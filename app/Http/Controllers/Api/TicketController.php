@@ -1,0 +1,140 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\ListTicketsRequest;
+use App\Http\Requests\StoreTicketRequest;
+use App\Http\Requests\UpdateTicketStateRequest;
+use App\Http\Resources\TicketResource;
+use App\Models\Ticket;
+use App\Services\Tickets\TicketCreationService;
+use App\Services\Tickets\TicketStateService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use InvalidArgumentException;
+
+class TicketController extends Controller
+{
+    public function index(ListTicketsRequest $request): AnonymousResourceCollection
+    {
+        $this->authorize('viewAny', Ticket::class);
+
+        $filters = $request->validated();
+        $query = Ticket::query()->with(['reporter', 'assignee', 'location', 'category']);
+        $this->applyFilters($query, $filters);
+
+        $tickets = $query
+            ->latest('created_at')
+            ->paginate((int) ($filters['per_page'] ?? 15))
+            ->withQueryString();
+
+        return TicketResource::collection($tickets);
+    }
+
+    public function store(StoreTicketRequest $request, TicketCreationService $creationService): JsonResponse
+    {
+        $this->authorize('create', Ticket::class);
+
+        $result = $creationService->create($request->user(), $request->validated());
+        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category']);
+
+        if (! $result['created']) {
+            return response()->json([
+                'message' => 'Se detecto un ticket activo para la misma ubicacion y categoria.',
+                'duplicate' => true,
+                'data' => (new TicketResource($ticket))->resolve($request),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Ticket creado correctamente.',
+            'duplicate' => false,
+            'data' => (new TicketResource($ticket))->resolve($request),
+        ], 201);
+    }
+
+    public function show(Ticket $ticket): TicketResource
+    {
+        $this->authorize('view', $ticket);
+
+        $ticket->load([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'stateHistory' => fn ($query) => $query->latest('created_at'),
+        ]);
+
+        return new TicketResource($ticket);
+    }
+
+    public function updateState(
+        UpdateTicketStateRequest $request,
+        Ticket $ticket,
+        TicketStateService $stateService
+    ): JsonResponse {
+        $this->authorize('updateState', $ticket);
+
+        try {
+            $updatedTicket = $stateService->transition(
+                $ticket,
+                $request->user(),
+                (string) $request->validated('to_state'),
+                $request->validated('comment')
+            );
+        } catch (InvalidArgumentException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'errors' => [
+                    'to_state' => [$exception->getMessage()],
+                ],
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Estado del ticket actualizado correctamente.',
+            'data' => (new TicketResource($updatedTicket))->resolve($request),
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['state'])) {
+            $query->where('state', $filters['state']);
+        }
+
+        if (! empty($filters['priority'])) {
+            $query->where('priority', $filters['priority']);
+        }
+
+        if (! empty($filters['location_id'])) {
+            $query->where('location_id', $filters['location_id']);
+        }
+
+        if (! empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = trim((string) $filters['search']);
+            $query->where(function (Builder $innerQuery) use ($search): void {
+                $innerQuery
+                    ->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if (! empty($filters['from'])) {
+            $query->whereDate('created_at', '>=', $filters['from']);
+        }
+
+        if (! empty($filters['to'])) {
+            $query->whereDate('created_at', '<=', $filters['to']);
+        }
+    }
+}

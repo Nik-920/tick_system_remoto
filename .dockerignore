@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*.local
+storage/logs/*
+storage/app/public
+bootstrap/cache/*
+.DS_Store
+Thumbs.db
+vendor/
+.vscode
+.idea
