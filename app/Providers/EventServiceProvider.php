@@ -8,8 +8,10 @@ use App\Events\TicketResolved;
 use App\Listeners\DetectDuplicatesOnEmbeddingReady;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
 use App\Listeners\NotifyDuplicateDetected;
+use App\Listeners\ReportFailedQueueJob;
 use App\Listeners\UpdateRecurrenceOnTicketResolved;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Queue\Events\JobFailed;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -26,6 +28,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         TicketResolved::class => [
             UpdateRecurrenceOnTicketResolved::class,
+        ],
+        JobFailed::class => [
+            ReportFailedQueueJob::class,
         ],
     ];
 
