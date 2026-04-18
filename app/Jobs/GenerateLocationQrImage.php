@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Location;
+use App\Services\Observability\TicketQrLogger;
 use App\Services\Qr\QrImageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,14 +24,32 @@ class GenerateLocationQrImage implements ShouldQueue
     {
     }
 
-    public function handle(QrImageService $qrImageService): void
+    public function handle(QrImageService $qrImageService, TicketQrLogger $logger): void
     {
+        $startedAt = microtime(true);
+
+        $logger->info('qr.generation.started', [
+            'location_id' => $this->locationId,
+            'qr_job_id' => $this->jobTrackingId,
+        ]);
+
         $location = Location::query()->find($this->locationId);
         if ($location === null) {
+            $logger->warning('qr.generation.location_not_found', [
+                'location_id' => $this->locationId,
+                'qr_job_id' => $this->jobTrackingId,
+            ]);
+
             return;
         }
 
         if ($this->jobTrackingId !== null && $location->qr_job_id !== $this->jobTrackingId) {
+            $logger->info('qr.generation.stale_job_ignored', [
+                'location_id' => $location->id,
+                'qr_job_id' => $this->jobTrackingId,
+                'current_qr_job_id' => $location->qr_job_id,
+            ]);
+
             return;
         }
 
@@ -41,6 +60,12 @@ class GenerateLocationQrImage implements ShouldQueue
                 'qr_generated_at' => null,
             ])->save();
 
+            $logger->warning('qr.generation.failed_missing_token', [
+                'location_id' => $location->id,
+                'qr_job_id' => $this->jobTrackingId,
+                'qr_generation_status' => 'failed',
+            ]);
+
             return;
         }
 
@@ -48,6 +73,12 @@ class GenerateLocationQrImage implements ShouldQueue
             'qr_generation_status' => 'processing',
             'qr_last_error' => null,
         ])->save();
+
+        $logger->info('qr.generation.processing', [
+            'location_id' => $location->id,
+            'qr_job_id' => $this->jobTrackingId,
+            'qr_generation_status' => 'processing',
+        ]);
 
         try {
             $url = $qrImageService->generateAndStore($location);
@@ -58,6 +89,13 @@ class GenerateLocationQrImage implements ShouldQueue
                 'qr_last_error' => null,
                 'qr_generated_at' => now(),
             ])->save();
+
+            $logger->info('qr.generation.ready', [
+                'location_id' => $location->id,
+                'qr_job_id' => $this->jobTrackingId,
+                'qr_generation_status' => 'ready',
+                'duration_ms' => $this->elapsedMilliseconds($startedAt),
+            ]);
         } catch (Throwable $exception) {
             $location->forceFill([
                 'qr_generation_status' => 'failed',
@@ -65,7 +103,21 @@ class GenerateLocationQrImage implements ShouldQueue
                 'qr_generated_at' => null,
             ])->save();
 
+            $logger->error('qr.generation.failed', [
+                'location_id' => $location->id,
+                'qr_job_id' => $this->jobTrackingId,
+                'qr_generation_status' => 'failed',
+                'exception_class' => $exception::class,
+                'error_message' => Str::limit($exception->getMessage(), 500, ''),
+                'duration_ms' => $this->elapsedMilliseconds($startedAt),
+            ]);
+
             throw $exception;
         }
+    }
+
+    private function elapsedMilliseconds(float $startedAt): int
+    {
+        return (int) round((microtime(true) - $startedAt) * 1000);
     }
 }

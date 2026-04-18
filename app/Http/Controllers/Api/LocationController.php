@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateLocationRequest;
 use App\Http\Resources\LocationResource;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
+use App\Services\Observability\TicketQrLogger;
 use App\Services\Qr\QrTokenService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,10 @@ use Illuminate\Support\Str;
 
 class LocationController extends Controller
 {
+    public function __construct(private TicketQrLogger $logger)
+    {
+    }
+
     public function index(ListLocationsRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Location::class);
@@ -63,7 +68,14 @@ class LocationController extends Controller
             'qr_generated_at' => null,
         ]);
 
-        $this->dispatchQrGeneration($location);
+        $this->logger->info('qr.location.created', [
+            'location_id' => $location->id,
+            'actor_id' => $request->user()?->id,
+            'is_active' => $location->is_active,
+            'qr_generation_status' => $location->qr_generation_status,
+        ]);
+
+        $this->dispatchQrGeneration($location, $request->user()?->id, 'location_created');
 
         $location->refresh();
 
@@ -95,12 +107,20 @@ class LocationController extends Controller
         $this->authorize('update', $location);
 
         if ($location->qr_token === null || $location->qr_token === '') {
+            $newToken = $qrTokenService->generateUniqueToken();
+
             $location->forceFill([
-                'qr_token' => $qrTokenService->generateUniqueToken(),
+                'qr_token' => $newToken,
             ])->save();
+
+            $this->logger->info('qr.token.regenerated', [
+                'location_id' => $location->id,
+                'actor_id' => request()->user()?->id,
+                'qr_token' => $newToken,
+            ]);
         }
 
-        $this->dispatchQrGeneration($location);
+        $this->dispatchQrGeneration($location, request()->user()?->id, 'manual_regenerate');
 
         $location->refresh();
         $location->loadCount(['tickets', 'incidentHistory']);
@@ -139,7 +159,7 @@ class LocationController extends Controller
         }
     }
 
-    private function dispatchQrGeneration(Location $location): void
+    private function dispatchQrGeneration(Location $location, mixed $actorId = null, string $trigger = 'unknown'): void
     {
         $jobId = (string) Str::uuid();
 
@@ -151,5 +171,13 @@ class LocationController extends Controller
         ])->save();
 
         GenerateLocationQrImage::dispatch($location->id, $jobId);
+
+        $this->logger->info('qr.generation.dispatched', [
+            'location_id' => $location->id,
+            'actor_id' => $actorId,
+            'qr_job_id' => $jobId,
+            'trigger' => $trigger,
+            'qr_generation_status' => 'pending',
+        ]);
     }
 }
