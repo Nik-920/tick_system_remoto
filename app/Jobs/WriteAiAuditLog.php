@@ -21,7 +21,8 @@ class WriteAiAuditLog implements ShouldQueue
         public string $message,
         public array $context = [],
         public ?Ticket $ticket = null,
-        public ?string $operationType = null
+        public ?string $operationType = null,
+        public string $correlationId = ''
     ) {
     }
 
@@ -44,6 +45,7 @@ class WriteAiAuditLog implements ShouldQueue
             $eventName = 'ticket.ai.' . str_replace('_', '.', $this->operationType);
         }
 
+        $context['correlation_id'] = $this->correlationId;
         $context['audit_message'] = $this->message;
 
         $logger->info($eventName, $context);

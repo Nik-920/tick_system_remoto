@@ -14,16 +14,17 @@ class UpdateRecurrenceOnTicketResolved
         }
 
         $ticket = $event->ticket;
+        $correlationId = $event->correlationId;
         if ($ticket->state !== 'resolved' && $ticket->resolved_at === null) {
             return;
         }
 
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
-            UpdateRecurrenceHistory::dispatch($ticket);
+            UpdateRecurrenceHistory::dispatch($ticket, $correlationId);
             return;
         }
 
-        UpdateRecurrenceHistory::dispatchSync($ticket);
+        UpdateRecurrenceHistory::dispatchSync($ticket, $correlationId);
     }
 }
