@@ -13,6 +13,7 @@ class NotifyDuplicateDetected
         $ticket = $event->ticket;
         $matched = $event->matchedTicket;
         $score = $event->similarityScore;
+        $correlationId = $event->correlationId;
         $threshold = (float) config('ai.dedup.similarity_threshold', 0.70);
 
         $inputData = [
@@ -39,9 +40,10 @@ class NotifyDuplicateDetected
                 $inputData,
                 $outputData,
                 $score,
-                'flagged_duplicate'
+                'flagged_duplicate',
+                $correlationId,
             );
-            WriteAiAuditLog::dispatch('Duplicate ticket detected.', $context, $ticket, 'semantic_dedup_check');
+            WriteAiAuditLog::dispatch('Duplicate ticket detected.', $context, $ticket, 'semantic_dedup_check', $correlationId);
             return;
         }
 
@@ -51,8 +53,9 @@ class NotifyDuplicateDetected
             $inputData,
             $outputData,
             $score,
-            'flagged_duplicate'
+            'flagged_duplicate',
+            $correlationId,
         );
-        WriteAiAuditLog::dispatchSync('Duplicate ticket detected.', $context, $ticket, 'semantic_dedup_check');
+        WriteAiAuditLog::dispatchSync('Duplicate ticket detected.', $context, $ticket, 'semantic_dedup_check', $correlationId);
     }
 }
