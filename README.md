@@ -14,7 +14,7 @@
 
  [Instalación](#-instalación-y-configuración) · [Decisiones de Arquitectura](#-decisiones-de-arquitectura-y-mejores-prácticas) · [Patrones de Diseño](#-patrones-de-diseño-aplicados) · [API](#-referencia-de-la-api) · [Testing](#-estrategia-de-testing)
 
-[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md) · [Implementacion de Tablero P0 P1 P2](Docs/TABLERO_TRABAJO_P0_P1_P2.md)
+[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md) · [Implementacion de Tablero P0 P1 P2](Docs/TABLERO_TRABAJO_P0_P1_P2.md) · [Activacion Sentry Staging y Produccion](Docs/SENTRY_ACTIVACION_STAGING_PROD.md)
 
 </div>
 
