@@ -10,6 +10,14 @@ x-app-base: &app-base
         APP_ENV: ${APP_ENV:-local}
         APP_DEBUG: ${APP_DEBUG:-true}
         APP_URL: ${APP_URL:-http://localhost:8000}
+        MAIL_MAILER: ${MAIL_MAILER:-log}
+        MAIL_SCHEME: ${MAIL_SCHEME:-}
+        MAIL_HOST: ${MAIL_HOST:-127.0.0.1}
+        MAIL_PORT: ${MAIL_PORT:-2525}
+        MAIL_USERNAME: ${MAIL_USERNAME:-}
+        MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+        MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+        MAIL_FROM_NAME: ${MAIL_FROM_NAME:-TickSystem}
         SENTRY_LARAVEL_DSN: ${SENTRY_LARAVEL_DSN:-}
         SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
         SENTRY_RELEASE: ${SENTRY_RELEASE:-}
@@ -52,6 +60,14 @@ services:
             APP_ENV: ${APP_ENV:-local}
             APP_DEBUG: ${APP_DEBUG:-true}
             APP_URL: ${APP_URL:-http://localhost:8000}
+            MAIL_MAILER: ${MAIL_MAILER:-log}
+            MAIL_SCHEME: ${MAIL_SCHEME:-}
+            MAIL_HOST: ${MAIL_HOST:-127.0.0.1}
+            MAIL_PORT: ${MAIL_PORT:-2525}
+            MAIL_USERNAME: ${MAIL_USERNAME:-}
+            MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+            MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+            MAIL_FROM_NAME: ${MAIL_FROM_NAME:-TickSystem}
             SENTRY_LARAVEL_DSN: ${SENTRY_LARAVEL_DSN:-}
             SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
             SENTRY_RELEASE: ${SENTRY_RELEASE:-}
