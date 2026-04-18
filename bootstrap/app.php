@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureCorrelationId;
+use App\Http\Middleware\SecureHeaders;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(EnsureCorrelationId::class);
+        $middleware->append(SecureHeaders::class);
+
+        $middleware->trustProxies(
+            at: env('TRUSTED_PROXIES', '*'),
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+                | Request::HEADER_X_FORWARDED_PREFIX
+        );
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
