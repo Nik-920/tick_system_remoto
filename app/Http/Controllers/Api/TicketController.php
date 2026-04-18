@@ -8,6 +8,7 @@ use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
+use App\Services\Observability\TicketQrLogger;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,18 +74,34 @@ class TicketController extends Controller
     public function updateState(
         UpdateTicketStateRequest $request,
         Ticket $ticket,
-        TicketStateService $stateService
+        TicketStateService $stateService,
+        TicketQrLogger $logger,
     ): JsonResponse {
         $this->authorize('updateState', $ticket);
+
+        $validated = $request->validated();
+        $toState = (string) ($validated['to_state'] ?? '');
+        $comment = $validated['comment'] ?? null;
 
         try {
             $updatedTicket = $stateService->transition(
                 $ticket,
                 $request->user(),
-                (string) $request->validated('to_state'),
-                $request->validated('comment')
+                $toState,
+                is_string($comment) ? $comment : null
             );
         } catch (InvalidArgumentException $exception) {
+            $logger->warning('ticket.state.transition_denied', [
+                'ticket_id' => $ticket->id,
+                'location_id' => $ticket->location_id,
+                'category_id' => $ticket->category_id,
+                'actor_id' => $request->user()?->id,
+                'from_state' => $ticket->state,
+                'to_state' => $toState,
+                'reason' => $exception->getMessage(),
+                'comment' => $comment,
+            ]);
+
             return response()->json([
                 'message' => $exception->getMessage(),
                 'errors' => [
