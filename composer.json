@@ -11,6 +11,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^4.2",
+        "sentry/sentry-laravel": "^4.25",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-model-states": "^2.12",
         "spatie/laravel-permission": "^6.25"

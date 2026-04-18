@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Str;
+use Sentry\State\Scope;
 use Throwable;
 
 class DetectDuplicates implements ShouldQueue
@@ -47,7 +48,7 @@ class DetectDuplicates implements ShouldQueue
             try {
                 $vector = $embeddings->generate($description);
             } catch (Throwable $exception) {
-                $logger->warning('ticket.duplicate.embedding_failed', [
+                $context = [
                     'ticket_id' => $ticket->id,
                     'location_id' => $ticket->location_id,
                     'category_id' => $ticket->category_id,
@@ -55,7 +56,11 @@ class DetectDuplicates implements ShouldQueue
                     'operation_type' => 'duplicate_detection',
                     'exception_class' => $exception::class,
                     'error_message' => Str::limit($exception->getMessage(), 500, ''),
-                ]);
+                ];
+
+                $logger->warning('ticket.duplicate.embedding_failed', $context);
+                $this->reportToSentry($exception, $context);
+
                 return;
             }
 
@@ -123,5 +128,24 @@ class DetectDuplicates implements ShouldQueue
                 $this->correlationId,
             ));
         }
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function reportToSentry(Throwable $exception, array $context): void
+    {
+        \Sentry\withScope(function (Scope $scope) use ($context): void {
+            $scope->setTag('domain', 'ticket');
+            $scope->setTag('operation_type', 'duplicate_detection');
+
+            if ($this->correlationId !== '') {
+                $scope->setTag('correlation_id', $this->correlationId);
+            }
+
+            $scope->setContext('ticket_job', $context);
+        });
+
+        \Sentry\captureException($exception);
     }
 }
