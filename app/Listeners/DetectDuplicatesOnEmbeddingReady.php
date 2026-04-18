@@ -18,12 +18,14 @@ class DetectDuplicatesOnEmbeddingReady
             return;
         }
 
+        $correlationId = $event->correlationId;
+
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
-            DetectDuplicates::dispatch($event->ticket);
+            DetectDuplicates::dispatch($event->ticket, $correlationId);
             return;
         }
 
-        DetectDuplicates::dispatchSync($event->ticket);
+        DetectDuplicates::dispatchSync($event->ticket, $correlationId);
     }
 }

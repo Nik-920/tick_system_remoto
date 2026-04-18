@@ -20,7 +20,7 @@ class DetectDuplicates implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Ticket $ticket)
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
     {
     }
 
@@ -51,6 +51,7 @@ class DetectDuplicates implements ShouldQueue
                     'ticket_id' => $ticket->id,
                     'location_id' => $ticket->location_id,
                     'category_id' => $ticket->category_id,
+                    'correlation_id' => $this->correlationId,
                     'operation_type' => 'duplicate_detection',
                     'exception_class' => $exception::class,
                     'error_message' => Str::limit($exception->getMessage(), 500, ''),
@@ -118,7 +119,8 @@ class DetectDuplicates implements ShouldQueue
             event(new DuplicateDetected(
                 $ticket,
                 $matchedTicket,
-                is_numeric($similarity) ? (float) $similarity : null
+                is_numeric($similarity) ? (float) $similarity : null,
+                $this->correlationId,
             ));
         }
     }
