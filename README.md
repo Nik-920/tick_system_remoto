@@ -14,7 +14,7 @@
 
  [Instalación](#-instalación-y-configuración) · [Decisiones de Arquitectura](#-decisiones-de-arquitectura-y-mejores-prácticas) · [Patrones de Diseño](#-patrones-de-diseño-aplicados) · [API](#-referencia-de-la-api) · [Testing](#-estrategia-de-testing)
 
-[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md)
+[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md) · [Implementacion de Tablero P0 P1 P2](Docs/TABLERO_TRABAJO_P0_P1_P2.md)
 
 </div>
 
@@ -347,7 +347,7 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 | **Laravel Dusk** | Testing E2E (browser) |
 | **PHP-CS-Fixer** | Formateo de código |
 | **PHPStan (Larastan)** | Análisis estático |
-| **Docker + Laravel Sail** | Entorno de desarrollo local |
+| **Docker Compose** | Entorno containerizado local y despliegues |
 
 ---
 
@@ -398,13 +398,23 @@ php artisan serve
 ### 4) Docker & Containerization
 
 - **Docker Engine**: 29.3.1 (build c2be9cc)
-- **Laravel Sail** soportado para entorno local con contenedores:
+- **Docker Compose** como orquestador principal (sin Laravel Sail):
 
 ```bash
-./vendor/bin/sail up -d
-./vendor/bin/sail artisan migrate --seed
-./vendor/bin/sail npm run dev
+cp .env.example .env
+# Completar credenciales de Supabase en .env
+docker compose build
+docker compose up -d
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
 ```
+
+Servicios incluidos en Compose:
+
+- `app` (PHP-FPM Laravel)
+- `nginx` (servidor web)
+- `redis` (cache/sesiones/colas)
+- `queue` (worker de jobs)
 
 ### 5) PHP Extensions
 
@@ -469,7 +479,7 @@ Motor y esquema actual:
 - 🔄 **Deduplicación** — Previene tickets duplicados para el mismo problema.
 - 🕵️ **Auditoría** — Log completo de cambios de estado con usuario y timestamp.
 - 🌐 **API REST** — Endpoints para integración con otros sistemas.
-- 🐳 **Docker Ready** — Entorno reproducible con Laravel Sail.
+- 🐳 **Docker Ready** — Entorno reproducible con Docker Compose.
 
 ---
 
@@ -687,7 +697,9 @@ ticket activo  pre-rellenado con
 │   └── tests/
 │       ├── Unit/Services/                  # Tests unitarios de servicios IA
 │       └── Feature/Ai/                     # Tests funcionales de deduplicación/recurrencia
-├── docker/                                 # Dockerfile, compose y utilidades de contenedores
+├── Dockerfile                              # Imagen PHP-FPM multistage
+├── docker-compose.yml                      # Orquestación de servicios
+├── docker/                                 # Scripts auxiliares (entrypoint)
 ├── supabase/
 │   └── migrations/                         # Migraciones SQL para Supabase
 ├── docs/                                   # Documentación técnica y funcional adicional
