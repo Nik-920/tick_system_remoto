@@ -7,12 +7,13 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Ai\EmbeddingService;
+use App\Services\Observability\TicketQrLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class DetectDuplicates implements ShouldQueue
@@ -23,7 +24,11 @@ class DetectDuplicates implements ShouldQueue
     {
     }
 
-    public function handle(DeduplicationService $deduplication, EmbeddingService $embeddings): void
+    public function handle(
+        DeduplicationService $deduplication,
+        EmbeddingService $embeddings,
+        TicketQrLogger $logger
+    ): void
     {
         if (! $deduplication->isEnabled()) {
             return;
@@ -42,9 +47,13 @@ class DetectDuplicates implements ShouldQueue
             try {
                 $vector = $embeddings->generate($description);
             } catch (Throwable $exception) {
-                Log::warning('Failed to generate embedding for duplicate detection.', [
+                $logger->warning('ticket.duplicate.embedding_failed', [
                     'ticket_id' => $ticket->id,
-                    'error' => $exception->getMessage(),
+                    'location_id' => $ticket->location_id,
+                    'category_id' => $ticket->category_id,
+                    'operation_type' => 'duplicate_detection',
+                    'exception_class' => $exception::class,
+                    'error_message' => Str::limit($exception->getMessage(), 500, ''),
                 ]);
                 return;
             }

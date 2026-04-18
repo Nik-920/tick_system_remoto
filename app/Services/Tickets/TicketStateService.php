@@ -6,11 +6,16 @@ use App\Events\TicketResolved;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Observability\TicketQrLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class TicketStateService
 {
+    public function __construct(private TicketQrLogger $logger)
+    {
+    }
+
     /**
      * @param string|null $comment
      */
@@ -19,6 +24,15 @@ class TicketStateService
         $fromState = (string) $ticket->state;
 
         if ($fromState === $toState) {
+            $this->logger->info('ticket.state.no_change', [
+                'ticket_id' => $ticket->id,
+                'location_id' => $ticket->location_id,
+                'category_id' => $ticket->category_id,
+                'actor_id' => $actor->id,
+                'from_state' => $fromState,
+                'to_state' => $toState,
+            ]);
+
             return $ticket;
         }
 
@@ -51,6 +65,16 @@ class TicketStateService
         if ($event !== null) {
             event($event);
         }
+
+        $this->logger->info('ticket.state.transitioned', [
+            'ticket_id' => $updatedTicket->id,
+            'location_id' => $updatedTicket->location_id,
+            'category_id' => $updatedTicket->category_id,
+            'actor_id' => $actor->id,
+            'from_state' => $fromState,
+            'to_state' => $toState,
+            'comment' => $comment,
+        ]);
 
         return $updatedTicket->fresh(['reporter', 'assignee', 'location', 'category', 'stateHistory']) ?? $updatedTicket;
     }

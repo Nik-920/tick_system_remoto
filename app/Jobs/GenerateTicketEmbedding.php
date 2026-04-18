@@ -5,12 +5,13 @@ namespace App\Jobs;
 use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Services\Ai\EmbeddingService;
+use App\Services\Observability\TicketQrLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class GenerateTicketEmbedding implements ShouldQueue
@@ -21,7 +22,7 @@ class GenerateTicketEmbedding implements ShouldQueue
     {
     }
 
-    public function handle(EmbeddingService $embeddings): void
+    public function handle(EmbeddingService $embeddings, TicketQrLogger $logger): void
     {
         if (! (bool) config('ai.enabled') || ! (bool) config('ai.huggingface.enabled')) {
             return;
@@ -41,9 +42,13 @@ class GenerateTicketEmbedding implements ShouldQueue
         try {
             $vector = $embeddings->generate($description);
         } catch (Throwable $exception) {
-            Log::warning('Failed to generate ticket embedding.', [
+            $logger->warning('ticket.embedding.generation_failed', [
                 'ticket_id' => $this->ticket->id,
-                'error' => $exception->getMessage(),
+                'location_id' => $this->ticket->location_id,
+                'category_id' => $this->ticket->category_id,
+                'operation_type' => 'embedding_generation',
+                'exception_class' => $exception::class,
+                'error_message' => Str::limit($exception->getMessage(), 500, ''),
             ]);
             return;
         }

@@ -3,12 +3,12 @@
 namespace App\Jobs;
 
 use App\Models\Ticket;
+use App\Services\Observability\TicketQrLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class WriteAiAuditLog implements ShouldQueue
 {
@@ -25,7 +25,7 @@ class WriteAiAuditLog implements ShouldQueue
     ) {
     }
 
-    public function handle(): void
+    public function handle(TicketQrLogger $logger): void
     {
         $context = $this->context;
 
@@ -39,6 +39,13 @@ class WriteAiAuditLog implements ShouldQueue
             $context['operation_type'] = $this->operationType;
         }
 
-        Log::info($this->message, $context);
+        $eventName = 'ticket.ai.audit';
+        if ($this->operationType !== null && $this->operationType !== '') {
+            $eventName = 'ticket.ai.' . str_replace('_', '.', $this->operationType);
+        }
+
+        $context['audit_message'] = $this->message;
+
+        $logger->info($eventName, $context);
     }
 }

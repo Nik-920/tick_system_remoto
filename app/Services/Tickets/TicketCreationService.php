@@ -7,11 +7,15 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Ai\DeduplicationService;
+use App\Services\Observability\TicketQrLogger;
 use Illuminate\Support\Facades\DB;
 
 class TicketCreationService
 {
-    public function __construct(private DeduplicationService $deduplication)
+    public function __construct(
+        private DeduplicationService $deduplication,
+        private TicketQrLogger $logger,
+    )
     {
     }
 
@@ -23,6 +27,14 @@ class TicketCreationService
     {
         $existing = $this->findExistingTicket((string) $payload['location_id'], (string) $payload['category_id']);
         if ($existing !== null) {
+            $this->logger->info('ticket.creation.duplicate_detected', [
+                'ticket_id' => $existing->id,
+                'location_id' => $existing->location_id,
+                'category_id' => $existing->category_id,
+                'reporter_id' => $reporter->id,
+                'reason' => 'active_ticket_exists',
+            ]);
+
             return [
                 'created' => false,
                 'ticket' => $existing,
@@ -54,6 +66,15 @@ class TicketCreationService
 
             return $ticket;
         });
+
+        $this->logger->info('ticket.creation.succeeded', [
+            'ticket_id' => $ticket->id,
+            'location_id' => $ticket->location_id,
+            'category_id' => $ticket->category_id,
+            'reporter_id' => $reporter->id,
+            'state' => $ticket->state,
+            'priority' => $ticket->priority,
+        ]);
 
         return [
             'created' => true,
