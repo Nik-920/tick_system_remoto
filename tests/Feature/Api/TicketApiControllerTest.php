@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\Api;
 
+use App\Jobs\DetectDuplicates;
+use App\Jobs\GenerateTicketEmbedding;
+use App\Jobs\UpdateRecurrenceHistory;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -164,6 +168,91 @@ class TicketApiControllerTest extends TestCase
             'to_state' => 'in_progress',
             'changed_by' => $maintenance->id,
         ]);
+    }
+
+    public function test_correlation_id_is_propagated_to_ticket_ai_jobs(): void
+    {
+        Queue::fake();
+
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.automation.async_processing' => true,
+        ]);
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+        $correlationId = 'corr-ticket-create-001';
+
+        $payload = [
+            'title' => 'Ticket con correlacion',
+            'description' => 'Prueba de propagacion correlation id en jobs de IA.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+        ];
+
+        $response = $this
+            ->withHeader('X-Correlation-Id', $correlationId)
+            ->postJson(route('api.tickets.store'), $payload);
+
+        $response->assertCreated();
+
+        Queue::assertPushed(GenerateTicketEmbedding::class, function (GenerateTicketEmbedding $job) use ($correlationId): bool {
+            return $job->correlationId === $correlationId;
+        });
+
+        Queue::assertPushed(DetectDuplicates::class, function (DetectDuplicates $job) use ($correlationId): bool {
+            return $job->correlationId === $correlationId;
+        });
+    }
+
+    public function test_correlation_id_is_propagated_to_recurrence_job_on_resolve(): void
+    {
+        Queue::fake();
+
+        config([
+            'ai.enabled' => true,
+            'ai.recurrence.enabled' => true,
+            'ai.automation.async_processing' => true,
+        ]);
+
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket listo para resolver',
+            'description' => 'Se valida propagacion correlation id en recurrencia.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+
+        $correlationId = 'corr-ticket-resolve-001';
+
+        $response = $this
+            ->withHeader('X-Correlation-Id', $correlationId)
+            ->patchJson(route('api.tickets.update-state', $ticket), [
+                'to_state' => 'resolved',
+                'comment' => 'Resuelto para validar correlacion.',
+            ]);
+
+        $response->assertOk();
+
+        Queue::assertPushed(UpdateRecurrenceHistory::class, function (UpdateRecurrenceHistory $job) use ($ticket, $correlationId): bool {
+            return $job->ticket->id === $ticket->id
+                && $job->correlationId === $correlationId;
+        });
     }
 
     private function createUserWithRole(string $role): User

@@ -19,12 +19,14 @@ class GenerateEmbeddingOnTicketCreated
             return;
         }
 
+        $correlationId = $event->correlationId;
+
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
-            GenerateTicketEmbedding::dispatch($ticket);
+            GenerateTicketEmbedding::dispatch($ticket, $correlationId);
             return;
         }
 
-        GenerateTicketEmbedding::dispatchSync($ticket);
+        GenerateTicketEmbedding::dispatchSync($ticket, $correlationId);
     }
 }

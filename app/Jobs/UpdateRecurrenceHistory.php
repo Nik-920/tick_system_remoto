@@ -15,7 +15,7 @@ class UpdateRecurrenceHistory implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Ticket $ticket)
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
     {
     }
 

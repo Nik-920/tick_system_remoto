@@ -58,7 +58,11 @@ class LocationApiControllerTest extends TestCase
             'is_active' => true,
         ];
 
-        $response = $this->postJson(route('api.locations.store'), $payload);
+        $correlationId = 'corr-location-store-001';
+
+        $response = $this
+            ->withHeader('X-Correlation-Id', $correlationId)
+            ->postJson(route('api.locations.store'), $payload);
 
         $response->assertCreated();
         $response->assertJsonPath('data.room_code', 'D-401');
@@ -83,7 +87,8 @@ class LocationApiControllerTest extends TestCase
 
         Queue::assertPushed(GenerateLocationQrImage::class, function (GenerateLocationQrImage $job) use ($locationId, $jobId): bool {
             return $job->locationId === $locationId
-                && $job->jobTrackingId === $jobId;
+                && $job->jobTrackingId === $jobId
+                && $job->correlationId === 'corr-location-store-001';
         });
     }
 
@@ -159,7 +164,11 @@ class LocationApiControllerTest extends TestCase
             'qr_generated_at' => now()->subHour(),
         ])->save();
 
-        $response = $this->postJson(route('api.locations.regenerate-qr', $location));
+        $correlationId = 'corr-location-regenerate-001';
+
+        $response = $this
+            ->withHeader('X-Correlation-Id', $correlationId)
+            ->postJson(route('api.locations.regenerate-qr', $location));
 
         $response->assertAccepted();
         $response->assertJsonPath('data.id', $location->id);
@@ -176,9 +185,10 @@ class LocationApiControllerTest extends TestCase
             'qr_job_id' => $jobId,
         ]);
 
-        Queue::assertPushed(GenerateLocationQrImage::class, function (GenerateLocationQrImage $job) use ($location, $jobId): bool {
+        Queue::assertPushed(GenerateLocationQrImage::class, function (GenerateLocationQrImage $job) use ($location, $jobId, $correlationId): bool {
             return $job->locationId === $location->id
-                && $job->jobTrackingId === $jobId;
+            && $job->jobTrackingId === $jobId
+            && $job->correlationId === $correlationId;
         });
     }
 

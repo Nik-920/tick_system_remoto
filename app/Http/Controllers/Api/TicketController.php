@@ -14,6 +14,7 @@ use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class TicketController extends Controller
@@ -38,7 +39,13 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
-        $result = $creationService->create($request->user(), $request->validated());
+        $correlationId = (string) $request->attributes->get('correlation_id', '');
+        if ($correlationId === '') {
+            $correlationId = (string) Str::uuid();
+            $request->attributes->set('correlation_id', $correlationId);
+        }
+
+        $result = $creationService->create($request->user(), $request->validated(), $correlationId);
         $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category']);
 
         if (! $result['created']) {
@@ -79,6 +86,12 @@ class TicketController extends Controller
     ): JsonResponse {
         $this->authorize('updateState', $ticket);
 
+        $correlationId = (string) $request->attributes->get('correlation_id', '');
+        if ($correlationId === '') {
+            $correlationId = (string) Str::uuid();
+            $request->attributes->set('correlation_id', $correlationId);
+        }
+
         $validated = $request->validated();
         $toState = (string) ($validated['to_state'] ?? '');
         $comment = $validated['comment'] ?? null;
@@ -88,7 +101,8 @@ class TicketController extends Controller
                 $ticket,
                 $request->user(),
                 $toState,
-                is_string($comment) ? $comment : null
+                is_string($comment) ? $comment : null,
+                $correlationId,
             );
         } catch (InvalidArgumentException $exception) {
             $logger->warning('ticket.state.transition_denied', [
@@ -96,6 +110,7 @@ class TicketController extends Controller
                 'location_id' => $ticket->location_id,
                 'category_id' => $ticket->category_id,
                 'actor_id' => $request->user()?->id,
+                'correlation_id' => $correlationId,
                 'from_state' => $ticket->state,
                 'to_state' => $toState,
                 'reason' => $exception->getMessage(),

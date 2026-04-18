@@ -20,6 +20,7 @@ class GenerateLocationQrImage implements ShouldQueue
     public function __construct(
         public string $locationId,
         public ?string $jobTrackingId = null,
+        public string $correlationId = '',
     )
     {
     }
@@ -31,6 +32,7 @@ class GenerateLocationQrImage implements ShouldQueue
         $logger->info('qr.generation.started', [
             'location_id' => $this->locationId,
             'qr_job_id' => $this->jobTrackingId,
+            'correlation_id' => $this->correlationId,
         ]);
 
         $location = Location::query()->find($this->locationId);
@@ -38,6 +40,7 @@ class GenerateLocationQrImage implements ShouldQueue
             $logger->warning('qr.generation.location_not_found', [
                 'location_id' => $this->locationId,
                 'qr_job_id' => $this->jobTrackingId,
+                'correlation_id' => $this->correlationId,
             ]);
 
             return;
@@ -47,6 +50,7 @@ class GenerateLocationQrImage implements ShouldQueue
             $logger->info('qr.generation.stale_job_ignored', [
                 'location_id' => $location->id,
                 'qr_job_id' => $this->jobTrackingId,
+                'correlation_id' => $this->correlationId,
                 'current_qr_job_id' => $location->qr_job_id,
             ]);
 
@@ -63,6 +67,7 @@ class GenerateLocationQrImage implements ShouldQueue
             $logger->warning('qr.generation.failed_missing_token', [
                 'location_id' => $location->id,
                 'qr_job_id' => $this->jobTrackingId,
+                'correlation_id' => $this->correlationId,
                 'qr_generation_status' => 'failed',
             ]);
 
@@ -77,6 +82,7 @@ class GenerateLocationQrImage implements ShouldQueue
         $logger->info('qr.generation.processing', [
             'location_id' => $location->id,
             'qr_job_id' => $this->jobTrackingId,
+            'correlation_id' => $this->correlationId,
             'qr_generation_status' => 'processing',
         ]);
 
@@ -93,6 +99,7 @@ class GenerateLocationQrImage implements ShouldQueue
             $logger->info('qr.generation.ready', [
                 'location_id' => $location->id,
                 'qr_job_id' => $this->jobTrackingId,
+                'correlation_id' => $this->correlationId,
                 'qr_generation_status' => 'ready',
                 'duration_ms' => $this->elapsedMilliseconds($startedAt),
             ]);
@@ -106,6 +113,7 @@ class GenerateLocationQrImage implements ShouldQueue
             $logger->error('qr.generation.failed', [
                 'location_id' => $location->id,
                 'qr_job_id' => $this->jobTrackingId,
+                'correlation_id' => $this->correlationId,
                 'qr_generation_status' => 'failed',
                 'exception_class' => $exception::class,
                 'error_message' => Str::limit($exception->getMessage(), 500, ''),

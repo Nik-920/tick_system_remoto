@@ -18,6 +18,7 @@ class TicketAiLog extends Model
         'id',
         'ticket_id',
         'operation_type',
+        'correlation_id',
         'input_data',
         'output_data',
         'confidence_score',

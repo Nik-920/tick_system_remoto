@@ -7,7 +7,9 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Observability\TicketQrLogger;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class TicketStateService
@@ -19,8 +21,16 @@ class TicketStateService
     /**
      * @param string|null $comment
      */
-    public function transition(Ticket $ticket, User $actor, string $toState, ?string $comment = null): Ticket
+    public function transition(
+        Ticket $ticket,
+        User $actor,
+        string $toState,
+        ?string $comment = null,
+        string $correlationId = ''
+    ): Ticket
     {
+        $correlationId = $this->resolveCorrelationId($correlationId);
+
         $fromState = (string) $ticket->state;
 
         if ($fromState === $toState) {
@@ -29,6 +39,7 @@ class TicketStateService
                 'location_id' => $ticket->location_id,
                 'category_id' => $ticket->category_id,
                 'actor_id' => $actor->id,
+                'correlation_id' => $correlationId,
                 'from_state' => $fromState,
                 'to_state' => $toState,
             ]);
@@ -61,7 +72,7 @@ class TicketStateService
             return $ticket;
         });
 
-        $event = TicketResolved::forTicket($updatedTicket);
+        $event = TicketResolved::forTicket($updatedTicket, $correlationId);
         if ($event !== null) {
             event($event);
         }
@@ -71,6 +82,7 @@ class TicketStateService
             'location_id' => $updatedTicket->location_id,
             'category_id' => $updatedTicket->category_id,
             'actor_id' => $actor->id,
+            'correlation_id' => $correlationId,
             'from_state' => $fromState,
             'to_state' => $toState,
             'comment' => $comment,
@@ -131,5 +143,32 @@ class TicketStateService
         if ($fromState === 'resolved' && $toState === 'open' && ! $actor->hasRole('super_admin')) {
             throw new InvalidArgumentException('Solo super_admin puede reabrir tickets resueltos.');
         }
+    }
+
+    private function resolveCorrelationId(string $correlationId): string
+    {
+        $trimmed = trim($correlationId);
+        if ($trimmed !== '') {
+            return $trimmed;
+        }
+
+        if (app()->bound('request')) {
+            $request = request();
+            if ($request instanceof Request) {
+                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
+                if ($fromAttribute !== '') {
+                    return $fromAttribute;
+                }
+
+                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
+                if ($fromHeader !== '') {
+                    $request->attributes->set('correlation_id', $fromHeader);
+
+                    return $fromHeader;
+                }
+            }
+        }
+
+        return (string) Str::uuid();
     }
 }

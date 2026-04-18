@@ -18,7 +18,7 @@ class GenerateTicketEmbedding implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Ticket $ticket)
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
     {
     }
 
@@ -46,6 +46,7 @@ class GenerateTicketEmbedding implements ShouldQueue
                 'ticket_id' => $this->ticket->id,
                 'location_id' => $this->ticket->location_id,
                 'category_id' => $this->ticket->category_id,
+                'correlation_id' => $this->correlationId,
                 'operation_type' => 'embedding_generation',
                 'exception_class' => $exception::class,
                 'error_message' => Str::limit($exception->getMessage(), 500, ''),

@@ -8,7 +8,9 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Observability\TicketQrLogger;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class TicketCreationService
 {
@@ -23,8 +25,10 @@ class TicketCreationService
      * @param array<string, mixed> $payload
      * @return array{created: bool, ticket: Ticket, reason: string|null}
      */
-    public function create(User $reporter, array $payload): array
+    public function create(User $reporter, array $payload, string $correlationId = ''): array
     {
+        $correlationId = $this->resolveCorrelationId($correlationId);
+
         $existing = $this->findExistingTicket((string) $payload['location_id'], (string) $payload['category_id']);
         if ($existing !== null) {
             $this->logger->info('ticket.creation.duplicate_detected', [
@@ -32,6 +36,7 @@ class TicketCreationService
                 'location_id' => $existing->location_id,
                 'category_id' => $existing->category_id,
                 'reporter_id' => $reporter->id,
+                'correlation_id' => $correlationId,
                 'reason' => 'active_ticket_exists',
             ]);
 
@@ -42,7 +47,7 @@ class TicketCreationService
             ];
         }
 
-        $ticket = DB::transaction(function () use ($reporter, $payload): Ticket {
+        $ticket = DB::transaction(function () use ($reporter, $payload, $correlationId): Ticket {
             $ticket = Ticket::create([
                 'title' => (string) $payload['title'],
                 'description' => (string) $payload['description'],
@@ -62,7 +67,7 @@ class TicketCreationService
                 'comment' => 'Ticket creado',
             ]);
 
-            event(new TicketCreated($ticket));
+            event(new TicketCreated($ticket, $correlationId));
 
             return $ticket;
         });
@@ -72,6 +77,7 @@ class TicketCreationService
             'location_id' => $ticket->location_id,
             'category_id' => $ticket->category_id,
             'reporter_id' => $reporter->id,
+            'correlation_id' => $correlationId,
             'state' => $ticket->state,
             'priority' => $ticket->priority,
         ]);
@@ -92,5 +98,32 @@ class TicketCreationService
             ->where('created_at', '>=', now()->subHours($this->deduplication->windowHours()))
             ->latest('created_at')
             ->first();
+    }
+
+    private function resolveCorrelationId(string $correlationId): string
+    {
+        $trimmed = trim($correlationId);
+        if ($trimmed !== '') {
+            return $trimmed;
+        }
+
+        if (app()->bound('request')) {
+            $request = request();
+            if ($request instanceof Request) {
+                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
+                if ($fromAttribute !== '') {
+                    return $fromAttribute;
+                }
+
+                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
+                if ($fromHeader !== '') {
+                    $request->attributes->set('correlation_id', $fromHeader);
+
+                    return $fromHeader;
+                }
+            }
+        }
+
+        return (string) Str::uuid();
     }
 }

@@ -14,7 +14,8 @@ class DuplicateDetected
     public function __construct(
         public Ticket $ticket,
         public ?Ticket $matchedTicket = null,
-        public ?float $similarityScore = null
+        public ?float $similarityScore = null,
+        public string $correlationId = ''
     ) {
     }
 }

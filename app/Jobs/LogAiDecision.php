@@ -24,7 +24,8 @@ class LogAiDecision implements ShouldQueue
         public array $inputData = [],
         public array $outputData = [],
         public ?float $confidenceScore = null,
-        public ?string $actionTaken = null
+        public ?string $actionTaken = null,
+        public string $correlationId = ''
     ) {
     }
 
@@ -37,6 +38,7 @@ class LogAiDecision implements ShouldQueue
         TicketAiLog::create([
             'ticket_id' => $this->ticket->id,
             'operation_type' => $this->operationType,
+            'correlation_id' => $this->correlationId,
             'input_data' => $this->inputData,
             'output_data' => $this->outputData,
             'confidence_score' => $this->confidenceScore,
