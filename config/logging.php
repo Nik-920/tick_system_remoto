@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\JsonFormatterTap;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -70,6 +71,15 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'ticket_qr' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ticket_qr.log'),
+            'level' => env('LOG_TICKET_QR_LEVEL', 'info'),
+            'days' => env('LOG_TICKET_QR_DAYS', 14),
+            'tap' => [JsonFormatterTap::class],
             'replace_placeholders' => true,
         ],
 
