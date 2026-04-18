@@ -52,6 +52,8 @@ class LocationController extends Controller
     {
         $this->authorize('create', Location::class);
 
+        $correlationId = (string) $request->attributes->get('correlation_id', '');
+
         $data = $request->validated();
 
         $location = Location::query()->create([
@@ -71,11 +73,12 @@ class LocationController extends Controller
         $this->logger->info('qr.location.created', [
             'location_id' => $location->id,
             'actor_id' => $request->user()?->id,
+            'correlation_id' => $correlationId,
             'is_active' => $location->is_active,
             'qr_generation_status' => $location->qr_generation_status,
         ]);
 
-        $this->dispatchQrGeneration($location, $request->user()?->id, 'location_created');
+        $this->dispatchQrGeneration($location, $request->user()?->id, 'location_created', $correlationId);
 
         $location->refresh();
 
@@ -106,6 +109,8 @@ class LocationController extends Controller
     {
         $this->authorize('update', $location);
 
+        $correlationId = (string) request()->attributes->get('correlation_id', '');
+
         if ($location->qr_token === null || $location->qr_token === '') {
             $newToken = $qrTokenService->generateUniqueToken();
 
@@ -116,11 +121,12 @@ class LocationController extends Controller
             $this->logger->info('qr.token.regenerated', [
                 'location_id' => $location->id,
                 'actor_id' => request()->user()?->id,
+                'correlation_id' => $correlationId,
                 'qr_token' => $newToken,
             ]);
         }
 
-        $this->dispatchQrGeneration($location, request()->user()?->id, 'manual_regenerate');
+        $this->dispatchQrGeneration($location, request()->user()?->id, 'manual_regenerate', $correlationId);
 
         $location->refresh();
         $location->loadCount(['tickets', 'incidentHistory']);
@@ -159,7 +165,12 @@ class LocationController extends Controller
         }
     }
 
-    private function dispatchQrGeneration(Location $location, mixed $actorId = null, string $trigger = 'unknown'): void
+    private function dispatchQrGeneration(
+        Location $location,
+        mixed $actorId = null,
+        string $trigger = 'unknown',
+        string $correlationId = ''
+    ): void
     {
         $jobId = (string) Str::uuid();
 
@@ -170,11 +181,12 @@ class LocationController extends Controller
             'qr_generated_at' => null,
         ])->save();
 
-        GenerateLocationQrImage::dispatch($location->id, $jobId);
+        GenerateLocationQrImage::dispatch($location->id, $jobId, $correlationId);
 
         $this->logger->info('qr.generation.dispatched', [
             'location_id' => $location->id,
             'actor_id' => $actorId,
+            'correlation_id' => $correlationId,
             'qr_job_id' => $jobId,
             'trigger' => $trigger,
             'qr_generation_status' => 'pending',
