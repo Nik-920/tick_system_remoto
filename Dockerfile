@@ -1,43 +1,55 @@
+FROM node:22-alpine AS node-builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY resources ./resources
+COPY public ./public
+COPY vite.config.js ./
+RUN npm run build
+
 FROM php:8.2-fpm
 
-# Instalar dependencias del sistema
+# Dependencias requeridas por Laravel y extensiones PHP.
 RUN apt-get update && apt-get install -y \
-    build-essential \
     libpq-dev \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
-    locales \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
     zip \
-    jpegoptim optipng pngquant gifsicle \
-    vim \
     unzip \
     git \
     curl \
-    wget
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
-# Limpiar cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_pgsql pdo_mysql gd bcmath mbstring xml zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
-# Instalar extensiones PHP
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install pdo pdo_pgsql pdo_mysql gd bcmath ctype fileinfo json mbstring tokenizer xml
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
 WORKDIR /app
 
-# Copiar archivos del proyecto
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+
 COPY . .
+COPY --from=node-builder /app/public/build /app/public/build
 
-# Instalar dependencias PHP
-RUN composer install --no-dev --optimize-autoloader
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
+    && chmod -R 775 /app/storage /app/bootstrap/cache
 
-# Permisos
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 9000
 
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]

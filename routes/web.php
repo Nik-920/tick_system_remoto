@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/health', HealthController::class)->name('health.show');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/scan/{token}', [QrScanController::class, 'show'])
