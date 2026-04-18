@@ -14,6 +14,18 @@ class TicketControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_authenticated_user_sees_logout_action_in_ticket_index(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee('Cerrar sesion');
+    }
+
     public function test_authenticated_user_can_view_ticket_index(): void
     {
         $user = $this->createUserWithRole('reporter');
