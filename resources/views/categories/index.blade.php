@@ -36,7 +36,13 @@
                 @forelse ($categories as $category)
                     <tr>
                         <td>{{ $category->name }}</td>
-                        <td>{{ $category->icon ?? 'N/A' }}</td>
+                        <td>
+                            @if (is_string($category->icon) && filter_var($category->icon, FILTER_VALIDATE_URL))
+                                <img src="{{ $category->icon }}" alt="Icono de categoria" class="h-8 w-8 rounded-md border border-slate-200 object-cover">
+                            @else
+                                {{ $category->icon ?? 'N/A' }}
+                            @endif
+                        </td>
                         <td>{{ $category->incident_history_count }}</td>
                         <td>{{ $category->tickets_count }}</td>
                         <td>
