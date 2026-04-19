@@ -140,7 +140,9 @@ class SuperAdminUserManagementTest extends TestCase
     {
         config([
             'services.supabase.role_sync_enabled' => false,
-            'filesystems.domain_disks.users' => 'public',
+            'services.supabase.storage.domain_buckets.users' => 'TablaUsers',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
             'filesystems.domain_prefixes.users' => 'users/avatars',
         ]);
         Storage::fake('public');
@@ -164,13 +166,15 @@ class SuperAdminUserManagementTest extends TestCase
 
         $response->assertRedirect(route('users.edit', $managedUser));
         $this->assertNotNull($managedUser->fresh()->avatar_url);
-        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '.png');
+        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '/avatar.png');
     }
 
     public function test_super_admin_can_replace_user_avatar(): void
     {
         config([
-            'filesystems.domain_disks.users' => 'public',
+            'services.supabase.storage.domain_buckets.users' => 'TablaUsers',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
             'filesystems.domain_prefixes.users' => 'users/avatars',
         ]);
         Storage::fake('public');
@@ -178,9 +182,10 @@ class SuperAdminUserManagementTest extends TestCase
         $superAdmin = $this->createUserWithRole('super_admin');
         $managedUser = $this->createUserWithRole('reporter');
 
-        Storage::disk('public')->put('users/avatars/' . $managedUser->id . '.png', 'legacy');
+        $legacyPath = 'users/avatars/' . $managedUser->id . '/legacy.png';
+        Storage::disk('public')->put($legacyPath, 'legacy');
         $managedUser->forceFill([
-            'avatar_url' => Storage::disk('public')->url('users/avatars/' . $managedUser->id . '.png'),
+            'avatar_url' => '/storage/v1/object/public/TablaUsers/' . $legacyPath,
         ])->save();
 
         $response = $this
@@ -192,8 +197,8 @@ class SuperAdminUserManagementTest extends TestCase
         $response->assertRedirect(route('users.edit', $managedUser));
         $response->assertSessionHas('status', 'Avatar actualizado correctamente.');
 
-        Storage::disk('public')->assertMissing('users/avatars/' . $managedUser->id . '.png');
-        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '.jpg');
+        Storage::disk('public')->assertMissing($legacyPath);
+        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '/new-avatar.jpg');
     }
 
     private function createUserWithRole(string $role): User

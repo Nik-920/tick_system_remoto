@@ -141,16 +141,19 @@ class ProfileManagementTest extends TestCase
     public function test_authenticated_user_can_replace_own_avatar(): void
     {
         config([
-            'filesystems.domain_disks.users' => 'public',
+            'services.supabase.storage.domain_buckets.users' => 'TablaUsers',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
             'filesystems.domain_prefixes.users' => 'users/avatars',
         ]);
         Storage::fake('public');
 
         $user = $this->createUserWithRole('reporter');
 
-        Storage::disk('public')->put('users/avatars/' . $user->id . '.png', 'legacy-avatar-content');
+        $legacyPath = 'users/avatars/' . $user->id . '/legacy.png';
+        Storage::disk('public')->put($legacyPath, 'legacy-avatar-content');
         $user->forceFill([
-            'avatar_url' => Storage::disk('public')->url('users/avatars/' . $user->id . '.png'),
+            'avatar_url' => '/storage/v1/object/public/TablaUsers/' . $legacyPath,
         ])->save();
 
         $response = $this
@@ -162,14 +165,16 @@ class ProfileManagementTest extends TestCase
         $response->assertRedirect(route('profile.edit'));
         $response->assertSessionHas('status', 'Avatar actualizado correctamente.');
 
-        Storage::disk('public')->assertMissing('users/avatars/' . $user->id . '.png');
-        Storage::disk('public')->assertExists('users/avatars/' . $user->id . '.jpg');
+        Storage::disk('public')->assertMissing($legacyPath);
+        Storage::disk('public')->assertExists('users/avatars/' . $user->id . '/new-avatar.jpg');
     }
 
     public function test_profile_avatar_update_rejects_non_image_files(): void
     {
         config([
-            'filesystems.domain_disks.users' => 'public',
+            'services.supabase.storage.domain_buckets.users' => 'TablaUsers',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
             'filesystems.domain_prefixes.users' => 'users/avatars',
         ]);
         Storage::fake('public');

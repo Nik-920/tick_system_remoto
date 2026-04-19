@@ -6,7 +6,6 @@ use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 
 class TicketMediaStorageService
 {
@@ -19,19 +18,30 @@ class TicketMediaStorageService
      */
     public function storeManyForTicket(Ticket $ticket, User $uploadedBy, array $files): void
     {
+        $nameCounts = [];
+
         foreach ($files as $file) {
             if (! $file instanceof UploadedFile) {
                 continue;
             }
 
-            $this->storeForTicket($ticket, $uploadedBy, $file);
+            $this->storeForTicketInternal($ticket, $uploadedBy, $file, $nameCounts);
         }
     }
 
     public function storeForTicket(Ticket $ticket, User $uploadedBy, UploadedFile $file): TicketMedia
     {
-        $extension = $this->safeExtension($file->getClientOriginalExtension());
-        $fileName = (string) Str::uuid() . '.' . $extension;
+        $nameCounts = [];
+
+        return $this->storeForTicketInternal($ticket, $uploadedBy, $file, $nameCounts);
+    }
+
+    /**
+     * @param array<string, int> $nameCounts
+     */
+    private function storeForTicketInternal(Ticket $ticket, User $uploadedBy, UploadedFile $file, array &$nameCounts): TicketMedia
+    {
+        $fileName = $this->resolveFileName($file, $nameCounts);
 
         $fileUrl = $this->domainStorage->storeUploadedFile(
             'tickets',
@@ -48,12 +58,35 @@ class TicketMediaStorageService
         ]);
     }
 
+    /**
+     * @param array<string, int> $nameCounts
+     */
+    private function resolveFileName(UploadedFile $file, array &$nameCounts): string
+    {
+        $baseFileName = SanitizedFileName::fromUploadedFile($file, 'ticket-media', 'bin');
+        $key = strtolower($baseFileName);
+        $seenCount = $nameCounts[$key] ?? 0;
+        $nameCounts[$key] = $seenCount + 1;
+
+        if ($seenCount === 0) {
+            return $baseFileName;
+        }
+
+        $namePart = (string) pathinfo($baseFileName, PATHINFO_FILENAME);
+        $extensionPart = (string) pathinfo($baseFileName, PATHINFO_EXTENSION);
+        $suffixedName = $namePart . '-' . $seenCount;
+
+        return $extensionPart === ''
+            ? $suffixedName
+            : $suffixedName . '.' . $extensionPart;
+    }
+
     private function pathPrefixForTicket(Ticket $ticket): string
     {
         $basePrefix = $this->domainStorage->pathPrefix('tickets');
 
         return $basePrefix === ''
-            ? $ticket->id
+            ? (string) $ticket->id
             : $basePrefix . '/' . $ticket->id;
     }
 
@@ -86,16 +119,5 @@ class TicketMediaStorageService
         }
 
         return 'other';
-    }
-
-    private function safeExtension(?string $extension): string
-    {
-        $normalized = strtolower(trim((string) $extension));
-
-        if ($normalized === '') {
-            return 'bin';
-        }
-
-        return preg_replace('/[^a-z0-9]+/', '', $normalized) ?: 'bin';
     }
 }

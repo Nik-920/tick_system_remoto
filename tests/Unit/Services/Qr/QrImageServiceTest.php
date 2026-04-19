@@ -16,7 +16,9 @@ class QrImageServiceTest extends TestCase
     public function test_generate_and_store_uses_locations_domain_storage(): void
     {
         config([
-            'filesystems.domain_disks.locations' => 'public',
+            'services.supabase.storage.domain_buckets.locations' => 'TablaLocations',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
             'filesystems.domain_prefixes.locations' => 'locations/qr-codes',
         ]);
         Storage::fake('public');
@@ -57,7 +59,7 @@ class QrImageServiceTest extends TestCase
         $url = $service->generateAndStore($location);
 
         $expectedPath = 'locations/qr-codes/' . $location->id . '.png';
-        $this->assertStringContainsString('/storage/' . $expectedPath, $url);
+        $this->assertStringContainsString('/storage/v1/object/public/TablaLocations/' . $expectedPath, $url);
         Storage::disk('public')->assertExists($expectedPath);
     }
 }
