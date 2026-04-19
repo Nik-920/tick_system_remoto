@@ -24,7 +24,8 @@ class StoreCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')],
-            'icon' => ['nullable', 'string', 'max:100'],
+            'icon' => ['nullable', 'string', 'max:255'],
+            'icon_file' => ['nullable', 'file', 'image', 'max:2048'],
             'description' => ['nullable', 'string', 'max:1000'],
         ];
     }

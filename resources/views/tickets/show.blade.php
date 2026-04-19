@@ -41,6 +41,32 @@
         </section>
 
         <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
+            <h3 class="text-lg font-semibold">Adjuntos</h3>
+            <div class="space-y-3">
+                @forelse ($ticket->media as $media)
+                    <article class="border border-slate-200 rounded-md p-3 text-sm space-y-2">
+                        <p>
+                            <strong>Tipo:</strong> {{ $media->file_type }}
+                            <span class="text-slate-500">| {{ $media->created_at?->format('d/m/Y H:i') }}</span>
+                        </p>
+
+                        @if ($media->file_type === 'image')
+                            <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer" class="inline-block">
+                                <img src="{{ $media->file_url }}" alt="Adjunto del ticket" class="max-h-52 rounded border border-slate-200">
+                            </a>
+                        @else
+                            <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline">
+                                Ver archivo adjunto
+                            </a>
+                        @endif
+                    </article>
+                @empty
+                    <p class="text-slate-600">No hay adjuntos para este ticket.</p>
+                @endforelse
+            </div>
+        </section>
+
+        <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
             <h3 class="text-lg font-semibold">Actualizar estado</h3>
             <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="space-y-3">
                 @csrf

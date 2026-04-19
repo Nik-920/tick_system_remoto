@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+        'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY'),
+        'role_sync_enabled' => (bool) env('SUPABASE_ROLE_SYNC_ENABLED', false),
+        'timeout' => (int) env('SUPABASE_TIMEOUT', 10),
+        'auth_admin_users_endpoint' => env('SUPABASE_AUTH_ADMIN_USERS_ENDPOINT', '/auth/v1/admin/users'),
+    ],
+
 ];
