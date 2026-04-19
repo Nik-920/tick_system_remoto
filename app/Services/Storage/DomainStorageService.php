@@ -3,37 +3,30 @@
 namespace App\Services\Storage;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
 
 class DomainStorageService
 {
+    public function __construct(private SupabaseStorageClient $storageClient)
+    {
+    }
+
     public function storeUploadedFile(
         string $domain,
         UploadedFile $file,
         string $pathPrefix,
         string $fileName,
     ): string {
-        $diskName = $this->diskName($domain);
-        $disk = Storage::disk($diskName);
+        $bucketName = $this->bucketName($domain);
         $normalizedPrefix = trim($pathPrefix, '/');
         $normalizedPath = $normalizedPrefix === ''
             ? $fileName
             : $normalizedPrefix . '/' . $fileName;
 
-        $storedPath = $disk->putFileAs(
-            $normalizedPrefix,
-            $file,
-            $fileName,
-            ['visibility' => 'public']
-        );
+        $this->storageClient->uploadUploadedFile($bucketName, $normalizedPath, $file);
 
-        if (! is_string($storedPath) || $storedPath === '') {
-            throw new RuntimeException('No fue posible almacenar el archivo en el disco configurado.');
-        }
-
-        return $this->publicUrlForPath($diskName, $normalizedPath);
+        return $this->storageClient->publicUrl($bucketName, $normalizedPath);
     }
 
     public function storeContents(
@@ -42,20 +35,15 @@ class DomainStorageService
         string $fileName,
         string $contents,
     ): string {
-        $diskName = $this->diskName($domain);
-        $disk = Storage::disk($diskName);
+        $bucketName = $this->bucketName($domain);
         $normalizedPrefix = trim($pathPrefix, '/');
         $normalizedPath = $normalizedPrefix === ''
             ? $fileName
             : $normalizedPrefix . '/' . $fileName;
 
-        $stored = $disk->put($normalizedPath, $contents, ['visibility' => 'public']);
+        $this->storageClient->uploadContents($bucketName, $normalizedPath, $contents, 'application/octet-stream');
 
-        if ($stored === false) {
-            throw new RuntimeException('No fue posible almacenar el contenido en el disco configurado.');
-        }
-
-        return $this->publicUrlForPath($diskName, $normalizedPath);
+        return $this->storageClient->publicUrl($bucketName, $normalizedPath);
     }
 
     public function replaceUploadedFile(
@@ -65,10 +53,10 @@ class DomainStorageService
         string $pathPrefix,
         string $fileName,
     ): string {
-        $diskName = $this->diskName($domain);
+        $bucketName = $this->bucketName($domain);
         $newUrl = $this->storeUploadedFile($domain, $file, $pathPrefix, $fileName);
 
-        $this->deletePreviousIfDifferentPath($diskName, $previousUrl, $newUrl);
+        $this->deletePreviousIfDifferentPath($bucketName, $previousUrl, $newUrl);
 
         return $newUrl;
     }
@@ -80,10 +68,10 @@ class DomainStorageService
         string $fileName,
         string $contents,
     ): string {
-        $diskName = $this->diskName($domain);
+        $bucketName = $this->bucketName($domain);
         $newUrl = $this->storeContents($domain, $pathPrefix, $fileName, $contents);
 
-        $this->deletePreviousIfDifferentPath($diskName, $previousUrl, $newUrl);
+        $this->deletePreviousIfDifferentPath($bucketName, $previousUrl, $newUrl);
 
         return $newUrl;
     }
@@ -94,22 +82,23 @@ class DomainStorageService
             return;
         }
 
-        $diskName = $this->diskName($domain);
-        $relativePath = $this->relativePathFromUrl($diskName, $url);
+        $bucketName = $this->bucketName($domain);
+        $relativePath = $this->relativePathFromUrl($bucketName, $url);
 
         if (! is_string($relativePath) || $relativePath === '') {
             return;
         }
 
-        $disk = Storage::disk($diskName);
-        if ($disk->exists($relativePath)) {
-            $disk->delete($relativePath);
-        }
+        $this->storageClient->deleteObject($bucketName, $relativePath);
     }
 
     public function pathPrefix(string $domain): string
     {
-        $prefix = config('filesystems.domain_prefixes.' . $domain);
+        $prefix = config('services.supabase.storage.domain_prefixes.' . $domain);
+
+        if (! is_string($prefix) || trim($prefix) === '') {
+            $prefix = config('filesystems.domain_prefixes.' . $domain);
+        }
 
         if (! is_string($prefix)) {
             throw new InvalidArgumentException('No existe prefijo configurado para el dominio de storage: ' . $domain);
@@ -118,100 +107,34 @@ class DomainStorageService
         return trim($prefix, '/');
     }
 
-    public function diskName(string $domain): string
+    public function bucketName(string $domain): string
     {
-        $diskName = config('filesystems.domain_disks.' . $domain);
+        $bucketName = config('services.supabase.storage.domain_buckets.' . $domain);
 
-        if (! is_string($diskName) || trim($diskName) === '') {
-            throw new InvalidArgumentException('No existe disco configurado para el dominio de storage: ' . $domain);
+        if (! is_string($bucketName) || trim($bucketName) === '') {
+            throw new InvalidArgumentException('No existe bucket configurado para el dominio de storage: ' . $domain);
         }
 
-        return trim($diskName);
+        return trim($bucketName);
     }
 
-    private function publicUrlForPath(string $diskName, string $normalizedPath): string
+    private function deletePreviousIfDifferentPath(string $bucketName, ?string $previousUrl, string $newUrl): void
     {
-        $configuredDiskUrl = trim((string) config('filesystems.disks.' . $diskName . '.url'));
-        if ($configuredDiskUrl !== '') {
-            return rtrim($configuredDiskUrl, '/') . '/' . ltrim($normalizedPath, '/');
-        }
-
-        $driver = (string) config('filesystems.disks.' . $diskName . '.driver');
-        if ($driver === 's3') {
-            $bucket = trim((string) config('filesystems.disks.' . $diskName . '.bucket'), '/');
-            $endpoint = trim((string) config('filesystems.disks.' . $diskName . '.endpoint'));
-            $supabaseBaseUrl = $this->supabaseBaseUrlFromS3Endpoint($endpoint);
-
-            if ($supabaseBaseUrl !== null && $bucket !== '') {
-                return $supabaseBaseUrl
-                    . '/storage/v1/object/public/'
-                    . $bucket
-                    . '/'
-                    . ltrim($normalizedPath, '/');
-            }
-        }
-
-        return Storage::disk($diskName)->url($normalizedPath);
-    }
-
-    private function supabaseBaseUrlFromS3Endpoint(string $endpoint): ?string
-    {
-        if ($endpoint === '') {
-            return null;
-        }
-
-        $parts = parse_url($endpoint);
-        if (! is_array($parts)) {
-            return null;
-        }
-
-        $scheme = $parts['scheme'] ?? null;
-        $host = $parts['host'] ?? null;
-        $path = $parts['path'] ?? '';
-
-        if (! is_string($scheme) || ! is_string($host) || ! is_string($path)) {
-            return null;
-        }
-
-        if (! str_ends_with($host, '.storage.supabase.co')) {
-            return null;
-        }
-
-        if (! str_starts_with($path, '/storage/v1/s3')) {
-            return null;
-        }
-
-        $baseHost = substr($host, 0, -strlen('.storage.supabase.co')) . '.supabase.co';
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
-
-        return $scheme . '://' . $baseHost . $port;
-    }
-
-    private function deletePreviousIfDifferentPath(string $diskName, ?string $previousUrl, string $newUrl): void
-    {
-        $previousPath = $this->relativePathFromUrl($diskName, (string) $previousUrl);
-        $newPath = $this->relativePathFromUrl($diskName, $newUrl);
+        $previousPath = $this->relativePathFromUrl($bucketName, (string) $previousUrl);
+        $newPath = $this->relativePathFromUrl($bucketName, $newUrl);
 
         if (
             is_string($previousPath)
             && $previousPath !== ''
             && $previousPath !== $newPath
         ) {
-            $disk = Storage::disk($diskName);
-            if ($disk->exists($previousPath)) {
-                $disk->delete($previousPath);
-            }
+            $this->storageClient->deleteObject($bucketName, $previousPath);
         }
     }
 
-    private function relativePathFromUrl(string $diskName, string $url): ?string
+    private function relativePathFromUrl(string $bucketName, string $url): ?string
     {
         $normalizedUrl = trim($url);
-        $configuredDiskUrl = rtrim((string) config('filesystems.disks.' . $diskName . '.url'), '/');
-
-        if ($configuredDiskUrl !== '' && str_starts_with($normalizedUrl, $configuredDiskUrl . '/')) {
-            return ltrim(substr($normalizedUrl, strlen($configuredDiskUrl)), '/');
-        }
 
         $parsedPath = parse_url($normalizedUrl, PHP_URL_PATH);
         if (! is_string($parsedPath) || trim($parsedPath) === '') {
@@ -223,20 +146,38 @@ class DomainStorageService
             return null;
         }
 
+        if (str_starts_with($normalizedPath, 'storage/v1/object/public/')) {
+            $bucketAndPath = substr($normalizedPath, strlen('storage/v1/object/public/'));
+            if (! is_string($bucketAndPath) || trim($bucketAndPath) === '') {
+                return null;
+            }
+
+            $parts = explode('/', $bucketAndPath, 2);
+            $encodedBucket = $parts[0] ?? '';
+            $encodedObjectPath = $parts[1] ?? '';
+
+            if (rawurldecode($encodedBucket) !== $bucketName || trim($encodedObjectPath) === '') {
+                return null;
+            }
+
+            return $this->decodePathSegments($encodedObjectPath);
+        }
+
         if (str_starts_with($normalizedPath, 'storage/')) {
             return substr($normalizedPath, strlen('storage/'));
         }
 
-        if (str_contains($normalizedPath, 'object/public/')) {
-            $parts = explode('object/public/', $normalizedPath, 2);
-            $bucketAndPath = $parts[1] ?? '';
-            $bucket = trim((string) config('filesystems.disks.' . $diskName . '.bucket'), '/');
+        return null;
+    }
 
-            if ($bucket !== '' && str_starts_with($bucketAndPath, $bucket . '/')) {
-                return substr($bucketAndPath, strlen($bucket) + 1);
-            }
+    private function decodePathSegments(string $path): string
+    {
+        $segments = array_values(array_filter(explode('/', trim($path, '/')), static fn (string $part): bool => $part !== ''));
+
+        if ($segments === []) {
+            return '';
         }
 
-        return null;
+        return implode('/', array_map('rawurldecode', $segments));
     }
 }

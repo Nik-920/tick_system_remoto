@@ -11,10 +11,14 @@ class DomainStorageServiceTest extends TestCase
 {
     public function test_store_uploaded_file_uses_domain_disk_and_prefix(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         $url = $service->storeUploadedFile(
             'categories',
@@ -23,19 +27,26 @@ class DomainStorageServiceTest extends TestCase
             'category-a.png'
         );
 
-        $this->assertStringContainsString('/storage/categories/icons/category-a.png', $url);
+        $this->assertStringContainsString(
+            '/storage/v1/object/public/TicketCategoria/categories/icons/category-a.png',
+            $url
+        );
         Storage::disk('public')->assertExists('categories/icons/category-a.png');
     }
 
     public function test_replace_uploaded_file_deletes_previous_when_paths_differ(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         Storage::disk('public')->put('categories/icons/old.png', 'old');
-        $previousUrl = Storage::disk('public')->url('categories/icons/old.png');
+        $previousUrl = $this->supabasePublicUrl('TicketCategoria', 'categories/icons/old.png');
 
         $newUrl = $service->replaceUploadedFile(
             'categories',
@@ -45,20 +56,27 @@ class DomainStorageServiceTest extends TestCase
             'new.png'
         );
 
-        $this->assertStringContainsString('/storage/categories/icons/new.png', $newUrl);
+        $this->assertStringContainsString(
+            '/storage/v1/object/public/TicketCategoria/categories/icons/new.png',
+            $newUrl
+        );
         Storage::disk('public')->assertMissing('categories/icons/old.png');
         Storage::disk('public')->assertExists('categories/icons/new.png');
     }
 
     public function test_replace_uploaded_file_keeps_file_when_previous_points_to_same_path(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         Storage::disk('public')->put('categories/icons/same.png', 'old');
-        $previousUrl = Storage::disk('public')->url('categories/icons/same.png');
+        $previousUrl = $this->supabasePublicUrl('TicketCategoria', 'categories/icons/same.png');
 
         $newUrl = $service->replaceUploadedFile(
             'categories',
@@ -68,16 +86,23 @@ class DomainStorageServiceTest extends TestCase
             'same.png'
         );
 
-        $this->assertStringContainsString('/storage/categories/icons/same.png', $newUrl);
+        $this->assertStringContainsString(
+            '/storage/v1/object/public/TicketCategoria/categories/icons/same.png',
+            $newUrl
+        );
         Storage::disk('public')->assertExists('categories/icons/same.png');
     }
 
     public function test_delete_managed_url_ignores_external_urls(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         Storage::disk('public')->put('categories/icons/keep.png', 'keep');
 
@@ -88,10 +113,14 @@ class DomainStorageServiceTest extends TestCase
 
     public function test_store_contents_uses_domain_disk_and_prefix(): void
     {
-        config(['filesystems.domain_disks.locations' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.locations' => 'TablaLocations',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         $url = $service->storeContents(
             'locations',
@@ -100,19 +129,26 @@ class DomainStorageServiceTest extends TestCase
             'png-binary-content'
         );
 
-        $this->assertStringContainsString('/storage/locations/qr-codes/room-a.png', $url);
+        $this->assertStringContainsString(
+            '/storage/v1/object/public/TablaLocations/locations/qr-codes/room-a.png',
+            $url
+        );
         Storage::disk('public')->assertExists('locations/qr-codes/room-a.png');
     }
 
     public function test_replace_contents_deletes_previous_when_paths_differ(): void
     {
-        config(['filesystems.domain_disks.locations' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.locations' => 'TablaLocations',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
-        $service = new DomainStorageService();
+        $service = app(DomainStorageService::class);
 
         Storage::disk('public')->put('locations/qr-codes/old.png', 'old-content');
-        $previousUrl = Storage::disk('public')->url('locations/qr-codes/old.png');
+        $previousUrl = $this->supabasePublicUrl('TablaLocations', 'locations/qr-codes/old.png');
 
         $newUrl = $service->replaceContents(
             'locations',
@@ -122,8 +158,19 @@ class DomainStorageServiceTest extends TestCase
             'new-content'
         );
 
-        $this->assertStringContainsString('/storage/locations/qr-codes/new.png', $newUrl);
+        $this->assertStringContainsString(
+            '/storage/v1/object/public/TablaLocations/locations/qr-codes/new.png',
+            $newUrl
+        );
         Storage::disk('public')->assertMissing('locations/qr-codes/old.png');
         Storage::disk('public')->assertExists('locations/qr-codes/new.png');
+    }
+
+    private function supabasePublicUrl(string $bucket, string $path): string
+    {
+        $segments = array_values(array_filter(explode('/', trim($path, '/')), static fn (string $part): bool => $part !== ''));
+        $encodedPath = implode('/', array_map('rawurlencode', $segments));
+
+        return '/storage/v1/object/public/' . rawurlencode($bucket) . '/' . $encodedPath;
     }
 }

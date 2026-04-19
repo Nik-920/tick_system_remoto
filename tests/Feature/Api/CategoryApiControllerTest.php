@@ -67,7 +67,11 @@ class CategoryApiControllerTest extends TestCase
 
     public function test_admin_can_store_category_with_icon_file_upload(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
         $admin = $this->createUserWithRole('admin');
@@ -84,7 +88,7 @@ class CategoryApiControllerTest extends TestCase
         $response->assertCreated();
 
         $iconUrl = (string) $response->json('data.icon');
-        $this->assertStringContainsString('/storage/categories/icons/', $iconUrl);
+        $this->assertStringContainsString('/storage/v1/object/public/TicketCategoria/categories/icons/', $iconUrl);
 
         $relativePath = $this->relativeStoragePath($iconUrl);
         $this->assertNotNull($relativePath);
@@ -132,7 +136,11 @@ class CategoryApiControllerTest extends TestCase
 
     public function test_super_admin_can_update_category_icon_with_file_upload(): void
     {
-        config(['filesystems.domain_disks.categories' => 'public']);
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
         Storage::fake('public');
 
         $superAdmin = $this->createUserWithRole('super_admin');
@@ -149,7 +157,7 @@ class CategoryApiControllerTest extends TestCase
         $response->assertOk();
 
         $iconUrl = (string) $response->json('data.icon');
-        $this->assertStringContainsString('/storage/categories/icons/', $iconUrl);
+        $this->assertStringContainsString('/storage/v1/object/public/TicketCategoria/categories/icons/', $iconUrl);
 
         $relativePath = $this->relativeStoragePath($iconUrl);
         $this->assertNotNull($relativePath);
@@ -224,6 +232,22 @@ class CategoryApiControllerTest extends TestCase
         }
 
         $normalizedPath = ltrim($path, '/');
+        if (str_starts_with($normalizedPath, 'storage/v1/object/public/')) {
+            $bucketAndPath = substr($normalizedPath, strlen('storage/v1/object/public/'));
+            if (! is_string($bucketAndPath) || trim($bucketAndPath) === '') {
+                return null;
+            }
+
+            $parts = explode('/', $bucketAndPath, 2);
+            if (! isset($parts[1]) || trim($parts[1]) === '') {
+                return null;
+            }
+
+            $segments = array_values(array_filter(explode('/', trim($parts[1], '/')), static fn (string $part): bool => $part !== ''));
+
+            return implode('/', array_map('rawurldecode', $segments));
+        }
+
         if (! str_starts_with($normalizedPath, 'storage/')) {
             return null;
         }

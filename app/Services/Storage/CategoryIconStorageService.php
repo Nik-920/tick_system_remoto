@@ -16,33 +16,18 @@ class CategoryIconStorageService
 
     public function replaceIcon(Category $category, UploadedFile $file, ?string $previousIcon): string
     {
-        $extension = $this->safeExtension($file);
-        $fileName = $category->id . '.' . $extension;
+        $basePrefix = $this->domainStorage->pathPrefix(self::DOMAIN);
+        $pathPrefix = $basePrefix === ''
+            ? (string) $category->id
+            : $basePrefix . '/' . $category->id;
+        $fileName = SanitizedFileName::fromUploadedFile($file, 'category-icon', 'png');
 
         return $this->domainStorage->replaceUploadedFile(
             self::DOMAIN,
             $previousIcon,
             $file,
-            $this->domainStorage->pathPrefix(self::DOMAIN),
+            $pathPrefix,
             $fileName,
         );
-    }
-
-    private function safeExtension(UploadedFile $file): string
-    {
-        $extension = $file->getClientOriginalExtension();
-        if (! is_string($extension) || $extension === '') {
-            $extension = $file->extension();
-        }
-
-        if (! is_string($extension) || $extension === '') {
-            return 'png';
-        }
-
-        $sanitized = preg_replace('/[^a-z0-9]/', '', strtolower($extension));
-
-        return is_string($sanitized) && $sanitized !== ''
-            ? $sanitized
-            : 'png';
     }
 }
