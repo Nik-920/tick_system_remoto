@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Policies\CategoryPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\TicketPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Ticket::class, TicketPolicy::class);
         Gate::policy(Location::class, LocationPolicy::class);
         Gate::policy(Category::class, CategoryPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
 
         $this->guardAgainstSqliteFallbackInProtectedEnvironments();
     }
