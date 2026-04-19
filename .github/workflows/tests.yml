@@ -36,6 +36,8 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          APP_ENV: testing
 
       - name: Copy environment file
         run: cp .env.example .env
