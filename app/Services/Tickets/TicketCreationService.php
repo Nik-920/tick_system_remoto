@@ -8,6 +8,8 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Observability\TicketQrLogger;
+use App\Services\Storage\TicketMediaStorageService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,15 +19,22 @@ class TicketCreationService
     public function __construct(
         private DeduplicationService $deduplication,
         private TicketQrLogger $logger,
+        private TicketMediaStorageService $ticketMediaStorage,
     )
     {
     }
 
     /**
      * @param array<string, mixed> $payload
+     * @param array<int, UploadedFile> $mediaFiles
      * @return array{created: bool, ticket: Ticket, reason: string|null}
      */
-    public function create(User $reporter, array $payload, string $correlationId = ''): array
+    public function create(
+        User $reporter,
+        array $payload,
+        array $mediaFiles = [],
+        string $correlationId = ''
+    ): array
     {
         $correlationId = $this->resolveCorrelationId($correlationId);
 
@@ -47,7 +56,7 @@ class TicketCreationService
             ];
         }
 
-        $ticket = DB::transaction(function () use ($reporter, $payload, $correlationId): Ticket {
+        $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles, $correlationId): Ticket {
             $ticket = Ticket::create([
                 'title' => (string) $payload['title'],
                 'description' => (string) $payload['description'],
@@ -66,6 +75,8 @@ class TicketCreationService
                 'changed_by' => $reporter->id,
                 'comment' => 'Ticket creado',
             ]);
+
+            $this->ticketMediaStorage->storeManyForTicket($ticket, $reporter, $mediaFiles);
 
             event(new TicketCreated($ticket, $correlationId));
 

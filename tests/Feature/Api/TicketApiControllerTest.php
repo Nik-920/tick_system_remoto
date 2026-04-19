@@ -10,7 +10,9 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -77,6 +79,54 @@ class TicketApiControllerTest extends TestCase
             'title' => 'Incidencia creada via API',
             'reporter_id' => $user->id,
         ]);
+    }
+
+    public function test_api_store_can_persist_ticket_media_files(): void
+    {
+        config([
+            'filesystems.domain_disks.tickets' => 'public',
+            'filesystems.domain_prefixes.tickets' => 'tickets/media',
+        ]);
+        Storage::fake('public');
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $response = $this
+            ->withHeader('Accept', 'application/json')
+            ->post(route('api.tickets.store'), [
+                'title' => 'Ticket con adjuntos API',
+                'description' => 'Descripcion suficientemente larga para crear ticket con evidencias adjuntas.',
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'priority' => 'high',
+                'media_files' => [
+                    UploadedFile::fake()->image('evidencia.jpg', 120, 120),
+                    UploadedFile::fake()->create('reporte.pdf', 300, 'application/pdf'),
+                ],
+            ]);
+
+        $response->assertCreated();
+        $response->assertJsonCount(2, 'data.media');
+
+        $ticketId = (string) $response->json('data.id');
+        $this->assertDatabaseCount('ticket_media', 2);
+        $this->assertDatabaseHas('ticket_media', [
+            'ticket_id' => $ticketId,
+            'uploaded_by' => $user->id,
+            'file_type' => 'image',
+        ]);
+        $this->assertDatabaseHas('ticket_media', [
+            'ticket_id' => $ticketId,
+            'uploaded_by' => $user->id,
+            'file_type' => 'document',
+        ]);
+
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticketId);
+        $this->assertCount(2, $storedFiles);
     }
 
     public function test_api_store_detects_duplicate_ticket_in_window(): void

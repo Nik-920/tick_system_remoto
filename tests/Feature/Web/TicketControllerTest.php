@@ -7,6 +7,8 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -77,6 +79,51 @@ class TicketControllerTest extends TestCase
             'reporter_id' => $user->id,
             'state' => 'open',
         ]);
+    }
+
+    public function test_authenticated_user_can_create_ticket_with_media_from_web_form(): void
+    {
+        config([
+            'filesystems.domain_disks.tickets' => 'public',
+            'filesystems.domain_prefixes.tickets' => 'tickets/media',
+        ]);
+        Storage::fake('public');
+
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('tickets.store'), [
+                'title' => 'Ticket Web con adjuntos',
+                'description' => 'Descripcion valida y suficientemente extensa para crear ticket con adjuntos desde web.',
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'priority' => 'high',
+                'media_files' => [
+                    UploadedFile::fake()->image('evidencia.png', 120, 120),
+                    UploadedFile::fake()->create('acta.pdf', 200, 'application/pdf'),
+                ],
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Ticket creado correctamente.');
+
+        $ticket = Ticket::query()->where('title', 'Ticket Web con adjuntos')->firstOrFail();
+        $this->assertDatabaseHas('ticket_media', [
+            'ticket_id' => $ticket->id,
+            'uploaded_by' => $user->id,
+            'file_type' => 'image',
+        ]);
+        $this->assertDatabaseHas('ticket_media', [
+            'ticket_id' => $ticket->id,
+            'uploaded_by' => $user->id,
+            'file_type' => 'document',
+        ]);
+
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticket->id);
+        $this->assertCount(2, $storedFiles);
     }
 
     public function test_maintenance_can_change_ticket_state_from_open_to_in_progress(): void

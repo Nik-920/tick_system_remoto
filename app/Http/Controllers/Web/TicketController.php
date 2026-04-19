@@ -68,7 +68,11 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
-        $result = $creationService->create($request->user(), $request->validated());
+        $result = $creationService->create(
+            $request->user(),
+            $request->validated(),
+            $request->file('media_files', [])
+        );
         $ticket = $result['ticket'];
 
         if (! $result['created']) {
@@ -91,6 +95,7 @@ class TicketController extends Controller
             'assignee',
             'location',
             'category',
+            'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
         ]);
 

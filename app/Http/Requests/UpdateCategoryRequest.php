@@ -31,7 +31,8 @@ class UpdateCategoryRequest extends FormRequest
                 'max:255',
                 Rule::unique('categories', 'name')->ignore($this->categoryId()),
             ],
-            'icon' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'icon' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'icon_file' => ['sometimes', 'nullable', 'file', 'image', 'max:2048'],
             'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ];
     }

@@ -80,6 +80,15 @@ class TicketResource extends JsonResource
                     'created_at' => $entry->created_at?->toIso8601String(),
                 ];
             })->values()->all()),
+            'media' => $this->whenLoaded('media', fn () => $this->media->map(function ($media): array {
+                return [
+                    'id' => $media->id,
+                    'file_url' => $media->file_url,
+                    'file_type' => $media->file_type,
+                    'uploaded_by' => $media->uploaded_by,
+                    'created_at' => $media->created_at?->toIso8601String(),
+                ];
+            })->values()->all()),
         ];
     }
 }
