@@ -1,0 +1,223 @@
+{
+  "labels": [
+    {"name": "priority:P0", "color": "B60205", "description": "Bloqueante para cierre o riesgo critico"},
+    {"name": "priority:P1", "color": "D93F0B", "description": "Alta prioridad no bloqueante inmediata"},
+    {"name": "priority:P2", "color": "FBCA04", "description": "Mejora incremental"},
+
+    {"name": "phase:F0", "color": "0052CC", "description": "Fase 0 - Baseline"},
+    {"name": "phase:F1", "color": "0E8A16", "description": "Fase 1 - Seguridad y observabilidad"},
+    {"name": "phase:F2", "color": "1D76DB", "description": "Fase 2 - Comunicacion y notificaciones"},
+    {"name": "phase:F3", "color": "5319E7", "description": "Fase 3 - Robustez de dominio"},
+    {"name": "phase:F4", "color": "C2E0C6", "description": "Fase 4 - Testing y cobertura"},
+    {"name": "phase:F5", "color": "006B75", "description": "Fase 5 - CI/CD y release"},
+    {"name": "phase:F6", "color": "BFDADC", "description": "Fase 6 - Documentacion final"},
+    {"name": "phase:F7", "color": "F9D0C4", "description": "Fase 7 - Go-live y estabilizacion"},
+
+    {"name": "type:epic", "color": "5319E7", "description": "Epic de trabajo"},
+    {"name": "type:task", "color": "0E8A16", "description": "Tarea tecnica"},
+    {"name": "type:bug", "color": "D73A4A", "description": "Defecto"},
+    {"name": "type:chore", "color": "C5DEF5", "description": "Mantenimiento o soporte"},
+
+    {"name": "area:security", "color": "D4C5F9", "description": "Seguridad y autorizacion"},
+    {"name": "area:observability", "color": "BFD4F2", "description": "Logging, monitoreo y alertas"},
+    {"name": "area:notifications", "color": "F9D0C4", "description": "Comunicacion de eventos"},
+    {"name": "area:testing", "color": "C2E0C6", "description": "Pruebas y cobertura"},
+    {"name": "area:cicd", "color": "006B75", "description": "Pipeline y despliegue"},
+    {"name": "area:docs", "color": "FBCA04", "description": "Documentacion tecnica u operativa"},
+    {"name": "area:product", "color": "E4E669", "description": "Mejoras funcionales no criticas"}
+  ],
+  "issues": [
+    {
+      "id": "P0-01",
+      "title": "[P0][F1][area:security] Health endpoint y chequeos operativos",
+      "summary": "Implementar endpoint de salud para app, DB y queue, incluyendo respuesta estandar para estado ok y degradado.",
+      "acceptance": [
+        "Endpoint de salud disponible y documentado",
+        "Chequeos de DB y queue incluidos",
+        "Respuesta diferenciada para estado normal y degradado"
+      ],
+      "verification": [
+        "php artisan test",
+        "Validacion manual del endpoint en entorno local"
+      ],
+      "dependencies": ["Fase 0 completada"],
+      "labels": ["priority:P0", "phase:F1", "type:task", "area:security"]
+    },
+    {
+      "id": "P0-02",
+      "title": "[P0][F1][area:observability] Observabilidad minima logging y error tracking",
+      "summary": "Estandarizar logs estructurados y habilitar seguimiento centralizado de errores para API y jobs criticos.",
+      "acceptance": [
+        "Formato de log estructurado definido para eventos criticos",
+        "Errores severos visibles en canal centralizado",
+        "Fallas de jobs QR y IA trazables"
+      ],
+      "verification": [
+        "php artisan test",
+        "Prueba manual de error controlado con evidencia de captura"
+      ],
+      "dependencies": ["P0-01"],
+      "labels": ["priority:P0", "phase:F1", "type:task", "area:observability"]
+    },
+    {
+      "id": "P0-03",
+      "title": "[P0][F6][area:docs] Documentacion API formal",
+      "summary": "Publicar contrato API formal con endpoints, payloads, errores y ejemplos para consumidores internos y externos.",
+      "acceptance": [
+        "Endpoints activos documentados",
+        "Ejemplos request/response incluidos",
+        "Errores y codigos de estado documentados"
+      ],
+      "verification": [
+        "Revision cruzada de documentacion",
+        "Validacion de ejemplos contra endpoints reales"
+      ],
+      "dependencies": ["Fase 1 completada"],
+      "labels": ["priority:P0", "phase:F6", "type:task", "area:docs"]
+    },
+    {
+      "id": "P0-04",
+      "title": "[P0][F2][area:notifications] Notificaciones de eventos criticos de tickets",
+      "summary": "Implementar notificaciones para creacion, cambio de estado y duplicado detectado con tolerancia a fallos.",
+      "acceptance": [
+        "Eventos criticos disparan notificacion verificable",
+        "Flujo no se rompe cuando falla proveedor de notificacion",
+        "Cobertura de pruebas de notificaciones creada"
+      ],
+      "verification": [
+        "Feature tests de notificaciones",
+        "Validacion manual en entorno local o staging"
+      ],
+      "dependencies": ["P0-01", "P0-02"],
+      "labels": ["priority:P0", "phase:F2", "type:task", "area:notifications"]
+    },
+    {
+      "id": "P0-05",
+      "title": "[P0][F3][area:testing] Pruebas de robustez en estados y roles",
+      "summary": "Endurecer reglas de transicion de estado y autorizacion con pruebas para escenarios invalidos y de borde.",
+      "acceptance": [
+        "Transiciones invalidas retornan error controlado",
+        "Escenarios de rol no autorizado cubiertos",
+        "Regresion de reglas de estado validada"
+      ],
+      "verification": [
+        "php artisan test --filter=TicketApiControllerTest",
+        "php artisan test"
+      ],
+      "dependencies": ["P0-04"],
+      "labels": ["priority:P0", "phase:F3", "type:task", "area:testing"]
+    },
+    {
+      "id": "P1-01",
+      "title": "[P1][F4][area:testing] Cobertura unitaria de servicios core",
+      "summary": "Agregar unit tests para servicios core de tickets, QR e IA, priorizando logica de negocio y manejo de errores.",
+      "acceptance": [
+        "Unit tests para TicketCreationService, TicketStateService y QrImageService",
+        "Escenarios de error relevantes cubiertos",
+        "Pruebas estables en CI"
+      ],
+      "verification": [
+        "php artisan test",
+        "Reporte de suites unitarias ejecutadas"
+      ],
+      "dependencies": ["P0-05"],
+      "labels": ["priority:P1", "phase:F4", "type:task", "area:testing"]
+    },
+    {
+      "id": "P1-02",
+      "title": "[P1][F4][area:testing] Pruebas de integracion E2E de flujos criticos",
+      "summary": "Cubrir flujos end-to-end de tickets, QR e IA para reducir riesgo de regresion entre componentes.",
+      "acceptance": [
+        "Flujo ticket completo cubierto",
+        "Flujo QR create/regenerate cubierto",
+        "Flujo IA de deduplicacion y recurrencia cubierto"
+      ],
+      "verification": [
+        "php artisan test",
+        "Evidencia de ejecucion de suites E2E"
+      ],
+      "dependencies": ["P1-01"],
+      "labels": ["priority:P1", "phase:F4", "type:task", "area:testing"]
+    },
+    {
+      "id": "P1-03",
+      "title": "[P1][F5][area:cicd] Pipeline de release y rollback",
+      "summary": "Extender CI a pipeline de release con validaciones, despliegue controlado y estrategia de rollback probada.",
+      "acceptance": [
+        "Pipeline incluye calidad, pruebas y release",
+        "Variables seguras por ambiente definidas",
+        "Rollback documentado y probado"
+      ],
+      "verification": [
+        "Ejecucion de pipeline en rama release",
+        "Simulacro de rollback con evidencia"
+      ],
+      "dependencies": ["P1-02"],
+      "labels": ["priority:P1", "phase:F5", "type:task", "area:cicd"]
+    },
+    {
+      "id": "P1-04",
+      "title": "[P1][F6][area:docs] Runbooks operativos y de contingencia",
+      "summary": "Publicar runbooks para operacion diaria, troubleshooting y recuperacion en fallos de API, queue, QR e IA.",
+      "acceptance": [
+        "Runbook de operacion diaria publicado",
+        "Runbook de incidentes y recovery publicado",
+        "Checklist de pre y post release incluido"
+      ],
+      "verification": [
+        "Revision cruzada de runbooks",
+        "Ejecucion de al menos un escenario de contingencia"
+      ],
+      "dependencies": ["P1-03"],
+      "labels": ["priority:P1", "phase:F6", "type:task", "area:docs"]
+    },
+    {
+      "id": "P2-01",
+      "title": "[P2][F7][area:product] Mejoras no criticas de experiencia",
+      "summary": "Aplicar mejoras no bloqueantes de UX y ergonomia en vistas clave sin alterar el dominio principal.",
+      "acceptance": [
+        "Lista de mejoras UX priorizadas y aplicadas",
+        "No hay regresion funcional en flujos core",
+        "Cambios documentados"
+      ],
+      "verification": [
+        "php artisan test",
+        "Validacion manual de flujos web"
+      ],
+      "dependencies": ["P1-04"],
+      "labels": ["priority:P2", "phase:F7", "type:task", "area:product"]
+    },
+    {
+      "id": "P2-02",
+      "title": "[P2][F7][area:product] Automatizacion adicional de reportes",
+      "summary": "Agregar automatizaciones de reportes no criticos para soporte operativo y analisis periodico.",
+      "acceptance": [
+        "Reporte adicional definido",
+        "Generacion automatizada implementada",
+        "Documentacion de consumo publicada"
+      ],
+      "verification": [
+        "Prueba tecnica de generacion de reporte",
+        "Validacion de contenido con caso real"
+      ],
+      "dependencies": ["P2-01"],
+      "labels": ["priority:P2", "phase:F7", "type:task", "area:product"]
+    },
+    {
+      "id": "P2-03",
+      "title": "[P2][F7][area:product] Optimizacion de performance avanzada",
+      "summary": "Optimizar consultas y procesos no criticos una vez estabilizado el cierre funcional y operativo.",
+      "acceptance": [
+        "Cuellos de botella identificados",
+        "Mejoras de performance aplicadas",
+        "Comparativa antes/despues documentada"
+      ],
+      "verification": [
+        "Mediciones de performance reproducibles",
+        "No hay impacto negativo en estabilidad"
+      ],
+      "dependencies": ["P2-02"],
+      "labels": ["priority:P2", "phase:F7", "type:task", "area:product"]
+    }
+  ]
+}

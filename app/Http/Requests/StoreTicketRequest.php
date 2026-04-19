@@ -29,6 +29,12 @@ class StoreTicketRequest extends FormRequest
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'assigned_to' => ['nullable', 'uuid', 'exists:users,id'],
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
+            'media_files' => ['sometimes', 'array', 'max:5'],
+            'media_files.*' => [
+                'file',
+                'max:10240',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,txt,doc,docx,xls,xlsx,mp4,webm,mov',
+            ],
         ];
     }
 }

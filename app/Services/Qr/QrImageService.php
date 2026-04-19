@@ -3,11 +3,15 @@
 namespace App\Services\Qr;
 
 use App\Models\Location;
-use Illuminate\Support\Facades\Storage;
+use App\Services\Storage\LocationQrStorageService;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class QrImageService
 {
+    public function __construct(private LocationQrStorageService $qrStorageService)
+    {
+    }
+
     public function generateAndStore(Location $location): string
     {
         $scanUrl = route('scan.show', ['token' => $location->qr_token]);
@@ -16,14 +20,6 @@ class QrImageService
             ->margin(1)
             ->generate($scanUrl);
 
-        $path = $this->pathForLocation($location->id);
-        Storage::disk('public')->put($path, $png);
-
-        return Storage::disk('public')->url($path);
-    }
-
-    private function pathForLocation(string $locationId): string
-    {
-        return "qr-codes/{$locationId}.png";
+        return $this->qrStorageService->replaceQrImage($location, $png);
     }
 }

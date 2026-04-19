@@ -12,7 +12,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$builder = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         api: __DIR__.'/../routes/api.php',
         web: __DIR__.'/../routes/web.php',
@@ -75,4 +75,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
             });
         });
-    })->create();
+    });
+
+$app = $builder->create();
+
+// Fall back to a production env file when .env is missing (local or staging setups).
+$fallbackEnvFiles = ['.env.production', '.env.sentry.production'];
+if (! is_file($app->environmentFilePath())) {
+    foreach ($fallbackEnvFiles as $fallbackEnvFile) {
+        $candidate = $app->environmentPath().DIRECTORY_SEPARATOR.$fallbackEnvFile;
+        if (is_file($candidate)) {
+            $app->loadEnvironmentFrom($fallbackEnvFile);
+            break;
+        }
+    }
+}
+
+return $app;

@@ -303,6 +303,10 @@
                     <a href="{{ route('categories.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Categorias</a>
                 @endcan
 
+                @can('viewAny', \App\Models\User::class)
+                    <a href="{{ route('users.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Usuarios</a>
+                @endcan
+
                 <details class="user-menu relative">
                     <summary class="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 text-sm cursor-pointer select-none">
                         <span class="hide-mobile max-w-[120px] truncate">{{ auth()->user()->name }}</span>
@@ -321,6 +325,10 @@
                                 Cerrar sesion
                             </button>
                         </form>
+
+                        <a href="{{ route('profile.edit') }}" class="btn-secondary mt-2 block w-full text-left border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-100">
+                            Perfil de usuario
+                        </a>
                     </div>
                 </details>
             @else

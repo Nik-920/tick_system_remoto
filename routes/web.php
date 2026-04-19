@@ -8,8 +8,10 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\TicketController;
+use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -39,6 +41,13 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->middleware('throttle:5,1')
+        ->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])
+        ->middleware('throttle:5,1')
+        ->name('profile.update-avatar');
 
     Route::get('/scan/{token}', [QrScanController::class, 'show'])
         ->middleware('throttle:20,1')
@@ -77,5 +86,26 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])
             ->middleware('throttle:5,1')
             ->name('categories.update');
+    });
+
+    Route::middleware('role:super_admin')->group(function (): void {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])
+            ->middleware('throttle:5,1')
+            ->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::patch('/users/{user}', [UserController::class, 'update'])
+            ->middleware('throttle:5,1')
+            ->name('users.update');
+        Route::post('/users/{user}/avatar', [UserController::class, 'updateAvatar'])
+            ->middleware('throttle:5,1')
+            ->name('users.update-avatar');
+        Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])
+            ->middleware('throttle:5,1')
+            ->name('users.update-role');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])
+            ->middleware('throttle:5,1')
+            ->name('users.destroy');
     });
 });

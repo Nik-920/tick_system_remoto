@@ -5,6 +5,8 @@ namespace Tests\Feature\Api;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -63,6 +65,41 @@ class CategoryApiControllerTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_store_category_with_icon_file_upload(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $response = $this->post(route('api.categories.store'), [
+            'name' => 'Infraestructura',
+            'description' => 'Incidencias de infraestructura',
+            'icon_file' => UploadedFile::fake()->image('infra.png', 64, 64),
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response->assertCreated();
+
+        $iconUrl = (string) $response->json('data.icon');
+        $this->assertStringContainsString('/storage/v1/object/public/TicketCategoria/categories/icons/', $iconUrl);
+
+        $relativePath = $this->relativeStoragePath($iconUrl);
+        $this->assertNotNull($relativePath);
+        Storage::disk('public')->assertExists($relativePath);
+
+        $this->assertDatabaseHas('categories', [
+            'name' => 'Infraestructura',
+            'icon' => $iconUrl,
+        ]);
+    }
+
     public function test_reporter_cannot_store_category(): void
     {
         $reporter = $this->createUserWithRole('reporter');
@@ -94,6 +131,41 @@ class CategoryApiControllerTest extends TestCase
         $this->assertDatabaseHas('categories', [
             'id' => $category->id,
             'name' => 'Mobiliario y Equipamiento',
+        ]);
+    }
+
+    public function test_super_admin_can_update_category_icon_with_file_upload(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $superAdmin = $this->createUserWithRole('super_admin');
+        Sanctum::actingAs($superAdmin);
+
+        $category = $this->createCategory('Mobiliario');
+
+        $response = $this->patch(route('api.categories.update', $category), [
+            'icon_file' => UploadedFile::fake()->image('updated-icon.png', 64, 64),
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response->assertOk();
+
+        $iconUrl = (string) $response->json('data.icon');
+        $this->assertStringContainsString('/storage/v1/object/public/TicketCategoria/categories/icons/', $iconUrl);
+
+        $relativePath = $this->relativeStoragePath($iconUrl);
+        $this->assertNotNull($relativePath);
+        Storage::disk('public')->assertExists($relativePath);
+
+        $this->assertDatabaseHas('categories', [
+            'id' => $category->id,
+            'icon' => $iconUrl,
         ]);
     }
 
@@ -150,5 +222,36 @@ class CategoryApiControllerTest extends TestCase
             'icon' => 'icon-' . strtolower($name),
             'description' => 'Descripcion de ' . $name,
         ]);
+    }
+
+    private function relativeStoragePath(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path)) {
+            return null;
+        }
+
+        $normalizedPath = ltrim($path, '/');
+        if (str_starts_with($normalizedPath, 'storage/v1/object/public/')) {
+            $bucketAndPath = substr($normalizedPath, strlen('storage/v1/object/public/'));
+            if (! is_string($bucketAndPath) || trim($bucketAndPath) === '') {
+                return null;
+            }
+
+            $parts = explode('/', $bucketAndPath, 2);
+            if (! isset($parts[1]) || trim($parts[1]) === '') {
+                return null;
+            }
+
+            $segments = array_values(array_filter(explode('/', trim($parts[1], '/')), static fn (string $part): bool => $part !== ''));
+
+            return implode('/', array_map('rawurldecode', $segments));
+        }
+
+        if (! str_starts_with($normalizedPath, 'storage/')) {
+            return null;
+        }
+
+        return substr($normalizedPath, strlen('storage/'));
     }
 }

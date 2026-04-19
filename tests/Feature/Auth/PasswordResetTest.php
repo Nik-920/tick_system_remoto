@@ -3,8 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
@@ -36,6 +38,8 @@ class PasswordResetTest extends TestCase
 
     public function test_password_reset_link_can_be_requested_for_existing_email(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create();
 
         $response = $this->from(route('password.request'))->post(route('password.email'), [
@@ -47,10 +51,13 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseHas('password_reset_tokens', [
             'email' => $user->email,
         ]);
+        Notification::assertSentTo($user, ResetPassword::class);
     }
 
     public function test_password_reset_link_returns_generic_message_for_unknown_email(): void
     {
+        Notification::fake();
+
         $response = $this->from(route('password.request'))->post(route('password.email'), [
             'email' => 'no-existe@example.com',
         ]);
@@ -61,6 +68,26 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseMissing('password_reset_tokens', [
             'email' => 'no-existe@example.com',
         ]);
+        Notification::assertNothingSent();
+    }
+
+    public function test_password_reset_link_request_is_rate_limited_after_five_attempts(): void
+    {
+        $user = User::factory()->create();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $response = $this->from(route('password.request'))->post(route('password.email'), [
+                'email' => $user->email,
+            ]);
+
+            $response->assertRedirect(route('password.request'));
+        }
+
+        $response = $this->from(route('password.request'))->post(route('password.email'), [
+            'email' => $user->email,
+        ]);
+
+        $response->assertStatus(429);
     }
 
     public function test_password_can_be_reset_with_valid_token(): void

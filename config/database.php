@@ -4,6 +4,8 @@ use Illuminate\Support\Str;
 
 return [
 
+    'allow_sqlite_in_production' => (bool) env('ALLOW_SQLITE_IN_PRODUCTION', false),
+
     /*
     |--------------------------------------------------------------------------
     | Default Database Connection Name

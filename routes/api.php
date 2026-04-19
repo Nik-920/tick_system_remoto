@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\TicketController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum'])->group(function (): void {
@@ -35,4 +36,22 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware('throttle:5,1')
         ->name('api.tickets.update-state');
+
+    Route::get('/users', [UserController::class, 'index'])->name('api.users.index');
+    Route::get('/users/{user}', [UserController::class, 'show'])->name('api.users.show');
+    Route::post('/users', [UserController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('api.users.store');
+    Route::patch('/users/{user}', [UserController::class, 'update'])
+        ->middleware('throttle:5,1')
+        ->name('api.users.update');
+    Route::post('/users/{user}/avatar', [UserController::class, 'updateAvatar'])
+        ->middleware('throttle:5,1')
+        ->name('api.users.update-avatar');
+    Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])
+        ->middleware('throttle:5,1')
+        ->name('api.users.update-role');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('api.users.destroy');
 });

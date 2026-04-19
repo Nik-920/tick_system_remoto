@@ -70,8 +70,10 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertViewIs('dashboard.index');
-        $response->assertSee('Resumen personal de tickets');
+        $response->assertViewIs('dashboard.reporter');
+        $response->assertSee('Centro personal de reportes');
+        $response->assertSee('Mis alertas inmediatas');
+        $response->assertDontSee('Centro de control operativo');
         $response->assertSee($owned->title);
         $response->assertSee($assigned->title);
         $response->assertDontSee($unrelated->title);
@@ -113,7 +115,10 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSee('Operacion de mantenimiento');
+        $response->assertViewIs('dashboard.maintenance');
+        $response->assertSee('Consola de mantenimiento');
+        $response->assertSee('Cola operativa priorizada');
+        $response->assertDontSee('Centro de control operativo');
         $response->assertSee($assigned->title);
         $response->assertDontSee($notAssigned->title);
     }
@@ -149,10 +154,12 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSee('Indicadores globales');
-        $response->assertSee('QR con incidencias');
+        $response->assertViewIs('dashboard.admin');
+        $response->assertSee('Centro de control operativo');
+        $response->assertSee('Salud QR por estado');
+        $response->assertDontSee('Centro personal de reportes');
         $response->assertSee('Laboratorio Hardware');
-        $response->assertSee('Ubicaciones activas');
+        $response->assertSee('Top ubicaciones con carga operativa');
     }
 
     public function test_super_admin_uses_admin_profile_dashboard(): void
@@ -164,7 +171,8 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSee('Perfil activo: Administracion');
+        $response->assertViewIs('dashboard.admin');
+        $response->assertSee('Perfil operativo: Administracion');
     }
 
     private function createUserWithRole(string $role): User

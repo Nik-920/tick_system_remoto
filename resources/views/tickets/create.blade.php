@@ -26,7 +26,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('tickets.store') }}" class="panel panel-pad bg-white border rounded-lg p-5 space-y-4">
+        <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data" class="panel panel-pad bg-white border rounded-lg p-5 space-y-4">
             @csrf
 
             <div>
@@ -72,6 +72,12 @@
                         <option value="{{ $priority }}" @selected(old('priority', 'medium') === $priority)>{{ ucfirst($priority) }}</option>
                     @endforeach
                 </select>
+            </div>
+
+            <div>
+                <label for="media_files" class="block text-sm font-medium mb-1 text-slate-700">Adjuntos (opcional)</label>
+                <input id="media_files" type="file" name="media_files[]" multiple class="field w-full border rounded-md p-2">
+                <p class="text-xs text-slate-500 mt-2">Hasta 5 archivos de maximo 10 MB cada uno (imagenes, PDF, documentos y video).</p>
             </div>
 
             <div class="flex justify-end">

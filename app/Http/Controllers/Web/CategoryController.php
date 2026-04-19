@@ -7,8 +7,11 @@ use App\Http\Requests\ListCategoriesRequest;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Services\Storage\CategoryIconStorageService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
@@ -40,11 +43,27 @@ class CategoryController extends Controller
         return view('categories.create');
     }
 
-    public function store(StoreCategoryRequest $request): RedirectResponse
+    public function store(StoreCategoryRequest $request, CategoryIconStorageService $iconStorage): RedirectResponse
     {
         $this->authorize('create', Category::class);
 
-        $category = Category::query()->create($request->validated());
+        $data = $request->validated();
+        $iconFile = $request->file('icon_file');
+
+        $category = DB::transaction(function () use ($data, $iconFile, $iconStorage): Category {
+            $category = Category::query()->create([
+                'name' => $data['name'],
+                'icon' => $data['icon'] ?? null,
+                'description' => $data['description'] ?? null,
+            ]);
+
+            if ($iconFile instanceof UploadedFile) {
+                $category->icon = $iconStorage->replaceIcon($category, $iconFile, $category->icon);
+                $category->save();
+            }
+
+            return $category;
+        });
 
         return redirect()
             ->route('categories.edit', $category)
@@ -62,12 +81,29 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
-    {
+    public function update(
+        UpdateCategoryRequest $request,
+        Category $category,
+        CategoryIconStorageService $iconStorage
+    ): RedirectResponse {
         $this->authorize('update', $category);
 
-        $category->fill($request->validated());
-        $category->save();
+        $payload = $request->validated();
+        unset($payload['icon_file']);
+
+        $iconFile = $request->file('icon_file');
+
+        DB::transaction(function () use ($category, $payload, $iconFile, $iconStorage): void {
+            $previousIcon = is_string($category->icon) ? $category->icon : null;
+
+            $category->fill($payload);
+
+            if ($iconFile instanceof UploadedFile) {
+                $category->icon = $iconStorage->replaceIcon($category, $iconFile, $previousIcon);
+            }
+
+            $category->save();
+        });
 
         return redirect()
             ->route('categories.edit', $category)

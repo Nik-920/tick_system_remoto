@@ -22,7 +22,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('categories.store') }}" class="panel panel-pad space-y-4">
+        <form method="POST" action="{{ route('categories.store') }}" enctype="multipart/form-data" class="panel panel-pad space-y-4">
             @csrf
 
             <div>
@@ -33,6 +33,13 @@
             <div>
                 <label for="icon" class="block text-sm font-medium mb-1 text-slate-700">Icono (opcional)</label>
                 <input id="icon" name="icon" type="text" value="{{ old('icon') }}" class="field" placeholder="wrench, alert, tools">
+                <p class="text-xs text-slate-500 mt-2">Compatibilidad legado: texto libre o URL manual.</p>
+            </div>
+
+            <div>
+                <label for="icon_file" class="block text-sm font-medium mb-1 text-slate-700">Archivo de icono (opcional)</label>
+                <input id="icon_file" name="icon_file" type="file" accept="image/*" class="field">
+                <p class="text-xs text-slate-500 mt-2">Si subes un archivo, este reemplaza el valor de texto de icono.</p>
             </div>
 
             <div>

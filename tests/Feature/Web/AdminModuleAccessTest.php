@@ -7,7 +7,9 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -122,6 +124,39 @@ class AdminModuleAccessTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_create_category_from_web_module_with_icon_upload(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $user = $this->createUserWithRole('admin');
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('categories.store'), [
+                'name' => 'Video',
+                'description' => 'Incidencias de video y proyectores',
+                'icon_file' => UploadedFile::fake()->image('video.png', 64, 64),
+            ]);
+
+        $category = Category::query()->where('name', 'Video')->first();
+
+        $response->assertRedirect(route('categories.edit', $category));
+        $response->assertSessionHas('status', 'Categoria creada correctamente.');
+
+        $this->assertNotNull($category);
+        $this->assertIsString($category?->icon);
+        $this->assertStringContainsString('/storage/v1/object/public/TicketCategoria/categories/icons/', (string) $category?->icon);
+
+        $relativePath = $this->relativeStoragePath((string) $category?->icon);
+        $this->assertNotNull($relativePath);
+        Storage::disk('public')->assertExists($relativePath);
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
@@ -137,5 +172,36 @@ class AdminModuleAccessTest extends TestCase
         foreach (['reporter', 'maintenance', 'admin', 'super_admin'] as $roleName) {
             Role::findOrCreate($roleName, 'web');
         }
+    }
+
+    private function relativeStoragePath(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path)) {
+            return null;
+        }
+
+        $normalizedPath = ltrim($path, '/');
+        if (str_starts_with($normalizedPath, 'storage/v1/object/public/')) {
+            $bucketAndPath = substr($normalizedPath, strlen('storage/v1/object/public/'));
+            if (! is_string($bucketAndPath) || trim($bucketAndPath) === '') {
+                return null;
+            }
+
+            $parts = explode('/', $bucketAndPath, 2);
+            if (! isset($parts[1]) || trim($parts[1]) === '') {
+                return null;
+            }
+
+            $segments = array_values(array_filter(explode('/', trim($parts[1], '/')), static fn (string $part): bool => $part !== ''));
+
+            return implode('/', array_map('rawurldecode', $segments));
+        }
+
+        if (! str_starts_with($normalizedPath, 'storage/')) {
+            return null;
+        }
+
+        return substr($normalizedPath, strlen('storage/'));
     }
 }

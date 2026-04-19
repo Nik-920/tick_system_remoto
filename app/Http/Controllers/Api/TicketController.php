@@ -45,8 +45,13 @@ class TicketController extends Controller
             $request->attributes->set('correlation_id', $correlationId);
         }
 
-        $result = $creationService->create($request->user(), $request->validated(), $correlationId);
-        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category']);
+        $result = $creationService->create(
+            $request->user(),
+            $request->validated(),
+            $request->file('media_files', []),
+            $correlationId
+        );
+        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category', 'media']);
 
         if (! $result['created']) {
             return response()->json([
@@ -72,6 +77,7 @@ class TicketController extends Controller
             'assignee',
             'location',
             'category',
+            'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
         ]);
 
