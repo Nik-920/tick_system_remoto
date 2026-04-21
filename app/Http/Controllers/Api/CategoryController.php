@@ -14,6 +14,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class CategoryController extends Controller
 {
@@ -102,6 +104,32 @@ class CategoryController extends Controller
         return response()->json([
             'message' => 'Categoria actualizada correctamente.',
             'data' => (new CategoryResource($category))->resolve($request),
+        ]);
+    }
+
+    public function destroy(Category $category, CategoryIconStorageService $iconStorage): JsonResponse
+    {
+        $this->authorize('delete', $category);
+
+        $categoryId = $category->id;
+        $iconUrl = is_string($category->icon) ? $category->icon : null;
+
+        DB::transaction(function () use ($category): void {
+            $category->delete();
+        });
+
+        try {
+            $iconStorage->deleteIcon($iconUrl);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar el icono de categoria en storage.', [
+                'category_id' => $categoryId,
+                'icon_url' => $iconUrl,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Categoria eliminada correctamente.',
         ]);
     }
 

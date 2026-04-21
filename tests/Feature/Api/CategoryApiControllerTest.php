@@ -183,6 +183,70 @@ class CategoryApiControllerTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_admin_can_delete_category(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $category = $this->createCategory('Temporal');
+
+        $response = $this->deleteJson(route('api.categories.destroy', $category));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Categoria eliminada correctamente.');
+
+        $this->assertDatabaseMissing('categories', [
+            'id' => $category->id,
+        ]);
+    }
+
+    public function test_admin_can_delete_category_and_remove_icon_from_storage(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $category = $this->createCategory('CategoriaConIcono');
+        $iconPath = 'categories/icons/' . $category->id . '/icono.png';
+        Storage::disk('public')->put($iconPath, 'icon-content');
+
+        $category->forceFill([
+            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+        ])->save();
+
+        $response = $this->deleteJson(route('api.categories.destroy', $category));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Categoria eliminada correctamente.');
+
+        $this->assertDatabaseMissing('categories', [
+            'id' => $category->id,
+        ]);
+        Storage::disk('public')->assertMissing($iconPath);
+    }
+
+    public function test_reporter_cannot_delete_category(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $category = $this->createCategory('Bloqueada');
+
+        $response = $this->deleteJson(route('api.categories.destroy', $category));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('categories', [
+            'id' => $category->id,
+        ]);
+    }
+
     public function test_store_category_validates_unique_name(): void
     {
         $admin = $this->createUserWithRole('admin');

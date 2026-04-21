@@ -12,7 +12,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Throwable;
 
 class CategoryController extends Controller
 {
@@ -108,6 +110,32 @@ class CategoryController extends Controller
         return redirect()
             ->route('categories.edit', $category)
             ->with('status', 'Categoria actualizada correctamente.');
+    }
+
+    public function destroy(Category $category, CategoryIconStorageService $iconStorage): RedirectResponse
+    {
+        $this->authorize('delete', $category);
+
+        $categoryId = $category->id;
+        $iconUrl = is_string($category->icon) ? $category->icon : null;
+
+        DB::transaction(function () use ($category): void {
+            $category->delete();
+        });
+
+        try {
+            $iconStorage->deleteIcon($iconUrl);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar el icono de categoria en storage.', [
+                'category_id' => $categoryId,
+                'icon_url' => $iconUrl,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return redirect()
+            ->route('categories.index')
+            ->with('status', 'Categoria eliminada correctamente.');
     }
 
     /**
