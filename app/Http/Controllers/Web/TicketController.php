@@ -35,6 +35,8 @@ class TicketController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'filters' => $filters,
+            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'categories' => Category::query()->orderBy('name')->get(),
         ]);
     }
 

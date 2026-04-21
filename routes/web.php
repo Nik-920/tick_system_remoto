@@ -86,6 +86,9 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])
             ->middleware('throttle:5,1')
             ->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
+            ->middleware('throttle:5,1')
+            ->name('categories.destroy');
     });
 
     Route::middleware('role:super_admin')->group(function (): void {
