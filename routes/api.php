@@ -27,6 +27,9 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::patch('/categories/{category}', [CategoryController::class, 'update'])
         ->middleware('throttle:5,1')
         ->name('api.categories.update');
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('api.categories.destroy');
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('api.tickets.index');
     Route::post('/tickets', [TicketController::class, 'store'])

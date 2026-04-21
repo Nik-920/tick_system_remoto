@@ -157,6 +157,43 @@ class AdminModuleAccessTest extends TestCase
         Storage::disk('public')->assertExists($relativePath);
     }
 
+    public function test_admin_can_delete_category_from_web_module_and_remove_icon_file(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $user = $this->createUserWithRole('admin');
+
+        $category = Category::query()->create([
+            'name' => 'EliminarCategoria',
+            'icon' => null,
+            'description' => 'Categoria temporal para eliminar',
+        ]);
+
+        $iconPath = 'categories/icons/' . $category->id . '/delete-icon.png';
+        Storage::disk('public')->put($iconPath, 'icon-content');
+
+        $category->forceFill([
+            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+        ])->save();
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('categories.destroy', $category));
+
+        $response->assertRedirect(route('categories.index'));
+        $response->assertSessionHas('status', 'Categoria eliminada correctamente.');
+
+        $this->assertDatabaseMissing('categories', [
+            'id' => $category->id,
+        ]);
+        Storage::disk('public')->assertMissing($iconPath);
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
