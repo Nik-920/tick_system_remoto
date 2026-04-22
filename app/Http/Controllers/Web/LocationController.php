@@ -9,11 +9,15 @@ use App\Http\Requests\UpdateLocationRequest;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
 use App\Services\Qr\QrTokenService;
+use App\Services\Storage\LocationQrStorageService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 
 class LocationController extends Controller
 {
@@ -92,6 +96,41 @@ class LocationController extends Controller
         return redirect()
             ->route('locations.edit', $location)
             ->with('status', 'Ubicacion actualizada correctamente.');
+    }
+
+    public function destroy(Location $location, LocationQrStorageService $qrStorageService): RedirectResponse
+    {
+        $this->authorize('delete', $location);
+
+        $ticketsCount = $location->tickets()->count();
+        $incidentHistoryCount = $location->incidentHistory()->count();
+
+        if ($ticketsCount > 0 || $incidentHistoryCount > 0) {
+            return redirect()
+                ->route('locations.edit', $location)
+                ->with('error', 'No se puede eliminar la ubicacion porque tiene tickets o historial de incidencias asociados.');
+        }
+
+        $locationId = $location->id;
+        $qrImageUrl = is_string($location->qr_image_url) ? $location->qr_image_url : null;
+
+        DB::transaction(function () use ($location): void {
+            $location->delete();
+        });
+
+        try {
+            $qrStorageService->deleteQrImage($qrImageUrl);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar la imagen QR de la ubicacion en storage.', [
+                'location_id' => $locationId,
+                'qr_image_url' => $qrImageUrl,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return redirect()
+            ->route('locations.index')
+            ->with('status', 'Ubicacion eliminada correctamente.');
     }
 
     public function regenerateQr(Request $request, Location $location, QrTokenService $qrTokenService): RedirectResponse
