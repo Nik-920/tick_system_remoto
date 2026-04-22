@@ -1457,6 +1457,17 @@
         border-color: #93c5fd;
     }
 
+    .locations-action-link-danger {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .locations-action-link-danger:hover {
+        border-color: #fca5a5;
+        background: #fee2e2;
+    }
+
     .locations-empty-state {
         margin: 0.35rem;
         padding: 1.2rem;

@@ -15,6 +15,9 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::patch('/locations/{location}', [LocationController::class, 'update'])
         ->middleware('throttle:5,1')
         ->name('api.locations.update');
+    Route::delete('/locations/{location}', [LocationController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('api.locations.destroy');
     Route::post('/locations/{location}/regenerate-qr', [LocationController::class, 'regenerateQr'])
         ->middleware('throttle:5,1')
         ->name('api.locations.regenerate-qr');
