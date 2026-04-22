@@ -16,6 +16,10 @@
             <div class="alert-success">{{ session('status') }}</div>
         @endif
 
+        @if (session('error'))
+            <div class="alert-error">{{ session('error') }}</div>
+        @endif
+
         @if ($errors->any())
             <div class="alert-error">
                 <ul class="list-disc pl-5 space-y-1">
@@ -88,5 +92,17 @@
                 <button type="submit" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Regenerar QR</button>
             </form>
         </section>
+
+        @can('delete', $location)
+            <section class="panel panel-pad space-y-3">
+                <h2 class="text-lg font-semibold">Zona de riesgo</h2>
+                <p class="text-sm text-slate-700">La eliminacion es permanente y se bloqueara si la ubicacion tiene tickets o historial de incidencias asociados.</p>
+                <form method="POST" action="{{ route('locations.destroy', $location) }}" onsubmit="return confirm('Esta accion es irreversible. Confirmas la eliminacion de la ubicacion?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="locations-action-link locations-action-link-danger">Eliminar ubicacion</button>
+                </form>
+            </section>
+        @endcan
     </div>
 @endsection

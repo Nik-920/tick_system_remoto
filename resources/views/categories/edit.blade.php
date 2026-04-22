@@ -73,5 +73,21 @@
                 </div>
             </form>
         </section>
+
+        @can('delete', $category)
+            <section class="panel panel-pad border border-red-200 bg-red-50 space-y-3">
+                <h2 class="text-lg font-semibold text-red-700">Zona de eliminacion</h2>
+                <p class="text-sm text-red-700">
+                    Esta accion es irreversible y eliminara la categoria junto con sus tickets e historial asociados.
+                </p>
+                <form method="POST" action="{{ route('categories.destroy', $category) }}" onsubmit="return confirm('Esta accion es irreversible. ¿Confirmas la eliminacion de la categoria?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                        Eliminar categoria
+                    </button>
+                </form>
+            </section>
+        @endcan
     </div>
 @endsection

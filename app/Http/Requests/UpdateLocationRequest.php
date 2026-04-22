@@ -32,6 +32,7 @@ class UpdateLocationRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
+                'regex:/^[A-Za-z0-9_-]+$/',
                 Rule::unique('locations', 'room_code')->ignore($this->locationId()),
             ],
             'is_active' => ['sometimes', 'boolean'],

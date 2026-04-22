@@ -27,6 +27,11 @@ class CategoryPolicy
         return $this->hasAnyRole($user, ['admin', 'super_admin']);
     }
 
+    public function delete(User $user, Category $category): bool
+    {
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
     /**
      * @param list<string> $roles
      */

@@ -3,7 +3,10 @@
 namespace Tests\Feature\Api;
 
 use App\Jobs\GenerateLocationQrImage;
+use App\Models\Category;
 use App\Models\Location;
+use App\Models\LocationIncidentHistory;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -223,6 +226,106 @@ class LocationApiControllerTest extends TestCase
         $response->assertJsonValidationErrors(['room_code']);
     }
 
+    public function test_store_location_validates_room_code_format(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $payload = [
+            'name' => 'Aula invalida',
+            'building' => 'Edificio H',
+            'room_code' => 'H 101',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['room_code']);
+    }
+
+    public function test_admin_can_delete_location_without_dependencies(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation('DEL-101', 'qr-del-101-token');
+
+        $response = $this->deleteJson(route('api.locations.destroy', $location));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Ubicacion eliminada correctamente.');
+
+        $this->assertDatabaseMissing('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
+    public function test_delete_location_is_blocked_when_has_tickets(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation('DEL-201', 'qr-del-201-token');
+        $category = $this->createCategory('Infraestructura');
+
+        Ticket::query()->create([
+            'title' => 'Ticket asociado',
+            'description' => 'No debe permitir eliminar ubicacion con tickets.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+        ]);
+
+        $response = $this->deleteJson(route('api.locations.destroy', $location));
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('data.tickets_count', 1);
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
+    public function test_delete_location_is_blocked_when_has_incident_history(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation('DEL-301', 'qr-del-301-token');
+        $category = $this->createCategory('Laboratorio');
+
+        LocationIncidentHistory::query()->create([
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'recurrence_count' => 1,
+            'avg_resolution_time' => '00:10:00',
+        ]);
+
+        $response = $this->deleteJson(route('api.locations.destroy', $location));
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('data.incident_history_count', 1);
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
+    public function test_reporter_cannot_delete_location(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation('DEL-401', 'qr-del-401-token');
+
+        $response = $this->deleteJson(route('api.locations.destroy', $location));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
@@ -254,6 +357,15 @@ class LocationApiControllerTest extends TestCase
             'qr_job_id' => null,
             'qr_generated_at' => null,
             'is_active' => true,
+        ]);
+    }
+
+    private function createCategory(string $name): Category
+    {
+        return Category::query()->create([
+            'name' => $name,
+            'icon' => 'icon-' . strtolower($name),
+            'description' => 'Descripcion de ' . $name,
         ]);
     }
 }

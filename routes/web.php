@@ -73,6 +73,9 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/locations/{location}', [LocationController::class, 'update'])
             ->middleware('throttle:5,1')
             ->name('locations.update');
+        Route::delete('/locations/{location}', [LocationController::class, 'destroy'])
+            ->middleware('throttle:5,1')
+            ->name('locations.destroy');
         Route::post('/locations/{location}/regenerate-qr', [LocationController::class, 'regenerateQr'])
             ->middleware('throttle:5,1')
             ->name('locations.regenerate-qr');
@@ -86,6 +89,9 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])
             ->middleware('throttle:5,1')
             ->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
+            ->middleware('throttle:5,1')
+            ->name('categories.destroy');
     });
 
     Route::middleware('role:super_admin')->group(function (): void {

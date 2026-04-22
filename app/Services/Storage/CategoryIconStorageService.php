@@ -30,4 +30,9 @@ class CategoryIconStorageService
             $fileName,
         );
     }
+
+    public function deleteIcon(?string $iconUrl): void
+    {
+        $this->domainStorage->deleteManagedUrl(self::DOMAIN, $iconUrl);
+    }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Web;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -124,6 +125,79 @@ class AdminModuleAccessTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_delete_location_from_web_module(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $location = Location::query()->create([
+            'name' => 'Ubicacion temporal',
+            'building' => 'Edificio Z',
+            'floor' => '1',
+            'room_code' => 'Z-901',
+            'qr_token' => 'qr-z-901-token',
+            'qr_image_url' => null,
+            'qr_generation_status' => 'pending',
+            'qr_last_error' => null,
+            'qr_job_id' => null,
+            'qr_generated_at' => null,
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('locations.destroy', $location));
+
+        $response->assertRedirect(route('locations.index'));
+        $response->assertSessionHas('status', 'Ubicacion eliminada correctamente.');
+
+        $this->assertDatabaseMissing('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_location_with_related_tickets(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $location = Location::query()->create([
+            'name' => 'Ubicacion bloqueada',
+            'building' => 'Edificio Z',
+            'floor' => '2',
+            'room_code' => 'Z-902',
+            'qr_token' => 'qr-z-902-token',
+            'qr_image_url' => null,
+            'qr_generation_status' => 'pending',
+            'qr_last_error' => null,
+            'qr_job_id' => null,
+            'qr_generated_at' => null,
+            'is_active' => true,
+        ]);
+
+        $category = Category::query()->create([
+            'name' => 'Categoria temporal web',
+            'icon' => 'icon-temp-web',
+            'description' => 'Categoria temporal para test de borrado',
+        ]);
+
+        Ticket::query()->create([
+            'title' => 'Ticket asociado web',
+            'description' => 'Debe bloquear eliminacion de ubicacion.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('locations.destroy', $location));
+
+        $response->assertRedirect(route('locations.edit', $location));
+        $response->assertSessionHas('error', 'No se puede eliminar la ubicacion porque tiene tickets o historial de incidencias asociados.');
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
     public function test_admin_can_create_category_from_web_module_with_icon_upload(): void
     {
         config([
@@ -155,6 +229,43 @@ class AdminModuleAccessTest extends TestCase
         $relativePath = $this->relativeStoragePath((string) $category?->icon);
         $this->assertNotNull($relativePath);
         Storage::disk('public')->assertExists($relativePath);
+    }
+
+    public function test_admin_can_delete_category_from_web_module_and_remove_icon_file(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.categories' => 'TicketCategoria',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $user = $this->createUserWithRole('admin');
+
+        $category = Category::query()->create([
+            'name' => 'EliminarCategoria',
+            'icon' => null,
+            'description' => 'Categoria temporal para eliminar',
+        ]);
+
+        $iconPath = 'categories/icons/' . $category->id . '/delete-icon.png';
+        Storage::disk('public')->put($iconPath, 'icon-content');
+
+        $category->forceFill([
+            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+        ])->save();
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('categories.destroy', $category));
+
+        $response->assertRedirect(route('categories.index'));
+        $response->assertSessionHas('status', 'Categoria eliminada correctamente.');
+
+        $this->assertDatabaseMissing('categories', [
+            'id' => $category->id,
+        ]);
+        Storage::disk('public')->assertMissing($iconPath);
     }
 
     private function createUserWithRole(string $role): User

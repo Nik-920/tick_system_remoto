@@ -29,7 +29,6 @@ return new class extends Migration
             $table->text('qr_image_url')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestampsTz();
-
             $table->index(['building', 'floor']);
             $table->index('is_active');
         });

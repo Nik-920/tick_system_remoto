@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -163,6 +164,145 @@ class TicketControllerTest extends TestCase
         ]);
     }
 
+    public function test_user_can_filter_tickets_by_location(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $locationA = $this->createLocation(['name' => 'Aula A']);
+        $locationB = $this->createLocation(['name' => 'Aula B']);
+        $category = $this->createCategory();
+
+        Ticket::create([
+            'title' => 'Ticket en Aula A',
+            'description' => 'Incidencia en aula A',
+            'reporter_id' => $user->id,
+            'location_id' => $locationA->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        Ticket::create([
+            'title' => 'Ticket en Aula B',
+            'description' => 'Incidencia en aula B',
+            'reporter_id' => $user->id,
+            'location_id' => $locationB->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index', ['location_id' => $locationA->id]));
+
+        $response->assertOk();
+        $response->assertSee('Ticket en Aula A');
+        $response->assertDontSee('Ticket en Aula B');
+    }
+
+    public function test_user_can_filter_tickets_by_category(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $categoryA = $this->createCategory(['name' => 'Electricidad A']);
+        $categoryB = $this->createCategory(['name' => 'Red B']);
+
+        Ticket::create([
+            'title' => 'Ticket categoria A',
+            'description' => 'Incidencia categoria A',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryA->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        Ticket::create([
+            'title' => 'Ticket categoria B',
+            'description' => 'Incidencia categoria B',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryB->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index', ['category_id' => $categoryA->id]));
+
+        $response->assertOk();
+        $response->assertSee('Ticket categoria A');
+        $response->assertDontSee('Ticket categoria B');
+    }
+
+    public function test_user_can_paginate_tickets_with_per_page_filter(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        for ($i = 1; $i <= 25; $i++) {
+            Ticket::create([
+                'title' => "Ticket #{$i}",
+                'description' => "Descripcion {$i}",
+                'reporter_id' => $user->id,
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'state' => 'resolved',
+                'priority' => 'low',
+            ]);
+        }
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index', ['per_page' => 10]));
+
+        $response->assertOk();
+
+        $tickets = $response->viewData('tickets');
+        $this->assertCount(10, $tickets->items());
+        $this->assertSame(10, $tickets->perPage());
+        $this->assertSame(25, $tickets->total());
+    }
+
+    public function test_filters_are_preserved_in_pagination_links(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        for ($i = 1; $i <= 20; $i++) {
+            Ticket::create([
+                'title' => "Ticket filtrado #{$i}",
+                'description' => "Descripcion filtro {$i}",
+                'reporter_id' => $user->id,
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'state' => 'resolved',
+                'priority' => 'medium',
+            ]);
+        }
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index', [
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'per_page' => 10,
+            ]));
+
+        $response->assertOk();
+
+        $tickets = $response->viewData('tickets');
+        $nextPageUrl = (string) $tickets->nextPageUrl();
+
+        $this->assertNotSame('', $nextPageUrl);
+        $this->assertStringContainsString('location_id=' . $location->id, $nextPageUrl);
+        $this->assertStringContainsString('category_id=' . $category->id, $nextPageUrl);
+        $this->assertStringContainsString('per_page=10', $nextPageUrl);
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
@@ -180,24 +320,34 @@ class TicketControllerTest extends TestCase
         }
     }
 
-    private function createLocation(): Location
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function createLocation(array $overrides = []): Location
     {
-        return Location::create([
+        $base = [
             'name' => 'Aula Innovacion',
             'building' => 'Edificio A',
             'floor' => '2',
-            'room_code' => 'A-201',
-            'qr_token' => 'qr-a-201',
+            'room_code' => 'A-' . Str::upper(Str::random(6)),
+            'qr_token' => 'qr-' . Str::lower(Str::random(12)),
             'is_active' => true,
-        ]);
+        ];
+
+        return Location::create(array_merge($base, $overrides));
     }
 
-    private function createCategory(): Category
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function createCategory(array $overrides = []): Category
     {
-        return Category::create([
-            'name' => 'Electricidad',
+        $base = [
+            'name' => 'Categoria ' . Str::lower(Str::random(8)),
             'icon' => 'bolt',
             'description' => 'Incidencias electricas',
-        ]);
+        ];
+
+        return Category::create(array_merge($base, $overrides));
     }
 }

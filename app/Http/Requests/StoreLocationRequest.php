@@ -26,7 +26,7 @@ class StoreLocationRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'building' => ['required', 'string', 'max:255'],
             'floor' => ['nullable', 'string', 'max:50'],
-            'room_code' => ['required', 'string', 'max:100', Rule::unique('locations', 'room_code')],
+            'room_code' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('locations', 'room_code')],
             'is_active' => ['nullable', 'boolean'],
             'qr_token' => ['prohibited'],
             'qr_image_url' => ['prohibited'],

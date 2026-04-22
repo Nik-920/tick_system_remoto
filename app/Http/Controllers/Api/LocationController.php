@@ -11,10 +11,14 @@ use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Qr\QrTokenService;
+use App\Services\Storage\LocationQrStorageService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class LocationController extends Controller
 {
@@ -102,6 +106,50 @@ class LocationController extends Controller
         return response()->json([
             'message' => 'Ubicacion actualizada correctamente.',
             'data' => (new LocationResource($location))->resolve($request),
+        ]);
+    }
+
+    public function destroy(Location $location, LocationQrStorageService $qrStorageService): JsonResponse
+    {
+        $this->authorize('delete', $location);
+
+        $ticketsCount = $location->tickets()->count();
+        $incidentHistoryCount = $location->incidentHistory()->count();
+
+        if ($ticketsCount > 0 || $incidentHistoryCount > 0) {
+            return response()->json([
+                'message' => 'No se puede eliminar la ubicacion porque tiene tickets o historial de incidencias asociados.',
+                'errors' => [
+                    'location' => [
+                        'La ubicacion tiene datos relacionados y no puede eliminarse.',
+                    ],
+                ],
+                'data' => [
+                    'tickets_count' => $ticketsCount,
+                    'incident_history_count' => $incidentHistoryCount,
+                ],
+            ], 409);
+        }
+
+        $locationId = $location->id;
+        $qrImageUrl = is_string($location->qr_image_url) ? $location->qr_image_url : null;
+
+        DB::transaction(function () use ($location): void {
+            $location->delete();
+        });
+
+        try {
+            $qrStorageService->deleteQrImage($qrImageUrl);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar la imagen QR de la ubicacion en storage.', [
+                'location_id' => $locationId,
+                'qr_image_url' => $qrImageUrl,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Ubicacion eliminada correctamente.',
         ]);
     }
 

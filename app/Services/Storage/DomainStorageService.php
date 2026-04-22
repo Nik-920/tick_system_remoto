@@ -34,6 +34,7 @@ class DomainStorageService
         string $pathPrefix,
         string $fileName,
         string $contents,
+        string $contentType = 'application/octet-stream',
     ): string {
         $bucketName = $this->bucketName($domain);
         $normalizedPrefix = trim($pathPrefix, '/');
@@ -41,7 +42,7 @@ class DomainStorageService
             ? $fileName
             : $normalizedPrefix . '/' . $fileName;
 
-        $this->storageClient->uploadContents($bucketName, $normalizedPath, $contents, 'application/octet-stream');
+        $this->storageClient->uploadContents($bucketName, $normalizedPath, $contents, $contentType);
 
         return $this->storageClient->publicUrl($bucketName, $normalizedPath);
     }
@@ -67,9 +68,10 @@ class DomainStorageService
         string $pathPrefix,
         string $fileName,
         string $contents,
+        string $contentType = 'application/octet-stream',
     ): string {
         $bucketName = $this->bucketName($domain);
-        $newUrl = $this->storeContents($domain, $pathPrefix, $fileName, $contents);
+        $newUrl = $this->storeContents($domain, $pathPrefix, $fileName, $contents, $contentType);
 
         $this->deletePreviousIfDifferentPath($bucketName, $previousUrl, $newUrl);
 
