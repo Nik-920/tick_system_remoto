@@ -75,6 +75,10 @@
             <div class="alert-success">{{ session('status') }}</div>
         @endif
 
+        @if (session('error'))
+            <div class="alert-error">{{ session('error') }}</div>
+        @endif
+
         <section class="panel panel-pad">
             <div class="locations-section-head">
                 <div>
@@ -188,6 +192,13 @@
                         <td>
                             <div class="locations-actions">
                                 <a href="{{ route('locations.edit', $location) }}" class="locations-action-link">Editar</a>
+                                @can('delete', $location)
+                                    <form method="POST" action="{{ route('locations.destroy', $location) }}" onsubmit="return confirm('Esta accion eliminara la ubicacion de forma permanente. Deseas continuar?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="locations-action-link locations-action-link-danger">Eliminar</button>
+                                    </form>
+                                @endcan
                             </div>
                         </td>
                     </tr>

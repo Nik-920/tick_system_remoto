@@ -5,6 +5,7 @@ namespace Tests\Feature\Web;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -121,6 +122,79 @@ class AdminModuleAccessTest extends TestCase
         $this->assertDatabaseHas('categories', [
             'name' => 'Audio',
             'icon' => 'volume-2',
+        ]);
+    }
+
+    public function test_admin_can_delete_location_from_web_module(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $location = Location::query()->create([
+            'name' => 'Ubicacion temporal',
+            'building' => 'Edificio Z',
+            'floor' => '1',
+            'room_code' => 'Z-901',
+            'qr_token' => 'qr-z-901-token',
+            'qr_image_url' => null,
+            'qr_generation_status' => 'pending',
+            'qr_last_error' => null,
+            'qr_job_id' => null,
+            'qr_generated_at' => null,
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('locations.destroy', $location));
+
+        $response->assertRedirect(route('locations.index'));
+        $response->assertSessionHas('status', 'Ubicacion eliminada correctamente.');
+
+        $this->assertDatabaseMissing('locations', [
+            'id' => $location->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_location_with_related_tickets(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $location = Location::query()->create([
+            'name' => 'Ubicacion bloqueada',
+            'building' => 'Edificio Z',
+            'floor' => '2',
+            'room_code' => 'Z-902',
+            'qr_token' => 'qr-z-902-token',
+            'qr_image_url' => null,
+            'qr_generation_status' => 'pending',
+            'qr_last_error' => null,
+            'qr_job_id' => null,
+            'qr_generated_at' => null,
+            'is_active' => true,
+        ]);
+
+        $category = Category::query()->create([
+            'name' => 'Categoria temporal web',
+            'icon' => 'icon-temp-web',
+            'description' => 'Categoria temporal para test de borrado',
+        ]);
+
+        Ticket::query()->create([
+            'title' => 'Ticket asociado web',
+            'description' => 'Debe bloquear eliminacion de ubicacion.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('locations.destroy', $location));
+
+        $response->assertRedirect(route('locations.edit', $location));
+        $response->assertSessionHas('error', 'No se puede eliminar la ubicacion porque tiene tickets o historial de incidencias asociados.');
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
         ]);
     }
 
