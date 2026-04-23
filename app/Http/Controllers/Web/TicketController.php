@@ -35,7 +35,7 @@ class TicketController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'filters' => $filters,
-            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
         ]);
     }
@@ -50,7 +50,7 @@ class TicketController extends Controller
         if ($requestedLocationId !== '') {
             $exists = Location::query()
                 ->where('id', $requestedLocationId)
-                ->where('is_active', true)
+                ->active()
                 ->exists();
 
             if ($exists) {
@@ -59,7 +59,7 @@ class TicketController extends Controller
         }
 
         return view('tickets.create', [
-            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'selectedLocationId' => $selectedLocationId,
