@@ -333,7 +333,7 @@ class DashboardController extends Controller
             ->toArray();
 
         $totalLocations = Location::query()->count();
-        $activeLocations = Location::query()->where('is_active', true)->count();
+        $activeLocations = Location::query()->active()->count();
         $totalCategories = Category::query()->count();
 
         $recentTickets = Ticket::query()
