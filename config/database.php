@@ -85,29 +85,32 @@ return [
         ],
 
         'pgsql' => [
-    'driver' => 'pgsql',
-    'url' => env('DATABASE_URL'),
-    'host' => env('DB_HOST', '127.0.0.1'),
-    'port' => env('DB_PORT', '5432'),
-    'database' => env('DB_DATABASE', 'postgres'),
-    'username' => env('DB_USERNAME', 'postgres'),
-    'password' => env('DB_PASSWORD', ''),
-    'charset' => env('DB_CHARSET', 'utf8'),
-    'prefix' => '',
-    'prefix_indexes' => true,
-    'schema' => 'public',
-    'sslmode' => env('DB_SSLMODE', 'require'),
-    
-    // ✅ OPCIONES CRÍTICAS PARA SUPABASE
-    'options' => [
-        \PDO::ATTR_PERSISTENT => false,
-        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-        'connect_timeout' => 10,
-        'tcp_keepalives_idle' => 30,
-        'tcp_keepalives_interval' => 10,
-        'tcp_keepalives_count' => 5,
-    ],
-],
+            'driver' => 'pgsql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'postgres'),
+            'username' => env('DB_USERNAME', 'postgres'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'schema' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'require'),
+
+            // Use emulated prepares with pooler connections to avoid SQLSTATE[26000].
+            // For PostgreSQL boolean filters, prefer model scopes that compile to
+            // SQL literals (IS TRUE/IS FALSE) instead of bound boolean values.
+            'options' => array_filter([
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
+                PDO::ATTR_EMULATE_PREPARES => (bool) env('DB_EMULATE_PREPARES', true),
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                'connect_timeout' => (int) env('DB_CONNECT_TIMEOUT', 10),
+                'tcp_keepalives_idle' => (int) env('DB_TCP_KEEPALIVES_IDLE', 30),
+                'tcp_keepalives_interval' => (int) env('DB_TCP_KEEPALIVES_INTERVAL', 10),
+                'tcp_keepalives_count' => (int) env('DB_TCP_KEEPALIVES_COUNT', 5),
+            ]),
+        ],
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
