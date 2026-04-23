@@ -24,7 +24,7 @@ class QrScanController extends Controller
 
         $location = Location::query()
             ->where('qr_token', $token)
-            ->where('is_active', true)
+            ->active()
             ->first();
 
         if ($location === null) {

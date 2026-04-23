@@ -32,6 +32,27 @@ class LocationApiControllerTest extends TestCase
         $response->assertJsonCount(2, 'data');
     }
 
+    public function test_authenticated_user_can_filter_locations_by_active_state(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $activeLocation = $this->createLocation('A-103', 'qr-a-103-token', true);
+        $inactiveLocation = $this->createLocation('A-104', 'qr-a-104-token', false);
+
+        $activeResponse = $this->getJson(route('api.locations.index', ['is_active' => 1]));
+
+        $activeResponse->assertOk();
+        $activeResponse->assertJsonCount(1, 'data');
+        $activeResponse->assertJsonPath('data.0.id', $activeLocation->id);
+
+        $inactiveResponse = $this->getJson(route('api.locations.index', ['is_active' => 0]));
+
+        $inactiveResponse->assertOk();
+        $inactiveResponse->assertJsonCount(1, 'data');
+        $inactiveResponse->assertJsonPath('data.0.id', $inactiveLocation->id);
+    }
+
     public function test_authenticated_user_can_show_location(): void
     {
         $user = $this->createUserWithRole('maintenance');
@@ -343,7 +364,7 @@ class LocationApiControllerTest extends TestCase
         }
     }
 
-    private function createLocation(string $roomCode, string $token): Location
+    private function createLocation(string $roomCode, string $token, bool $isActive = true): Location
     {
         return Location::query()->create([
             'name' => 'Aula ' . $roomCode,
@@ -356,7 +377,7 @@ class LocationApiControllerTest extends TestCase
             'qr_last_error' => null,
             'qr_job_id' => null,
             'qr_generated_at' => null,
-            'is_active' => true,
+            'is_active' => $isActive,
         ]);
     }
 
