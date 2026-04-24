@@ -13,7 +13,6 @@ class UserFactory extends Factory
 {
     /**
      * The current password being used by the factory.
-     * evidencia
      */
     protected static ?string $password;
 

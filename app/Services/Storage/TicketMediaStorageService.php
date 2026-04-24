@@ -36,6 +36,33 @@ class TicketMediaStorageService
         return $this->storeForTicketInternal($ticket, $uploadedBy, $file, $nameCounts);
     }
 
+    public function deleteByUrl(?string $fileUrl): void
+    {
+        $this->domainStorage->deleteManagedUrl('tickets', $fileUrl);
+    }
+
+    /**
+     * @param iterable<int, mixed> $fileUrls
+     */
+    public function deleteManyByUrls(iterable $fileUrls): void
+    {
+        $processedUrls = [];
+
+        foreach ($fileUrls as $fileUrl) {
+            if (! is_string($fileUrl)) {
+                continue;
+            }
+
+            $normalizedUrl = trim($fileUrl);
+            if ($normalizedUrl === '' || isset($processedUrls[$normalizedUrl])) {
+                continue;
+            }
+
+            $processedUrls[$normalizedUrl] = true;
+            $this->deleteByUrl($normalizedUrl);
+        }
+    }
+
     /**
      * @param array<string, int> $nameCounts
      */
