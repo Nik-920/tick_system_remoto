@@ -5,6 +5,7 @@ namespace Tests\Feature\Web;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -161,6 +162,83 @@ class TicketControllerTest extends TestCase
             'from_state' => 'open',
             'to_state' => 'in_progress',
             'changed_by' => $maintenance->id,
+        ]);
+    }
+
+    public function test_admin_can_delete_ticket_and_remove_media_from_storage_from_web(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.tickets' => 'TableTicket',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $admin = $this->createUserWithRole('admin');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket a eliminar Web',
+            'description' => 'Ticket con adjunto para validar borrado desde modulo web.',
+            'reporter_id' => $admin->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $mediaPath = 'tickets/media/' . $ticket->id . '/web-evidencia.png';
+        Storage::disk('public')->put($mediaPath, 'image-content');
+
+        $media = TicketMedia::query()->create([
+            'ticket_id' => $ticket->id,
+            'file_url' => '/storage/v1/object/public/TableTicket/' . $mediaPath,
+            'file_type' => 'image',
+            'uploaded_by' => $admin->id,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->delete(route('tickets.destroy', $ticket));
+
+        $response->assertRedirect(route('tickets.index'));
+        $response->assertSessionHas('status', 'Ticket eliminado correctamente.');
+
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
+        ]);
+        $this->assertDatabaseMissing('ticket_media', [
+            'id' => $media->id,
+        ]);
+
+        Storage::disk('public')->assertMissing($mediaPath);
+    }
+
+    public function test_reporter_cannot_delete_ticket_from_web(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket protegido Web',
+            'description' => 'Un reporter no debe eliminar tickets desde web.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->delete(route('tickets.destroy', $ticket));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
         ]);
     }
 

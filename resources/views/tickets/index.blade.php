@@ -200,6 +200,13 @@
                         <td>
                             <div class="tickets-actions">
                                 <a href="{{ route('tickets.show', $ticket) }}" class="tickets-action-link">Ver detalle</a>
+                                @can('delete', $ticket)
+                                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('¿Eliminar este ticket y sus adjuntos? Esta accion no se puede deshacer.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="tickets-action-link">Eliminar</button>
+                                    </form>
+                                @endcan
                             </div>
                         </td>
                     </tr>
