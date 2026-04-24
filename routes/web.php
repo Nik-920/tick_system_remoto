@@ -59,6 +59,9 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:5,1')
         ->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('tickets.destroy');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware('throttle:5,1')
         ->name('tickets.update-state');
