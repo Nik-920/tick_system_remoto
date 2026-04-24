@@ -9,7 +9,16 @@
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900">Detalle Ticket</h1>
                 <p class="text-sm text-slate-600 mt-1">Revision completa de la incidencia y su historial.</p>
             </div>
-            <a href="{{ route('tickets.index') }}" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Volver</a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('tickets.index') }}" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Volver</a>
+                @can('delete', $ticket)
+                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('¿Eliminar este ticket y sus adjuntos? Esta accion no se puede deshacer.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="border border-red-300 bg-red-50 text-red-700 px-3 py-2 rounded-md">Eliminar</button>
+                    </form>
+                @endcan
+            </div>
         </header>
 
         @if (session('status'))
