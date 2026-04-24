@@ -9,13 +9,17 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use InvalidArgumentException;
+use Throwable;
 
 class TicketController extends Controller
 {
@@ -105,6 +109,31 @@ class TicketController extends Controller
             'ticket' => $ticket,
             'states' => ['open', 'in_progress', 'resolved', 'rejected'],
         ]);
+    }
+
+    public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): RedirectResponse
+    {
+        $this->authorize('delete', $ticket);
+
+        $ticketId = $ticket->id;
+        $mediaUrls = $ticket->media()->pluck('file_url')->all();
+
+        DB::transaction(function () use ($ticket): void {
+            $ticket->delete();
+        });
+
+        try {
+            $mediaStorage->deleteManyByUrls($mediaUrls);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar adjuntos del ticket en storage.', [
+                'ticket_id' => $ticketId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return redirect()
+            ->route('tickets.index')
+            ->with('status', 'Ticket eliminado correctamente.');
     }
 
     public function updateState(
