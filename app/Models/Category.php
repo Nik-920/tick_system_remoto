@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // CATEGORIAS COMENTARIO
 class Category extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
+    use HasUuids;
 
     /**
      * @var list<string>

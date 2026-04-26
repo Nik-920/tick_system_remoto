@@ -19,9 +19,14 @@ use Throwable;
 
 class DetectDuplicates implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
+    {
+    }
 
     public function handle(
         DeduplicationService $deduplication,

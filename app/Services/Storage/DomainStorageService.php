@@ -7,7 +7,9 @@ use InvalidArgumentException;
 
 class DomainStorageService
 {
-    public function __construct(private SupabaseStorageClient $storageClient) {}
+    public function __construct(private SupabaseStorageClient $storageClient)
+    {
+    }
 
     public function storeUploadedFile(
         string $domain,

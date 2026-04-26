@@ -11,7 +11,8 @@ class CategoryIconStorageService
 
     public function __construct(
         private readonly DomainStorageService $domainStorage,
-    ) {}
+    ) {
+    }
 
     public function replaceIcon(Category $category, UploadedFile $file, ?string $previousIcon): string
     {
