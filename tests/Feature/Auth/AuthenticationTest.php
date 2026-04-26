@@ -16,7 +16,7 @@ class AuthenticationTest extends TestCase
         $response = $this->get(route('login'));
 
         $response->assertOk();
-        $response->assertSee('Iniciar sesion');
+        $response->assertSee("Iniciar sesi\u{00F3}n");
     }
 
     public function test_authenticated_user_is_redirected_from_login_screen_to_dashboard(): void
