@@ -15,7 +15,7 @@ class TicketQrLoggerTest extends TestCase
         $request->headers->set('X-Request-Id', 'req-123');
         $this->app->instance('request', $request);
 
-        $logger = new TicketQrLogger();
+        $logger = new TicketQrLogger;
 
         Log::shouldReceive('channel')->once()->with('ticket_qr')->andReturnSelf();
         Log::shouldReceive('log')->once()->withArgs(function (string $level, string $message, array $payload): bool {
@@ -43,7 +43,7 @@ class TicketQrLoggerTest extends TestCase
 
     public function test_logger_hashes_and_redacts_sensitive_fields(): void
     {
-        $logger = new TicketQrLogger();
+        $logger = new TicketQrLogger;
 
         Log::shouldReceive('channel')->once()->with('ticket_qr')->andReturnSelf();
         Log::shouldReceive('log')->once()->withArgs(function (string $level, string $message, array $payload): bool {
@@ -73,7 +73,7 @@ class TicketQrLoggerTest extends TestCase
         $request->headers->set('X-Correlation-Id', 'corr-001');
         $this->app->instance('request', $request);
 
-        $logger = new TicketQrLogger();
+        $logger = new TicketQrLogger;
 
         Log::shouldReceive('channel')->once()->with('ticket_qr')->andReturnSelf();
         Log::shouldReceive('log')->once()->withArgs(function (string $level, string $message, array $payload): bool {

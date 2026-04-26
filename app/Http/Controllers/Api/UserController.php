@@ -50,8 +50,7 @@ class UserController extends Controller
         StoreUserRequest $request,
         SupabaseRoleSyncService $roleSyncService,
         UserAvatarStorageService $avatarStorageService
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $this->authorize('create', User::class);
 
         $data = $request->validated();
@@ -158,7 +157,7 @@ class UserController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {
@@ -187,7 +186,7 @@ class UserController extends Controller
     }
 
     /**
-     * @param array{status:string,message:string,role:string} $syncResult
+     * @param  array{status:string,message:string,role:string}  $syncResult
      */
     private function buildStatusMessage(string $baseMessage, array $syncResult): string
     {
@@ -195,7 +194,7 @@ class UserController extends Controller
             return $baseMessage;
         }
 
-        return $baseMessage . ' ' . $syncResult['message'];
+        return $baseMessage.' '.$syncResult['message'];
     }
 
     private function isSelfDemotion(User $actor, User $managedUser, string $newRole): bool

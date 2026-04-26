@@ -4,13 +4,10 @@ namespace App\Services\Storage;
 
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
-use RuntimeException;
 
 class DomainStorageService
 {
-    public function __construct(private SupabaseStorageClient $storageClient)
-    {
-    }
+    public function __construct(private SupabaseStorageClient $storageClient) {}
 
     public function storeUploadedFile(
         string $domain,
@@ -22,7 +19,7 @@ class DomainStorageService
         $normalizedPrefix = trim($pathPrefix, '/');
         $normalizedPath = $normalizedPrefix === ''
             ? $fileName
-            : $normalizedPrefix . '/' . $fileName;
+            : $normalizedPrefix.'/'.$fileName;
 
         $this->storageClient->uploadUploadedFile($bucketName, $normalizedPath, $file);
 
@@ -40,7 +37,7 @@ class DomainStorageService
         $normalizedPrefix = trim($pathPrefix, '/');
         $normalizedPath = $normalizedPrefix === ''
             ? $fileName
-            : $normalizedPrefix . '/' . $fileName;
+            : $normalizedPrefix.'/'.$fileName;
 
         $this->storageClient->uploadContents($bucketName, $normalizedPath, $contents, $contentType);
 
@@ -96,14 +93,14 @@ class DomainStorageService
 
     public function pathPrefix(string $domain): string
     {
-        $prefix = config('services.supabase.storage.domain_prefixes.' . $domain);
+        $prefix = config('services.supabase.storage.domain_prefixes.'.$domain);
 
         if (! is_string($prefix) || trim($prefix) === '') {
-            $prefix = config('filesystems.domain_prefixes.' . $domain);
+            $prefix = config('filesystems.domain_prefixes.'.$domain);
         }
 
         if (! is_string($prefix)) {
-            throw new InvalidArgumentException('No existe prefijo configurado para el dominio de storage: ' . $domain);
+            throw new InvalidArgumentException('No existe prefijo configurado para el dominio de storage: '.$domain);
         }
 
         return trim($prefix, '/');
@@ -111,10 +108,10 @@ class DomainStorageService
 
     public function bucketName(string $domain): string
     {
-        $bucketName = config('services.supabase.storage.domain_buckets.' . $domain);
+        $bucketName = config('services.supabase.storage.domain_buckets.'.$domain);
 
         if (! is_string($bucketName) || trim($bucketName) === '') {
-            throw new InvalidArgumentException('No existe bucket configurado para el dominio de storage: ' . $domain);
+            throw new InvalidArgumentException('No existe bucket configurado para el dominio de storage: '.$domain);
         }
 
         return trim($bucketName);

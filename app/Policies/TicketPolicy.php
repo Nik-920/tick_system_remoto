@@ -45,7 +45,7 @@ class TicketPolicy
     }
 
     /**
-     * @param list<string> $roles
+     * @param  list<string>  $roles
      */
     private function hasAnyRole(User $user, array $roles): bool
     {

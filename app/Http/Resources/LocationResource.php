@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Location;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Location */
+/** @mixin Location */
 class LocationResource extends JsonResource
 {
     /**
@@ -16,6 +17,9 @@ class LocationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $status = (string) ($this->qr_generation_status ?? 'pending');
+        $qrGeneratedAt = $this->qr_generated_at;
+        $createdAt = $this->created_at;
+        $updatedAt = $this->updated_at;
 
         return [
             'id' => $this->id,
@@ -29,12 +33,12 @@ class LocationResource extends JsonResource
             'qr_image_status' => $status,
             'qr_last_error' => $this->qr_last_error,
             'qr_job_id' => $this->qr_job_id,
-            'qr_generated_at' => $this->qr_generated_at?->toIso8601String(),
+            'qr_generated_at' => $qrGeneratedAt instanceof \DateTimeInterface ? $qrGeneratedAt->format(DATE_ATOM) : null,
             'is_active' => (bool) $this->is_active,
             'tickets_count' => $this->whenCounted('tickets'),
             'incident_history_count' => $this->whenCounted('incidentHistory'),
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $createdAt instanceof \DateTimeInterface ? $createdAt->format(DATE_ATOM) : null,
+            'updated_at' => $updatedAt instanceof \DateTimeInterface ? $updatedAt->format(DATE_ATOM) : null,
         ];
     }
 }

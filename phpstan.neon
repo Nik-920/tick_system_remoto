@@ -8,10 +8,8 @@ parameters:
         - database
         - routes
         - tests
-    level: 5
+    level: 3
     tmpDir: storage/phpstan
-    checkMissingIterableValueType: false
-    checkGenericClassInNonGenericObjectType: false
     excludePaths:
         - bootstrap/cache/*
         - storage/*

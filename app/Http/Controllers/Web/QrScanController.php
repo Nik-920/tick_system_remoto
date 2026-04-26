@@ -44,6 +44,6 @@ class QrScanController extends Controller
 
         return redirect()
             ->route('tickets.create', ['location_id' => $location->id])
-            ->with('status', 'Ubicacion detectada desde QR: ' . $location->name);
+            ->with('status', 'Ubicacion detectada desde QR: '.$location->name);
     }
 }

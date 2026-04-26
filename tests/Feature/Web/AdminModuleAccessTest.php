@@ -287,11 +287,11 @@ class AdminModuleAccessTest extends TestCase
             'description' => 'Categoria temporal para eliminar',
         ]);
 
-        $iconPath = 'categories/icons/' . $category->id . '/delete-icon.png';
+        $iconPath = 'categories/icons/'.$category->id.'/delete-icon.png';
         Storage::disk('public')->put($iconPath, 'icon-content');
 
         $category->forceFill([
-            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+            'icon' => '/storage/v1/object/public/TicketCategoria/'.$iconPath,
         ])->save();
 
         $response = $this

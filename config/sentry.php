@@ -1,7 +1,11 @@
 <?php
 
 use App\Services\Observability\SentrySanitizer;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
 use Sentry\Event;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Sentry Laravel SDK configuration file.
@@ -55,10 +59,10 @@ return [
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
     'ignore_exceptions' => [
-        Illuminate\Auth\AuthenticationException::class,
-        Illuminate\Auth\Access\AuthorizationException::class,
-        Illuminate\Validation\ValidationException::class,
-        Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
+        AuthenticationException::class,
+        AuthorizationException::class,
+        ValidationException::class,
+        NotFoundHttpException::class,
     ],
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions

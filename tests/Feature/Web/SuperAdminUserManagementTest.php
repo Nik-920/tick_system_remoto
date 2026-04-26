@@ -166,7 +166,7 @@ class SuperAdminUserManagementTest extends TestCase
 
         $response->assertRedirect(route('users.edit', $managedUser));
         $this->assertNotNull($managedUser->fresh()->avatar_url);
-        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '/avatar.png');
+        Storage::disk('public')->assertExists('users/avatars/'.$managedUser->id.'/avatar.png');
     }
 
     public function test_super_admin_can_replace_user_avatar(): void
@@ -182,10 +182,10 @@ class SuperAdminUserManagementTest extends TestCase
         $superAdmin = $this->createUserWithRole('super_admin');
         $managedUser = $this->createUserWithRole('reporter');
 
-        $legacyPath = 'users/avatars/' . $managedUser->id . '/legacy.png';
+        $legacyPath = 'users/avatars/'.$managedUser->id.'/legacy.png';
         Storage::disk('public')->put($legacyPath, 'legacy');
         $managedUser->forceFill([
-            'avatar_url' => '/storage/v1/object/public/TablaUsers/' . $legacyPath,
+            'avatar_url' => '/storage/v1/object/public/TablaUsers/'.$legacyPath,
         ])->save();
 
         $response = $this
@@ -198,7 +198,7 @@ class SuperAdminUserManagementTest extends TestCase
         $response->assertSessionHas('status', 'Avatar actualizado correctamente.');
 
         Storage::disk('public')->assertMissing($legacyPath);
-        Storage::disk('public')->assertExists('users/avatars/' . $managedUser->id . '/new-avatar.jpg');
+        Storage::disk('public')->assertExists('users/avatars/'.$managedUser->id.'/new-avatar.jpg');
     }
 
     private function createUserWithRole(string $role): User

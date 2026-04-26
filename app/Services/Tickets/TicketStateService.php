@@ -14,21 +14,15 @@ use InvalidArgumentException;
 
 class TicketStateService
 {
-    public function __construct(private TicketQrLogger $logger)
-    {
-    }
+    public function __construct(private TicketQrLogger $logger) {}
 
-    /**
-     * @param string|null $comment
-     */
     public function transition(
         Ticket $ticket,
         User $actor,
         string $toState,
         ?string $comment = null,
         string $correlationId = ''
-    ): Ticket
-    {
+    ): Ticket {
         $correlationId = $this->resolveCorrelationId($correlationId);
 
         $fromState = (string) $ticket->state;

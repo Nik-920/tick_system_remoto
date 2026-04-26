@@ -9,8 +9,8 @@ use App\Models\User;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -20,13 +20,11 @@ class TicketCreationService
         private DeduplicationService $deduplication,
         private TicketQrLogger $logger,
         private TicketMediaStorageService $ticketMediaStorage,
-    )
-    {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $payload
-     * @param array<int, UploadedFile> $mediaFiles
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, UploadedFile>  $mediaFiles
      * @return array{created: bool, ticket: Ticket, reason: string|null}
      */
     public function create(
@@ -34,8 +32,7 @@ class TicketCreationService
         array $payload,
         array $mediaFiles = [],
         string $correlationId = ''
-    ): array
-    {
+    ): array {
         $correlationId = $this->resolveCorrelationId($correlationId);
 
         $existing = $this->findExistingTicket((string) $payload['location_id'], (string) $payload['category_id']);

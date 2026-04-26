@@ -24,6 +24,7 @@ class GenerateEmbeddingOnTicketCreated
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
             GenerateTicketEmbedding::dispatch($ticket, $correlationId);
+
             return;
         }
 

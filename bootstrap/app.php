@@ -2,10 +2,10 @@
 
 use App\Http\Middleware\EnsureCorrelationId;
 use App\Http\Middleware\SecureHeaders;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Sentry\Laravel\Integration;
 use Sentry\State\Scope;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -41,7 +41,7 @@ $builder = Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
 
-        $exceptions->reportable(function (\Throwable $throwable): void {
+        $exceptions->reportable(function (Throwable $throwable): void {
             if (! app()->bound('request')) {
                 return;
             }
@@ -64,7 +64,7 @@ $builder = Application::configure(basePath: dirname(__DIR__))
                 $route = $request->route();
                 $scope->setContext('http_request', array_filter([
                     'method' => $request->method(),
-                    'path' => '/' . ltrim($request->path(), '/'),
+                    'path' => '/'.ltrim($request->path(), '/'),
                     'route_name' => is_object($route) ? $route->getName() : null,
                     'request_id' => trim((string) $request->headers->get('X-Request-Id', '')),
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''));

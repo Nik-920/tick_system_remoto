@@ -128,6 +128,7 @@ Artisan::command(
 
                     if ($currentValue === '') {
                         $summary[$domain]['skipped']++;
+
                         continue;
                     }
 
@@ -135,12 +136,14 @@ Artisan::command(
                         $sourcePath = $extractRelativePath($currentValue);
                         if (! is_string($sourcePath) || $sourcePath === '') {
                             $summary[$domain]['skipped']++;
+
                             continue;
                         }
 
                         $targetPath = $targetPathResolver($row, $sourcePath);
                         if (! is_string($targetPath) || trim($targetPath) === '') {
                             $summary[$domain]['skipped']++;
+
                             continue;
                         }
 
@@ -154,6 +157,7 @@ Artisan::command(
                                 $copied = $storageClient->copyObject($bucket, $sourcePath, $targetPath);
                                 if (! $copied) {
                                     $summary[$domain]['missing_source']++;
+
                                     continue;
                                 }
 
@@ -175,7 +179,7 @@ Artisan::command(
                         } else {
                             $summary[$domain]['skipped']++;
                         }
-                    } catch (\Throwable $exception) {
+                    } catch (Throwable $exception) {
                         $summary[$domain]['errors']++;
                         $this->warn(sprintf(
                             '[%s] Error en registro %s: %s',
@@ -196,7 +200,7 @@ Artisan::command(
                 $rawName = basename($sourcePath);
                 $fileName = SanitizedFileName::fromRawName($rawName, 'avatar', 'png');
 
-                return trim($domainStorage->pathPrefix('users'), '/') . '/' . $user->id . '/' . $fileName;
+                return trim($domainStorage->pathPrefix('users'), '/').'/'.$user->id.'/'.$fileName;
             }
         );
 
@@ -208,7 +212,7 @@ Artisan::command(
                 $rawName = basename($sourcePath);
                 $fileName = SanitizedFileName::fromRawName($rawName, 'category-icon', 'png');
 
-                return trim($domainStorage->pathPrefix('categories'), '/') . '/' . $category->id . '/' . $fileName;
+                return trim($domainStorage->pathPrefix('categories'), '/').'/'.$category->id.'/'.$fileName;
             }
         );
 
@@ -220,7 +224,7 @@ Artisan::command(
                 $rawName = basename($sourcePath);
                 $fileName = SanitizedFileName::fromRawName($rawName, 'ticket-media', 'bin');
 
-                return trim($domainStorage->pathPrefix('tickets'), '/') . '/' . $ticketMedia->ticket_id . '/' . $fileName;
+                return trim($domainStorage->pathPrefix('tickets'), '/').'/'.$ticketMedia->ticket_id.'/'.$fileName;
             }
         );
 
@@ -230,10 +234,10 @@ Artisan::command(
             'qr_image_url',
             function (Location $location, string $sourcePath) use ($domainStorage): string {
                 $rawName = basename($sourcePath);
-                $fallbackName = (string) $location->id . '.png';
+                $fallbackName = (string) $location->id.'.png';
                 $fileName = SanitizedFileName::fromRawName($rawName !== '' ? $rawName : $fallbackName, (string) $location->id, 'png');
 
-                return trim($domainStorage->pathPrefix('locations'), '/') . '/' . $fileName;
+                return trim($domainStorage->pathPrefix('locations'), '/').'/'.$fileName;
             }
         );
 

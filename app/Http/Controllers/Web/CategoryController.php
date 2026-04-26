@@ -139,7 +139,7 @@ class CategoryController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {

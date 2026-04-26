@@ -8,9 +8,7 @@ use App\Services\Ai\DeduplicationService;
 
 class DetectDuplicatesOnEmbeddingReady
 {
-    public function __construct(private DeduplicationService $deduplication)
-    {
-    }
+    public function __construct(private DeduplicationService $deduplication) {}
 
     public function handle(TicketCreated $event): void
     {
@@ -23,6 +21,7 @@ class DetectDuplicatesOnEmbeddingReady
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
             DetectDuplicates::dispatch($event->ticket, $correlationId);
+
             return;
         }
 

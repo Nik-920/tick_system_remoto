@@ -51,7 +51,7 @@ class SupabaseStorageClient
         $response = Http::timeout($this->timeoutSeconds())
             ->withHeaders([
                 'apikey' => $this->serviceKey(),
-                'Authorization' => 'Bearer ' . $this->serviceKey(),
+                'Authorization' => 'Bearer '.$this->serviceKey(),
                 'x-upsert' => 'true',
             ])
             ->withBody($contents, trim($contentType) !== '' ? $contentType : 'application/octet-stream')
@@ -84,7 +84,7 @@ class SupabaseStorageClient
         $response = Http::timeout($this->timeoutSeconds())
             ->withHeaders([
                 'apikey' => $this->serviceKey(),
-                'Authorization' => 'Bearer ' . $this->serviceKey(),
+                'Authorization' => 'Bearer '.$this->serviceKey(),
             ])
             ->delete($this->objectEndpoint($bucket, $normalizedPath));
 
@@ -134,7 +134,7 @@ class SupabaseStorageClient
         $downloadResponse = Http::timeout($this->timeoutSeconds())
             ->withHeaders([
                 'apikey' => $this->serviceKey(),
-                'Authorization' => 'Bearer ' . $this->serviceKey(),
+                'Authorization' => 'Bearer '.$this->serviceKey(),
             ])
             ->get($this->objectEndpoint($bucket, $normalizedSource));
 
@@ -165,10 +165,10 @@ class SupabaseStorageClient
         $normalizedPath = $this->normalizePath($path);
 
         return rtrim($this->publicBaseUrl(), '/')
-            . '/storage/v1/object/public/'
-            . rawurlencode(trim($bucket, '/'))
-            . '/'
-            . $this->encodePathSegments($normalizedPath);
+            .'/storage/v1/object/public/'
+            .rawurlencode(trim($bucket, '/'))
+            .'/'
+            .$this->encodePathSegments($normalizedPath);
     }
 
     private function shouldUseLocalDiskForTesting(): bool
@@ -197,10 +197,10 @@ class SupabaseStorageClient
     private function objectEndpoint(string $bucket, string $path): string
     {
         return rtrim($this->apiBaseUrl(), '/')
-            . '/storage/v1/object/'
-            . rawurlencode(trim($bucket, '/'))
-            . '/'
-            . $this->encodePathSegments($path);
+            .'/storage/v1/object/'
+            .rawurlencode(trim($bucket, '/'))
+            .'/'
+            .$this->encodePathSegments($path);
     }
 
     private function normalizePath(string $path): string

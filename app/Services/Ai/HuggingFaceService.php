@@ -13,9 +13,6 @@ class HuggingFaceService
      */
     private array $config;
 
-    /**
-     * @var bool
-     */
     private bool $enabled;
 
     public function __construct()
@@ -67,7 +64,7 @@ class HuggingFaceService
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>|array<int, mixed>
      */
     private function postToModel(string $model, array $payload): array
@@ -80,7 +77,7 @@ class HuggingFaceService
 
         $response = $this->client()->post("/models/{$model}", $payload);
         if (! $response->successful()) {
-            throw new RuntimeException('Hugging Face request failed: ' . $response->body());
+            throw new RuntimeException('Hugging Face request failed: '.$response->body());
         }
 
         $json = $response->json();
@@ -90,7 +87,7 @@ class HuggingFaceService
 
         if (array_key_exists('error', $json)) {
             $message = is_string($json['error']) ? $json['error'] : 'Unknown Hugging Face error.';
-            throw new RuntimeException('Hugging Face error: ' . $message);
+            throw new RuntimeException('Hugging Face error: '.$message);
         }
 
         return $json;
@@ -130,7 +127,7 @@ class HuggingFaceService
     }
 
     /**
-     * @param array<string, mixed>|array<int, mixed> $data
+     * @param  array<string, mixed>|array<int, mixed>  $data
      * @return array<int, float>
      */
     private function extractVector(array $data): array

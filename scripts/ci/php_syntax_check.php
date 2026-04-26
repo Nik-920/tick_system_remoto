@@ -26,6 +26,7 @@ final class PhpSyntaxChecker
 
         if ($files === []) {
             fwrite(STDOUT, "No PHP files found to lint.\n");
+
             return 0;
         }
 
@@ -38,10 +39,12 @@ final class PhpSyntaxChecker
             foreach ($this->errors as $error) {
                 fwrite(STDERR, " - {$error}\n");
             }
+
             return 1;
         }
 
         fwrite(STDOUT, sprintf("PHP syntax check passed for %d files.\n", count($files)));
+
         return 0;
     }
 
@@ -60,13 +63,13 @@ final class PhpSyntaxChecker
 
         /** @var SplFileInfo $fileInfo */
         foreach ($iterator as $fileInfo) {
-            if (!$fileInfo->isFile()) {
+            if (! $fileInfo->isFile()) {
                 continue;
             }
 
             $path = str_replace('\\', '/', $fileInfo->getPathname());
 
-            if (!$this->isPhpFile($path)) {
+            if (! $this->isPhpFile($path)) {
                 continue;
             }
 
@@ -78,6 +81,7 @@ final class PhpSyntaxChecker
         }
 
         sort($result);
+
         return $result;
     }
 
@@ -89,7 +93,7 @@ final class PhpSyntaxChecker
     private function isExcluded(string $path): bool
     {
         foreach (self::EXCLUDED_DIRS as $excludedDir) {
-            if (str_contains($path, '/' . trim($excludedDir, '/') . '/')) {
+            if (str_contains($path, '/'.trim($excludedDir, '/').'/')) {
                 return true;
             }
         }
@@ -100,10 +104,11 @@ final class PhpSyntaxChecker
     private function lintFile(string $file): void
     {
         $command = sprintf('php -l %s', escapeshellarg($file));
-        exec($command . ' 2>&1', $output, $exitCode);
+        exec($command.' 2>&1', $output, $exitCode);
 
         if ($exitCode !== 0) {
             $this->errors[] = sprintf('%s :: %s', $file, implode(' | ', $output));
+
             return;
         }
 
@@ -111,5 +116,5 @@ final class PhpSyntaxChecker
     }
 }
 
-$checker = new PhpSyntaxChecker();
+$checker = new PhpSyntaxChecker;
 exit($checker->run(dirname(__DIR__, 2)));

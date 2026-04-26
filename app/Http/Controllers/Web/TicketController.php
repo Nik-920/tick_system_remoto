@@ -13,10 +13,10 @@ use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use Throwable;
@@ -162,7 +162,7 @@ class TicketController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {

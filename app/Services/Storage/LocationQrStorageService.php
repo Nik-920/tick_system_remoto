@@ -6,17 +6,14 @@ use App\Models\Location;
 
 class LocationQrStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage)
-    {
-    }
+    public function __construct(private DomainStorageService $domainStorage) {}
 
     public function replaceQrImage(
         Location $location,
         string $contents,
         string $extension = 'png',
         string $contentType = 'application/octet-stream'
-    ): string
-    {
+    ): string {
         $normalizedExtension = ltrim(strtolower(trim($extension)), '.');
         if ($normalizedExtension === '') {
             $normalizedExtension = 'png';
@@ -26,7 +23,7 @@ class LocationQrStorageService
             'locations',
             $location->qr_image_url,
             $this->domainStorage->pathPrefix('locations'),
-            $location->id . '.' . $normalizedExtension,
+            $location->id.'.'.$normalizedExtension,
             $contents,
             $contentType
         );

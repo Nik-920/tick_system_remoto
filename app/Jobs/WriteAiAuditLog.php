@@ -12,10 +12,13 @@ use Illuminate\Queue\SerializesModels;
 
 class WriteAiAuditLog implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function __construct(
         public string $message,
@@ -23,8 +26,7 @@ class WriteAiAuditLog implements ShouldQueue
         public ?Ticket $ticket = null,
         public ?string $operationType = null,
         public string $correlationId = ''
-    ) {
-    }
+    ) {}
 
     public function handle(TicketQrLogger $logger): void
     {
@@ -42,7 +44,7 @@ class WriteAiAuditLog implements ShouldQueue
 
         $eventName = 'ticket.ai.audit';
         if ($this->operationType !== null && $this->operationType !== '') {
-            $eventName = 'ticket.ai.' . str_replace('_', '.', $this->operationType);
+            $eventName = 'ticket.ai.'.str_replace('_', '.', $this->operationType);
         }
 
         $context['correlation_id'] = $this->correlationId;

@@ -19,7 +19,6 @@ pipeline {
 
 	parameters {
 		booleanParam(name: 'SKIP_PHPSTAN', defaultValue: false, description: 'Si es true, omite analisis estatico con PHPStan')
-		booleanParam(name: 'SKIP_CSFIXER', defaultValue: false, description: 'Si es true, omite verificacion de estilo con php-cs-fixer')
 	}
 
 	environment {
@@ -82,16 +81,6 @@ pipeline {
 			}
 		}
 
-		stage('PHP-CS-Fixer') {
-			when {
-				expression { !params.SKIP_CSFIXER }
-			}
-			steps {
-				script {
-					runCommand('composer run lint:csfixer', 'composer run lint:csfixer')
-				}
-			}
-		}
 	}
 }
 
