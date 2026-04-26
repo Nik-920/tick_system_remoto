@@ -22,7 +22,9 @@ use Throwable;
 
 class LocationController extends Controller
 {
-    public function __construct(private TicketQrLogger $logger) {}
+    public function __construct(private TicketQrLogger $logger)
+    {
+    }
 
     public function index(ListLocationsRequest $request): AnonymousResourceCollection
     {

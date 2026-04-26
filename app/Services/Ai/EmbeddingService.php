@@ -6,7 +6,9 @@ use InvalidArgumentException;
 
 class EmbeddingService
 {
-    public function __construct(private HuggingFaceService $huggingFace) {}
+    public function __construct(private HuggingFaceService $huggingFace)
+    {
+    }
 
     /**
      * @return array<int, float>

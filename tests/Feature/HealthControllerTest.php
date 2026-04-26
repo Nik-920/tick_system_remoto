@@ -25,8 +25,7 @@ class HealthControllerTest extends TestCase
 
     public function test_health_endpoint_returns_503_when_any_check_fails(): void
     {
-        $this->app->instance(HealthCheckService::class, new class extends HealthCheckService
-        {
+        $this->app->instance(HealthCheckService::class, new class () extends HealthCheckService {
             public function check(): array
             {
                 return [
