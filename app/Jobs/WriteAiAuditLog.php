@@ -12,7 +12,10 @@ use Illuminate\Queue\SerializesModels;
 
 class WriteAiAuditLog implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * @param  array<string, mixed>  $context
@@ -23,7 +26,8 @@ class WriteAiAuditLog implements ShouldQueue
         public ?Ticket $ticket = null,
         public ?string $operationType = null,
         public string $correlationId = ''
-    ) {}
+    ) {
+    }
 
     public function handle(TicketQrLogger $logger): void
     {
