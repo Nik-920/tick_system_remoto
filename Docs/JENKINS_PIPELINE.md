@@ -30,7 +30,7 @@ npm -v
 5. Branch recomendado:
    - `*/develop` para integración continua.
    - `*/main` para validación de rama principal.
-6. Script Path: `Jenkinsfile`.
+6. Script Path: `ci/jenkins/Jenkinsfile.lint`.
 7. Guardar y ejecutar **Build Now**.
 
 ## 3. Qué ejecuta el pipeline

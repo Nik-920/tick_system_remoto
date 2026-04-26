@@ -20,7 +20,7 @@ class SentrySanitizer
     ];
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     public static function sanitizeArray(array $payload): array

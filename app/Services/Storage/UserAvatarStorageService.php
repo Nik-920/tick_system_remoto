@@ -7,16 +7,14 @@ use Illuminate\Http\UploadedFile;
 
 class UserAvatarStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage)
-    {
-    }
+    public function __construct(private DomainStorageService $domainStorage) {}
 
     public function replaceAvatar(User $user, UploadedFile $file): string
     {
         $basePrefix = $this->domainStorage->pathPrefix('users');
         $pathPrefix = $basePrefix === ''
             ? (string) $user->id
-            : $basePrefix . '/' . $user->id;
+            : $basePrefix.'/'.$user->id;
 
         $fileName = SanitizedFileName::fromUploadedFile($file, 'avatar', 'png');
 

@@ -23,7 +23,7 @@ class SanitizedFileName
         $extension = trim((string) $file->extension());
         $extension = self::normalizeSegment($extension, $fallbackExtension, true);
 
-        return $fallback . '.' . $extension;
+        return $fallback.'.'.$extension;
     }
 
     public static function fromRawName(
@@ -40,7 +40,7 @@ class SanitizedFileName
         $normalizedBase = self::normalizeSegment($namePart, $fallbackBase, false);
         $normalizedExtension = self::normalizeSegment($extensionPart, $fallbackExtension, true);
 
-        return $normalizedBase . '.' . $normalizedExtension;
+        return $normalizedBase.'.'.$normalizedExtension;
     }
 
     private static function normalizeSegment(string $value, string $fallback, bool $extension): string

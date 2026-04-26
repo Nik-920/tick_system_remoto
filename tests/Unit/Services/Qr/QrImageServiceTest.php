@@ -58,8 +58,8 @@ class QrImageServiceTest extends TestCase
         $service = app(QrImageService::class);
         $url = $service->generateAndStore($location);
 
-        $expectedPath = 'locations/qr-codes/' . $location->id . '.png';
-        $this->assertStringContainsString('/storage/v1/object/public/TablaLocations/' . $expectedPath, $url);
+        $expectedPath = 'locations/qr-codes/'.$location->id.'.png';
+        $this->assertStringContainsString('/storage/v1/object/public/TablaLocations/'.$expectedPath, $url);
         Storage::disk('public')->assertExists($expectedPath);
     }
 
@@ -116,8 +116,8 @@ class QrImageServiceTest extends TestCase
         $service = app(QrImageService::class);
         $url = $service->generateAndStore($location);
 
-        $expectedPath = 'locations/qr-codes/' . $location->id . '.svg';
-        $this->assertStringContainsString('/storage/v1/object/public/TablaLocations/' . $expectedPath, $url);
+        $expectedPath = 'locations/qr-codes/'.$location->id.'.svg';
+        $this->assertStringContainsString('/storage/v1/object/public/TablaLocations/'.$expectedPath, $url);
         Storage::disk('public')->assertExists($expectedPath);
     }
 }

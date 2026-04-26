@@ -367,7 +367,7 @@ class LocationApiControllerTest extends TestCase
     private function createLocation(string $roomCode, string $token, bool $isActive = true): Location
     {
         return Location::query()->create([
-            'name' => 'Aula ' . $roomCode,
+            'name' => 'Aula '.$roomCode,
             'building' => 'Edificio Test',
             'floor' => '1',
             'room_code' => $roomCode,
@@ -385,8 +385,8 @@ class LocationApiControllerTest extends TestCase
     {
         return Category::query()->create([
             'name' => $name,
-            'icon' => 'icon-' . strtolower($name),
-            'description' => 'Descripcion de ' . $name,
+            'icon' => 'icon-'.strtolower($name),
+            'description' => 'Descripcion de '.$name,
         ]);
     }
 }

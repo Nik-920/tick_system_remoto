@@ -19,9 +19,7 @@ class GenerateTicketEmbedding implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '')
-    {
-    }
+    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
 
     public function handle(EmbeddingService $embeddings, TicketQrLogger $logger): void
     {
@@ -72,7 +70,7 @@ class GenerateTicketEmbedding implements ShouldQueue
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function reportToSentry(Throwable $exception, array $context): void
     {

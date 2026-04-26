@@ -22,9 +22,7 @@ use Throwable;
 
 class LocationController extends Controller
 {
-    public function __construct(private TicketQrLogger $logger)
-    {
-    }
+    public function __construct(private TicketQrLogger $logger) {}
 
     public function index(ListLocationsRequest $request): AnonymousResourceCollection
     {
@@ -186,7 +184,7 @@ class LocationController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {
@@ -220,8 +218,7 @@ class LocationController extends Controller
         mixed $actorId = null,
         string $trigger = 'unknown',
         string $correlationId = ''
-    ): void
-    {
+    ): void {
         $jobId = (string) Str::uuid();
 
         $location->forceFill([

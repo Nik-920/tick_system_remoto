@@ -6,9 +6,7 @@ use InvalidArgumentException;
 
 class EmbeddingService
 {
-    public function __construct(private HuggingFaceService $huggingFace)
-    {
-    }
+    public function __construct(private HuggingFaceService $huggingFace) {}
 
     /**
      * @return array<int, float>
@@ -19,8 +17,8 @@ class EmbeddingService
     }
 
     /**
-     * @param array<int, float|int|string> $a
-     * @param array<int, float|int|string> $b
+     * @param  array<int, float|int|string>  $a
+     * @param  array<int, float|int|string>  $b
      */
     public function cosineSimilarity(array $a, array $b): float
     {
@@ -50,7 +48,7 @@ class EmbeddingService
     }
 
     /**
-     * @param array<int, float|int|string> $vector
+     * @param  array<int, float|int|string>  $vector
      * @return array<int, float>
      */
     private function toFloatVector(array $vector): array

@@ -44,6 +44,7 @@ class NotifyDuplicateDetected
                 $correlationId,
             );
             WriteAiAuditLog::dispatch('Duplicate ticket detected.', $context, $ticket, 'semantic_dedup_check', $correlationId);
+
             return;
         }
 

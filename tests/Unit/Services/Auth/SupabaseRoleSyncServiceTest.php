@@ -5,6 +5,7 @@ namespace Tests\Unit\Services\Auth;
 use App\Models\User;
 use App\Services\Auth\SupabaseRoleSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -56,9 +57,9 @@ class SupabaseRoleSyncServiceTest extends TestCase
         $this->assertSame('synced', $result['status']);
         $this->assertSame('maintenance', $result['role']);
 
-        Http::assertSent(function (\Illuminate\Http\Client\Request $request) use ($user): bool {
+        Http::assertSent(function (Request $request) use ($user): bool {
             return $request->method() === 'PUT'
-                && $request->url() === 'https://supabase.test/auth/v1/admin/users/' . rawurlencode($user->id)
+                && $request->url() === 'https://supabase.test/auth/v1/admin/users/'.rawurlencode($user->id)
                 && $request->hasHeader('apikey', 'service-role-key')
                 && $request->hasHeader('Authorization', 'Bearer service-role-key')
                 && ($request['app_metadata']['app_role'] ?? null) === 'maintenance';

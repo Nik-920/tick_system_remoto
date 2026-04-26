@@ -150,10 +150,10 @@ class ProfileManagementTest extends TestCase
 
         $user = $this->createUserWithRole('reporter');
 
-        $legacyPath = 'users/avatars/' . $user->id . '/legacy.png';
+        $legacyPath = 'users/avatars/'.$user->id.'/legacy.png';
         Storage::disk('public')->put($legacyPath, 'legacy-avatar-content');
         $user->forceFill([
-            'avatar_url' => '/storage/v1/object/public/TablaUsers/' . $legacyPath,
+            'avatar_url' => '/storage/v1/object/public/TablaUsers/'.$legacyPath,
         ])->save();
 
         $response = $this
@@ -166,7 +166,7 @@ class ProfileManagementTest extends TestCase
         $response->assertSessionHas('status', 'Avatar actualizado correctamente.');
 
         Storage::disk('public')->assertMissing($legacyPath);
-        Storage::disk('public')->assertExists('users/avatars/' . $user->id . '/new-avatar.jpg');
+        Storage::disk('public')->assertExists('users/avatars/'.$user->id.'/new-avatar.jpg');
     }
 
     public function test_profile_avatar_update_rejects_non_image_files(): void

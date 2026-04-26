@@ -13,9 +13,6 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    /**
-     * @return View
-     */
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Ticket::class);
@@ -281,7 +278,7 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Promedio resolucion 30 dias',
-                    'value' => $avgResolutionHoursLast30Days . ' h',
+                    'value' => $avgResolutionHoursLast30Days.' h',
                     'hint' => 'Tiempo medio de resolucion para tickets cerrados.',
                 ],
             ],
@@ -504,7 +501,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param list<string> $roles
+     * @param  list<string>  $roles
      */
     private function hasAnyRole(User $user, array $roles): bool
     {

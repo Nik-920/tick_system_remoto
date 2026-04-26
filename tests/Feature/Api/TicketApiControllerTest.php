@@ -128,7 +128,7 @@ class TicketApiControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticketId);
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticketId);
         $this->assertCount(2, $storedFiles);
     }
 
@@ -248,12 +248,12 @@ class TicketApiControllerTest extends TestCase
             'priority' => 'medium',
         ]);
 
-        $mediaPath = 'tickets/media/' . $ticket->id . '/evidencia.png';
+        $mediaPath = 'tickets/media/'.$ticket->id.'/evidencia.png';
         Storage::disk('public')->put($mediaPath, 'image-content');
 
         $media = TicketMedia::query()->create([
             'ticket_id' => $ticket->id,
-            'file_url' => '/storage/v1/object/public/TableTicket/' . $mediaPath,
+            'file_url' => '/storage/v1/object/public/TableTicket/'.$mediaPath,
             'file_type' => 'image',
             'uploaded_by' => $admin->id,
         ]);
@@ -320,7 +320,7 @@ class TicketApiControllerTest extends TestCase
 
         TicketMedia::query()->create([
             'ticket_id' => $ticket->id,
-            'file_url' => '/storage/v1/object/public/TableTicket/tickets/media/' . $ticket->id . '/fallo.png',
+            'file_url' => '/storage/v1/object/public/TableTicket/tickets/media/'.$ticket->id.'/fallo.png',
             'file_type' => 'image',
             'uploaded_by' => $admin->id,
         ]);

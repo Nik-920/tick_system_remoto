@@ -15,8 +15,8 @@ class LogAiDecision implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * @param array<string, mixed> $inputData
-     * @param array<string, mixed> $outputData
+     * @param  array<string, mixed>  $inputData
+     * @param  array<string, mixed>  $outputData
      */
     public function __construct(
         public Ticket $ticket,
@@ -26,8 +26,7 @@ class LogAiDecision implements ShouldQueue
         public ?float $confidenceScore = null,
         public ?string $actionTaken = null,
         public string $correlationId = ''
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {

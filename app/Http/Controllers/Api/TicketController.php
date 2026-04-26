@@ -12,11 +12,11 @@ use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -167,7 +167,7 @@ class TicketController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {

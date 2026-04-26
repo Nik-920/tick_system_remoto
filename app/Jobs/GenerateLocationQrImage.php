@@ -21,9 +21,7 @@ class GenerateLocationQrImage implements ShouldQueue
         public string $locationId,
         public ?string $jobTrackingId = null,
         public string $correlationId = '',
-    )
-    {
-    }
+    ) {}
 
     public function handle(QrImageService $qrImageService, TicketQrLogger $logger): void
     {

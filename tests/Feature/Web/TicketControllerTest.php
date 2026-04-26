@@ -9,8 +9,8 @@ use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -124,7 +124,7 @@ class TicketControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticket->id);
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticket->id);
         $this->assertCount(2, $storedFiles);
     }
 
@@ -188,12 +188,12 @@ class TicketControllerTest extends TestCase
             'priority' => 'medium',
         ]);
 
-        $mediaPath = 'tickets/media/' . $ticket->id . '/web-evidencia.png';
+        $mediaPath = 'tickets/media/'.$ticket->id.'/web-evidencia.png';
         Storage::disk('public')->put($mediaPath, 'image-content');
 
         $media = TicketMedia::query()->create([
             'ticket_id' => $ticket->id,
-            'file_url' => '/storage/v1/object/public/TableTicket/' . $mediaPath,
+            'file_url' => '/storage/v1/object/public/TableTicket/'.$mediaPath,
             'file_type' => 'image',
             'uploaded_by' => $admin->id,
         ]);
@@ -376,8 +376,8 @@ class TicketControllerTest extends TestCase
         $nextPageUrl = (string) $tickets->nextPageUrl();
 
         $this->assertNotSame('', $nextPageUrl);
-        $this->assertStringContainsString('location_id=' . $location->id, $nextPageUrl);
-        $this->assertStringContainsString('category_id=' . $category->id, $nextPageUrl);
+        $this->assertStringContainsString('location_id='.$location->id, $nextPageUrl);
+        $this->assertStringContainsString('category_id='.$category->id, $nextPageUrl);
         $this->assertStringContainsString('per_page=10', $nextPageUrl);
     }
 
@@ -399,7 +399,7 @@ class TicketControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function createLocation(array $overrides = []): Location
     {
@@ -407,8 +407,8 @@ class TicketControllerTest extends TestCase
             'name' => 'Aula Innovacion',
             'building' => 'Edificio A',
             'floor' => '2',
-            'room_code' => 'A-' . Str::upper(Str::random(6)),
-            'qr_token' => 'qr-' . Str::lower(Str::random(12)),
+            'room_code' => 'A-'.Str::upper(Str::random(6)),
+            'qr_token' => 'qr-'.Str::lower(Str::random(12)),
             'is_active' => true,
         ];
 
@@ -416,12 +416,12 @@ class TicketControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function createCategory(array $overrides = []): Category
     {
         $base = [
-            'name' => 'Categoria ' . Str::lower(Str::random(8)),
+            'name' => 'Categoria '.Str::lower(Str::random(8)),
             'icon' => 'bolt',
             'description' => 'Incidencias electricas',
         ];

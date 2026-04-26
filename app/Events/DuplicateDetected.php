@@ -16,6 +16,5 @@ class DuplicateDetected
         public ?Ticket $matchedTicket = null,
         public ?float $similarityScore = null,
         public string $correlationId = ''
-    ) {
-    }
+    ) {}
 }

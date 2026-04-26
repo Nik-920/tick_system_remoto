@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Ticket */
+/** @mixin Ticket */
 class TicketResource extends JsonResource
 {
     /**

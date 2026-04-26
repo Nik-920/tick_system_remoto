@@ -21,16 +21,13 @@ class DetectDuplicates implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '')
-    {
-    }
+    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
 
     public function handle(
         DeduplicationService $deduplication,
         EmbeddingService $embeddings,
         TicketQrLogger $logger
-    ): void
-    {
+    ): void {
         if (! $deduplication->isEnabled()) {
             return;
         }
@@ -131,7 +128,7 @@ class DetectDuplicates implements ShouldQueue
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function reportToSentry(Throwable $exception, array $context): void
     {

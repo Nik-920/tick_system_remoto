@@ -24,6 +24,7 @@ class DeduplicationTest extends TestCase
 
         if (! $enabled) {
             $this->assertFalse($this->isDuplicate($above, $enabled, $threshold));
+
             return;
         }
 
@@ -45,6 +46,7 @@ class DeduplicationTest extends TestCase
 
         if (! $enabled) {
             $this->assertFalse($this->isWithinWindow($recent, $enabled, $windowHours));
+
             return;
         }
 
@@ -56,7 +58,7 @@ class DeduplicationTest extends TestCase
     {
         $baseUrl = rtrim(config('ai.huggingface.base_url'), '/');
         $model = config('ai.huggingface.embedding_model');
-        $endpoint = $baseUrl . '/models/' . $model;
+        $endpoint = $baseUrl.'/models/'.$model;
 
         Http::fake([
             $endpoint => Http::response([0.1, 0.2, 0.3], 200),

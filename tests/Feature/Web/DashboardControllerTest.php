@@ -199,7 +199,7 @@ class DashboardControllerTest extends TestCase
             'building' => 'Edificio C',
             'floor' => '3',
             'room_code' => $roomCode,
-            'qr_token' => 'qr-' . strtolower(str_replace(' ', '-', $roomCode)),
+            'qr_token' => 'qr-'.strtolower(str_replace(' ', '-', $roomCode)),
             'is_active' => true,
         ]);
     }
