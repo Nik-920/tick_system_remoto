@@ -25,7 +25,7 @@ class LocationIncidentHistoryTest extends TestCase
 
     public function test_relations_are_defined(): void
     {
-        $model = new LocationIncidentHistory;
+        $model = new LocationIncidentHistory();
 
         $this->assertInstanceOf(BelongsTo::class, $model->location());
         $this->assertInstanceOf(BelongsTo::class, $model->category());

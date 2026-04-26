@@ -6,7 +6,9 @@ use App\Models\Location;
 
 class LocationQrStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage) {}
+    public function __construct(private DomainStorageService $domainStorage)
+    {
+    }
 
     public function replaceQrImage(
         Location $location,

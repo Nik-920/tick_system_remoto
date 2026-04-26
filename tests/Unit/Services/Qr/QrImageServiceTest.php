@@ -32,8 +32,7 @@ class QrImageServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        QrCode::swap(new class
-        {
+        QrCode::swap(new class () {
             public function format(string $format): self
             {
                 return $this;
@@ -82,8 +81,7 @@ class QrImageServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        QrCode::swap(new class
-        {
+        QrCode::swap(new class () {
             private string $currentFormat = 'png';
 
             public function format(string $format): self

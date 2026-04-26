@@ -12,7 +12,10 @@ use Illuminate\Queue\SerializesModels;
 
 class LogAiDecision implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * @param  array<string, mixed>  $inputData
@@ -26,7 +29,8 @@ class LogAiDecision implements ShouldQueue
         public ?float $confidenceScore = null,
         public ?string $actionTaken = null,
         public string $correlationId = ''
-    ) {}
+    ) {
+    }
 
     public function handle(): void
     {
