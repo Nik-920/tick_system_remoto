@@ -9,7 +9,7 @@ class HealthCheckServiceTest extends TestCase
 {
     public function test_check_returns_healthy_when_database_and_queue_are_available(): void
     {
-        $service = new HealthCheckService();
+        $service = new HealthCheckService;
 
         $result = $service->check();
 
@@ -23,7 +23,7 @@ class HealthCheckServiceTest extends TestCase
     {
         config(['database.default' => 'missing_connection']);
 
-        $service = new HealthCheckService();
+        $service = new HealthCheckService;
 
         $result = $service->check();
 
@@ -36,7 +36,7 @@ class HealthCheckServiceTest extends TestCase
     {
         config(['queue.default' => 'missing_driver']);
 
-        $service = new HealthCheckService();
+        $service = new HealthCheckService;
 
         $result = $service->check();
 

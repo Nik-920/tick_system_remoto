@@ -7,9 +7,7 @@ use Illuminate\Http\UploadedFile;
 
 class UserAvatarStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage)
-    {
-    }
+    public function __construct(private DomainStorageService $domainStorage) {}
 
     public function replaceAvatar(User $user, UploadedFile $file): string
     {

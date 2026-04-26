@@ -8,9 +8,7 @@ use App\Services\Ai\DeduplicationService;
 
 class DetectDuplicatesOnEmbeddingReady
 {
-    public function __construct(private DeduplicationService $deduplication)
-    {
-    }
+    public function __construct(private DeduplicationService $deduplication) {}
 
     public function handle(TicketCreated $event): void
     {

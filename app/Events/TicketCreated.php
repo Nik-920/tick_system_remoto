@@ -13,7 +13,5 @@ class TicketCreated
     use InteractsWithSockets;
     use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '')
-    {
-    }
+    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
 }

@@ -9,9 +9,7 @@ use Sentry\State\Scope;
 
 class ReportFailedQueueJob
 {
-    public function __construct(private TicketQrLogger $logger)
-    {
-    }
+    public function __construct(private TicketQrLogger $logger) {}
 
     public function handle(JobFailed $event): void
     {

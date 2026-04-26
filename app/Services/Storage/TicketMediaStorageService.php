@@ -9,9 +9,7 @@ use Illuminate\Http\UploadedFile;
 
 class TicketMediaStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage)
-    {
-    }
+    public function __construct(private DomainStorageService $domainStorage) {}
 
     /**
      * @param  array<int, UploadedFile>  $files

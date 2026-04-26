@@ -26,8 +26,7 @@ class WriteAiAuditLog implements ShouldQueue
         public ?Ticket $ticket = null,
         public ?string $operationType = null,
         public string $correlationId = ''
-    ) {
-    }
+    ) {}
 
     public function handle(TicketQrLogger $logger): void
     {

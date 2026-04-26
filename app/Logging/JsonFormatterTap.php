@@ -15,7 +15,7 @@ class JsonFormatterTap
                 continue;
             }
 
-            $handler->setFormatter(new JsonFormatter());
+            $handler->setFormatter(new JsonFormatter);
         }
     }
 }

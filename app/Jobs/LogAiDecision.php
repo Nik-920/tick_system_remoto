@@ -29,8 +29,7 @@ class LogAiDecision implements ShouldQueue
         public ?float $confidenceScore = null,
         public ?string $actionTaken = null,
         public string $correlationId = ''
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {

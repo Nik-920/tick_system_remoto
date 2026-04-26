@@ -22,9 +22,7 @@ class GenerateTicketEmbedding implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '')
-    {
-    }
+    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
 
     public function handle(EmbeddingService $embeddings, TicketQrLogger $logger): void
     {

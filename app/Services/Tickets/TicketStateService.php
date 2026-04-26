@@ -14,9 +14,7 @@ use InvalidArgumentException;
 
 class TicketStateService
 {
-    public function __construct(private TicketQrLogger $logger)
-    {
-    }
+    public function __construct(private TicketQrLogger $logger) {}
 
     public function transition(
         Ticket $ticket,

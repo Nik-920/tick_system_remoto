@@ -6,9 +6,7 @@ use Illuminate\Support\Carbon;
 
 class DeduplicationService
 {
-    public function __construct(private EmbeddingService $embeddings)
-    {
-    }
+    public function __construct(private EmbeddingService $embeddings) {}
 
     public function isEnabled(): bool
     {

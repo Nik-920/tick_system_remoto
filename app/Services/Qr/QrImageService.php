@@ -9,9 +9,7 @@ use Throwable;
 
 class QrImageService
 {
-    public function __construct(private LocationQrStorageService $qrStorageService)
-    {
-    }
+    public function __construct(private LocationQrStorageService $qrStorageService) {}
 
     public function generateAndStore(Location $location): string
     {

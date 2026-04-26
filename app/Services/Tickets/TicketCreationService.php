@@ -20,8 +20,7 @@ class TicketCreationService
         private DeduplicationService $deduplication,
         private TicketQrLogger $logger,
         private TicketMediaStorageService $ticketMediaStorage,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
