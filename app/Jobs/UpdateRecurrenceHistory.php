@@ -4,12 +4,12 @@ namespace App\Jobs;
 
 use App\Models\LocationIncidentHistory;
 use App\Models\Ticket;
+use Carbon\CarbonInterval;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\CarbonInterval;
 
 class UpdateRecurrenceHistory implements ShouldQueue
 {
@@ -19,7 +19,7 @@ class UpdateRecurrenceHistory implements ShouldQueue
 
     public function handle(): void
     {
-        if (! (bool) config('ai.recurrence.enabled')) {
+        if (config('ai.recurrence.enabled') !== true) {
             return;
         }
 

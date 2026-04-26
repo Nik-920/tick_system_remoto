@@ -353,7 +353,10 @@ class DashboardController extends Controller
             ->limit(8)
             ->get()
             ->filter(function (Location $location): bool {
-                return ($location->open_tickets_count + $location->in_progress_tickets_count) > 0;
+                $openTicketsCount = (int) $location->getAttribute('open_tickets_count');
+                $inProgressTicketsCount = (int) $location->getAttribute('in_progress_tickets_count');
+
+                return ($openTicketsCount + $inProgressTicketsCount) > 0;
             })
             ->take(5)
             ->values();

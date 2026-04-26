@@ -152,6 +152,7 @@ class LocationController extends Controller
 
     /**
      * @param  array<string, mixed>  $filters
+     * @param  Builder<Location>  $query
      */
     private function applyFilters(Builder $query, array $filters): void
     {
