@@ -70,14 +70,10 @@
         "lint:phpstan": [
             "vendor/bin/phpstan analyse --memory-limit=1G"
         ],
-        "lint:csfixer": [
-            "vendor/bin/php-cs-fixer fix --dry-run --diff --allow-risky=yes"
-        ],
         "lint": [
             "@lint:syntax",
             "@lint:pint",
-            "@lint:phpstan",
-            "@lint:csfixer"
+            "@lint:phpstan"
         ]
     },
     "extra": {
