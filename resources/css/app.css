@@ -11,6 +11,7 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 @import './modules/dashboard-role-shared.css';
+@import './modules/app-layout.css';
 @import './modules/users.css';
 @import './modules/tickets.css';
 @import './modules/categories.css';
