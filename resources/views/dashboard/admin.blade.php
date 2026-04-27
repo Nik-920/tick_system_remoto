@@ -4,6 +4,8 @@
 
 @section('content')
     <div class="role-dashboard role-dashboard-admin space-y-6">
+
+        {{-- ===== HERO ===== --}}
         <section class="role-hero role-hero-admin panel panel-pad overflow-hidden">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
@@ -21,146 +23,166 @@
 
             <div class="mt-4 flex flex-wrap items-center gap-2">
                 @foreach ($quickActions as $action)
-                    <a
-                        href="{{ $action['href'] }}"
-                        class="{{ $action['variant'] === 'primary' ? 'btn-primary bg-emerald-700 hover:bg-emerald-800 text-white' : 'btn-secondary border border-emerald-200 text-emerald-800 hover:bg-emerald-50' }}"
-                    >
+                    <a href="{{ $action['href'] }}"
+                       class="{{ $action['variant'] === 'primary' ? 'btn-primary' : 'btn-secondary' }}">
                         {{ $action['label'] }}
                     </a>
                 @endforeach
             </div>
         </section>
 
-        <section class="role-kpi-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {{-- ===== KPIs ===== --}}
+        <section class="role-kpi-grid grid grid-cols-2 xl:grid-cols-4 gap-4">
             @foreach ($kpis as $kpi)
-                <article class="role-kpi-card panel panel-pad border border-emerald-100 bg-emerald-50/35 space-y-2">
-                    <p class="text-xs uppercase tracking-[0.1em] text-emerald-700 font-semibold">{{ $kpi['label'] }}</p>
-                    <p class="text-3xl font-black text-slate-900">{{ $kpi['value'] }}</p>
-                    <p class="text-sm text-slate-600">{{ $kpi['hint'] }}</p>
+                <article class="role-kpi-card">
+                    <p>{{ $kpi['label'] }}</p>
+                    <p>{{ $kpi['value'] }}</p>
+                    <p>{{ $kpi['hint'] }}</p>
                 </article>
             @endforeach
         </section>
 
+        {{-- ===== QR + UBICACIONES ===== --}}
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <section class="role-section panel panel-pad border border-emerald-100">
-                <header class="mb-3">
-                    <h2 class="text-lg font-bold text-slate-900">Salud QR por estado</h2>
-                    <p class="text-sm text-slate-600">Semaforo de generacion y estabilidad QR institucional.</p>
+
+            {{-- Salud QR --}}
+            <section class="role-section">
+                <header>
+                    <h2>Salud QR por estado</h2>
+                    <p>Semaforo de generacion y estabilidad QR institucional.</p>
                 </header>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <article class="rounded-xl border border-slate-200 bg-white p-3">
-                        <p class="text-xs uppercase tracking-[0.1em] text-slate-500">Pending</p>
-                        <p class="text-2xl font-black text-slate-900 mt-1">{{ $qrStatusSummary['pending'] ?? 0 }}</p>
+                <div class="grid grid-cols-2 gap-2 p-4">
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Pending</p>
+                        <p class="dash-mini-val">{{ $qrStatusSummary['pending'] ?? 0 }}</p>
                     </article>
-                    <article class="rounded-xl border border-slate-200 bg-white p-3">
-                        <p class="text-xs uppercase tracking-[0.1em] text-slate-500">Processing</p>
-                        <p class="text-2xl font-black text-slate-900 mt-1">{{ $qrStatusSummary['processing'] ?? 0 }}</p>
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Processing</p>
+                        <p class="dash-mini-val dash-mini-val--amber">{{ $qrStatusSummary['processing'] ?? 0 }}</p>
                     </article>
-                    <article class="rounded-xl border border-slate-200 bg-white p-3">
-                        <p class="text-xs uppercase tracking-[0.1em] text-slate-500">Failed</p>
-                        <p class="text-2xl font-black text-red-700 mt-1">{{ $qrStatusSummary['failed'] ?? 0 }}</p>
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Failed</p>
+                        <p class="dash-mini-val dash-mini-val--red">{{ $qrStatusSummary['failed'] ?? 0 }}</p>
                     </article>
-                    <article class="rounded-xl border border-slate-200 bg-white p-3">
-                        <p class="text-xs uppercase tracking-[0.1em] text-slate-500">Ready</p>
-                        <p class="text-2xl font-black text-emerald-700 mt-1">{{ $qrStatusSummary['ready'] ?? 0 }}</p>
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Ready</p>
+                        <p class="dash-mini-val dash-mini-val--green">{{ $qrStatusSummary['ready'] ?? 0 }}</p>
                     </article>
                 </div>
             </section>
 
-            <section class="role-section panel panel-pad border border-emerald-100 xl:col-span-2">
-                <header class="mb-3">
-                    <h2 class="text-lg font-bold text-slate-900">Top ubicaciones con carga operativa</h2>
-                    <p class="text-sm text-slate-600">Espacios con mayor volumen de incidencias abiertas/en progreso.</p>
+            {{-- Top ubicaciones --}}
+            <section class="role-section xl:col-span-2">
+                <header>
+                    <h2>Top ubicaciones con carga operativa</h2>
+                    <p>Espacios con mayor volumen de incidencias abiertas/en progreso.</p>
                 </header>
 
-                <div class="space-y-2">
+                <div class="p-4 space-y-2">
                     @forelse ($topLocationsByOpen as $location)
-                        <article class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <p class="font-semibold text-slate-900">{{ $location->name }}</p>
-                                    <p class="text-xs text-slate-500">{{ $location->room_code }} · {{ $location->building }}</p>
-                                </div>
-                                <div class="text-right text-xs">
-                                    <p class="text-slate-700">Abiertos: <strong>{{ $location->open_tickets_count }}</strong></p>
-                                    <p class="text-slate-700">En progreso: <strong>{{ $location->in_progress_tickets_count }}</strong></p>
-                                </div>
+                        <article class="dash-location-card">
+                            <div>
+                                <p class="dash-location-name">{{ $location->name }}</p>
+                                <p class="dash-location-meta">{{ $location->room_code }} · {{ $location->building }}</p>
+                            </div>
+                            <div class="dash-location-stats">
+                                <p>Abiertos: <strong>{{ $location->open_tickets_count }}</strong></p>
+                                <p>En progreso: <strong>{{ $location->in_progress_tickets_count }}</strong></p>
                             </div>
                         </article>
                     @empty
-                        <p class="text-sm text-slate-600">No hay ubicaciones con carga activa en este momento.</p>
+                        <p class="dash-empty">No hay ubicaciones con carga activa en este momento.</p>
                     @endforelse
                 </div>
             </section>
         </div>
 
+        {{-- ===== TABLAS ===== --}}
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <section class="role-section panel overflow-hidden border border-emerald-100">
-                <header class="panel-pad border-b border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-900">Radar de incidencias QR</h2>
-                    <p class="text-sm text-slate-600 mt-1">Ubicaciones con QR pendiente, procesando o fallido.</p>
-                </header>
 
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Ubicacion</th>
-                        <th>Aula</th>
-                        <th>Estado QR</th>
-                        <th>Tickets</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @forelse ($qrIssues as $location)
-                        <tr>
-                            <td>{{ $location->name }}</td>
-                            <td>{{ $location->room_code }}</td>
-                            <td>{{ $location->qr_generation_status ?? 'pending' }}</td>
-                            <td>{{ $location->tickets_count }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="text-slate-600">No hay incidencias QR activas.</td>
-                        </tr>
-                    @endforelse
-                    </tbody>
-                </table>
+            {{-- Radar QR --}}
+            <section class="role-section">
+                <header>
+                    <h2>Radar de incidencias QR</h2>
+                    <p>Ubicaciones con QR pendiente, procesando o fallido.</p>
+                </header>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ubicacion</th>
+                                <th>Aula</th>
+                                <th>Estado QR</th>
+                                <th>Tickets</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($qrIssues as $location)
+                                <tr>
+                                    <td>{{ $location->name }}</td>
+                                    <td>{{ $location->room_code }}</td>
+                                    <td>
+                                        <span class="dash-qr-badge dash-qr-badge--{{ $location->qr_generation_status ?? 'pending' }}">
+                                            {{ $location->qr_generation_status ?? 'pending' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $location->tickets_count }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="dash-empty">No hay incidencias QR activas.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
-            <section class="role-section panel overflow-hidden border border-emerald-100">
-                <header class="panel-pad border-b border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-900">Actividad global reciente</h2>
-                    <p class="text-sm text-slate-600 mt-1">Ultimos movimientos sobre tickets en toda la plataforma.</p>
+            {{-- Actividad reciente --}}
+            <section class="role-section">
+                <header>
+                    <h2>Actividad global reciente</h2>
+                    <p>Ultimos movimientos sobre tickets en toda la plataforma.</p>
                 </header>
-
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Titulo</th>
-                        <th>Estado</th>
-                        <th>Prioridad</th>
-                        <th>Ubicacion</th>
-                        <th>Accion</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @forelse ($recentTickets as $ticket)
-                        <tr>
-                            <td>{{ $ticket->title }}</td>
-                            <td>{{ $stateLabels[$ticket->state] ?? $ticket->state }}</td>
-                            <td>{{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</td>
-                            <td>{{ $ticket->location?->name ?? 'N/A' }}</td>
-                            <td><a href="{{ route('tickets.show', $ticket) }}" class="text-emerald-700 hover:underline">Ver</a></td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-slate-600">No hay actividad reciente para mostrar.</td>
-                        </tr>
-                    @endforelse
-                    </tbody>
-                </table>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Titulo</th>
+                                <th>Estado</th>
+                                <th>Prioridad</th>
+                                <th>Ubicacion</th>
+                                <th>Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($recentTickets as $ticket)
+                                <tr>
+                                    <td>{{ $ticket->title }}</td>
+                                    <td>
+                                        <span class="dash-state-badge dash-state-badge--{{ $ticket->state }}">
+                                            {{ $stateLabels[$ticket->state] ?? $ticket->state }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="dash-priority-badge dash-priority-badge--{{ $ticket->priority }}">
+                                            {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $ticket->location?->name ?? 'N/A' }}</td>
+                                    <td><a href="{{ route('tickets.show', $ticket) }}">Ver</a></td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="dash-empty">No hay actividad reciente para mostrar.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </div>
+
     </div>
 @endsection
