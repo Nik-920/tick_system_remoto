@@ -137,7 +137,7 @@
 
                 <div class="tickets-form-group">
                     <label for="comment" class="tickets-field-label">Comentario</label>
-                    <textarea id="comment" name="comment" rows="3" 
+                    <textarea id="comment" name="comment" rows="3"
                               placeholder="Explica brevemente por qué cambias el estado o qué acción se realizó"
                               class="tickets-field">{{ old('comment') }}</textarea>
                     @error('comment')

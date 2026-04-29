@@ -1,0 +1,167 @@
+def runCommand(String unixCommand, String windowsCommand) {
+	if (isUnix()) {
+		sh unixCommand
+	} else {
+		bat windowsCommand
+	}
+}
+
+pipeline {
+	agent any
+
+	options {
+		timestamps()
+		ansiColor('xterm')
+		disableConcurrentBuilds()
+		buildDiscarder(logRotator(numToKeepStr: '20'))
+		timeout(time: 35, unit: 'MINUTES')
+	}
+
+	parameters {
+		booleanParam(name: 'SKIP_FRONTEND_BUILD', defaultValue: false, description: 'Si es true, omite npm ci y npm run build')
+		booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Si es true, ejecuta PHPUnit y publica reporte JUnit')
+	}
+
+	environment {
+		APP_ENV = 'testing'
+		COMPOSER_ALLOW_SUPERUSER = '1'
+		COMPOSER_NO_INTERACTION = '1'
+		PACKAGE_DIR = 'storage/package'
+	}
+
+	stages {
+		stage('Checkout') {
+			steps {
+				checkout scm
+			}
+		}
+
+		stage('Toolchain') {
+			steps {
+				script {
+					runCommand('php -v', 'php -v')
+					runCommand('composer --version', 'composer --version')
+					runCommand('git --version', 'git --version')
+					runCommand('node -v', 'node -v')
+					runCommand('npm -v', 'npm -v')
+				}
+			}
+		}
+
+		stage('Install Backend Dependencies') {
+			steps {
+				script {
+					runCommand(
+						'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative',
+						'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative'
+					)
+				}
+			}
+		}
+
+		stage('Run PHPUnit') {
+			when {
+				expression { params.RUN_TESTS }
+			}
+			steps {
+				script {
+					runCommand('mkdir -p storage/test-results', 'if not exist storage\\test-results mkdir storage\\test-results')
+					runCommand('vendor/bin/phpunit --log-junit storage/test-results/phpunit.xml', 'vendor\\bin\\phpunit --log-junit storage\\test-results\\phpunit.xml')
+				}
+			}
+		}
+
+		stage('Build Frontend') {
+			when {
+				expression { !params.SKIP_FRONTEND_BUILD }
+			}
+			steps {
+				script {
+					runCommand('npm ci', 'npm ci')
+					runCommand('npm run build', 'npm run build')
+				}
+			}
+		}
+
+		stage('Prepare Package Directory') {
+			steps {
+				script {
+					runCommand('mkdir -p storage/package', 'if not exist storage\\package mkdir storage\\package')
+					writeFile file: 'storage/package/release-info.txt', text: """project=system_app
+build_number=${env.BUILD_NUMBER}
+git_commit=${env.GIT_COMMIT ?: 'unknown'}
+build_url=${env.BUILD_URL ?: 'unknown'}
+created_at_utc=${new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))}
+"""
+				}
+			}
+		}
+
+		stage('Create Source ZIP') {
+			steps {
+				script {
+					runCommand(
+						'git archive --format=zip --output=storage/package/system_app-source-${BUILD_NUMBER}.zip HEAD',
+						'git archive --format=zip --output=storage\\package\\system_app-source-%BUILD_NUMBER%.zip HEAD'
+					)
+				}
+			}
+		}
+
+		stage('Create Release ZIP') {
+			steps {
+				script {
+					if (isUnix()) {
+						sh '''
+							set -e
+							rm -rf storage/package/release
+							mkdir -p storage/package/release
+							cp -R app bootstrap config database public resources routes vendor storage/package/release/
+							cp artisan composer.json composer.lock storage/package/release/
+							if [ -f .env.example ]; then cp .env.example storage/package/release/.env.example; fi
+							cd storage/package/release
+							zip -r ../system_app-release-${BUILD_NUMBER}.zip .
+						'''
+					} else {
+						bat '''
+							if exist storage\\package\\release rmdir /s /q storage\\package\\release
+							mkdir storage\\package\\release
+							xcopy app storage\\package\\release\\app\\ /E /I /Y >nul
+							xcopy bootstrap storage\\package\\release\\bootstrap\\ /E /I /Y >nul
+							xcopy config storage\\package\\release\\config\\ /E /I /Y >nul
+							xcopy database storage\\package\\release\\database\\ /E /I /Y >nul
+							xcopy public storage\\package\\release\\public\\ /E /I /Y >nul
+							xcopy resources storage\\package\\release\\resources\\ /E /I /Y >nul
+							xcopy routes storage\\package\\release\\routes\\ /E /I /Y >nul
+							xcopy vendor storage\\package\\release\\vendor\\ /E /I /Y >nul
+							copy /Y artisan storage\\package\\release\\artisan >nul
+							copy /Y composer.json storage\\package\\release\\composer.json >nul
+							copy /Y composer.lock storage\\package\\release\\composer.lock >nul
+							if exist .env.example copy /Y .env.example storage\\package\\release\\.env.example >nul
+							powershell -NoProfile -Command "Compress-Archive -Path 'storage\\package\\release\\*' -DestinationPath 'storage\\package\\system_app-release-%BUILD_NUMBER%.zip' -Force"
+						'''
+					}
+				}
+			}
+		}
+
+		stage('Generate Checksums') {
+			steps {
+				script {
+					if (isUnix()) {
+						sh 'cd storage/package && sha256sum *.zip > checksums.sha256'
+					} else {
+						bat 'powershell -NoProfile -Command "$files = Get-ChildItem -Path storage\\package -Filter *.zip; $files | ForEach-Object { $h = Get-FileHash -Algorithm SHA256 $_.FullName; \"$($h.Hash)  $($_.Name)\" } | Set-Content storage\\package\\checksums.sha256"'
+					}
+				}
+			}
+		}
+	}
+
+	post {
+		always {
+			junit allowEmptyResults: true, testResults: 'storage/test-results/phpunit.xml'
+			archiveArtifacts artifacts: 'storage/package/*.zip,storage/package/*.txt,storage/package/*.sha256,public/build/**,storage/test-results/*.xml', allowEmptyArchive: true, fingerprint: true
+		}
+	}
+}
