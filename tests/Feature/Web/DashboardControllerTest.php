@@ -71,12 +71,12 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.reporter');
-            $response->assertSeeText('Centro personal de reportes');
-            $response->assertSeeText('Mis alertas inmediatas');
-            $response->assertDontSeeText('Centro de control operativo');
-            $response->assertSeeText($owned->title);
-            $response->assertSeeText($assigned->title);
-            $response->assertDontSeeText($unrelated->title);
+        $response->assertSeeText('Centro personal de reportes');
+        $response->assertSeeText('Mis alertas inmediatas');
+        $response->assertDontSeeText('Centro de control operativo');
+        $response->assertSeeText($owned->title);
+        $response->assertSeeText($assigned->title);
+        $response->assertDontSeeText($unrelated->title);
     }
 
     public function test_maintenance_dashboard_shows_only_assigned_tickets(): void
@@ -116,11 +116,11 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.maintenance');
-            $response->assertSeeText('Consola de mantenimiento');
-            $response->assertSeeText('Cola operativa priorizada');
-            $response->assertDontSeeText('Centro de control operativo');
-            $response->assertSeeText($assigned->title);
-            $response->assertDontSeeText($notAssigned->title);
+        $response->assertSeeText('Consola de mantenimiento');
+        $response->assertSeeText('Cola operativa priorizada');
+        $response->assertDontSeeText('Centro de control operativo');
+        $response->assertSeeText($assigned->title);
+        $response->assertDontSeeText($notAssigned->title);
     }
 
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void

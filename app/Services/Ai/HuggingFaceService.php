@@ -2,8 +2,8 @@
 
 namespace App\Services\Ai;
 
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 

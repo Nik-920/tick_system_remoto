@@ -4,13 +4,14 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\TicketMedia;
 use App\Models\User;
-use App\Services\Auth\SupabaseRoleSyncService;
 use App\Services\Ai\HuggingFaceService;
+use App\Services\Auth\SupabaseRoleSyncService;
 use App\Services\Storage\DomainStorageService;
 use App\Services\Storage\SanitizedFileName;
 use App\Services\Storage\SupabaseStorageClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -38,7 +39,7 @@ Artisan::command(
         } catch (Throwable $exception) {
             $this->error('Hugging Face ping failed: '.$exception->getMessage());
 
-            return self::FAILURE;
+            return Command::FAILURE;
         }
 
         $this->info('Hugging Face respondió correctamente.');
@@ -46,7 +47,7 @@ Artisan::command(
         $this->info('Vector dimensions: '.count($vector));
         $this->line('Primeros valores: '.implode(', ', array_map(static fn (float $value): string => (string) $value, array_slice($vector, 0, 5))));
 
-        return self::SUCCESS;
+        return Command::SUCCESS;
     }
 )->purpose('Ping real a Hugging Face para verificar token y respuesta');
 
