@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎫 Sistema de Reporte de Incidencias de Infraestructura
+# 🎫 Sistema de Reporte de Incidencias
 
 ### *Infrastructure Ticketing System*
 
@@ -75,10 +75,10 @@ Antes de escribir una sola línea de código, es fundamental analizar objetivame
 > **Riesgo:** Un mismo problema puede generar decenas de tickets idénticos desde cualquier vía (QR, API REST, formulario manual).
 
 **Mitigación:**
-- **`TicketDeduplicationService`** centralizado: toda ruta de creación (QR controller, API controller, Livewire form) invoca este servicio antes de insertar. Si existe un ticket *Abierto* o *En Proceso* para la misma ubicación **y categoría** en las últimas 24 h, redirige al ticket existente.
+- **`TicketDeduplicationService`** centralizado: toda ruta de creación (QR controller, API controller, Livewire form) invoca este servicio antes de insertar. Si existe un ticket *Abierto* o *En Proceso* para la misma ubicación **y categoría**, redirige al ticket existente.
 - **Índice UNIQUE parcial en DB** (última línea de defensa): `UNIQUE (location_id, category_id) WHERE state IN ('open', 'in_progress')`. Aunque la lógica de aplicación falle, la base de datos rechaza el duplicado.
 - Rate limiting por IP (`throttle:10,1`) y por usuario autenticado (`throttle:5,1`) en todas las rutas de creación.
-- La ventana de 24 h es configurable vía `config/tickets.php` (clave `dedup_window_hours`, valor por defecto: `24`). Crear `config/tickets.php` con `return ['dedup_window_hours' => env('DEDUP_WINDOW_HOURS', 24)];`.
+- El bloqueo aplica mientras el ticket permanezca *Abierto* o *En Proceso*.
 
 #### 4. 🔐 Autenticación y Anonimato
 > **Riesgo:** Sin login, cualquiera con el QR puede enumerar incidencias del edificio (riesgo de privacidad e ingeniería social).
@@ -224,9 +224,9 @@ SÍ: Similitud ≥ 70%    NO: Similitud < 70%
 
 1. Usuario crea ticket con descripción
 2. Laravel dispara evento (ticket.created)
-3. Job asíncrono llama a Hugging Face API
+3. Proceso sincronico llama a Hugging Face API
 4. Se genera embedding y se almacena
-5. Se buscan matches en últimas 24h
+5. Se buscan matches en tickets abiertos/en progreso
 6. Si similitud ≥ 0.70 → Se marca como posible duplicado
 7. Administrador revisa antes de consolidar
 
@@ -668,7 +668,6 @@ ticket activo  pre-rellenado con
 │   │   │   ├── GenerateEmbeddingOnTicketCreated.php
 │   │   │   └── NotifyDuplicateDetected.php
 │   │   │   └── UpdateRecurrenceOnTicketResolved.php
-│   │   │   └── DetectDuplicatesOnEmbeddingReady.php 
 │   │   ├── Repositories/
 │   │   │   ├── TicketRepository.php
 │   │   │   └── EmbeddingRepository.php
@@ -744,7 +743,6 @@ Este job ejecuta, en orden:
 1. Validación de sintaxis PHP.
 2. `pint --test`.
 3. `phpstan`.
-4. `php-cs-fixer --dry-run --diff`.
 
 Guía paso a paso:
 
