@@ -3,344 +3,155 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Tick System Onn')</title>
+    <title>@yield('title', 'Incidencias OPS') — Sistema de Incidencias</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800|dm-mono:400,500" rel="stylesheet" />
 
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <style>
-            :root {
-                --slate-950: #020617;
-                --slate-900: #0f172a;
-                --slate-700: #334155;
-                --slate-600: #475569;
-                --slate-500: #64748b;
-                --slate-300: #cbd5e1;
-                --slate-200: #e2e8f0;
-                --slate-100: #f1f5f9;
-                --blue-600: #2563eb;
-                --blue-700: #1d4ed8;
-                --red-100: #fee2e2;
-                --red-700: #b91c1c;
-                --green-100: #dcfce7;
-                --green-700: #166534;
-            }
-
-            * {
-                box-sizing: border-box;
-            }
-
-            body.app-page {
-                margin: 0;
-                min-height: 100vh;
-                color: var(--slate-900);
-                background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-                font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
-            }
-
-            .app-nav {
-                position: sticky;
-                top: 0;
-                z-index: 40;
-                border-bottom: 1px solid var(--slate-200);
-                background: rgba(255, 255, 255, 0.9);
-                backdrop-filter: blur(6px);
-            }
-
-            .app-nav-inner {
-                width: min(1140px, calc(100% - 2rem));
-                margin: 0 auto;
-                min-height: 4.2rem;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 1rem;
-            }
-
-            .brand {
-                font-size: 1.05rem;
-                font-weight: 800;
-                letter-spacing: -0.01em;
-                color: var(--slate-950);
-                text-decoration: none;
-            }
-
-            .menu-links {
-                display: flex;
-                align-items: center;
-                gap: 0.8rem;
-            }
-
-            .menu-link {
-                text-decoration: none;
-                color: var(--slate-700);
-                font-size: 0.93rem;
-                padding: 0.45rem 0.6rem;
-                border-radius: 8px;
-            }
-
-            .menu-link:hover {
-                color: var(--slate-900);
-                background: var(--slate-100);
-            }
-
-            .app-shell {
-                width: min(1140px, calc(100% - 2rem));
-                margin: 0 auto;
-                padding: 1.5rem 0 2rem;
-            }
-
-            .panel {
-                background: #fff;
-                border: 1px solid var(--slate-200);
-                border-radius: 16px;
-                box-shadow: 0 16px 26px -26px rgba(15, 23, 42, 0.65);
-            }
-
-            .panel-pad {
-                padding: 1.1rem 1.2rem;
-            }
-
-            .field {
-                width: 100%;
-                border: 1px solid var(--slate-300);
-                border-radius: 10px;
-                background: #fff;
-                padding: 0.62rem 0.7rem;
-                color: var(--slate-900);
-            }
-
-            .field:focus {
-                outline: 2px solid #bfdbfe;
-                border-color: #60a5fa;
-            }
-
-            .btn-primary,
-            .btn-secondary,
-            .btn-danger {
-                border-radius: 10px;
-                padding: 0.6rem 0.95rem;
-                font-size: 0.93rem;
-                font-weight: 600;
-                text-decoration: none;
-                border: 0;
-                cursor: pointer;
-            }
-
-            .btn-primary {
-                background: var(--blue-600);
-                color: #fff;
-            }
-
-            .btn-primary:hover {
-                background: var(--blue-700);
-            }
-
-            .btn-secondary {
-                background: #fff;
-                color: var(--slate-700);
-                border: 1px solid var(--slate-300);
-            }
-
-            .btn-secondary:hover {
-                background: var(--slate-100);
-            }
-
-            .btn-danger {
-                width: 100%;
-                text-align: left;
-                background: #fff;
-                color: #991b1b;
-                border: 1px solid #fecaca;
-            }
-
-            .btn-danger:hover {
-                background: #fef2f2;
-            }
-
-            .alert-error,
-            .alert-success {
-                border-radius: 12px;
-                padding: 0.8rem 0.95rem;
-                font-size: 0.93rem;
-            }
-
-            .alert-error {
-                background: var(--red-100);
-                color: var(--red-700);
-                border: 1px solid #fecaca;
-            }
-
-            .alert-success {
-                background: var(--green-100);
-                color: var(--green-700);
-                border: 1px solid #bbf7d0;
-            }
-
-            .user-menu {
-                position: relative;
-            }
-
-            .user-menu summary {
-                list-style: none;
-                display: flex;
-                align-items: center;
-                gap: 0.55rem;
-                padding: 0.4rem 0.65rem;
-                border-radius: 10px;
-                border: 1px solid var(--slate-300);
-                background: #fff;
-                cursor: pointer;
-                font-size: 0.85rem;
-                color: var(--slate-700);
-            }
-
-            .user-menu summary::-webkit-details-marker {
-                display: none;
-            }
-
-            .user-menu summary:hover {
-                border-color: #94a3b8;
-            }
-
-            .user-menu[open] summary {
-                border-color: #94a3b8;
-            }
-
-            .user-menu-panel {
-                position: absolute;
-                top: calc(100% + 0.45rem);
-                right: 0;
-                min-width: 260px;
-                background: #fff;
-                border: 1px solid var(--slate-200);
-                border-radius: 12px;
-                box-shadow: 0 14px 20px -20px rgba(15, 23, 42, 0.7);
-                padding: 0.85rem;
-                z-index: 50;
-            }
-
-            .user-name {
-                font-size: 0.86rem;
-                font-weight: 700;
-                color: var(--slate-900);
-            }
-
-            .user-email {
-                font-size: 0.79rem;
-                color: var(--slate-500);
-                margin-top: 0.2rem;
-                margin-bottom: 0.7rem;
-            }
-
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            th,
-            td {
-                text-align: left;
-                padding: 0.7rem 0.8rem;
-                border-top: 1px solid var(--slate-200);
-                font-size: 0.9rem;
-            }
-
-            thead th {
-                border-top: 0;
-                background: #f8fafc;
-                color: var(--slate-600);
-                font-size: 0.78rem;
-                letter-spacing: 0.02em;
-                text-transform: uppercase;
-                font-weight: 700;
-            }
-
-            @media (max-width: 768px) {
-                .app-nav-inner,
-                .app-shell {
-                    width: calc(100% - 1.2rem);
-                }
-
-                .menu-links {
-                    gap: 0.4rem;
-                }
-
-                .user-menu summary .hide-mobile {
-                    display: none;
-                }
-            }
+            *, *::before, *::after { box-sizing: border-box; }
+            body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
         </style>
     @endif
 </head>
-<body class="app-page min-h-screen bg-slate-100 text-slate-900">
-<header class="app-nav border-b border-slate-200 bg-white/90 backdrop-blur">
-    <div class="app-nav-inner max-w-6xl mx-auto px-4 min-h-[4.2rem] flex items-center justify-between gap-4">
-        <a href="{{ auth()->check() ? route('dashboard.index') : url('/') }}" class="brand text-lg font-black tracking-tight text-slate-950">Tick System Onn</a>
+<body class="app-body">
 
-        <nav class="menu-links flex items-center gap-2 md:gap-3">
-            @auth
-                @can('viewAny', \App\Models\Ticket::class)
-                    <a href="{{ route('dashboard.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Dashboard</a>
-                @endcan
+{{-- ════════════════════════════════ NAVBAR ════════════════════════════════ --}}
+<header class="app-nav" role="banner">
+    <div class="app-nav-inner">
 
-                @can('viewAny', \App\Models\Ticket::class)
-                    <a href="{{ route('tickets.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Tickets</a>
-                @endcan
+        {{-- Brand --}}
+        <a href="{{ auth()->check() ? route('dashboard.index') : url('/') }}" class="app-brand" aria-label="Incidencias OPS — Inicio">
+            <span class="app-brand-icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="28" rx="7" fill="#1e40af"/>
+                    <path d="M14 6.5L14 10M14 18v3.5M6.5 14H10M18 14h3.5" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
+                    <circle cx="14" cy="14" r="1.2" fill="#fff"/>
+                </svg>
+            </span>
+            <span class="app-brand-name">
+                Incidencias <span class="app-brand-ops">OPS</span>
+            </span>
+        </a>
 
-                @can('create', \App\Models\Ticket::class)
-                    <a href="{{ route('tickets.create') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Nuevo</a>
-                @endcan
+        @auth
+        {{-- Primary nav links --}}
+        <nav class="app-nav-links" aria-label="Navegación principal">
+            @can('viewAny', \App\Models\Ticket::class)
+                <a href="{{ route('dashboard.index') }}" class="app-nav-link {{ request()->routeIs('dashboard.*') ? 'app-nav-link--active' : '' }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    Dashboard
+                </a>
+            @endcan
 
-                @can('create', \App\Models\Location::class)
-                    <a href="{{ route('locations.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Ubicaciones</a>
-                @endcan
+            @can('viewAny', \App\Models\Ticket::class)
+                <a href="{{ route('tickets.index') }}" class="app-nav-link {{ request()->routeIs('tickets.*') ? 'app-nav-link--active' : '' }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3L14.5 4z"/>
+                        <circle cx="12" cy="13" r="3"/>
+                    </svg>
+                    Tickets
+                </a>
+            @endcan
 
-                @can('create', \App\Models\Category::class)
-                    <a href="{{ route('categories.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Categorias</a>
-                @endcan
+            @can('create', \App\Models\Ticket::class)
+                <a href="{{ route('tickets.create') }}" class="app-nav-link app-nav-link--create {{ request()->routeIs('tickets.create') ? 'app-nav-link--active' : '' }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Nuevo ticket
+                </a>
+            @endcan
 
-                @can('viewAny', \App\Models\User::class)
-                    <a href="{{ route('users.index') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Usuarios</a>
-                @endcan
+            @can('create', \App\Models\Location::class)
+                <a href="{{ route('locations.index') }}" class="app-nav-link {{ request()->routeIs('locations.*') ? 'app-nav-link--active' : '' }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Ubicaciones
+                </a>
+            @endcan
 
-                <details class="user-menu relative">
-                    <summary class="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 text-sm cursor-pointer select-none">
-                        <span class="hide-mobile max-w-[120px] truncate">{{ auth()->user()->name }}</span>
-                        <svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path d="M5 8L10 13L15 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </summary>
+            @can('create', \App\Models\Category::class)
+                <a href="{{ route('categories.index') }}" class="app-nav-link {{ request()->routeIs('categories.*') ? 'app-nav-link--active' : '' }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 6h18M3 12h18M3 18h18"/>
+                    </svg>
+                    Categorías
+                </a>
+            @endcan
 
-                    <div class="user-menu-panel absolute right-0 mt-2 min-w-[240px] bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-900/10 p-3">
-                        <p class="user-name font-semibold text-slate-900">{{ auth()->user()->name }}</p>
-                        <p class="user-email text-xs text-slate-500 mb-3">{{ auth()->user()->email }}</p>
-
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="btn-danger w-full text-left border border-red-200 text-red-700 rounded-lg px-3 py-2 hover:bg-red-50">
-                                Cerrar sesion
-                            </button>
-                        </form>
-
-                        <a href="{{ route('profile.edit') }}" class="btn-secondary mt-2 block w-full text-left border border-slate-300 rounded-lg px-3 py-2 hover:bg-slate-100">
-                            Perfil de usuario
-                        </a>
-                    </div>
-                </details>
-            @else
-                <a href="{{ route('login') }}" class="menu-link text-sm text-slate-700 hover:bg-slate-100 rounded-md px-2.5 py-1.5">Iniciar sesion</a>
-                <a href="{{ route('register') }}" class="btn-primary bg-blue-600 text-white rounded-lg px-3 py-2 text-sm hover:bg-blue-700">Registrarse</a>
-            @endauth
+            @can('viewAny', \App\Models\User::class)
+                <a href="{{ route('users.index') }}" class="app-nav-link {{ request()->routeIs('users.*') ? 'app-nav-link--active' : '' }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Usuarios
+                </a>
+            @endcan
         </nav>
+
+        {{-- User menu --}}
+        <div class="app-user-area">
+            <details class="app-user-menu">
+                <summary class="app-user-trigger" aria-label="Menú de usuario — {{ auth()->user()->name }}">
+                    <span class="app-user-avatar" aria-hidden="true">
+                        {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}
+                    </span>
+                    <span class="app-user-name">{{ auth()->user()->name }}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </summary>
+
+                <div class="app-user-panel" role="menu">
+                    <div class="app-user-panel-info">
+                        <p class="app-user-panel-name">{{ auth()->user()->name }}</p>
+                        <p class="app-user-panel-email">{{ auth()->user()->email }}</p>
+                    </div>
+
+                    <a href="{{ route('profile.edit') }}" class="app-user-panel-link" role="menuitem">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        Perfil de usuario
+                    </a>
+
+                    <form method="POST" action="{{ route('logout') }}" class="app-user-panel-form">
+                        @csrf
+                        <button type="submit" class="app-user-panel-logout" role="menuitem">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                            Cerrar sesión
+                        </button>
+                    </form>
+                </div>
+            </details>
+        </div>
+        @else
+        <div class="app-nav-guest">
+            <a href="{{ route('login') }}" class="app-nav-btn app-nav-btn--ghost">Iniciar sesión</a>
+            <a href="{{ route('register') }}" class="app-nav-btn app-nav-btn--primary">Registrarse</a>
+        </div>
+        @endauth
     </div>
 </header>
 
-<main class="app-shell max-w-6xl mx-auto p-4 md:p-6">
+{{-- ════════════════════════════════ MAIN ════════════════════════════════ --}}
+<main class="app-shell" id="main-content">
     @yield('content')
 </main>
+
 </body>
 </html>
