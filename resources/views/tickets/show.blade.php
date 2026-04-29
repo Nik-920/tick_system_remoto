@@ -35,6 +35,23 @@
             </div>
         @endif
 
+        @if ($ticket->embedding?->is_duplicate)
+            <div class="alert-warning bg-amber-50 border border-amber-300 text-amber-900 p-3 rounded-md">
+                <p class="font-semibold">IA: posible duplicado detectado.</p>
+                <p class="text-sm text-amber-800">
+                    @if ($ticket->embedding?->matchedTicket)
+                        Coincide con
+                        <a href="{{ route('tickets.show', $ticket->embedding->matchedTicket) }}" class="underline">{{ $ticket->embedding->matchedTicket->title }}</a>
+                    @else
+                        Coincide con un ticket existente.
+                    @endif
+                    @if (is_numeric($ticket->embedding?->similarity_score))
+                        ({{ round($ticket->embedding->similarity_score * 100) }}% similar).
+                    @endif
+                </p>
+            </div>
+        @endif
+
         <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
             <h2 class="text-xl font-semibold">{{ $ticket->title }}</h2>
             <p class="text-slate-700">{{ $ticket->description }}</p>
