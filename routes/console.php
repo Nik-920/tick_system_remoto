@@ -52,6 +52,34 @@ Artisan::command(
 )->purpose('Ping real a Hugging Face para verificar token y respuesta');
 
 Artisan::command(
+    'app:huggingface-classification-ping {text? : Texto de prueba para clasificacion zero-shot} {--labels=refund,legal,faq : Etiquetas candidatas separadas por coma} {--model= : Sobrescribe el modelo de clasificacion}',
+    function (HuggingFaceService $huggingFace): int {
+        $text = trim((string) ($this->argument('text') ?: 'Hi, I recently bought a device from your company but it is not working as advertised and I would like to get reimbursed!'));
+        $model = trim((string) $this->option('model'));
+        $labels = array_values(array_filter(array_map(
+            static fn (string $label): string => trim($label),
+            explode(',', (string) $this->option('labels'))
+        ), static fn (string $label): bool => $label !== ''));
+
+        try {
+            $result = $huggingFace->classifyZeroShot($text, $labels, $model !== '' ? $model : null);
+        } catch (Throwable $exception) {
+            $this->error('Hugging Face classification ping failed: '.$exception->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $this->info('Hugging Face clasifico correctamente.');
+        $this->info('Modelo: '.($model !== '' ? $model : (string) config('ai.huggingface.classification_model')));
+        $this->info('Labels: '.implode(', ', $result['labels'] ?? []));
+        $this->info('Scores: '.implode(', ', array_map(static fn ($score): string => (string) $score, $result['scores'] ?? [])));
+        $this->line('Sequence: '.((string) ($result['sequence'] ?? '')));
+
+        return Command::SUCCESS;
+    }
+)->purpose('Ping real a Hugging Face para verificar zero-shot classification');
+
+Artisan::command(
     'app:migrate-storage-urls
         {--dry-run : Simula los cambios sin actualizar BD ni mover objetos}
         {--chunk=200 : Cantidad de registros por lote}
