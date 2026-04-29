@@ -1,9 +1,13 @@
+/* ═══════════════════════════════════════════════════════════════
+   dashboard-animations.css — Sistema de Incidencias
+   Reemplaza el archivo existente completo.
+   ═══════════════════════════════════════════════════════════════ */
+
 @keyframes dashboardFadeIn {
     from {
         opacity: 0;
         transform: translateY(4px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -15,9 +19,25 @@
         opacity: 0;
         transform: translateY(8px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+@keyframes dashboardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes dashboardPop {
+    0%   { transform: scale(0.97); opacity: 0; }
+    60%  { transform: scale(1.01); }
+    100% { transform: scale(1);    opacity: 1; }
 }
