@@ -41,7 +41,7 @@ class AdminModuleAccessTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Ubicaciones');
-        $response->assertSee('Categorias');
+        $response->assertSee('Categorías');
     }
 
     public function test_reporter_and_maintenance_cannot_access_admin_modules(): void

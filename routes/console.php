@@ -4,12 +4,14 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Services\Ai\HuggingFaceService;
 use App\Services\Auth\SupabaseRoleSyncService;
 use App\Services\Storage\DomainStorageService;
 use App\Services\Storage\SanitizedFileName;
 use App\Services\Storage\SupabaseStorageClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -25,6 +27,29 @@ Artisan::command('app:sync-supabase-roles', function (SupabaseRoleSyncService $r
         ['skipped', $summary['skipped']],
     ]);
 })->purpose('Sync app_role metadata to Supabase for all users');
+
+Artisan::command(
+    'app:huggingface-ping {text? : Texto de prueba para generar embedding} {--model= : Sobrescribe el modelo de embeddings}',
+    function (HuggingFaceService $huggingFace): int {
+        $text = trim((string) ($this->argument('text') ?: 'Prueba de conectividad con Hugging Face para verificar token y respuesta.'));
+        $model = trim((string) $this->option('model'));
+
+        try {
+            $vector = $huggingFace->embedding($text, $model !== '' ? $model : null);
+        } catch (Throwable $exception) {
+            $this->error('Hugging Face ping failed: '.$exception->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $this->info('Hugging Face respondió correctamente.');
+        $this->info('Modelo: '.($model !== '' ? $model : (string) config('ai.huggingface.embedding_model')));
+        $this->info('Vector dimensions: '.count($vector));
+        $this->line('Primeros valores: '.implode(', ', array_map(static fn (float $value): string => (string) $value, array_slice($vector, 0, 5))));
+
+        return Command::SUCCESS;
+    }
+)->purpose('Ping real a Hugging Face para verificar token y respuesta');
 
 Artisan::command(
     'app:migrate-storage-urls
@@ -194,7 +219,7 @@ Artisan::command(
 
         $processRecords(
             'users',
-            User::query()->whereNotNull('avatar_url')->where('avatar_url', '<>', ''),
+            User::query()->whereRaw("avatar_url is not null and avatar_url <> ''", [], 'and'),
             'avatar_url',
             function (User $user, string $sourcePath) use ($domainStorage): string {
                 $rawName = basename($sourcePath);
@@ -206,7 +231,7 @@ Artisan::command(
 
         $processRecords(
             'categories',
-            Category::query()->whereNotNull('icon')->where('icon', '<>', ''),
+            Category::query()->whereRaw("icon is not null and icon <> ''", [], 'and'),
             'icon',
             function (Category $category, string $sourcePath) use ($domainStorage): string {
                 $rawName = basename($sourcePath);
@@ -218,7 +243,7 @@ Artisan::command(
 
         $processRecords(
             'tickets',
-            TicketMedia::query()->whereNotNull('file_url')->where('file_url', '<>', ''),
+            TicketMedia::query()->whereRaw("file_url is not null and file_url <> ''", [], 'and'),
             'file_url',
             function (TicketMedia $ticketMedia, string $sourcePath) use ($domainStorage): string {
                 $rawName = basename($sourcePath);
@@ -230,7 +255,7 @@ Artisan::command(
 
         $processRecords(
             'locations',
-            Location::query()->whereNotNull('qr_image_url')->where('qr_image_url', '<>', ''),
+            Location::query()->whereRaw("qr_image_url is not null and qr_image_url <> ''", [], 'and'),
             'qr_image_url',
             function (Location $location, string $sourcePath) use ($domainStorage): string {
                 $rawName = basename($sourcePath);
