@@ -6,8 +6,9 @@ return [
     'huggingface' => [
         'enabled' => env('HUGGINGFACE_ENABLED', true),
         'api_key' => env('HUGGINGFACE_API_KEY'),
-        'base_url' => env('HUGGINGFACE_BASE_URL', 'https://router.huggingface.co/hf-inference'),
-        'embedding_model' => env('HUGGINGFACE_EMBEDDING_MODEL', 'thenlper/gte-large'),
+        // Use Authorization: Bearer {api_key} and {base_url}/models/{model}.
+        'base_url' => env('HUGGINGFACE_BASE_URL', 'https://api-inference.huggingface.co'),
+        'embedding_model' => env('HUGGINGFACE_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
         'classification_model' => env('HUGGINGFACE_CLASSIFICATION_MODEL', 'facebook/bart-large-mnli'),
         'wait_for_model' => env('HUGGINGFACE_WAIT_FOR_MODEL', true),
         'timeout_seconds' => intval(env('HUGGINGFACE_TIMEOUT_SECONDS', 30)),

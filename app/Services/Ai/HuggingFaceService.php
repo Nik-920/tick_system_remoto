@@ -3,7 +3,6 @@
 namespace App\Services\Ai;
 
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -76,15 +75,7 @@ class HuggingFaceService
             throw new RuntimeException('Hugging Face model is not configured.');
         }
 
-        try {
-            $response = $this->client()->post("/models/{$model}/pipeline/feature-extraction", $payload);
-        } catch (RequestException $exception) {
-            $response = $exception->response;
-            $body = is_object($response) && method_exists($response, 'body') ? $response->body() : $exception->getMessage();
-
-            throw new RuntimeException('Hugging Face request failed: '.$body, previous: $exception);
-        }
-
+        $response = $this->client()->post("/models/{$model}", $payload);
         if (! $response->successful()) {
             throw new RuntimeException('Hugging Face request failed: '.$response->body());
         }

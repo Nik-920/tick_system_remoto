@@ -1,83 +1,55 @@
 @extends('layouts.app')
 
-@section('title', 'Nueva categoría')
+@section('title', 'Nueva categoria')
 
 @section('content')
-    <div class="cats-form-page">
-
-        {{-- ===== HEADER ===== --}}
-        <header class="cats-form-header">
+    <div class="max-w-3xl mx-auto space-y-6">
+        <header class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="cats-form-title">Nueva categoría</h1>
-                <p class="cats-form-subtitle">Crea una categoría para clasificar tickets y analítica operativa.</p>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Nueva categoria</h1>
+                <p class="text-sm text-slate-600 mt-1">Crea una categoria para clasificar tickets y analitica.</p>
             </div>
-            <a href="{{ route('categories.index') }}" class="btn-secondary">← Volver</a>
+            <a href="{{ route('categories.index') }}" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Volver</a>
         </header>
 
-        {{-- ===== ALERTS ===== --}}
         @if ($errors->any())
             <div class="alert-error">
-                <p class="font-semibold mb-2">Corrige los siguientes errores:</p>
-                <ul class="space-y-1">
+                <ul class="list-disc pl-5 space-y-1">
                     @foreach ($errors->all() as $error)
-                        <li class="text-sm">{{ $error }}</li>
+                        <li>{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
 
-        {{-- ===== FORM ===== --}}
-        <form method="POST" action="{{ route('categories.store') }}" enctype="multipart/form-data" class="cats-form-card">
+        <form method="POST" action="{{ route('categories.store') }}" enctype="multipart/form-data" class="panel panel-pad space-y-4">
             @csrf
 
-            <div class="cats-form-card-body">
+            <div>
+                <label for="name" class="block text-sm font-medium mb-1 text-slate-700">Nombre</label>
+                <input id="name" name="name" type="text" value="{{ old('name') }}" required class="field">
+            </div>
 
-                <div class="cats-form-group">
-                    <label for="name" class="cats-field-label">Nombre *</label>
-                    <input id="name" name="name" type="text" value="{{ old('name') }}" required
-                           placeholder="Ej: Infraestructura, Electricidad, Plomería"
-                           class="cats-field">
-                    @error('name')
-                        <p class="cats-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
+            <div>
+                <label for="icon" class="block text-sm font-medium mb-1 text-slate-700">Icono (opcional)</label>
+                <input id="icon" name="icon" type="text" value="{{ old('icon') }}" class="field" placeholder="wrench, alert, tools">
+                <p class="text-xs text-slate-500 mt-2">Compatibilidad legado: texto libre o URL manual.</p>
+            </div>
 
-                <div class="cats-form-group">
-                    <label for="icon" class="cats-field-label">Icono (opcional)</label>
-                    <input id="icon" name="icon" type="text" value="{{ old('icon') }}"
-                           placeholder="wrench, alert, tools o URL de imagen"
-                           class="cats-field">
-                    <p class="cats-field-hint">Texto libre o URL de imagen. Si subes un archivo abajo, este campo se ignora.</p>
-                    @error('icon')
-                        <p class="cats-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
+            <div>
+                <label for="icon_file" class="block text-sm font-medium mb-1 text-slate-700">Archivo de icono (opcional)</label>
+                <input id="icon_file" name="icon_file" type="file" accept="image/*" class="field">
+                <p class="text-xs text-slate-500 mt-2">Si subes un archivo, este reemplaza el valor de texto de icono.</p>
+            </div>
 
-                <div class="cats-form-group">
-                    <label for="icon_file" class="cats-field-label">Archivo de icono (opcional)</label>
-                    <input id="icon_file" name="icon_file" type="file" accept="image/*" class="cats-field">
-                    <p class="cats-field-hint">Si subes un archivo, reemplaza el valor del campo icono.</p>
-                    @error('icon_file')
-                        <p class="cats-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
+            <div>
+                <label for="description" class="block text-sm font-medium mb-1 text-slate-700">Descripcion</label>
+                <textarea id="description" name="description" class="field" rows="4">{{ old('description') }}</textarea>
+            </div>
 
-                <div class="cats-form-group">
-                    <label for="description" class="cats-field-label">Descripción</label>
-                    <textarea id="description" name="description" class="cats-field" rows="4"
-                              placeholder="Describe brevemente qué tipo de incidencias agrupa esta categoría">{{ old('description') }}</textarea>
-                    @error('description')
-                        <p class="cats-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="cats-form-actions">
-                    <button type="submit" class="btn-primary">Guardar categoría</button>
-                    <a href="{{ route('categories.index') }}" class="btn-secondary">Cancelar</a>
-                </div>
-
+            <div class="flex justify-end">
+                <button type="submit" class="btn-primary bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Guardar categoria</button>
             </div>
         </form>
-
     </div>
 @endsection

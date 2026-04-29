@@ -3,130 +3,164 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Autenticación') — Incidencias OPS</title>
-    <meta name="description" content="Sistema de Reporte de Incidencias — Acceso operativo seguro">
+    <title>@yield('title', 'Autenticacion')</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800|dm-mono:400,500" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
 
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <style>
-            /* Fallback minimal styles when Vite build not present */
-            *, *::before, *::after { box-sizing: border-box; }
-            body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; background: #f1f5f9; }
+            :root {
+                --slate-900: #0f172a;
+                --slate-700: #334155;
+                --slate-500: #64748b;
+                --slate-200: #e2e8f0;
+                --blue-600: #2563eb;
+                --blue-700: #1d4ed8;
+                --red-100: #fee2e2;
+                --red-700: #b91c1c;
+                --green-100: #dcfce7;
+                --green-700: #166534;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body.auth-page {
+                margin: 0;
+                min-height: 100vh;
+                font-family: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+                color: var(--slate-900);
+                background: radial-gradient(circle at 10% -5%, #dbeafe 0%, transparent 30%),
+                    radial-gradient(circle at 90% 10%, #e2e8f0 0%, transparent 35%),
+                    #f8fafc;
+            }
+
+            .auth-shell {
+                width: min(520px, calc(100% - 2rem));
+                margin: 0 auto;
+                padding: 2.5rem 0;
+            }
+
+            .auth-panel {
+                background: #fff;
+                border: 1px solid var(--slate-200);
+                border-radius: 18px;
+                box-shadow: 0 20px 30px -24px rgba(15, 23, 42, 0.55);
+                padding: 1.5rem;
+            }
+
+            .auth-panel h1 {
+                margin: 0;
+                font-size: 1.65rem;
+                line-height: 1.2;
+            }
+
+            .auth-panel p {
+                margin: 0;
+                color: var(--slate-500);
+            }
+
+            .auth-panel form {
+                margin-top: 1rem;
+            }
+
+            .auth-panel label {
+                display: block;
+                margin-bottom: 0.45rem;
+                color: var(--slate-700);
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+
+            .auth-panel input,
+            .auth-panel select,
+            .auth-panel textarea {
+                width: 100%;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                padding: 0.62rem 0.75rem;
+                background: #f8fafc;
+                color: var(--slate-900);
+            }
+
+            .auth-panel input:focus,
+            .auth-panel select:focus,
+            .auth-panel textarea:focus {
+                outline: 2px solid #93c5fd;
+                border-color: #60a5fa;
+                background: #fff;
+            }
+
+            .auth-panel a {
+                color: var(--blue-600);
+                text-decoration: none;
+            }
+
+            .auth-panel a:hover {
+                color: var(--blue-700);
+                text-decoration: underline;
+            }
+
+            .btn-primary {
+                border: 0;
+                border-radius: 10px;
+                padding: 0.62rem 1rem;
+                background: var(--blue-600);
+                color: #fff;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            .btn-primary:hover {
+                background: var(--blue-700);
+            }
+
+            .alert-error,
+            .alert-success {
+                border-radius: 12px;
+                padding: 0.8rem 0.95rem;
+                font-size: 0.93rem;
+            }
+
+            .alert-error {
+                background: var(--red-100);
+                color: var(--red-700);
+                border: 1px solid #fecaca;
+            }
+
+            .alert-success {
+                background: var(--green-100);
+                color: var(--green-700);
+                border: 1px solid #bbf7d0;
+            }
+
+            .stack {
+                display: grid;
+                gap: 0.95rem;
+            }
+
+            .actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .muted-link {
+                font-size: 0.9rem;
+            }
         </style>
     @endif
 </head>
-<body class="auth-body">
-
-<div class="auth-shell">
-
-    {{-- ══════════════════ LEFT PANEL — Ops Identity ══════════════════ --}}
-    <aside class="auth-panel-left" aria-hidden="true">
-        {{-- Background grid --}}
-        <div class="auth-left-grid"></div>
-        {{-- Glow --}}
-        <div class="auth-left-glow"></div>
-
-        <div class="auth-left-content">
-            {{-- Brand mark --}}
-            <a href="{{ url('/') }}" class="auth-left-brand" tabindex="-1">
-                <span class="auth-left-brand-icon">
-                    <svg width="32" height="32" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="28" height="28" rx="7" fill="#1e40af"/>
-                        <path d="M14 6.5L14 10M14 18v3.5M6.5 14H10M18 14h3.5" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                        <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                    </svg>
-                </span>
-                <span class="auth-left-brand-name">Incidencias <span class="auth-left-brand-ops">OPS</span></span>
-            </a>
-
-            {{-- Main copy --}}
-            <div class="auth-left-copy">
-                <p class="auth-left-overline">Plataforma operativa</p>
-                <h2 class="auth-left-headline">Control total sobre cada incidente</h2>
-                <p class="auth-left-sub">Reporte, asignación y resolución de incidencias en tiempo real con trazabilidad completa.</p>
-            </div>
-
-            {{-- Status indicators --}}
-            <div class="auth-left-status-group">
-                <div class="auth-left-status-item">
-                    <span class="auth-left-status-dot auth-left-status-dot--green"></span>
-                    <span class="auth-left-status-label">Sistema operativo</span>
-                </div>
-                <div class="auth-left-status-item">
-                    <span class="auth-left-status-dot auth-left-status-dot--blue"></span>
-                    <span class="auth-left-status-label">Tickets activos en curso</span>
-                </div>
-                <div class="auth-left-status-item">
-                    <span class="auth-left-status-dot auth-left-status-dot--amber"></span>
-                    <span class="auth-left-status-label">Monitoreo 24/7</span>
-                </div>
-            </div>
-
-            {{-- Stat strip --}}
-            <dl class="auth-left-stats">
-                <div class="auth-left-stat">
-                    <dt class="auth-left-stat-label">Respuesta</dt>
-                    <dd class="auth-left-stat-value">&lt; 5 min</dd>
-                </div>
-                <div class="auth-left-stat-sep"></div>
-                <div class="auth-left-stat">
-                    <dt class="auth-left-stat-label">Trazabilidad</dt>
-                    <dd class="auth-left-stat-value">100%</dd>
-                </div>
-                <div class="auth-left-stat-sep"></div>
-                <div class="auth-left-stat">
-                    <dt class="auth-left-stat-label">Disponible</dt>
-                    <dd class="auth-left-stat-value">24 / 7</dd>
-                </div>
-            </dl>
-        </div>
-
-        {{-- Bottom back link --}}
-        <div class="auth-left-footer">
-            <a href="{{ url('/') }}" class="auth-left-back-link">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M19 12H5M12 5l-7 7 7 7"/>
-                </svg>
-                Volver al inicio
-            </a>
-        </div>
-    </aside>
-
-    {{-- ══════════════════ RIGHT PANEL — Form ══════════════════ --}}
-    <main class="auth-panel-right" id="main-content">
-        {{-- Mobile-only header --}}
-        <div class="auth-mobile-header">
-            <a href="{{ url('/') }}" class="auth-mobile-brand">
-                <svg width="22" height="22" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <rect width="28" height="28" rx="7" fill="#1e40af"/>
-                    <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                    <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                </svg>
-                <span>Incidencias <strong>OPS</strong></span>
-            </a>
-        </div>
-
-        <div class="auth-form-wrap">
-            @yield('content')
-        </div>
-
-        {{-- Mobile back link --}}
-        <div class="auth-mobile-footer">
-            <a href="{{ url('/') }}" class="auth-mobile-back">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M19 12H5M12 5l-7 7 7 7"/>
-                </svg>
-                Volver al inicio
-            </a>
-        </div>
-    </main>
-
-</div>
-
+<body class="auth-page min-h-screen bg-slate-100 text-slate-900">
+<main class="auth-shell max-w-xl mx-auto p-4 md:py-12">
+    <section class="auth-panel bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-900/10 p-6 md:p-8">
+        @yield('content')
+    </section>
+</main>
 </body>
 </html>
