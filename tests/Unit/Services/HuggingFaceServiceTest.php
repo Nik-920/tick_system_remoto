@@ -61,4 +61,39 @@ class HuggingFaceServiceTest extends TestCase
         $service = new HuggingFaceService;
         $service->embedding('Prueba de conectividad');
     }
+
+    public function test_zero_shot_classification_request_uses_expected_endpoint(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.huggingface.api_key' => 'hf_test_token_123',
+            'ai.huggingface.base_url' => 'https://router.huggingface.co/hf-inference',
+            'ai.huggingface.classification_model' => 'facebook/bart-large-mnli',
+            'ai.huggingface.wait_for_model' => true,
+        ]);
+
+        Http::fake(function (Request $request) {
+            $this->assertSame('https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli', $request->url());
+            $this->assertSame('Bearer hf_test_token_123', $request->header('Authorization')[0] ?? null);
+
+            $payload = $request->data();
+            $this->assertSame('Necesito un reembolso', $payload['inputs'] ?? null);
+            $this->assertSame(['refund', 'legal', 'faq'], $payload['parameters']['candidate_labels'] ?? null);
+            $this->assertTrue($payload['options']['wait_for_model'] ?? false);
+
+            return Http::response([
+                'labels' => ['refund', 'legal', 'faq'],
+                'scores' => [0.91, 0.06, 0.03],
+                'sequence' => 'Necesito un reembolso',
+            ], 200);
+        });
+
+        $service = new HuggingFaceService;
+        $result = $service->classifyZeroShot('Necesito un reembolso', ['refund', 'legal', 'faq']);
+
+        $this->assertSame(['refund', 'legal', 'faq'], $result['labels']);
+        $this->assertSame([0.91, 0.06, 0.03], $result['scores']);
+        $this->assertSame('Necesito un reembolso', $result['sequence']);
+    }
 }
