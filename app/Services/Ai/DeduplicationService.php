@@ -6,9 +6,7 @@ use Illuminate\Support\Carbon;
 
 class DeduplicationService
 {
-    public function __construct(private EmbeddingService $embeddings)
-    {
-    }
+    public function __construct(private EmbeddingService $embeddings) {}
 
     public function isEnabled(): bool
     {
@@ -44,8 +42,8 @@ class DeduplicationService
     }
 
     /**
-     * @param array<int, float|int|string> $sourceEmbedding
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<int, float|int|string>  $sourceEmbedding
+     * @param  array<int, array<string, mixed>>  $candidates
      * @return array<string, mixed>|null
      */
     public function findBestMatch(array $sourceEmbedding, array $candidates): ?array
@@ -80,7 +78,7 @@ class DeduplicationService
     }
 
     /**
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<int, array<string, mixed>>  $candidates
      * @return array<string, mixed>|null
      */
     public function findBestMatchForText(string $text, array $candidates): ?array

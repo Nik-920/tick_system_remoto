@@ -9,12 +9,10 @@ use Illuminate\Http\UploadedFile;
 
 class TicketMediaStorageService
 {
-    public function __construct(private DomainStorageService $domainStorage)
-    {
-    }
+    public function __construct(private DomainStorageService $domainStorage) {}
 
     /**
-     * @param array<int, UploadedFile> $files
+     * @param  array<int, UploadedFile>  $files
      */
     public function storeManyForTicket(Ticket $ticket, User $uploadedBy, array $files): void
     {
@@ -36,8 +34,35 @@ class TicketMediaStorageService
         return $this->storeForTicketInternal($ticket, $uploadedBy, $file, $nameCounts);
     }
 
+    public function deleteByUrl(?string $fileUrl): void
+    {
+        $this->domainStorage->deleteManagedUrl('tickets', $fileUrl);
+    }
+
     /**
-     * @param array<string, int> $nameCounts
+     * @param  iterable<int, mixed>  $fileUrls
+     */
+    public function deleteManyByUrls(iterable $fileUrls): void
+    {
+        $processedUrls = [];
+
+        foreach ($fileUrls as $fileUrl) {
+            if (! is_string($fileUrl)) {
+                continue;
+            }
+
+            $normalizedUrl = trim($fileUrl);
+            if ($normalizedUrl === '' || isset($processedUrls[$normalizedUrl])) {
+                continue;
+            }
+
+            $processedUrls[$normalizedUrl] = true;
+            $this->deleteByUrl($normalizedUrl);
+        }
+    }
+
+    /**
+     * @param  array<string, int>  $nameCounts
      */
     private function storeForTicketInternal(Ticket $ticket, User $uploadedBy, UploadedFile $file, array &$nameCounts): TicketMedia
     {
@@ -59,7 +84,7 @@ class TicketMediaStorageService
     }
 
     /**
-     * @param array<string, int> $nameCounts
+     * @param  array<string, int>  $nameCounts
      */
     private function resolveFileName(UploadedFile $file, array &$nameCounts): string
     {
@@ -74,11 +99,11 @@ class TicketMediaStorageService
 
         $namePart = (string) pathinfo($baseFileName, PATHINFO_FILENAME);
         $extensionPart = (string) pathinfo($baseFileName, PATHINFO_EXTENSION);
-        $suffixedName = $namePart . '-' . $seenCount;
+        $suffixedName = $namePart.'-'.$seenCount;
 
         return $extensionPart === ''
             ? $suffixedName
-            : $suffixedName . '.' . $extensionPart;
+            : $suffixedName.'.'.$extensionPart;
     }
 
     private function pathPrefixForTicket(Ticket $ticket): string
@@ -87,7 +112,7 @@ class TicketMediaStorageService
 
         return $basePrefix === ''
             ? (string) $ticket->id
-            : $basePrefix . '/' . $ticket->id;
+            : $basePrefix.'/'.$ticket->id;
     }
 
     private function resolveFileType(UploadedFile $file): string

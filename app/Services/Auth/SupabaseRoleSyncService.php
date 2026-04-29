@@ -40,7 +40,7 @@ class SupabaseRoleSyncService
                 ->acceptJson()
                 ->withHeaders([
                     'apikey' => $serviceRoleKey,
-                    'Authorization' => 'Bearer ' . $serviceRoleKey,
+                    'Authorization' => 'Bearer '.$serviceRoleKey,
                 ])
                 ->put($this->buildUserAdminEndpoint($baseUrl, $user->id), [
                     'app_metadata' => [
@@ -137,6 +137,6 @@ class SupabaseRoleSyncService
     {
         $basePath = trim((string) config('services.supabase.auth_admin_users_endpoint', '/auth/v1/admin/users'));
 
-        return rtrim($baseUrl, '/') . '/' . trim($basePath, '/') . '/' . rawurlencode($userId);
+        return rtrim($baseUrl, '/').'/'.trim($basePath, '/').'/'.rawurlencode($userId);
     }
 }

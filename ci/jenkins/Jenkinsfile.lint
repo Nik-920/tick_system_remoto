@@ -1,0 +1,86 @@
+def runCommand(String unixCommand, String windowsCommand) {
+	if (isUnix()) {
+		sh unixCommand
+	} else {
+		bat windowsCommand
+	}
+}
+
+pipeline {
+	agent any
+
+	options {
+		timestamps()
+		ansiColor('xterm')
+		disableConcurrentBuilds()
+		buildDiscarder(logRotator(numToKeepStr: '20'))
+		timeout(time: 25, unit: 'MINUTES')
+	}
+
+	parameters {
+		booleanParam(name: 'SKIP_PHPSTAN', defaultValue: false, description: 'Si es true, omite analisis estatico con PHPStan')
+	}
+
+	environment {
+		APP_ENV = 'testing'
+		COMPOSER_ALLOW_SUPERUSER = '1'
+		COMPOSER_NO_INTERACTION = '1'
+	}
+
+	stages {
+		stage('Checkout') {
+			steps {
+				checkout scm
+			}
+		}
+
+		stage('Toolchain') {
+			steps {
+				script {
+					runCommand('php -v', 'php -v')
+					runCommand('composer --version', 'composer --version')
+				}
+			}
+		}
+
+		stage('Install Dependencies') {
+			steps {
+				script {
+					runCommand(
+						'composer install --prefer-dist --no-progress --optimize-autoloader',
+						'composer install --prefer-dist --no-progress --optimize-autoloader'
+					)
+				}
+			}
+		}
+
+		stage('PHP Syntax') {
+			steps {
+				script {
+					runCommand('composer run lint:syntax', 'composer run lint:syntax')
+				}
+			}
+		}
+
+		stage('Laravel Pint') {
+			steps {
+				script {
+					runCommand('composer run lint:pint', 'composer run lint:pint')
+				}
+			}
+		}
+
+		stage('PHPStan') {
+			when {
+				expression { !params.SKIP_PHPSTAN }
+			}
+			steps {
+				script {
+					runCommand('composer run lint:phpstan', 'composer run lint:phpstan')
+				}
+			}
+		}
+
+	}
+}
+

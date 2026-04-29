@@ -13,9 +13,6 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    /**
-     * @return View
-     */
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Ticket::class);
@@ -281,7 +278,7 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Promedio resolucion 30 dias',
-                    'value' => $avgResolutionHoursLast30Days . ' h',
+                    'value' => $avgResolutionHoursLast30Days.' h',
                     'hint' => 'Tiempo medio de resolucion para tickets cerrados.',
                 ],
             ],
@@ -333,7 +330,7 @@ class DashboardController extends Controller
             ->toArray();
 
         $totalLocations = Location::query()->count();
-        $activeLocations = Location::query()->where('is_active', true)->count();
+        $activeLocations = Location::query()->active()->count();
         $totalCategories = Category::query()->count();
 
         $recentTickets = Ticket::query()
@@ -356,7 +353,10 @@ class DashboardController extends Controller
             ->limit(8)
             ->get()
             ->filter(function (Location $location): bool {
-                return ($location->open_tickets_count + $location->in_progress_tickets_count) > 0;
+                $openTicketsCount = (int) $location->getAttribute('open_tickets_count');
+                $inProgressTicketsCount = (int) $location->getAttribute('in_progress_tickets_count');
+
+                return ($openTicketsCount + $inProgressTicketsCount) > 0;
             })
             ->take(5)
             ->values();
@@ -504,7 +504,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param list<string> $roles
+     * @param  list<string>  $roles
      */
     private function hasAnyRole(User $user, array $roles): bool
     {

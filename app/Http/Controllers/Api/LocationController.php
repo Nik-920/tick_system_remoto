@@ -22,9 +22,7 @@ use Throwable;
 
 class LocationController extends Controller
 {
-    public function __construct(private TicketQrLogger $logger)
-    {
-    }
+    public function __construct(private TicketQrLogger $logger) {}
 
     public function index(ListLocationsRequest $request): AnonymousResourceCollection
     {
@@ -186,12 +184,15 @@ class LocationController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
+     * @param  Builder<Location>  $query
      */
     private function applyFilters(Builder $query, array $filters): void
     {
-        if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
-            $query->where('is_active', (bool) $filters['is_active']);
+        if (array_key_exists('is_active', $filters)) {
+            $query->withActiveState(
+                $filters['is_active'] === null ? null : (bool) $filters['is_active']
+            );
         }
 
         if (! empty($filters['building'])) {
@@ -218,8 +219,7 @@ class LocationController extends Controller
         mixed $actorId = null,
         string $trigger = 'unknown',
         string $correlationId = ''
-    ): void
-    {
+    ): void {
         $jobId = (string) Str::uuid();
 
         $location->forceFill([

@@ -9,13 +9,17 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use InvalidArgumentException;
+use Throwable;
 
 class TicketController extends Controller
 {
@@ -35,7 +39,7 @@ class TicketController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'filters' => $filters,
-            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
         ]);
     }
@@ -50,7 +54,7 @@ class TicketController extends Controller
         if ($requestedLocationId !== '') {
             $exists = Location::query()
                 ->where('id', $requestedLocationId)
-                ->where('is_active', true)
+                ->active()
                 ->exists();
 
             if ($exists) {
@@ -59,7 +63,7 @@ class TicketController extends Controller
         }
 
         return view('tickets.create', [
-            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'selectedLocationId' => $selectedLocationId,
@@ -107,6 +111,31 @@ class TicketController extends Controller
         ]);
     }
 
+    public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): RedirectResponse
+    {
+        $this->authorize('delete', $ticket);
+
+        $ticketId = $ticket->id;
+        $mediaUrls = $ticket->media()->pluck('file_url')->all();
+
+        DB::transaction(function () use ($ticket): void {
+            $ticket->delete();
+        });
+
+        try {
+            $mediaStorage->deleteManyByUrls($mediaUrls);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar adjuntos del ticket en storage.', [
+                'ticket_id' => $ticketId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return redirect()
+            ->route('tickets.index')
+            ->with('status', 'Ticket eliminado correctamente.');
+    }
+
     public function updateState(
         UpdateTicketStateRequest $request,
         Ticket $ticket,
@@ -133,7 +162,7 @@ class TicketController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {

@@ -72,6 +72,45 @@ class AdminModuleAccessTest extends TestCase
             ->assertOk();
     }
 
+    public function test_admin_can_filter_locations_by_active_state_in_web_module(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+
+        $activeLocation = Location::query()->create([
+            'name' => 'Ubicacion activa web',
+            'building' => 'Edificio W',
+            'floor' => '1',
+            'room_code' => 'W-101',
+            'qr_token' => 'qr-w-101-token',
+            'is_active' => true,
+        ]);
+
+        $inactiveLocation = Location::query()->create([
+            'name' => 'Ubicacion inactiva web',
+            'building' => 'Edificio W',
+            'floor' => '2',
+            'room_code' => 'W-102',
+            'qr_token' => 'qr-w-102-token',
+            'is_active' => false,
+        ]);
+
+        $activeResponse = $this
+            ->actingAs($admin)
+            ->get(route('locations.index', ['is_active' => '1']));
+
+        $activeResponse->assertOk();
+        $activeResponse->assertSee($activeLocation->name);
+        $activeResponse->assertDontSee($inactiveLocation->name);
+
+        $inactiveResponse = $this
+            ->actingAs($admin)
+            ->get(route('locations.index', ['is_active' => '0']));
+
+        $inactiveResponse->assertOk();
+        $inactiveResponse->assertSee($inactiveLocation->name);
+        $inactiveResponse->assertDontSee($activeLocation->name);
+    }
+
     public function test_admin_can_create_location_and_queue_qr_generation(): void
     {
         Queue::fake();
@@ -248,11 +287,11 @@ class AdminModuleAccessTest extends TestCase
             'description' => 'Categoria temporal para eliminar',
         ]);
 
-        $iconPath = 'categories/icons/' . $category->id . '/delete-icon.png';
+        $iconPath = 'categories/icons/'.$category->id.'/delete-icon.png';
         Storage::disk('public')->put($iconPath, 'icon-content');
 
         $category->forceFill([
-            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+            'icon' => '/storage/v1/object/public/TicketCategoria/'.$iconPath,
         ])->save();
 
         $response = $this

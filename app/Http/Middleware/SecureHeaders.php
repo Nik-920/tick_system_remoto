@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class SecureHeaders
 {
     /**
-     * @param Closure(Request): Response $next
+     * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -62,7 +62,7 @@ class SecureHeaders
         }
 
         $maxAge = (int) config('security_headers.hsts_max_age', 31536000);
-        $policy = 'max-age=' . max($maxAge, 0);
+        $policy = 'max-age='.max($maxAge, 0);
 
         if ((bool) config('security_headers.hsts_include_subdomains', true)) {
             $policy .= '; includeSubDomains';

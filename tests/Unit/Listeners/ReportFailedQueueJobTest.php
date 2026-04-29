@@ -22,7 +22,7 @@ class ReportFailedQueueJobTest extends TestCase
             ],
         ]);
 
-        $logger = new CapturingTicketQrLogger();
+        $logger = new CapturingTicketQrLogger;
         $listener = new ReportFailedQueueJob($logger);
 
         $listener->handle(new JobFailed('database', $job, new RuntimeException('Queue exploded')));
@@ -43,7 +43,7 @@ class CapturingTicketQrLogger extends TicketQrLogger
     public array $context = [];
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function error(string $eventName, array $context = []): void
     {
@@ -54,19 +54,15 @@ class CapturingTicketQrLogger extends TicketQrLogger
 
 class FakeQueueCommand
 {
-    public function __construct(public string $correlationId)
-    {
-    }
+    public function __construct(public string $correlationId) {}
 }
 
 class FakeQueueJob
 {
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
-    public function __construct(private array $payload)
-    {
-    }
+    public function __construct(private array $payload) {}
 
     /**
      * @return array<string, mixed>

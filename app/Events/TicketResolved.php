@@ -9,11 +9,11 @@ use Illuminate\Queue\SerializesModels;
 
 class TicketResolved
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '')
-    {
-    }
+    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
 
     public static function forTicket(Ticket $ticket, string $correlationId = ''): ?self
     {

@@ -213,11 +213,11 @@ class CategoryApiControllerTest extends TestCase
         Sanctum::actingAs($admin);
 
         $category = $this->createCategory('CategoriaConIcono');
-        $iconPath = 'categories/icons/' . $category->id . '/icono.png';
+        $iconPath = 'categories/icons/'.$category->id.'/icono.png';
         Storage::disk('public')->put($iconPath, 'icon-content');
 
         $category->forceFill([
-            'icon' => '/storage/v1/object/public/TicketCategoria/' . $iconPath,
+            'icon' => '/storage/v1/object/public/TicketCategoria/'.$iconPath,
         ])->save();
 
         $response = $this->deleteJson(route('api.categories.destroy', $category));
@@ -283,8 +283,8 @@ class CategoryApiControllerTest extends TestCase
     {
         return Category::query()->create([
             'name' => $name,
-            'icon' => 'icon-' . strtolower($name),
-            'description' => 'Descripcion de ' . $name,
+            'icon' => 'icon-'.strtolower($name),
+            'description' => 'Descripcion de '.$name,
         ]);
     }
 

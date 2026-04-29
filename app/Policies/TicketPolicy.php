@@ -39,8 +39,13 @@ class TicketPolicy
         return $this->hasAnyRole($user, ['maintenance', 'admin', 'super_admin']);
     }
 
+    public function delete(User $user, Ticket $ticket): bool
+    {
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
     /**
-     * @param list<string> $roles
+     * @param  list<string>  $roles
      */
     private function hasAnyRole(User $user, array $roles): bool
     {

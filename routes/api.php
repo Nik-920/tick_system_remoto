@@ -39,6 +39,9 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
         ->middleware('throttle:5,1')
         ->name('api.tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('api.tickets.show');
+    Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('api.tickets.destroy');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware('throttle:5,1')
         ->name('api.tickets.update-state');

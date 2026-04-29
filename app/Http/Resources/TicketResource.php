@@ -2,10 +2,16 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Category;
+use App\Models\Location;
+use App\Models\StateHistory;
+use App\Models\Ticket;
+use App\Models\TicketMedia;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Ticket */
+/** @mixin Ticket */
 class TicketResource extends JsonResource
 {
     /**
@@ -15,62 +21,78 @@ class TicketResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $resolvedAt = $this->resolved_at;
+        $createdAt = $this->created_at;
+        $updatedAt = $this->updated_at;
+
         return [
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
             'state' => $this->state,
             'priority' => $this->priority,
-            'resolved_at' => $this->resolved_at?->toIso8601String(),
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'resolved_at' => $resolvedAt instanceof \DateTimeInterface ? $resolvedAt->format(DATE_ATOM) : null,
+            'created_at' => $createdAt instanceof \DateTimeInterface ? $createdAt->format(DATE_ATOM) : null,
+            'updated_at' => $updatedAt instanceof \DateTimeInterface ? $updatedAt->format(DATE_ATOM) : null,
             'reporter' => $this->whenLoaded('reporter', function (): ?array {
-                if ($this->reporter === null) {
+                /** @var User|null $reporter */
+                $reporter = $this->reporter;
+
+                if ($reporter === null) {
                     return null;
                 }
 
                 return [
-                    'id' => $this->reporter->id,
-                    'name' => $this->reporter->name,
-                    'email' => $this->reporter->email,
+                    'id' => $reporter->id,
+                    'name' => $reporter->name,
+                    'email' => $reporter->email,
                 ];
             }),
             'assignee' => $this->whenLoaded('assignee', function (): ?array {
-                if ($this->assignee === null) {
+                /** @var User|null $assignee */
+                $assignee = $this->assignee;
+
+                if ($assignee === null) {
                     return null;
                 }
 
                 return [
-                    'id' => $this->assignee->id,
-                    'name' => $this->assignee->name,
-                    'email' => $this->assignee->email,
+                    'id' => $assignee->id,
+                    'name' => $assignee->name,
+                    'email' => $assignee->email,
                 ];
             }),
             'location' => $this->whenLoaded('location', function (): ?array {
-                if ($this->location === null) {
+                /** @var Location|null $location */
+                $location = $this->location;
+
+                if ($location === null) {
                     return null;
                 }
 
                 return [
-                    'id' => $this->location->id,
-                    'name' => $this->location->name,
-                    'building' => $this->location->building,
-                    'floor' => $this->location->floor,
-                    'room_code' => $this->location->room_code,
+                    'id' => $location->id,
+                    'name' => $location->name,
+                    'building' => $location->building,
+                    'floor' => $location->floor,
+                    'room_code' => $location->room_code,
                 ];
             }),
             'category' => $this->whenLoaded('category', function (): ?array {
-                if ($this->category === null) {
+                /** @var Category|null $category */
+                $category = $this->category;
+
+                if ($category === null) {
                     return null;
                 }
 
                 return [
-                    'id' => $this->category->id,
-                    'name' => $this->category->name,
-                    'icon' => $this->category->icon,
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
                 ];
             }),
-            'state_history' => $this->whenLoaded('stateHistory', fn () => $this->stateHistory->map(function ($entry): array {
+            'state_history' => $this->whenLoaded('stateHistory', fn () => $this->stateHistory->map(function (StateHistory $entry): array {
                 return [
                     'id' => $entry->id,
                     'from_state' => $entry->from_state,
@@ -80,7 +102,7 @@ class TicketResource extends JsonResource
                     'created_at' => $entry->created_at?->toIso8601String(),
                 ];
             })->values()->all()),
-            'media' => $this->whenLoaded('media', fn () => $this->media->map(function ($media): array {
+            'media' => $this->whenLoaded('media', fn () => $this->media->map(function (TicketMedia $media): array {
                 return [
                     'id' => $media->id,
                     'file_url' => $media->file_url,

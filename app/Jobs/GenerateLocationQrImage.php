@@ -15,15 +15,16 @@ use Throwable;
 
 class GenerateLocationQrImage implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public function __construct(
         public string $locationId,
         public ?string $jobTrackingId = null,
         public string $correlationId = '',
-    )
-    {
-    }
+    ) {}
 
     public function handle(QrImageService $qrImageService, TicketQrLogger $logger): void
     {

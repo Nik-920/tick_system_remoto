@@ -9,13 +9,17 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Services\Observability\TicketQrLogger;
+use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Throwable;
 
 class TicketController extends Controller
 {
@@ -84,6 +88,31 @@ class TicketController extends Controller
         return new TicketResource($ticket);
     }
 
+    public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): JsonResponse
+    {
+        $this->authorize('delete', $ticket);
+
+        $ticketId = $ticket->id;
+        $mediaUrls = $ticket->media()->pluck('file_url')->all();
+
+        DB::transaction(function () use ($ticket): void {
+            $ticket->delete();
+        });
+
+        try {
+            $mediaStorage->deleteManyByUrls($mediaUrls);
+        } catch (Throwable $exception) {
+            Log::warning('No fue posible eliminar adjuntos del ticket en storage.', [
+                'ticket_id' => $ticketId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Ticket eliminado correctamente.',
+        ]);
+    }
+
     public function updateState(
         UpdateTicketStateRequest $request,
         Ticket $ticket,
@@ -138,7 +167,7 @@ class TicketController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
     {

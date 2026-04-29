@@ -5,11 +5,12 @@ namespace Tests\Feature\Web;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -123,7 +124,7 @@ class TicketControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticket->id);
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticket->id);
         $this->assertCount(2, $storedFiles);
     }
 
@@ -161,6 +162,83 @@ class TicketControllerTest extends TestCase
             'from_state' => 'open',
             'to_state' => 'in_progress',
             'changed_by' => $maintenance->id,
+        ]);
+    }
+
+    public function test_admin_can_delete_ticket_and_remove_media_from_storage_from_web(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.tickets' => 'TableTicket',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $admin = $this->createUserWithRole('admin');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket a eliminar Web',
+            'description' => 'Ticket con adjunto para validar borrado desde modulo web.',
+            'reporter_id' => $admin->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $mediaPath = 'tickets/media/'.$ticket->id.'/web-evidencia.png';
+        Storage::disk('public')->put($mediaPath, 'image-content');
+
+        $media = TicketMedia::query()->create([
+            'ticket_id' => $ticket->id,
+            'file_url' => '/storage/v1/object/public/TableTicket/'.$mediaPath,
+            'file_type' => 'image',
+            'uploaded_by' => $admin->id,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->delete(route('tickets.destroy', $ticket));
+
+        $response->assertRedirect(route('tickets.index'));
+        $response->assertSessionHas('status', 'Ticket eliminado correctamente.');
+
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
+        ]);
+        $this->assertDatabaseMissing('ticket_media', [
+            'id' => $media->id,
+        ]);
+
+        Storage::disk('public')->assertMissing($mediaPath);
+    }
+
+    public function test_reporter_cannot_delete_ticket_from_web(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket protegido Web',
+            'description' => 'Un reporter no debe eliminar tickets desde web.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->delete(route('tickets.destroy', $ticket));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
         ]);
     }
 
@@ -298,8 +376,8 @@ class TicketControllerTest extends TestCase
         $nextPageUrl = (string) $tickets->nextPageUrl();
 
         $this->assertNotSame('', $nextPageUrl);
-        $this->assertStringContainsString('location_id=' . $location->id, $nextPageUrl);
-        $this->assertStringContainsString('category_id=' . $category->id, $nextPageUrl);
+        $this->assertStringContainsString('location_id='.$location->id, $nextPageUrl);
+        $this->assertStringContainsString('category_id='.$category->id, $nextPageUrl);
         $this->assertStringContainsString('per_page=10', $nextPageUrl);
     }
 
@@ -321,7 +399,7 @@ class TicketControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function createLocation(array $overrides = []): Location
     {
@@ -329,8 +407,8 @@ class TicketControllerTest extends TestCase
             'name' => 'Aula Innovacion',
             'building' => 'Edificio A',
             'floor' => '2',
-            'room_code' => 'A-' . Str::upper(Str::random(6)),
-            'qr_token' => 'qr-' . Str::lower(Str::random(12)),
+            'room_code' => 'A-'.Str::upper(Str::random(6)),
+            'qr_token' => 'qr-'.Str::lower(Str::random(12)),
             'is_active' => true,
         ];
 
@@ -338,12 +416,12 @@ class TicketControllerTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function createCategory(array $overrides = []): Category
     {
         $base = [
-            'name' => 'Categoria ' . Str::lower(Str::random(8)),
+            'name' => 'Categoria '.Str::lower(Str::random(8)),
             'icon' => 'bolt',
             'description' => 'Incidencias electricas',
         ];

@@ -22,6 +22,7 @@ class UpdateRecurrenceOnTicketResolved
         $async = (bool) config('ai.automation.async_processing', true);
         if ($async) {
             UpdateRecurrenceHistory::dispatch($ticket, $correlationId);
+
             return;
         }
 

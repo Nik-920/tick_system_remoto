@@ -14,7 +14,7 @@
 
  [Instalación](#-instalación-y-configuración) · [Decisiones de Arquitectura](#-decisiones-de-arquitectura-y-mejores-prácticas) · [Patrones de Diseño](#-patrones-de-diseño-aplicados) · [API](#-referencia-de-la-api) · [Testing](#-estrategia-de-testing)
 
-[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md) · [Implementacion de Tablero P0 P1 P2](Docs/TABLERO_TRABAJO_P0_P1_P2.md) · [Activacion Sentry Staging y Produccion](Docs/SENTRY_ACTIVACION_STAGING_PROD.md)
+[Estado Actual del Proyecto](Docs/ESTADO_ACTUAL_PROYECTO.md) · [Plan Completo de Cierre](Docs/PLAN_CIERRE_PROYECTO.md) · [Implementacion de Tablero P0 P1 P2](Docs/TABLERO_TRABAJO_P0_P1_P2.md) · [Activacion Sentry Staging y Produccion](Docs/SENTRY_ACTIVACION_STAGING_PROD.md) · [Pipeline Jenkins](Docs/JENKINS_PIPELINE.md) · [Jenkins Lint Job](Docs/JENKINS_LINT_JOB.md)
 
 </div>
 
@@ -717,6 +717,38 @@ Flujo simple para 2 devs junior:
 1. **Lint** (composer + pint + phpstan).
 2. **Tests** con base Supabase (imagen oficial con extensiones `auth.*` y `pgcrypto`) para que la migración que referencia `auth.users` no falle.
 3. **Smoke RLS**: genera un JWT con `app_role` y hace una consulta mínima contra PostgREST para verificar que la política responde (sin cubrir todo el sistema).
+
+### Jenkins — CI Declarativo
+
+El repositorio incluye un `Jenkinsfile` listo para ejecutar integración continua en Jenkins con estas etapas:
+
+1. Checkout de código.
+2. Validación de toolchain (`php`, `composer`, `node`, `npm`).
+3. Instalación de dependencias backend (`composer install`).
+4. Preparación de entorno de testing (`.env` + `php artisan key:generate`).
+5. Ejecución de pruebas (`vendor/bin/phpunit`) con reporte JUnit.
+6. Build frontend (`npm ci` + `npm run build`) con artefactos en `public/build`.
+
+Guía paso a paso de configuración en Jenkins:
+
+- [Docs/JENKINS_PIPELINE.md](Docs/JENKINS_PIPELINE.md)
+
+### Jenkins — Job de Lint / Code Style
+
+Se agregó un pipeline dedicado para calidad de código con nombre sugerido `system_app-lint` y script:
+
+- `CI/jenkins/Jenkinsfile.lint`
+
+Este job ejecuta, en orden:
+
+1. Validación de sintaxis PHP.
+2. `pint --test`.
+3. `phpstan`.
+4. `php-cs-fixer --dry-run --diff`.
+
+Guía paso a paso:
+
+- [Docs/JENKINS_LINT_JOB.md](Docs/JENKINS_LINT_JOB.md)
 
 ## 📊 Monitoreo y Observabilidad
 

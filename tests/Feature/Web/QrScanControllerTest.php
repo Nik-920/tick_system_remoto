@@ -21,7 +21,7 @@ class QrScanControllerTest extends TestCase
             ->get(route('scan.show', ['token' => $location->qr_token]));
 
         $response->assertRedirect(route('tickets.create', ['location_id' => $location->id]));
-        $response->assertSessionHas('status', 'Ubicacion detectada desde QR: ' . $location->name);
+        $response->assertSessionHas('status', 'Ubicacion detectada desde QR: '.$location->name);
     }
 
     public function test_invalid_qr_token_returns_not_found(): void
@@ -73,7 +73,7 @@ class QrScanControllerTest extends TestCase
             'name' => 'Aula 301',
             'building' => 'Edificio C',
             'floor' => '3',
-            'room_code' => 'C-301-' . substr($token, -3),
+            'room_code' => 'C-301-'.substr($token, -3),
             'qr_token' => $token,
             'is_active' => $isActive,
         ]);

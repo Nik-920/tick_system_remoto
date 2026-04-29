@@ -11,10 +11,10 @@ use App\Models\Location;
 use App\Services\Qr\QrTokenService;
 use App\Services\Storage\LocationQrStorageService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Throwable;
@@ -151,12 +151,15 @@ class LocationController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $filters
+     * @param  array<string, mixed>  $filters
+     * @param  Builder<Location>  $query
      */
     private function applyFilters(Builder $query, array $filters): void
     {
-        if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
-            $query->where('is_active', (bool) $filters['is_active']);
+        if (array_key_exists('is_active', $filters)) {
+            $query->withActiveState(
+                $filters['is_active'] === null ? null : (bool) $filters['is_active']
+            );
         }
 
         if (! empty($filters['building'])) {

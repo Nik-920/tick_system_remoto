@@ -171,6 +171,6 @@ class DomainStorageServiceTest extends TestCase
         $segments = array_values(array_filter(explode('/', trim($path, '/')), static fn (string $part): bool => $part !== ''));
         $encodedPath = implode('/', array_map('rawurlencode', $segments));
 
-        return '/storage/v1/object/public/' . rawurlencode($bucket) . '/' . $encodedPath;
+        return '/storage/v1/object/public/'.rawurlencode($bucket).'/'.$encodedPath;
     }
 }

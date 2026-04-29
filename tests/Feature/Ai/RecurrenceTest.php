@@ -23,6 +23,7 @@ class RecurrenceTest extends TestCase
 
         if (! $enabled) {
             $this->assertFalse($this->isRecurring($recent, 2, $enabled, $windowHours));
+
             return;
         }
 
@@ -39,6 +40,7 @@ class RecurrenceTest extends TestCase
 
         if (! $enabled) {
             $this->assertFalse($this->isRecurring($recent, 2, $enabled, $windowHours));
+
             return;
         }
 

@@ -8,12 +8,15 @@ use App\Jobs\UpdateRecurrenceHistory;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketMedia;
 use App\Models\User;
+use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -125,7 +128,7 @@ class TicketApiControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $storedFiles = Storage::disk('public')->allFiles('tickets/media/' . $ticketId);
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticketId);
         $this->assertCount(2, $storedFiles);
     }
 
@@ -217,6 +220,124 @@ class TicketApiControllerTest extends TestCase
             'ticket_id' => $ticket->id,
             'to_state' => 'in_progress',
             'changed_by' => $maintenance->id,
+        ]);
+    }
+
+    public function test_admin_can_delete_ticket_and_remove_media_from_storage(): void
+    {
+        config([
+            'services.supabase.storage.domain_buckets.tickets' => 'TableTicket',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
+        ]);
+        Storage::fake('public');
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket a eliminar API',
+            'description' => 'Ticket con adjunto para validar limpieza en storage al eliminar.',
+            'reporter_id' => $admin->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $mediaPath = 'tickets/media/'.$ticket->id.'/evidencia.png';
+        Storage::disk('public')->put($mediaPath, 'image-content');
+
+        $media = TicketMedia::query()->create([
+            'ticket_id' => $ticket->id,
+            'file_url' => '/storage/v1/object/public/TableTicket/'.$mediaPath,
+            'file_type' => 'image',
+            'uploaded_by' => $admin->id,
+        ]);
+
+        $response = $this->deleteJson(route('api.tickets.destroy', $ticket));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Ticket eliminado correctamente.');
+
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
+        ]);
+        $this->assertDatabaseMissing('ticket_media', [
+            'id' => $media->id,
+        ]);
+
+        Storage::disk('public')->assertMissing($mediaPath);
+    }
+
+    public function test_reporter_cannot_delete_ticket_via_api(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket protegido API',
+            'description' => 'Un reporter no debe eliminar tickets.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->deleteJson(route('api.tickets.destroy', $ticket));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+        ]);
+    }
+
+    public function test_delete_ticket_keeps_database_deletion_when_storage_cleanup_fails(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket cleanup fallido API',
+            'description' => 'Si falla storage, el ticket igual debe quedar eliminado de BD.',
+            'reporter_id' => $admin->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketMedia::query()->create([
+            'ticket_id' => $ticket->id,
+            'file_url' => '/storage/v1/object/public/TableTicket/tickets/media/'.$ticket->id.'/fallo.png',
+            'file_type' => 'image',
+            'uploaded_by' => $admin->id,
+        ]);
+
+        $this->mock(TicketMediaStorageService::class, function ($mock): void {
+            $mock->shouldReceive('deleteManyByUrls')
+                ->once()
+                ->andThrow(new RuntimeException('storage-delete-failed'));
+        });
+
+        $response = $this->deleteJson(route('api.tickets.destroy', $ticket));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Ticket eliminado correctamente.');
+
+        $this->assertDatabaseMissing('tickets', [
+            'id' => $ticket->id,
         ]);
     }
 

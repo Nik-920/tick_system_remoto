@@ -13,7 +13,7 @@ class TicketQrLogger
     private const REDACTED_KEYS = ['comment', 'description', 'title'];
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function info(string $eventName, array $context = []): void
     {
@@ -21,7 +21,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function warning(string $eventName, array $context = []): void
     {
@@ -29,7 +29,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function error(string $eventName, array $context = []): void
     {
@@ -37,7 +37,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public function log(string $level, string $eventName, array $context = []): void
     {
@@ -63,7 +63,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function dropNullValues(array $payload): array
@@ -72,7 +72,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function resolveDomain(string $eventName, array $context): string
     {
@@ -93,7 +93,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function resolveActorId(array $context): ?string
     {
@@ -107,7 +107,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     private function resolveCorrelationId(?Request $request, array $context): string
     {
@@ -170,7 +170,7 @@ class TicketQrLogger
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
     private function sanitizeContext(array $context): array
