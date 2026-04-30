@@ -1,4 +1,4 @@
-name: CI Pipeline - Sistema de Incidencias
+name: 🎫 CI Pipeline — Sistema de Incidencias
 
 on:
   push:
@@ -21,21 +21,20 @@ env:
   PHP_VERSION: '8.2'
   NODE_VERSION: '22'
 
+# ═══════════════════════════════════════════════
+# JOB 1 — LINT & CODE QUALITY
+# ═══════════════════════════════════════════════
 jobs:
-
-# -----------------------------------------------
-# JOB 1 - LINT & CODE QUALITY
-# -----------------------------------------------
   lint:
-    name: Lint and Code Quality
+    name: 🔍 Lint & Code Quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout codigo
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
@@ -43,34 +42,38 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Cache Composer
+      - name: 📦 Cache Composer
         uses: actions/cache@v4
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      - name: Instalar dependencias PHP
+      # FIX 1: --no-scripts para que artisan no corra sin .env
+      - name: 📦 Instalar dependencias PHP
         run: composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader --no-scripts
 
-      - name: PHP Syntax Check
+      - name: ✅ PHP Syntax Check
         run: find app config routes -name "*.php" | xargs php -l
 
-      - name: Laravel Pint - Code Style
+      - name: ✅ Laravel Pint (Code Style)
         run: vendor/bin/pint --test
 
-      - name: PHPStan - Analisis Estatico
+      - name: Preparar .env para PHPStan
+        run: cp .env.testing .env  
+
+      - name: ✅ PHPStan — Análisis Estático
         run: vendor/bin/phpstan analyse --memory-limit=512M
 
-      - name: PHP CS Fixer dry-run
+      - name: ✅ PHP CS Fixer (dry-run)
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
         continue-on-error: true
 
-# -----------------------------------------------
-# JOB 2 - TEST SUITE
-# -----------------------------------------------
+# ═══════════════════════════════════════════════
+# JOB 2 — TEST SUITE
+# ═══════════════════════════════════════════════
   tests:
-    name: Test Suite
+    name: 🧪 Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: lint
@@ -91,66 +94,66 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout codigo
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
           coverage: xdebug
 
-      - name: Setup Node.js
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Cache Composer
+      - name: 📦 Cache Composer
         uses: actions/cache@v4
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      - name: Preparar .env desde .env.testing
+      # FIX 2: .env listo ANTES de composer install
+      - name: ⚙️ Preparar .env desde .env.testing
         run: cp .env.testing .env
 
-      - name: Instalar dependencias PHP
+      - name: 📦 Instalar dependencias PHP
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Instalar dependencias Node
+      - name: 📦 Instalar dependencias Node
         run: npm ci
 
-      - name: Build frontend
+      - name: 🏗️ Build frontend
         run: npm run build
 
-      - name: Generar APP_KEY
+      - name: 🔑 Generar APP_KEY
         run: php artisan key:generate
 
-      - name: Ejecutar migraciones
+      - name: 🗄️ Ejecutar migraciones
         run: php artisan migrate --force
 
-      - name: PHPUnit Tests
+      - name: 🧪 PHPUnit / Pest
         run: |
           vendor/bin/phpunit \
             --log-junit storage/logs/junit-report.xml \
             --testdox
 
-      - name: Publicar reporte de tests
+      - name: 📊 Publicar reporte de tests
         uses: mikepenz/action-junit-report@v4
         if: always()
         with:
           report_paths: storage/logs/junit-report.xml
-          check_name: Test Results
+          check_name: 'Test Results'
 
-# -----------------------------------------------
-# JOB 3 - BUILD DOCKER IMAGE
-# Solo en push a develop o main
-# -----------------------------------------------
+# ═══════════════════════════════════════════════
+# JOB 3 — BUILD DOCKER IMAGE
+# ═══════════════════════════════════════════════
   build:
-    name: Build and Push Docker Image
+    name: 🐳 Build & Push Docker Image
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: tests
@@ -161,17 +164,17 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout codigo
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Login a ghcr.io
+      - name: 🔐 Login a ghcr.io
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Metadata
+      - name: 🏷️ Docker Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -181,7 +184,7 @@ jobs:
             type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=,format=short
 
-      - name: Build and Push imagen
+      - name: 🐳 Build & Push imagen
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -192,8 +195,8 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
 
-      - name: Resumen del build
+      - name: 📋 Resumen del build
         run: |
-          echo "## Docker Image publicada" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Image publicada" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
