@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -24,7 +25,7 @@ class HuggingFaceService
     public function embedding(string $text, ?string $model = null): array
     {
         $model = $model ?: (string) ($this->config['embedding_model'] ?? '');
-        $data = $this->postToModel($model, [
+        $data = $this->postToFeatureExtractionModel($model, [
             'inputs' => $text,
             'options' => [
                 'wait_for_model' => $this->waitForModel(),
@@ -46,7 +47,7 @@ class HuggingFaceService
         }
 
         $model = $model ?: (string) ($this->config['classification_model'] ?? '');
-        $data = $this->postToModel($model, [
+        $data = $this->postToClassificationModel($model, [
             'inputs' => $text,
             'parameters' => [
                 'candidate_labels' => $labels,
@@ -56,10 +57,35 @@ class HuggingFaceService
             ],
         ]);
 
+        if (array_is_list($data)) {
+            $labelsFromResponse = [];
+            $scoresFromResponse = [];
+
+            foreach ($data as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                if (isset($item['label']) && is_string($item['label'])) {
+                    $labelsFromResponse[] = $item['label'];
+                }
+
+                if (isset($item['score']) && is_numeric($item['score'])) {
+                    $scoresFromResponse[] = (float) $item['score'];
+                }
+            }
+
+            return [
+                'labels' => $labelsFromResponse,
+                'scores' => $scoresFromResponse,
+                'sequence' => $text,
+            ];
+        }
+
         return [
             'labels' => $data['labels'] ?? [],
-            'scores' => $data['scores'] ?? [],
-            'sequence' => $data['sequence'] ?? null,
+            'scores' => array_map(static fn ($score): float => (float) $score, $data['scores'] ?? []),
+            'sequence' => $data['sequence'] ?? $text,
         ];
     }
 
@@ -67,7 +93,25 @@ class HuggingFaceService
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>|array<int, mixed>
      */
-    private function postToModel(string $model, array $payload): array
+    private function postToFeatureExtractionModel(string $model, array $payload): array
+    {
+        return $this->post($model, '/models/'.$model.'/pipeline/feature-extraction', $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|array<int, mixed>
+     */
+    private function postToClassificationModel(string $model, array $payload): array
+    {
+        return $this->post($model, '/models/'.$model, $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|array<int, mixed>
+     */
+    private function post(string $model, string $route, array $payload): array
     {
         $this->ensureEnabled();
 
@@ -75,7 +119,15 @@ class HuggingFaceService
             throw new RuntimeException('Hugging Face model is not configured.');
         }
 
-        $response = $this->client()->post("/models/{$model}", $payload);
+        try {
+            $response = $this->client()->post($route, $payload);
+        } catch (RequestException $exception) {
+            $response = $exception->response;
+            $body = is_object($response) && method_exists($response, 'body') ? $response->body() : $exception->getMessage();
+
+            throw new RuntimeException('Hugging Face request failed: '.$body, previous: $exception);
+        }
+
         if (! $response->successful()) {
             throw new RuntimeException('Hugging Face request failed: '.$response->body());
         }
