@@ -52,7 +52,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo \
         pdo_pgsql \
-        # FIX 3: eliminado pdo_mysql — solo usan PostgreSQL/Supabase
         gd \
         bcmath \
         mbstring \
