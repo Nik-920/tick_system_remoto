@@ -37,5 +37,6 @@ class AiConfigTest extends TestCase
         $baseUrl = config('ai.huggingface.base_url');
         $this->assertIsString($baseUrl);
         $this->assertNotSame('', $baseUrl);
+        $this->assertStringContainsString('router.huggingface.co/hf-inference', $baseUrl);
     }
 }

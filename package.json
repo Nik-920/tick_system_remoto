@@ -3,7 +3,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "ops:cache:clean": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/ops/clean_laravel_phpstan_cache.ps1",
+        "ops:cache:clean:dry": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/ops/clean_laravel_phpstan_cache.ps1 -DryRun"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

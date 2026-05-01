@@ -19,7 +19,7 @@ class PasswordResetTest extends TestCase
         $response = $this->get(route('password.request'));
 
         $response->assertOk();
-        $response->assertSee('Recuperar contrasena');
+        $response->assertSee("Recuperar contrase\u{00F1}a");
     }
 
     public function test_reset_password_screen_can_be_rendered(): void
@@ -33,7 +33,7 @@ class PasswordResetTest extends TestCase
         ]));
 
         $response->assertOk();
-        $response->assertSee('Restablecer contrasena');
+        $response->assertSee("Restablecer contrase\u{00F1}a");
     }
 
     public function test_password_reset_link_can_be_requested_for_existing_email(): void
