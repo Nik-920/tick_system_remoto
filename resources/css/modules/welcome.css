@@ -1,9 +1,3 @@
-/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
-   WELCOME LANDING ÔÇö Sistema de Reporte de Incidencias
-   Append these rules to resources/css/app.css
-   ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */
-
-/* ÔöÇÔöÇ Utility: screen-reader only ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -16,7 +10,6 @@
     border-width: 0;
 }
 
-/* ÔöÇÔöÇ Body / Shell ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
 .welcome-body {
     margin: 0;
     padding: 0;
@@ -248,8 +241,15 @@
 }
 
 @keyframes welcome-pulse {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
-    50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.1); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.1);
+    }
 }
 
 .welcome-hero-title {
@@ -512,9 +512,17 @@
     border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
-.welcome-benefit-card--blue .welcome-benefit-icon { color: #1d4ed8; }
-.welcome-benefit-card--amber .welcome-benefit-icon { color: #92400e; }
-.welcome-benefit-card--emerald .welcome-benefit-icon { color: #065f46; }
+.welcome-benefit-card--blue .welcome-benefit-icon {
+    color: #1d4ed8;
+}
+
+.welcome-benefit-card--amber .welcome-benefit-icon {
+    color: #92400e;
+}
+
+.welcome-benefit-card--emerald .welcome-benefit-icon {
+    color: #065f46;
+}
 
 .welcome-benefit-title {
     margin: 0 0 0.6rem;
@@ -557,9 +565,17 @@
     flex-shrink: 0;
 }
 
-.welcome-benefit-card--blue .welcome-benefit-list li::before { background: #3b82f6; }
-.welcome-benefit-card--amber .welcome-benefit-list li::before { background: #f59e0b; }
-.welcome-benefit-card--emerald .welcome-benefit-list li::before { background: #10b981; }
+.welcome-benefit-card--blue .welcome-benefit-list li::before {
+    background: #3b82f6;
+}
+
+.welcome-benefit-card--amber .welcome-benefit-list li::before {
+    background: #f59e0b;
+}
+
+.welcome-benefit-card--emerald .welcome-benefit-list li::before {
+    background: #10b981;
+}
 
 /* ÔöÇÔöÇ Features strip ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
 .welcome-features {
@@ -747,6 +763,7 @@
     .welcome-status-dot {
         animation: none;
     }
+
     .welcome-cta--primary:hover,
     .welcome-benefit-card:hover {
         transform: none;
