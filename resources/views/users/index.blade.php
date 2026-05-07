@@ -19,7 +19,7 @@ if ($roleValue !== '') $activeFilterCount++;
         <div class="users-hero-inner">
             <div>
                 <p class="users-overline">Panel de control</p>
-                <h1 class="users-title">Gestión de usuarios</h1>
+                <h1 class="users-title">Gestion de usuarios y roles</h1>
                 <p class="users-subtitle">Administra identidades con una vista clara, consistente y segura para altas, mantenimiento y control de accesos.</p>
             </div>
             <a href="{{ route('users.create') }}" class="btn-primary users-btn-new">Nuevo usuario</a>
