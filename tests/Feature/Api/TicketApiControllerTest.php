@@ -87,8 +87,10 @@ class TicketApiControllerTest extends TestCase
     public function test_api_store_can_persist_ticket_media_files(): void
     {
         config([
-            'filesystems.domain_disks.tickets' => 'public',
-            'filesystems.domain_prefixes.tickets' => 'tickets/media',
+            'services.supabase.storage.domain_buckets.tickets' => 'TableTicket',
+            'services.supabase.storage.domain_prefixes.tickets' => 'tickets/media',
+            'services.supabase.storage.use_local_disk_for_testing' => true,
+            'services.supabase.storage.testing_disk' => 'public',
         ]);
         Storage::fake('public');
 
@@ -128,8 +130,16 @@ class TicketApiControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticketId);
-        $this->assertCount(2, $storedFiles);
+        $mediaUrls = Ticket::query()
+            ->findOrFail($ticketId)
+            ->media()
+            ->pluck('file_url')
+            ->all();
+
+        $this->assertCount(2, $mediaUrls);
+        foreach ($mediaUrls as $mediaUrl) {
+            $this->assertStringContainsString('/storage/v1/object/public/TableTicket/tickets/media/'.$ticketId.'/', $mediaUrl);
+        }
     }
 
     public function test_api_store_detects_duplicate_ticket_in_window(): void
@@ -270,7 +280,7 @@ class TicketApiControllerTest extends TestCase
             'id' => $media->id,
         ]);
 
-        Storage::disk('public')->assertMissing($mediaPath);
+        $this->assertFalse(Storage::disk('public')->exists($mediaPath));
     }
 
     public function test_reporter_cannot_delete_ticket_via_api(): void
