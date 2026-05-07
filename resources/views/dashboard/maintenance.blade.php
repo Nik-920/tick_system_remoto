@@ -77,11 +77,11 @@
                             <div class="rd-queue-item-info">
                                 <p class="rd-queue-item-title">{{ $ticket->title }}</p>
                                 <p class="rd-queue-item-meta">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <x-lucide-clock width="11" height="11" stroke-width="2.5" aria-hidden="true" />
                                     {{ $ticket->created_at?->diffForHumans() ?? 'N/A' }}
                                     @if($ticket->location)
                                         &nbsp;·&nbsp;
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        <x-lucide-map-pin width="11" height="11" stroke-width="2.5" aria-hidden="true" />
                                         {{ $ticket->location->name }}
                                     @endif
                                 </p>
@@ -98,7 +98,7 @@
                     </li>
                 @empty
                     <li class="rd-empty-state rd-empty-state--success">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <x-lucide-check-circle width="20" height="20" stroke-width="2" aria-hidden="true" />
                         No tienes tickets activos en cola. ¡Bien hecho!
                     </li>
                 @endforelse

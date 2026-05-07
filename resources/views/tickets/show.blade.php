@@ -162,9 +162,7 @@
                     <article class="tickets-history-item">
                         <div class="tickets-history-transition">
                             <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry->from_state ?? 'Inicio')) }}</span>
-                            <svg class="tickets-history-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 12H19M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                            <x-lucide-arrow-right class="tickets-history-arrow" />
                             <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry->to_state)) }}</span>
                         </div>
                         <p class="tickets-history-comment">{{ $entry->comment ?? '(sin comentario)' }}</p>

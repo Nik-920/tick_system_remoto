@@ -37,11 +37,7 @@
 
                 <div class="profile-card-header profile-card-header--teal">
                     <div class="profile-card-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                        </svg>
+                        <x-lucide-image width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <p class="profile-card-title">Foto de perfil</p>
@@ -61,10 +57,7 @@
                                 </div>
                             @endif
                             <div class="profile-avatar-badge">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                    <circle cx="12" cy="13" r="4"/>
-                                </svg>
+                                <x-lucide-camera width="12" height="12" stroke-width="2.5" />
                             </div>
                         </div>
 
@@ -72,11 +65,7 @@
                         <div class="profile-avatar-upload">
                             <label for="avatar_file" class="profile-upload-label">
                                 <div class="profile-upload-icon">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="17 8 12 3 7 8"/>
-                                        <line x1="12" y1="3" x2="12" y2="15"/>
-                                    </svg>
+                                    <x-lucide-upload width="22" height="22" stroke-width="1.5" />
                                 </div>
                                 <p class="profile-upload-text">Arrastra o haz clic para subir</p>
                                 <p class="profile-upload-hint">PNG, JPG, WEBP — máx. 2 MB</p>
@@ -99,10 +88,7 @@
 
                 <div class="profile-card-header">
                     <div class="profile-card-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
+                        <x-lucide-edit width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <p class="profile-card-title">Datos personales</p>

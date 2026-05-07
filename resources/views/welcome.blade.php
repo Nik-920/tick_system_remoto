@@ -84,27 +84,20 @@
                 <div class="welcome-hero-actions">
                     @auth
                         <a href="{{ route('dashboard.index') }}" class="welcome-cta welcome-cta--primary">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                            </svg>
+                            <x-lucide-layout-grid width="18" height="18" stroke-width="2.2" aria-hidden="true" />
                             Ir al panel
                         </a>
                     @else
                         @if (Route::has('register'))
                             <a href="{{ route('register') }}" class="welcome-cta welcome-cta--primary">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M12 5v14M5 12h14"/>
-                                </svg>
+                                <x-lucide-plus width="18" height="18" stroke-width="2.2" aria-hidden="true" />
                                 Crear cuenta
                             </a>
                         @endif
                         @if (Route::has('login'))
                             <a href="{{ route('login') }}" class="welcome-cta welcome-cta--ghost">
                                 Iniciar sesión
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M5 12h14M13 6l6 6-6 6"/>
-                                </svg>
+                                <x-lucide-arrow-right width="16" height="16" stroke-width="2.2" aria-hidden="true" />
                             </a>
                         @endif
                     @endauth
@@ -148,10 +141,7 @@
                     <li class="welcome-flow-step">
                         <div class="welcome-flow-step-num" aria-hidden="true">01</div>
                         <div class="welcome-flow-step-icon" aria-hidden="true">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2a9 9 0 0 1 9 9 9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9z"/>
-                                <path d="M12 8v4M12 16h.01"/>
-                            </svg>
+                            <x-lucide-alert-circle width="22" height="22" stroke-width="2" />
                         </div>
                         <h3 class="welcome-flow-step-title">Reportar</h3>
                         <p class="welcome-flow-step-desc">El usuario escanea el código QR de la ubicación o accede al sistema y registra el incidente con categoría, descripción y evidencia fotográfica.</p>
@@ -160,11 +150,7 @@
                     <li class="welcome-flow-step">
                         <div class="welcome-flow-step-num" aria-hidden="true">02</div>
                         <div class="welcome-flow-step-icon" aria-hidden="true">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="8" r="4"/>
-                                <path d="M6 20v-1a6 6 0 0 1 12 0v1"/>
-                                <path d="M19 11l2 2-5 5-3-3"/>
-                            </svg>
+                            <x-lucide-user-check width="22" height="22" stroke-width="2" />
                         </div>
                         <h3 class="welcome-flow-step-title">Asignar</h3>
                         <p class="welcome-flow-step-desc">El equipo administrativo revisa el ticket, lo clasifica por prioridad y lo asigna al técnico o área responsable de atender el incidente.</p>
@@ -173,9 +159,7 @@
                     <li class="welcome-flow-step">
                         <div class="welcome-flow-step-num" aria-hidden="true">03</div>
                         <div class="welcome-flow-step-icon" aria-hidden="true">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                            </svg>
+                            <x-lucide-wrench width="22" height="22" stroke-width="2" />
                         </div>
                         <h3 class="welcome-flow-step-title">Resolver</h3>
                         <p class="welcome-flow-step-desc">El técnico atiende el incidente en campo, actualiza el estado del ticket y documenta las acciones correctivas realizadas para el cierre.</p>
@@ -184,9 +168,7 @@
                     <li class="welcome-flow-step">
                         <div class="welcome-flow-step-num" aria-hidden="true">04</div>
                         <div class="welcome-flow-step-icon" aria-hidden="true">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                            </svg>
+                            <x-lucide-activity width="22" height="22" stroke-width="2" />
                         </div>
                         <h3 class="welcome-flow-step-title">Seguimiento</h3>
                         <p class="welcome-flow-step-desc">Consulta el historial completo, analiza métricas por categoría, ubicación o período y genera reportes para la toma de decisiones.</p>
@@ -207,10 +189,7 @@
                     <!-- Reporters -->
                     <article class="welcome-benefit-card welcome-benefit-card--blue">
                         <div class="welcome-benefit-icon" aria-hidden="true">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3L14.5 4z"/>
-                                <circle cx="12" cy="13" r="3"/>
-                            </svg>
+                            <x-lucide-camera width="24" height="24" stroke-width="2" />
                         </div>
                         <h3 class="welcome-benefit-title">Reporteros</h3>
                         <p class="welcome-benefit-desc">Reporta cualquier incidencia en segundos escaneando el QR de la ubicación. Sin formularios complejos, sin fricción.</p>
@@ -224,9 +203,7 @@
                     <!-- Maintenance -->
                     <article class="welcome-benefit-card welcome-benefit-card--amber">
                         <div class="welcome-benefit-icon" aria-hidden="true">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                            </svg>
+                            <x-lucide-wrench width="24" height="24" stroke-width="2" />
                         </div>
                         <h3 class="welcome-benefit-title">Equipo técnico</h3>
                         <p class="welcome-benefit-desc">Recibe tickets asignados con toda la información necesaria. Actualiza el estado desde cualquier dispositivo, en campo o en oficina.</p>
@@ -240,9 +217,7 @@
                     <!-- Admins -->
                     <article class="welcome-benefit-card welcome-benefit-card--emerald">
                         <div class="welcome-benefit-icon" aria-hidden="true">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 3h18v18H3z" rx="2"/><path d="M3 9h18M9 21V9"/>
-                            </svg>
+                            <x-lucide-layout-dashboard width="24" height="24" stroke-width="2" />
                         </div>
                         <h3 class="welcome-benefit-title">Administración</h3>
                         <p class="welcome-benefit-desc">Visión completa del estado operativo. Gestiona ubicaciones, categorías, usuarios y analiza patrones de incidencias para actuar de forma preventiva.</p>
@@ -263,54 +238,42 @@
                 <ul class="welcome-features-list" role="list">
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                            </svg>
+                            <x-lucide-lock width="18" height="18" stroke-width="2.2" />
                         </span>
                         Acceso por roles
                     </li>
                     <li class="welcome-feature-sep" aria-hidden="true">·</li>
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
+                            <x-lucide-layers width="18" height="18" stroke-width="2.2" />
                         </span>
                         Tickets con estados
                     </li>
                     <li class="welcome-feature-sep" aria-hidden="true">·</li>
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01M12 12h.01"/>
-                            </svg>
+                            <x-lucide-qr-code width="18" height="18" stroke-width="2.2" />
                         </span>
                         Códigos QR por ubicación
                     </li>
                     <li class="welcome-feature-sep" aria-hidden="true">·</li>
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
+                            <x-lucide-message-square width="18" height="18" stroke-width="2.2" />
                         </span>
                         Categorización de incidencias
                     </li>
                     <li class="welcome-feature-sep" aria-hidden="true">·</li>
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            </svg>
+                            <x-lucide-shield width="18" height="18" stroke-width="2.2" />
                         </span>
                         Auditoría completa
                     </li>
                     <li class="welcome-feature-sep" aria-hidden="true">·</li>
                     <li class="welcome-feature-item">
                         <span class="welcome-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
-                            </svg>
+                            <x-lucide-smartphone width="18" height="18" stroke-width="2.2" />
                         </span>
                         Optimizado para móvil
                     </li>

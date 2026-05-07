@@ -29,7 +29,7 @@
                 @csrf
                 <div class="users-form-card-header">
                     <div class="users-form-card-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <x-lucide-user width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <p class="users-form-card-title">Datos del usuario</p>
@@ -112,7 +112,7 @@
         <aside class="users-form-sidebar">
             <div class="users-sidebar-card users-sidebar-hero">
                 <div class="users-sidebar-icon">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <x-lucide-user width="28" height="28" stroke-width="1.5" />
                 </div>
                 <h3 class="users-sidebar-title">Nuevo usuario</h3>
                 <p class="users-sidebar-subtitle">El usuario recibirá acceso inmediato según el rol asignado.</p>

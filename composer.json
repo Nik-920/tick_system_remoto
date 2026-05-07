@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.25",
         "livewire/livewire": "^4.2",
+        "mallardduck/blade-lucide-icons": "^1.26",
         "sentry/sentry-laravel": "^4.25",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-model-states": "^2.12",

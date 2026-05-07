@@ -138,9 +138,7 @@
                         <img src="{{ $resolvedIcon }}" alt="Icono" class="cats-sidebar-icon-img">
                     @else
                         <div class="cats-sidebar-icon-placeholder">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
-                            </svg>
+                            <x-lucide-image width="28" height="28" stroke-width="1.5" />
                         </div>
                     @endif
                 </div>

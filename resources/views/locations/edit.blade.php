@@ -38,7 +38,7 @@
 
                 <div class="locs-edit-form-header">
                     <div class="locs-edit-form-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <x-lucide-edit width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <h2 class="locs-edit-form-title">Datos de la ubicación</h2>
@@ -96,7 +96,7 @@
                 <div class="locs-qr-header">
                     <div class="locs-qr-header-left">
                         <div class="locs-qr-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
+                            <x-lucide-qr-code width="18" height="18" stroke-width="2" />
                         </div>
                         <div>
                             <h2 class="locs-qr-title">Estado QR</h2>
@@ -127,7 +127,7 @@
 
                 @if ($location->qr_last_error)
                     <div class="locs-qr-error">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <x-lucide-alert-circle width="15" height="15" stroke-width="2" />
                         <p class="locs-qr-error-text">Último error: {{ $location->qr_last_error }}</p>
                     </div>
                 @endif
@@ -135,14 +135,14 @@
                 <div class="locs-qr-actions">
                     @if ($location->qr_image_url)
                         <a href="{{ $location->qr_image_url }}" target="_blank" rel="noopener noreferrer" class="locs-qr-btn-view">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            <x-lucide-external-link width="14" height="14" stroke-width="2" />
                             Ver imagen QR
                         </a>
                     @endif
                     <form method="POST" action="{{ route('locations.regenerate-qr', $location) }}" class="inline">
                         @csrf
                         <button type="submit" class="locs-qr-btn-regen">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            <x-lucide-refresh-cw width="14" height="14" stroke-width="2" />
                             Regenerar QR
                         </button>
                     </form>
@@ -171,7 +171,7 @@
 
             <div class="locs-sidebar-card locs-sidebar-preview">
                 <div class="locs-sidebar-preview-icon">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <x-lucide-home width="26" height="26" stroke-width="1.5" />
                 </div>
                 <h3 class="locs-sidebar-name">{{ $location->name }}</h3>
                 <p class="locs-sidebar-code">{{ $location->room_code }}</p>
@@ -211,7 +211,7 @@
                     </div>
                 @else
                     <div class="locs-sidebar-qr-empty">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:#cbd5e1;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        <x-lucide-qr-code width="32" height="32" stroke-width="1.5" style="color:#cbd5e1;" />
                         <p class="locs-sidebar-item-text">QR no disponible aún</p>
                     </div>
                 @endif
