@@ -286,7 +286,6 @@ class DashboardController extends Controller
             'recentResolved' => $recentResolved,
             'stateBreakdown' => $stateBreakdown,
             'priorityBreakdown' => $priorityBreakdown,
-            'avgResolutionHoursLast30Days' => $avgResolutionHoursLast30Days,
         ];
     }
 

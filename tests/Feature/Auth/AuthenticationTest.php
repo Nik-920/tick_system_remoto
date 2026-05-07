@@ -16,12 +16,11 @@ class AuthenticationTest extends TestCase
         $response = $this->get(route('login'));
 
         $response->assertOk();
-        $response->assertSee("Iniciar sesi\u{00F3}n");
+        $response->assertSee('Iniciar sesion');
     }
 
     public function test_authenticated_user_is_redirected_from_login_screen_to_dashboard(): void
     {
-        /** @var User $user */
         $user = User::factory()->create();
 
         $response = $this
@@ -33,7 +32,6 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_login_screen(): void
     {
-        /** @var User $user */
         $user = User::factory()->create([
             'password' => Hash::make('password123'),
         ]);
@@ -65,7 +63,6 @@ class AuthenticationTest extends TestCase
 
     public function test_authenticated_users_can_logout(): void
     {
-        /** @var User $user */
         $user = User::factory()->create();
 
         $response = $this
