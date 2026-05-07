@@ -77,9 +77,21 @@
 
                     <div class="profile-form-actions">
                         <button type="submit" class="btn-primary">Actualizar foto</button>
+                        @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+                            <button type="button" class="btn-danger" onclick="openDeleteAvatarModal()">
+                                Eliminar foto
+                            </button>
+                        @endif
                     </div>
                 </div>
             </form>
+
+            @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+                <form id="delete-avatar-form" action="{{ route('profile.delete-avatar') }}" method="POST" style="display: none;">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endif
 
             {{-- DATOS PERSONALES --}}
             <form method="POST" action="{{ route('profile.update') }}" class="profile-card">
@@ -230,5 +242,70 @@ function previewAvatar(input) {
     };
     reader.readAsDataURL(input.files[0]);
 }
+
+// Lógica para el modal premium
+function openDeleteAvatarModal() {
+    const modal = document.getElementById('deleteAvatarModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Mostrar contenedor
+    modal.classList.remove('hidden');
+    
+    // Forzar reflow para aplicar la transición
+    void modal.offsetWidth;
+    
+    // Animar entrada
+    modal.classList.remove('opacity-0');
+    modal.classList.add('opacity-100');
+    modalContent.classList.remove('scale-95', 'translate-y-4');
+    modalContent.classList.add('scale-100', 'translate-y-0');
+}
+
+function closeDeleteAvatarModal() {
+    const modal = document.getElementById('deleteAvatarModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Animar salida
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0');
+    modalContent.classList.remove('scale-100', 'translate-y-0');
+    modalContent.classList.add('scale-95', 'translate-y-4');
+    
+    // Ocultar completamente después de la transición
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
 </script>
+
+{{-- Custom Delete Modal Overlay --}}
+<div id="deleteAvatarModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
+    <!-- Backdrop oscuro -->
+    <div class="absolute inset-0" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteAvatarModal()"></div>
+
+    <!-- Contenido del Modal -->
+    <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">
+        
+        <!-- Icono centrado -->
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4" style="background-color: rgba(225, 29, 72, 0.12);">
+            <x-lucide-alert-triangle width="28" height="28" style="color: #e11d48;" stroke-width="2.5" />
+        </div>
+        
+        <!-- Título y descripción -->
+        <div class="text-center mb-6">
+            <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">¿Eliminar foto de perfil?</h3>
+            <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">Esta acción no se puede deshacer. Se removerá tu imagen y volverás a usar tus iniciales por defecto.</p>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="flex gap-3 justify-center mt-2">
+            <button type="button" class="btn-secondary flex-1 text-center justify-center" onclick="closeDeleteAvatarModal()">
+                Cancelar
+            </button>
+            <button type="button" class="btn-danger flex-1 text-center justify-center" onclick="document.getElementById('delete-avatar-form').submit();">
+                Sí, eliminar
+            </button>
+        </div>
+    </div>
+</div>
 @endsection

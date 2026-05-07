@@ -26,4 +26,12 @@ class UserAvatarStorageService
             $fileName
         );
     }
+
+    public function deleteAvatar(User $user): void
+    {
+        if ($user->avatar_url !== null) {
+            $this->domainStorage->deleteManagedUrl('users', $user->avatar_url);
+            $user->forceFill(['avatar_url' => null])->save();
+        }
+    }
 }

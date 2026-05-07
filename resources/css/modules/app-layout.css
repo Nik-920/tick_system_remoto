@@ -658,6 +658,18 @@
     background: rgba(255,255,255,0.08);
 }
 
+[data-theme="dark"] .btn-danger {
+    background: rgba(225, 29, 72, 0.1);
+    border-color: rgba(225, 29, 72, 0.2);
+    color: #f43f5e;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+    background: rgba(225, 29, 72, 0.15);
+    border-color: rgba(225, 29, 72, 0.3);
+    color: #fda4af;
+}
+
 [data-theme="dark"] .alert-success {
     background: rgba(22,101,52,0.15);
     border-color: rgba(34,197,94,0.2);

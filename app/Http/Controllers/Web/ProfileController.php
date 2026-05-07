@@ -58,4 +58,19 @@ class ProfileController extends Controller
             ->route('profile.edit')
             ->with('status', 'Avatar actualizado correctamente.');
     }
+
+    public function destroyAvatar(UserAvatarStorageService $avatarStorageService): RedirectResponse
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        $avatarStorageService->deleteAvatar($user);
+
+        return redirect()
+            ->route('profile.edit')
+            ->with('status', 'Avatar eliminado correctamente.');
+    }
 }
