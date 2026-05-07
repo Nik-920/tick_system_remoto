@@ -20,14 +20,13 @@
     overflow-x: hidden;
 }
 
-/* ÔöÇÔöÇ Navbar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
 .welcome-nav {
     position: sticky;
     top: 0;
     z-index: 50;
     background: rgba(248, 250, 252, 0.88);
-    backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
     border-bottom: 1px solid #e2e8f0;
 }
 
@@ -174,6 +173,7 @@
         linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
         linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
     background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
     mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
     pointer-events: none;
 }
@@ -351,6 +351,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.8);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     padding: 0.1rem 0;
     width: 100%;
@@ -615,6 +616,7 @@
     color: #cbd5e1;
     font-size: 1.2rem;
     line-height: 1;
+    -webkit-user-select: none;
     user-select: none;
 }
 

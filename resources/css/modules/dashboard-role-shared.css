@@ -113,6 +113,7 @@ body.app-page {
 .role-hero-admin .rounded-xl.border.border-emerald-200 {
     background: rgba(255,255,255,0.12) !important;
     border-color: rgba(255,255,255,0.25) !important;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 .role-hero-admin .rounded-xl.border.border-emerald-200 p {
@@ -486,7 +487,6 @@ body.app-page {
 /* ============================= */
 .table-wrap {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 /* ============================= */

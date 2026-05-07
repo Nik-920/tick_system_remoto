@@ -426,6 +426,7 @@
     background: transparent;
     cursor: pointer;
     transition: all 0.15s ease;
+    -webkit-user-select: none;
     user-select: none;
 }
 
