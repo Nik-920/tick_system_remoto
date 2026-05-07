@@ -87,6 +87,10 @@
                     placeholder="••••••••"
                     class="auth-input"
                 >
+                <button type="button" id="toggle-password" class="auth-input-action" aria-label="Mostrar contraseña">
+                    <x-lucide-eye id="eye-icon" width="16" height="16" stroke-width="2" />
+                    <x-lucide-eye-off id="eye-off-icon" width="16" height="16" stroke-width="2" style="display: none;" />
+                </button>
             </div>
         </div>
 
@@ -103,9 +107,18 @@
             </label>
         </div>
 
-        <button type="submit" class="auth-submit">
-            <x-lucide-log-in width="17" height="17" stroke-width="2.2" aria-hidden="true" />
-            Entrar al sistema
+        <button type="submit" class="auth-submit" id="submit-btn">
+            <span class="auth-submit-text">
+                <x-lucide-log-in width="17" height="17" stroke-width="2.2" aria-hidden="true" />
+                Entrar al sistema
+            </span>
+            <span class="auth-submit-loading" style="display: none;">
+                <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Accediendo...
+            </span>
         </button>
     </form>
 
@@ -120,4 +133,68 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Password Visibility Toggle
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-password');
+    const eyeIcon = document.getElementById('eye-icon');
+    const eyeOffIcon = document.getElementById('eye-off-icon');
+
+    if (toggleBtn && passwordInput) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.style.display = isPassword ? 'none' : 'block';
+            eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+        });
+    }
+
+    // 2. Loading State on Submit
+    const loginForm = document.querySelector('.auth-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = submitBtn?.querySelector('.auth-submit-text');
+    const btnLoading = submitBtn?.querySelector('.auth-submit-loading');
+
+    if (loginForm && submitBtn) {
+        loginForm.addEventListener('submit', () => {
+            submitBtn.disabled = true;
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoading) btnLoading.style.display = 'flex';
+        });
+    }
+
+    // 3. Subtle scale in on load
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.98) translateY(10px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1) translateY(0)';
+        }, 100);
+    }
+});
+</script>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+.auth-submit-loading {
+    justify-content: center;
+}
+.auth-submit:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+</style>
+@endpush
 @endsection

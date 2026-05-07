@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'Autenticación') — Incidencias OPS</title>
+    <title>@yield('title', 'Autenticación') — Tick System Onn</title>
     <meta name="description" content="Sistema de Reporte de Incidencias — Acceso operativo seguro">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -34,14 +34,9 @@
             {{-- Brand mark --}}
             <a href="{{ url('/') }}" class="auth-left-brand" tabindex="-1">
                 <span class="auth-left-brand-icon">
-                    <svg width="32" height="32" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="28" height="28" rx="7" fill="#1e40af"/>
-                        <path d="M14 6.5L14 10M14 18v3.5M6.5 14H10M18 14h3.5" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                        <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                    </svg>
+                    <x-lucide-shield width="24" height="24" stroke="white" stroke-width="2.5" />
                 </span>
-                <span class="auth-left-brand-name">Incidencias <span class="auth-left-brand-ops">OPS</span></span>
+                <span class="auth-left-brand-name">Tick System <span class="auth-left-brand-ops">Onn</span></span>
             </a>
 
             {{-- Main copy --}}
@@ -100,12 +95,8 @@
         {{-- Mobile-only header --}}
         <div class="auth-mobile-header">
             <a href="{{ url('/') }}" class="auth-mobile-brand">
-                <svg width="22" height="22" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <rect width="28" height="28" rx="7" fill="#1e40af"/>
-                    <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                    <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                </svg>
-                <span>Incidencias <strong>OPS</strong></span>
+                <x-lucide-shield width="22" height="22" stroke="#1e40af" stroke-width="2.5" aria-hidden="true" />
+                <span>Tick System <strong>Onn</strong></span>
             </a>
         </div>
 
@@ -124,5 +115,7 @@
 
 </div>
 
+
+    @stack('scripts')
 </body>
 </html>

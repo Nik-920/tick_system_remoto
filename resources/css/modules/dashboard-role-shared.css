@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    DASHBOARD â€” TICK SYSTEM ONN  v2
    Reemplaza SOLO el bloque dashboard en tu app.css
    ============================================================ */
@@ -440,11 +440,18 @@ body.app-page {
     border: 1px solid transparent;
     cursor: pointer;
     letter-spacing: -0.01em;
+    background: #1d4ed8;
+    color: white;
 }
 
 .btn-primary:hover {
+    background: #1e40af;
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
 }
 
 .btn-secondary {
@@ -459,10 +466,19 @@ body.app-page {
     transition: var(--transition);
     text-decoration: none;
     cursor: pointer;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
 }
 
 .btn-secondary:hover {
+    background: #e2e8f0;
+    color: #1e293b;
     transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
 }
 
 /* ============================= */

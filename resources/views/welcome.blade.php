@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sistema de Reporte de Incidencias</title>
+    <title>Tick System Onn — Sistema de Gestión</title>
     <meta name="description" content="Plataforma centralizada para reportar, asignar y resolver incidencias operativas en tiempo real.">
 
     <!-- Fonts -->
@@ -18,18 +18,13 @@
     <header class="welcome-nav" role="banner">
         <div class="welcome-nav-inner">
             <!-- Logo / Brand -->
-            <a href="{{ url('/') }}" class="welcome-brand" aria-label="Inicio — Sistema de Incidencias">
+            <a href="{{ url('/') }}" class="welcome-brand" aria-label="Inicio — Tick System Onn">
                 <span class="welcome-brand-icon" aria-hidden="true">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="28" height="28" rx="7" fill="#1e40af"/>
-                        <path d="M14 6.5L14 10M14 18v3.5M6.5 14H10M18 14h3.5" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                        <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                    </svg>
+                    <x-lucide-shield width="24" height="24" stroke="white" stroke-width="2.5" />
                 </span>
                 <span class="welcome-brand-name">
-                    <span class="welcome-brand-primary">Incidencias</span>
-                    <span class="welcome-brand-suffix">&nbsp;OPS</span>
+                    <span class="welcome-brand-primary">Tick System</span>
+                    <span class="welcome-brand-suffix">&nbsp;Onn</span>
                 </span>
             </a>
 
@@ -320,14 +315,10 @@
         <div class="welcome-section-inner">
             <div class="welcome-footer-inner">
                 <p class="welcome-footer-brand">
-                    <svg width="16" height="16" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <rect width="28" height="28" rx="7" fill="#1e3a8a"/>
-                        <circle cx="14" cy="14" r="3.5" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5"/>
-                        <circle cx="14" cy="14" r="1.2" fill="#fff"/>
-                    </svg>
-                    Incidencias OPS
+                    <x-lucide-shield width="18" height="18" stroke="#3b82f6" stroke-width="2.5" aria-hidden="true" />
+                    Tick System Onn
                 </p>
-                <p class="welcome-footer-copy">Sistema de Reporte de Incidencias &copy; {{ date('Y') }}</p>
+                <p class="welcome-footer-copy">Tick System Onn &copy; {{ date('Y') }}</p>
             </div>
         </div>
     </footer>
