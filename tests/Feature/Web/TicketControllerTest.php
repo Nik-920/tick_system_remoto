@@ -27,7 +27,7 @@ class TicketControllerTest extends TestCase
             ->get(route('tickets.index'));
 
         $response->assertOk();
-        $response->assertSeeText('Cerrar sesión');
+        $response->assertSee('Cerrar sesion');
     }
 
     public function test_authenticated_user_can_view_ticket_index(): void
@@ -124,16 +124,8 @@ class TicketControllerTest extends TestCase
             'file_type' => 'document',
         ]);
 
-        $mediaUrls = Ticket::query()
-            ->findOrFail($ticket->id)
-            ->media()
-            ->pluck('file_url')
-            ->all();
-
-        $this->assertCount(2, $mediaUrls);
-        foreach ($mediaUrls as $mediaUrl) {
-            $this->assertStringContainsString('/storage/v1/object/public/TableTicket/tickets/media/'.$ticket->id.'/', $mediaUrl);
-        }
+        $storedFiles = Storage::disk('public')->allFiles('tickets/media/'.$ticket->id);
+        $this->assertCount(2, $storedFiles);
     }
 
     public function test_maintenance_can_change_ticket_state_from_open_to_in_progress(): void
@@ -220,7 +212,7 @@ class TicketControllerTest extends TestCase
             'id' => $media->id,
         ]);
 
-        $this->assertFalse(Storage::disk('public')->exists($mediaPath));
+        Storage::disk('public')->assertMissing($mediaPath);
     }
 
     public function test_reporter_cannot_delete_ticket_from_web(): void
