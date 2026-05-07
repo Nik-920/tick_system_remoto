@@ -37,11 +37,7 @@
 
                 <div class="profile-card-header profile-card-header--teal">
                     <div class="profile-card-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <polyline points="21 15 16 10 5 21"/>
-                        </svg>
+                        <x-lucide-image width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <p class="profile-card-title">Foto de perfil</p>
@@ -61,10 +57,7 @@
                                 </div>
                             @endif
                             <div class="profile-avatar-badge">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                    <circle cx="12" cy="13" r="4"/>
-                                </svg>
+                                <x-lucide-camera width="12" height="12" stroke-width="2.5" />
                             </div>
                         </div>
 
@@ -72,11 +65,7 @@
                         <div class="profile-avatar-upload">
                             <label for="avatar_file" class="profile-upload-label">
                                 <div class="profile-upload-icon">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="17 8 12 3 7 8"/>
-                                        <line x1="12" y1="3" x2="12" y2="15"/>
-                                    </svg>
+                                    <x-lucide-upload width="22" height="22" stroke-width="1.5" />
                                 </div>
                                 <p class="profile-upload-text">Arrastra o haz clic para subir</p>
                                 <p class="profile-upload-hint">PNG, JPG, WEBP — máx. 2 MB</p>
@@ -88,9 +77,21 @@
 
                     <div class="profile-form-actions">
                         <button type="submit" class="btn-primary">Actualizar foto</button>
+                        @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+                            <button type="button" class="btn-danger" onclick="openDeleteAvatarModal()">
+                                Eliminar foto
+                            </button>
+                        @endif
                     </div>
                 </div>
             </form>
+
+            @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+                <form id="delete-avatar-form" action="{{ route('profile.delete-avatar') }}" method="POST" style="display: none;">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endif
 
             {{-- DATOS PERSONALES --}}
             <form method="POST" action="{{ route('profile.update') }}" class="profile-card">
@@ -99,10 +100,7 @@
 
                 <div class="profile-card-header">
                     <div class="profile-card-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
+                        <x-lucide-edit width="18" height="18" stroke-width="2" />
                     </div>
                     <div>
                         <p class="profile-card-title">Datos personales</p>
@@ -244,5 +242,70 @@ function previewAvatar(input) {
     };
     reader.readAsDataURL(input.files[0]);
 }
+
+// Lógica para el modal premium
+function openDeleteAvatarModal() {
+    const modal = document.getElementById('deleteAvatarModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Mostrar contenedor
+    modal.classList.remove('hidden');
+    
+    // Forzar reflow para aplicar la transición
+    void modal.offsetWidth;
+    
+    // Animar entrada
+    modal.classList.remove('opacity-0');
+    modal.classList.add('opacity-100');
+    modalContent.classList.remove('scale-95', 'translate-y-4');
+    modalContent.classList.add('scale-100', 'translate-y-0');
+}
+
+function closeDeleteAvatarModal() {
+    const modal = document.getElementById('deleteAvatarModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Animar salida
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0');
+    modalContent.classList.remove('scale-100', 'translate-y-0');
+    modalContent.classList.add('scale-95', 'translate-y-4');
+    
+    // Ocultar completamente después de la transición
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
 </script>
+
+{{-- Custom Delete Modal Overlay --}}
+<div id="deleteAvatarModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
+    <!-- Backdrop oscuro -->
+    <div class="absolute inset-0" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteAvatarModal()"></div>
+
+    <!-- Contenido del Modal -->
+    <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">
+        
+        <!-- Icono centrado -->
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4" style="background-color: rgba(225, 29, 72, 0.12);">
+            <x-lucide-alert-triangle width="28" height="28" style="color: #e11d48;" stroke-width="2.5" />
+        </div>
+        
+        <!-- Título y descripción -->
+        <div class="text-center mb-6">
+            <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">¿Eliminar foto de perfil?</h3>
+            <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">Esta acción no se puede deshacer. Se removerá tu imagen y volverás a usar tus iniciales por defecto.</p>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="flex gap-3 justify-center mt-2">
+            <button type="button" class="btn-secondary flex-1 text-center justify-center" onclick="closeDeleteAvatarModal()">
+                Cancelar
+            </button>
+            <button type="button" class="btn-danger flex-1 text-center justify-center" onclick="document.getElementById('delete-avatar-form').submit();">
+                Sí, eliminar
+            </button>
+        </div>
+    </div>
+</div>
 @endsection

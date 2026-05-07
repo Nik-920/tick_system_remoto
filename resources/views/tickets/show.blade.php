@@ -14,10 +14,10 @@
             <div class="tickets-show-actions">
                 <a href="{{ route('tickets.index') }}" class="btn-secondary">Volver</a>
                 @can('delete', $ticket)
-                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('¿Eliminar este ticket y sus adjuntos? Esta acción no se puede deshacer.');" class="inline">
+                    <form id="delete-ticket-form" method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="tickets-btn-danger">Eliminar</button>
+                        <button type="button" class="tickets-btn-danger" onclick="openDeleteTicketModal()">Eliminar</button>
                     </form>
                 @endcan
             </div>
@@ -162,9 +162,7 @@
                     <article class="tickets-history-item">
                         <div class="tickets-history-transition">
                             <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry->from_state ?? 'Inicio')) }}</span>
-                            <svg class="tickets-history-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 12H19M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                            <x-lucide-arrow-right class="tickets-history-arrow" />
                             <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry->to_state)) }}</span>
                         </div>
                         <p class="tickets-history-comment">{{ $entry->comment ?? '(sin comentario)' }}</p>
@@ -177,4 +175,71 @@
         </section>
 
     </div>
+
+<script>
+// Lógica para el modal premium
+function openDeleteTicketModal() {
+    const modal = document.getElementById('deleteTicketModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Mostrar contenedor
+    modal.classList.remove('hidden');
+    
+    // Forzar reflow para aplicar la transición
+    void modal.offsetWidth;
+    
+    // Animar entrada
+    modal.classList.remove('opacity-0');
+    modal.classList.add('opacity-100');
+    modalContent.classList.remove('scale-95', 'translate-y-4');
+    modalContent.classList.add('scale-100', 'translate-y-0');
+}
+
+function closeDeleteTicketModal() {
+    const modal = document.getElementById('deleteTicketModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Animar salida
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0');
+    modalContent.classList.remove('scale-100', 'translate-y-0');
+    modalContent.classList.add('scale-95', 'translate-y-4');
+    
+    // Ocultar completamente después de la transición
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+</script>
+
+{{-- Custom Delete Modal Overlay --}}
+<div id="deleteTicketModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
+    <!-- Backdrop oscuro -->
+    <div class="absolute inset-0" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteTicketModal()"></div>
+
+    <!-- Contenido del Modal -->
+    <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">
+        
+        <!-- Icono centrado -->
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4" style="background-color: rgba(225, 29, 72, 0.12);">
+            <x-lucide-alert-triangle width="28" height="28" style="color: #e11d48;" stroke-width="2.5" />
+        </div>
+        
+        <!-- Título y descripción -->
+        <div class="text-center mb-6">
+            <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">¿Eliminar este ticket?</h3>
+            <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">Esta acción no se puede deshacer. Se eliminará el ticket junto con todos sus adjuntos.</p>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="flex gap-3 justify-center mt-2">
+            <button type="button" class="btn-secondary flex-1 text-center justify-center" onclick="closeDeleteTicketModal()">
+                Cancelar
+            </button>
+            <button type="button" class="btn-danger flex-1 text-center justify-center" onclick="document.getElementById('delete-ticket-form').submit();">
+                Sí, eliminar
+            </button>
+        </div>
+    </div>
+</div>
 @endsection

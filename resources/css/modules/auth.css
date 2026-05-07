@@ -1,4 +1,4 @@
-﻿/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
    AUTH MODULE ÔÇö Sistema de Reporte de Incidencias
    Save as: resources/css/modules/auth.css
    Then add to resources/css/app.css: @import './modules/auth.css';
@@ -526,9 +526,32 @@
     pointer-events: none;
 }
 
+.auth-input-action {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    z-index: 10;
+}
+
+.auth-input-action:hover {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+}
+
 .auth-input {
     width: 100%;
-    padding: 0.65rem 0.85rem 0.65rem 2.5rem;
+    padding: 0.65rem 2.5rem;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     background: #f8fafc;
@@ -582,6 +605,7 @@
     align-items: center;
     gap: 0.6rem;
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -624,6 +648,15 @@
     cursor: pointer;
     transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
     margin-top: 0.25rem;
+}
+
+.auth-submit-text,
+.auth-submit-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
 }
 
 .auth-submit:hover {

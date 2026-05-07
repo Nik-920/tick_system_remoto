@@ -20,7 +20,7 @@
 
             {{-- Quick ticket tip --}}
             <div class="rd-hero-tip">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01M12 12h.01"/></svg>
+                <x-lucide-qr-code width="18" height="18" stroke-width="2" aria-hidden="true" />
                 <p>Escanea el QR de la ubicación para reportar una incidencia en segundos.</p>
             </div>
         </div>
@@ -78,7 +78,7 @@
                                 <p class="rd-queue-item-title">{{ $ticket->title }}</p>
                                 <p class="rd-queue-item-meta">
                                     @if($ticket->location)
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        <x-lucide-map-pin width="11" height="11" stroke-width="2.5" aria-hidden="true" />
                                         {{ $ticket->location->name }}
                                     @endif
                                     @if($ticket->category)
@@ -98,7 +98,7 @@
                     </li>
                 @empty
                     <li class="rd-empty-state rd-empty-state--success">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <x-lucide-check-circle width="20" height="20" stroke-width="2" aria-hidden="true" />
                         No hay alertas activas por ahora.
                     </li>
                 @endforelse

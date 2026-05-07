@@ -8,11 +8,7 @@
     {{-- Header --}}
     <header class="auth-card-header">
         <div class="auth-card-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
+            <x-lucide-log-in width="20" height="20" stroke-width="2" />
         </div>
         <div>
             <h1 class="auth-card-title">Iniciar sesión</h1>
@@ -23,9 +19,7 @@
     {{-- Alerts --}}
     @if ($errors->any())
         <div class="auth-alert auth-alert--error" role="alert" aria-live="polite">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
+            <x-lucide-alert-circle width="16" height="16" stroke-width="2" aria-hidden="true" />
             <ul class="auth-alert-list">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -36,9 +30,7 @@
 
     @if (session('status'))
         <div class="auth-alert auth-alert--success" role="status" aria-live="polite">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
+            <x-lucide-check-circle width="16" height="16" stroke-width="2" aria-hidden="true" />
             <span>{{ session('status') }}</span>
         </div>
     @endif
@@ -53,9 +45,7 @@
             </label>
             <div class="auth-input-wrap">
                 <span class="auth-input-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                    </svg>
+                    <x-lucide-mail width="16" height="16" stroke-width="2" />
                 </span>
                 <input
                     id="email"
@@ -86,9 +76,7 @@
             </div>
             <div class="auth-input-wrap">
                 <span class="auth-input-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
+                    <x-lucide-lock width="16" height="16" stroke-width="2" />
                 </span>
                 <input
                     id="password"
@@ -99,6 +87,10 @@
                     placeholder="••••••••"
                     class="auth-input"
                 >
+                <button type="button" id="toggle-password" class="auth-input-action" aria-label="Mostrar contraseña">
+                    <x-lucide-eye id="eye-icon" width="16" height="16" stroke-width="2" />
+                    <x-lucide-eye-off id="eye-off-icon" width="16" height="16" stroke-width="2" style="display: none;" />
+                </button>
             </div>
         </div>
 
@@ -115,13 +107,18 @@
             </label>
         </div>
 
-        <button type="submit" class="auth-submit">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                <polyline points="10 17 15 12 10 7"/>
-                <line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-            Entrar al sistema
+        <button type="submit" class="auth-submit" id="submit-btn">
+            <span class="auth-submit-text">
+                <x-lucide-log-in width="17" height="17" stroke-width="2.2" aria-hidden="true" />
+                Entrar al sistema
+            </span>
+            <span class="auth-submit-loading" style="display: none;">
+                <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Accediendo...
+            </span>
         </button>
     </form>
 
@@ -136,4 +133,68 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Password Visibility Toggle
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-password');
+    const eyeIcon = document.getElementById('eye-icon');
+    const eyeOffIcon = document.getElementById('eye-off-icon');
+
+    if (toggleBtn && passwordInput) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.style.display = isPassword ? 'none' : 'block';
+            eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+        });
+    }
+
+    // 2. Loading State on Submit
+    const loginForm = document.querySelector('.auth-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = submitBtn?.querySelector('.auth-submit-text');
+    const btnLoading = submitBtn?.querySelector('.auth-submit-loading');
+
+    if (loginForm && submitBtn) {
+        loginForm.addEventListener('submit', () => {
+            submitBtn.disabled = true;
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoading) btnLoading.style.display = 'flex';
+        });
+    }
+
+    // 3. Subtle scale in on load
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.98) translateY(10px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1) translateY(0)';
+        }, 100);
+    }
+});
+</script>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+.auth-submit-loading {
+    justify-content: center;
+}
+.auth-submit:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+</style>
+@endpush
 @endsection

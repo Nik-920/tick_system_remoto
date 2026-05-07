@@ -1,5 +1,12 @@
 import './bootstrap';
 
+// Layout module: sidebar toggle, theme, dropdowns (all authenticated pages)
+if (document.querySelector('.admin-layout')) {
+	import('./components/layout')
+		.then((mod) => mod.init?.())
+		.catch((err) => console.error('Error loading layout module', err));
+}
+
 // Carga condicional de scripts por página (modularización segura)
 // Detecta la página por selectores únicos en las vistas Blade y carga el módulo correspondiente.
 const pageLoaders = [

@@ -48,6 +48,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])
         ->middleware('throttle:5,1')
         ->name('profile.update-avatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])
+        ->middleware('throttle:5,1')
+        ->name('profile.delete-avatar');
 
     Route::get('/scan/{token}', [QrScanController::class, 'show'])
         ->middleware('throttle:20,1')

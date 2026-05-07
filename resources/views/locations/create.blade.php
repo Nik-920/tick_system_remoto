@@ -108,10 +108,7 @@
             {{-- Info card --}}
             <div class="locs-sidebar-card locs-sidebar-hero-card">
                 <div class="locs-sidebar-icon-wrap">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9 22 9 12 15 12 15 22"/>
-                    </svg>
+                    <x-lucide-home width="30" height="30" stroke-width="1.5" />
                 </div>
                 <h3 class="locs-sidebar-title">Nueva ubicación</h3>
                 <p class="locs-sidebar-subtitle">El espacio quedará disponible para asignar tickets y generar su código QR de trazabilidad.</p>
