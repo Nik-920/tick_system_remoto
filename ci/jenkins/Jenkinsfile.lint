@@ -1,3 +1,4 @@
+// Jenkinsfile para análisis estático de código PHP con PHPStan y Laravel Pint
 def runCommand(String unixCommand, String windowsCommand) {
 	if (isUnix()) {
 		sh unixCommand
