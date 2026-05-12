@@ -1,12 +1,10 @@
 #!/bin/sh
 set -e
 
-#!/bin/sh
-set -e
-
-# DEBUG temporal
-ls /etc/nginx/conf.d/
-ls /etc/nginx/sites-enabled/ 2>/dev/null || echo "sites-enabled vacío"
+# Eliminar configs default de Nginx
+rm -f /etc/nginx/conf.d/default.conf
+rm -f /etc/nginx/conf.d/default
+rm -f /etc/nginx/sites-enabled/default
 
 cd /app
 
