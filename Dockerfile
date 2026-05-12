@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════
-# STAGE 1 — Node Builder (compila assets Tailwind/Vite)
+# STAGE 1 — Node Builder
 # ═══════════════════════════════════════════════════════════
 FROM node:22-alpine AS node-builder
 
@@ -17,14 +17,13 @@ COPY postcss.config.js*  ./
 RUN npm run build
 
 # ═══════════════════════════════════════════════════════════
-# STAGE 2 — PHP-FPM Runtime (imagen de producción final)
+# STAGE 2 — PHP-FPM Runtime
 # ═══════════════════════════════════════════════════════════
 FROM php:8.2-fpm
 
 ENV APP_ENV=production \
     APP_DEBUG=false
 
-# ── Dependencias del sistema ──────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libpng-dev \
@@ -41,7 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Extensiones PHP ───────────────────────────────────────
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo \
@@ -62,7 +60,6 @@ RUN echo "opcache.enable=1"                >> /usr/local/etc/php/conf.d/opcache.
  && echo "opcache.validate_timestamps=0"   >> /usr/local/etc/php/conf.d/opcache.ini \
  && echo "opcache.save_comments=1"         >> /usr/local/etc/php/conf.d/opcache.ini
 
-# ── Composer ──────────────────────────────────────────────
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
@@ -82,10 +79,7 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
 
 # ── Nginx config ───────────────────────────────────────────
-RUN rm -f /etc/nginx/sites-enabled/default \
-    && rm -f /etc/nginx/conf.d/default.conf \
-    && rm -f /etc/nginx/conf.d/default \
-    && rm -f /etc/nginx/sites-available/default
+COPY nginx.conf /etc/nginx/conf.d/laravel.conf
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
