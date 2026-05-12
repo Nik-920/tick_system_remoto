@@ -1,5 +1,13 @@
 #!/bin/sh
 set -e
+
+#!/bin/sh
+set -e
+
+# DEBUG temporal
+ls /etc/nginx/conf.d/
+ls /etc/nginx/sites-enabled/ 2>/dev/null || echo "sites-enabled vacío"
+
 cd /app
 
 if [ ! -f .env ] && [ -f .env.example ]; then
