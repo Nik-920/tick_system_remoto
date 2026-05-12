@@ -82,8 +82,9 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
 
 # ── Nginx config ───────────────────────────────────────────
-RUN rm -f /etc/nginx/sites-enabled/default
-COPY nginx.conf /etc/nginx/conf.d/laravel.conf
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && rm -f /etc/nginx/conf.d/default.conf \
+    && rm -f /etc/nginx/sites-available/default
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
