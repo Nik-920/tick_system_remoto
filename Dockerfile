@@ -84,6 +84,7 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
 # ── Nginx config ───────────────────────────────────────────
 RUN rm -f /etc/nginx/sites-enabled/default \
     && rm -f /etc/nginx/conf.d/default.conf \
+    && rm -f /etc/nginx/conf.d/default \
     && rm -f /etc/nginx/sites-available/default
 
 # ── Entrypoint ────────────────────────────────────────────
