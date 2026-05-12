@@ -6,6 +6,11 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
 
+# Limpiar cachés siempre al iniciar
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
 if [ "${CACHE_CONFIG:-false}" = "true" ]; then
     php artisan config:cache
     php artisan route:cache
