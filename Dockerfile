@@ -45,6 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     git \
     curl \
+    wget \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Extensiones PHP ───────────────────────────────────────
@@ -93,20 +95,16 @@ COPY --from=node-builder /app/public/build ./public/build
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
 
-# FIX 4: Optimizaciones de producción Laravel
-#         Se ejecutan DESPUÉS de copiar el código fuente
-#         Nota: APP_KEY debe estar disponible; el entrypoint la inyecta desde .env
-RUN php artisan config:clear \
-    && php artisan route:clear \
-    && php artisan view:clear
 #   Los cache:* definitivos los hace el entrypoint cuando ya tiene el .env real
+
+# ── Nginx config ───────────────────────────────────────────
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Puerto PHP-FPM (Nginx en otro contenedor hace el proxy)
-EXPOSE 9000
+EXPOSE 80
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]
