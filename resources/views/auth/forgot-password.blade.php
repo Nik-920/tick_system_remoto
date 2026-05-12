@@ -1,44 +1,64 @@
 @extends('layouts.auth')
 
-@section('title', 'Recuperar contrasena')
+@section('title', 'Recuperar contraseña')
 
 @section('content')
-    <div class="space-y-6">
-        <header class="space-y-2">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Recuperar contrasena</h1>
-            <p class="text-sm text-slate-600">Ingresa tu correo y te enviaremos un enlace para restablecer el acceso.</p>
-        </header>
+<div class="auth-card">
 
-        @if ($errors->any())
-            <div class="alert-error bg-red-100 border border-red-300 text-red-800 p-3 rounded-md">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+    <header class="auth-card-header">
+        <div class="auth-card-icon" aria-hidden="true">
+            <x-lucide-unlock width="20" height="20" stroke-width="2" />
+        </div>
+        <div>
+            <h1 class="auth-card-title">Recuperar contraseña</h1>
+            <p class="auth-card-subtitle">Ingresa tu correo y te enviaremos un enlace para restablecer el acceso.</p>
+        </div>
+    </header>
+
+    @if ($errors->any())
+        <div class="auth-alert auth-alert--error" role="alert" aria-live="polite">
+            <x-lucide-alert-circle width="16" height="16" stroke-width="2" aria-hidden="true" />
+            <ul class="auth-alert-list">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if (session('status'))
+        <div class="auth-alert auth-alert--success" role="status" aria-live="polite">
+            <x-lucide-check-circle width="16" height="16" stroke-width="2" aria-hidden="true" />
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('password.email') }}" class="auth-form" novalidate>
+        @csrf
+
+        <div class="auth-field">
+            <label for="email" class="auth-label">Correo electrónico</label>
+            <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                    <x-lucide-mail width="16" height="16" stroke-width="2" />
+                </span>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus autocomplete="email" placeholder="usuario@empresa.com" class="auth-input {{ $errors->has('email') ? 'auth-input--error' : '' }}">
             </div>
-        @endif
+            @error('email')<p class="auth-field-error" role="alert">{{ $message }}</p>@enderror
+        </div>
 
-        @if (session('status'))
-            <div class="alert-success bg-green-100 border border-green-300 text-green-800 p-3 rounded-md">
-                {{ session('status') }}
-            </div>
-        @endif
+        <button type="submit" class="auth-submit">
+            <x-lucide-send width="17" height="17" stroke-width="2.2" aria-hidden="true" />
+            Enviar enlace de recuperación
+        </button>
+    </form>
 
-        <form method="POST" action="{{ route('password.email') }}" class="stack space-y-4">
-            @csrf
-
-            <div>
-                <label for="email" class="block text-sm font-medium mb-1 text-slate-700">Correo</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus class="field w-full border rounded-md p-2">
-            </div>
-
-            <div class="actions flex items-center justify-between pt-2">
-                <a href="{{ route('login') }}" class="text-sm text-blue-600 hover:underline">Volver a iniciar sesion</a>
-                <button type="submit" class="btn-primary bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Enviar enlace</button>
-            </div>
-        </form>
-
-        <a href="{{ url('/') }}" class="muted-link inline-block text-sm text-slate-600 hover:underline">Volver al inicio</a>
+    <div class="auth-card-footer">
+        <p class="auth-card-footer-text">
+            ¿Recordaste tu contraseña?
+            <a href="{{ route('login') }}" class="auth-card-footer-link">Volver a iniciar sesión</a>
+        </p>
     </div>
+
+</div>
 @endsection

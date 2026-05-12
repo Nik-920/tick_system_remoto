@@ -3,120 +3,243 @@
 @section('title', 'Detalle Ticket')
 
 @section('content')
-    <div class="max-w-4xl mx-auto space-y-6">
-        <header class="flex flex-wrap items-center justify-between gap-3">
+    <div class="tickets-show-page">
+
+        {{-- ===== HEADER ===== --}}
+        <header class="tickets-show-header">
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Detalle Ticket</h1>
-                <p class="text-sm text-slate-600 mt-1">Revision completa de la incidencia y su historial.</p>
+                <h1 class="tickets-show-title">{{ $ticket->title }}</h1>
+                <p class="tickets-show-subtitle">Revisión completa de la incidencia y su historial</p>
             </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('tickets.index') }}" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Volver</a>
+            <div class="tickets-show-actions">
+                <a href="{{ route('tickets.index') }}" class="btn-secondary">Volver</a>
                 @can('delete', $ticket)
-                    <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('¿Eliminar este ticket y sus adjuntos? Esta accion no se puede deshacer.');">
+                    <form id="delete-ticket-form" method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="border border-red-300 bg-red-50 text-red-700 px-3 py-2 rounded-md">Eliminar</button>
+                        <button type="button" class="tickets-btn-danger" onclick="openDeleteTicketModal()">Eliminar</button>
                     </form>
                 @endcan
             </div>
         </header>
 
+        {{-- ===== ALERTS ===== --}}
         @if (session('status'))
-            <div class="alert-success bg-green-100 border border-green-300 text-green-800 p-3 rounded-md">{{ session('status') }}</div>
+            <div class="alert-success">{{ session('status') }}</div>
         @endif
 
         @if ($errors->any())
-            <div class="alert-error bg-red-100 border border-red-300 text-red-800 p-3 rounded-md">
-                <ul class="list-disc pl-5 space-y-1">
+            <div class="alert-error">
+                <p class="font-semibold mb-2">Errores en la actualización:</p>
+                <ul class="space-y-1">
                     @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                        <li class="text-sm">{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
 
-        <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
-            <h2 class="text-xl font-semibold">{{ $ticket->title }}</h2>
-            <p class="text-slate-700">{{ $ticket->description }}</p>
+        {{-- ===== INFO PRINCIPAL ===== --}}
+        <section class="tickets-show-section">
+            <header class="tickets-show-section-header">
+                <h2>Información del ticket</h2>
+            </header>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
-                <p><strong>Estado:</strong> {{ $ticket->state }}</p>
-                <p><strong>Prioridad:</strong> {{ $ticket->priority }}</p>
-                <p><strong>Ubicacion:</strong> {{ $ticket->location?->name ?? 'N/A' }}</p>
-                <p><strong>Categoria:</strong> {{ $ticket->category?->name ?? 'N/A' }}</p>
-                <p><strong>Reportado por:</strong> {{ $ticket->reporter?->name ?? $ticket->reporter?->email ?? 'N/A' }}</p>
-                <p><strong>Creado:</strong> {{ $ticket->created_at?->format('d/m/Y H:i') }}</p>
+            <div class="tickets-show-content">
+                <div class="tickets-show-description">
+                    <h3 class="tickets-show-description-title">Descripción</h3>
+                    <p class="tickets-show-description-text">{{ $ticket->description }}</p>
+                </div>
+
+                <div class="tickets-show-grid">
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Estado</p>
+                        <p class="tickets-show-meta-value">{{ $ticket->state }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Prioridad</p>
+                        <p class="tickets-show-meta-value">{{ ucfirst($ticket->priority) }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Ubicación</p>
+                        <p class="tickets-show-meta-value">{{ $ticket->location?->name ?? 'N/A' }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Categoría</p>
+                        <p class="tickets-show-meta-value">{{ $ticket->category?->name ?? 'N/A' }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Reportado por</p>
+                        <p class="tickets-show-meta-value">{{ $ticket->reporter?->name ?? $ticket->reporter?->email ?? 'N/A' }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Creado</p>
+                        <p class="tickets-show-meta-value">{{ $ticket->created_at?->format('d/m/Y H:i') }}</p>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
-            <h3 class="text-lg font-semibold">Adjuntos</h3>
-            <div class="space-y-3">
-                @forelse ($ticket->media as $media)
-                    <article class="border border-slate-200 rounded-md p-3 text-sm space-y-2">
-                        <p>
-                            <strong>Tipo:</strong> {{ $media->file_type }}
-                            <span class="text-slate-500">| {{ $media->created_at?->format('d/m/Y H:i') }}</span>
-                        </p>
+        {{-- ===== ADJUNTOS ===== --}}
+        @if ($ticket->media->count() > 0)
+            <section class="tickets-show-section">
+                <header class="tickets-show-section-header">
+                    <h2>Adjuntos ({{ $ticket->media->count() }})</h2>
+                </header>
 
-                        @if ($media->file_type === 'image')
-                            <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer" class="inline-block">
-                                <img src="{{ $media->file_url }}" alt="Adjunto del ticket" class="max-h-52 rounded border border-slate-200">
-                            </a>
-                        @else
-                            <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline">
-                                Ver archivo adjunto
-                            </a>
-                        @endif
-                    </article>
-                @empty
-                    <p class="text-slate-600">No hay adjuntos para este ticket.</p>
-                @endforelse
-            </div>
-        </section>
+                <div class="tickets-media-grid">
+                    @foreach ($ticket->media as $media)
+                        <article class="tickets-media-item">
+                            @if ($media->file_type === 'image')
+                                <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer">
+                                    <img src="{{ $media->file_url }}" alt="Adjunto" class="tickets-media-image">
+                                </a>
+                            @else
+                                <div class="tickets-media-file">
+                                    <p class="tickets-media-type">{{ strtoupper($media->file_type) }}</p>
+                                </div>
+                            @endif
+                            <div class="tickets-media-info">
+                                <p class="tickets-media-label">{{ $media->file_type }}</p>
+                                <p class="tickets-media-date">{{ $media->created_at?->format('d/m/Y H:i') }}</p>
+                                <a href="{{ $media->file_url }}" target="_blank" rel="noopener noreferrer" class="tickets-media-link">Ver archivo</a>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
-        <section class="panel panel-pad bg-white border rounded-lg p-5 space-y-3">
-            <h3 class="text-lg font-semibold">Actualizar estado</h3>
-            <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="space-y-3">
+        {{-- ===== ACTUALIZAR ESTADO ===== --}}
+        <section class="tickets-show-section">
+            <header class="tickets-show-section-header">
+                <h2>Actualizar estado</h2>
+            </header>
+
+            <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="tickets-update-form">
                 @csrf
                 @method('PATCH')
 
-                <div>
-                    <label for="to_state" class="block text-sm font-medium mb-1 text-slate-700">Nuevo estado</label>
-                    <select id="to_state" name="to_state" class="field w-full border rounded-md p-2" required>
+                <div class="tickets-form-group">
+                    <label for="to_state" class="tickets-field-label">Nuevo estado *</label>
+                    <select id="to_state" name="to_state" class="tickets-field" required>
                         <option value="">Selecciona estado</option>
                         @foreach ($states as $state)
                             @if ($state !== $ticket->state)
-                                <option value="{{ $state }}" @selected(old('to_state') === $state)>{{ $state }}</option>
+                                <option value="{{ $state }}" @selected(old('to_state') === $state)>{{ ucfirst(str_replace('_', ' ', $state)) }}</option>
                             @endif
                         @endforeach
                     </select>
+                    @error('to_state')
+                        <p class="tickets-field-error">{{ $message }}</p>
+                    @enderror
                 </div>
 
-                <div>
-                    <label for="comment" class="block text-sm font-medium mb-1 text-slate-700">Comentario</label>
-                    <textarea id="comment" name="comment" rows="3" class="field w-full border rounded-md p-2">{{ old('comment') }}</textarea>
+                <div class="tickets-form-group">
+                    <label for="comment" class="tickets-field-label">Comentario</label>
+                    <textarea id="comment" name="comment" rows="3"
+                              placeholder="Explica brevemente por qué cambias el estado o qué acción se realizó"
+                              class="tickets-field">{{ old('comment') }}</textarea>
+                    @error('comment')
+                        <p class="tickets-field-error">{{ $message }}</p>
+                    @enderror
                 </div>
 
-                <div class="flex justify-end">
-                    <button type="submit" class="btn-primary bg-slate-900 text-white px-4 py-2 rounded-md">Actualizar estado</button>
+                <div class="tickets-form-actions">
+                    <button type="submit" class="btn-primary">Actualizar estado</button>
                 </div>
             </form>
         </section>
 
-        <section class="panel panel-pad bg-white border rounded-lg p-5">
-            <h3 class="text-lg font-semibold mb-3">Historial de estados</h3>
-            <div class="space-y-3">
+        {{-- ===== HISTORIAL ===== --}}
+        <section class="tickets-show-section">
+            <header class="tickets-show-section-header">
+                <h2>Historial de estados</h2>
+            </header>
+
+            <div class="tickets-history-list">
                 @forelse ($ticket->stateHistory as $entry)
-                    <article class="border border-slate-200 rounded-md p-3 text-sm">
-                        <p><strong>{{ $entry->from_state ?? 'N/A' }}</strong> -> <strong>{{ $entry->to_state }}</strong></p>
-                        <p class="text-slate-600">{{ $entry->comment }}</p>
-                        <p class="text-xs text-slate-500 mt-1">{{ $entry->created_at?->format('d/m/Y H:i') }}</p>
+                    <article class="tickets-history-item">
+                        <div class="tickets-history-transition">
+                            <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry->from_state ?? 'Inicio')) }}</span>
+                            <x-lucide-arrow-right class="tickets-history-arrow" />
+                            <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry->to_state)) }}</span>
+                        </div>
+                        <p class="tickets-history-comment">{{ $entry->comment ?? '(sin comentario)' }}</p>
+                        <p class="tickets-history-date">{{ $entry->created_at?->format('d/m/Y H:i') }}</p>
                     </article>
                 @empty
-                    <p class="text-slate-600">Aun no hay historial registrado.</p>
+                    <p class="tickets-history-empty">Aún no hay cambios de estado registrados</p>
                 @endforelse
             </div>
         </section>
+
     </div>
+
+<script>
+// Lógica para el modal premium
+function openDeleteTicketModal() {
+    const modal = document.getElementById('deleteTicketModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Mostrar contenedor
+    modal.classList.remove('hidden');
+    
+    // Forzar reflow para aplicar la transición
+    void modal.offsetWidth;
+    
+    // Animar entrada
+    modal.classList.remove('opacity-0');
+    modal.classList.add('opacity-100');
+    modalContent.classList.remove('scale-95', 'translate-y-4');
+    modalContent.classList.add('scale-100', 'translate-y-0');
+}
+
+function closeDeleteTicketModal() {
+    const modal = document.getElementById('deleteTicketModal');
+    const modalContent = modal.querySelector('.relative');
+    
+    // Animar salida
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0');
+    modalContent.classList.remove('scale-100', 'translate-y-0');
+    modalContent.classList.add('scale-95', 'translate-y-4');
+    
+    // Ocultar completamente después de la transición
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+</script>
+
+{{-- Custom Delete Modal Overlay --}}
+<div id="deleteTicketModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
+    <!-- Backdrop oscuro -->
+    <div class="absolute inset-0" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteTicketModal()"></div>
+
+    <!-- Contenido del Modal -->
+    <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">
+        
+        <!-- Icono centrado -->
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4" style="background-color: rgba(225, 29, 72, 0.12);">
+            <x-lucide-alert-triangle width="28" height="28" style="color: #e11d48;" stroke-width="2.5" />
+        </div>
+        
+        <!-- Título y descripción -->
+        <div class="text-center mb-6">
+            <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">¿Eliminar este ticket?</h3>
+            <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">Esta acción no se puede deshacer. Se eliminará el ticket junto con todos sus adjuntos.</p>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="flex gap-3 justify-center mt-2">
+            <button type="button" class="btn-secondary flex-1 text-center justify-center" onclick="closeDeleteTicketModal()">
+                Cancelar
+            </button>
+            <button type="button" class="btn-danger flex-1 text-center justify-center" onclick="document.getElementById('delete-ticket-form').submit();">
+                Sí, eliminar
+            </button>
+        </div>
+    </div>
+</div>
 @endsection

@@ -71,12 +71,12 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.reporter');
-        $response->assertSee('Centro personal de reportes');
-        $response->assertSee('Mis alertas inmediatas');
-        $response->assertDontSee('Centro de control operativo');
-        $response->assertSee($owned->title);
-        $response->assertSee($assigned->title);
-        $response->assertDontSee($unrelated->title);
+        $response->assertSeeText('Centro personal de reportes');
+        $response->assertSeeText('Mis alertas inmediatas');
+        $response->assertDontSeeText('Centro de control operativo');
+        $response->assertSeeText($owned->title);
+        $response->assertSeeText($assigned->title);
+        $response->assertDontSeeText($unrelated->title);
     }
 
     public function test_maintenance_dashboard_shows_only_assigned_tickets(): void
@@ -116,11 +116,11 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.maintenance');
-        $response->assertSee('Consola de mantenimiento');
-        $response->assertSee('Cola operativa priorizada');
-        $response->assertDontSee('Centro de control operativo');
-        $response->assertSee($assigned->title);
-        $response->assertDontSee($notAssigned->title);
+        $response->assertSeeText('Consola de mantenimiento');
+        $response->assertSeeText('Cola operativa priorizada');
+        $response->assertDontSeeText('Centro de control operativo');
+        $response->assertSeeText($assigned->title);
+        $response->assertDontSeeText($notAssigned->title);
     }
 
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void
@@ -155,11 +155,11 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.admin');
-        $response->assertSee('Centro de control operativo');
-        $response->assertSee('Salud QR por estado');
-        $response->assertDontSee('Centro personal de reportes');
-        $response->assertSee('Laboratorio Hardware');
-        $response->assertSee('Top ubicaciones con carga operativa');
+        $response->assertSeeText('Centro de control operativo');
+        $response->assertSeeText('Salud QR por estado');
+        $response->assertDontSeeText('Centro personal de reportes');
+        $response->assertSeeText('Laboratorio Hardware');
+        $response->assertSeeText('Top ubicaciones con carga operativa');
     }
 
     public function test_super_admin_uses_admin_profile_dashboard(): void
@@ -172,7 +172,8 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.admin');
-        $response->assertSee('Perfil operativo: Administracion');
+        $response->assertSeeText('Perfil operativo:');
+        $response->assertSeeText('Administracion');
     }
 
     private function createUserWithRole(string $role): User

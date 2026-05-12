@@ -3,78 +3,158 @@
 @section('title', 'Nuevo usuario')
 
 @section('content')
-    <div class="max-w-3xl mx-auto space-y-6">
-        <header class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Nuevo usuario</h1>
-                <p class="text-sm text-slate-600 mt-1">Crear usuario y asignar su rol inicial.</p>
-            </div>
-            <a href="{{ route('users.index') }}" class="btn-secondary border border-slate-300 px-3 py-2 rounded-md">Volver</a>
-        </header>
+    <div class="users-form-layout">
 
-        @if ($errors->any())
-            <div class="alert-error">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+        {{-- COLUMNA IZQUIERDA --}}
+        <div class="users-form-left">
+
+            <header class="users-form-header">
+                <div>
+                    <h1 class="users-form-title">Nuevo usuario</h1>
+                    <p class="users-form-subtitle">Crea una cuenta y asigna su rol inicial en la plataforma.</p>
+                </div>
+                <a href="{{ route('users.index') }}" class="btn-secondary">← Volver</a>
+            </header>
+
+            @if ($errors->any())
+                <div class="alert-error">
+                    <p class="font-semibold mb-2">Corrige los siguientes errores:</p>
+                    <ul class="space-y-1">
+                        @foreach ($errors->all() as $error)<li class="text-sm">{{ $error }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('users.store') }}" enctype="multipart/form-data" class="users-form-card">
+                @csrf
+                <div class="users-form-card-header">
+                    <div class="users-form-card-icon">
+                        <x-lucide-user width="18" height="18" stroke-width="2" />
+                    </div>
+                    <div>
+                        <p class="users-form-card-title">Datos del usuario</p>
+                        <p class="users-form-card-subtitle">Información de identidad y acceso</p>
+                    </div>
+                </div>
+
+                <div class="users-form-body">
+
+                    <div class="users-form-grid">
+                        <div class="users-form-group">
+                            <label for="name" class="users-field-label">Nombre *</label>
+                            <input id="name" name="name" type="text" value="{{ old('name') }}" required
+                                   placeholder="Ej: Juan" class="users-field">
+                            @error('name')<p class="users-field-error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="users-form-group">
+                            <label for="last_name" class="users-field-label">Apellido *</label>
+                            <input id="last_name" name="last_name" type="text" value="{{ old('last_name') }}" required
+                                   placeholder="Ej: Pérez" class="users-field">
+                            @error('last_name')<p class="users-field-error">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <div class="users-form-group">
+                        <label for="email" class="users-field-label">Email *</label>
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" required
+                               placeholder="usuario@institución.pe" class="users-field">
+                        @error('email')<p class="users-field-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="users-form-group">
+                        <label for="phone" class="users-field-label">Teléfono (opcional)</label>
+                        <input id="phone" name="phone" type="text" value="{{ old('phone') }}" maxlength="30"
+                               placeholder="+51 999 888 777" class="users-field">
+                        @error('phone')<p class="users-field-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="users-form-group">
+                        <label for="avatar_file" class="users-field-label">Avatar (opcional)</label>
+                        <input id="avatar_file" name="avatar_file" type="file" accept="image/*" class="users-field">
+                        <p class="users-field-hint">Imagen hasta 2 MB. Se mostrará en el perfil.</p>
+                        @error('avatar_file')<p class="users-field-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="users-form-divider"></div>
+
+                    <div class="users-form-grid">
+                        <div class="users-form-group">
+                            <label for="password" class="users-field-label">Contraseña *</label>
+                            <input id="password" name="password" type="password" required class="users-field">
+                            @error('password')<p class="users-field-error">{{ $message }}</p>@enderror
+                        </div>
+                        <div class="users-form-group">
+                            <label for="password_confirmation" class="users-field-label">Confirmar contraseña *</label>
+                            <input id="password_confirmation" name="password_confirmation" type="password" required class="users-field">
+                        </div>
+                    </div>
+
+                    <div class="users-form-group">
+                        <label for="role" class="users-field-label">Rol *</label>
+                        <select id="role" name="role" required class="users-field">
+                            @foreach ($availableRoles as $role)
+                                <option value="{{ $role }}" @selected(old('role') === $role)>{{ $role }}</option>
+                            @endforeach
+                        </select>
+                        <p class="users-field-hint">Define los permisos de acceso del usuario en el sistema.</p>
+                        @error('role')<p class="users-field-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="users-form-actions">
+                        <button type="submit" class="btn-primary">Crear usuario</button>
+                        <a href="{{ route('users.index') }}" class="btn-secondary">Cancelar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {{-- SIDEBAR --}}
+        <aside class="users-form-sidebar">
+            <div class="users-sidebar-card users-sidebar-hero">
+                <div class="users-sidebar-icon">
+                    <x-lucide-user width="28" height="28" stroke-width="1.5" />
+                </div>
+                <h3 class="users-sidebar-title">Nuevo usuario</h3>
+                <p class="users-sidebar-subtitle">El usuario recibirá acceso inmediato según el rol asignado.</p>
+            </div>
+
+            <div class="users-sidebar-card">
+                <p class="users-sidebar-section-title">Roles disponibles</p>
+                <ul class="users-sidebar-roles">
+                    @foreach ($availableRoles as $role)
+                        <li class="users-sidebar-role-item">
+                            <span class="users-role-badge users-role-badge--{{ $role }}">{{ str_replace('_', ' ', $role) }}</span>
+                        </li>
                     @endforeach
                 </ul>
             </div>
-        @endif
 
-        <form method="POST" action="{{ route('users.store') }}" enctype="multipart/form-data" class="panel panel-pad space-y-4">
-            @csrf
-
-            <div>
-                <label for="name" class="block text-sm font-medium mb-1 text-slate-700">Nombre</label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" required class="field">
+            <div class="users-sidebar-card users-sidebar-tips">
+                <p class="users-sidebar-section-title">Buenas prácticas</p>
+                <ul class="users-sidebar-guide">
+                    <li>
+                        <span class="users-sidebar-dot"></span>
+                        <div>
+                            <p class="users-sidebar-item-title">Contraseña segura</p>
+                            <p class="users-sidebar-item-text">Mínimo 8 caracteres con letras y números.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="users-sidebar-dot"></span>
+                        <div>
+                            <p class="users-sidebar-item-title">Email institucional</p>
+                            <p class="users-sidebar-item-text">Usa el correo oficial para trazabilidad.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="users-sidebar-dot"></span>
+                        <div>
+                            <p class="users-sidebar-item-title">Rol mínimo necesario</p>
+                            <p class="users-sidebar-item-text">Asigna solo los permisos que el usuario necesita.</p>
+                        </div>
+                    </li>
+                </ul>
             </div>
-
-            <div>
-                <label for="last_name" class="block text-sm font-medium mb-1 text-slate-700">Apellido</label>
-                <input id="last_name" name="last_name" type="text" value="{{ old('last_name') }}" required class="field">
-            </div>
-
-            <div>
-                <label for="email" class="block text-sm font-medium mb-1 text-slate-700">Email</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" required class="field">
-            </div>
-
-            <div>
-                <label for="phone" class="block text-sm font-medium mb-1 text-slate-700">Telefono (opcional)</label>
-                <input id="phone" name="phone" type="text" value="{{ old('phone') }}" maxlength="30" class="field" placeholder="Ejemplo: +51 999 888 777">
-            </div>
-
-            <div>
-                <label for="avatar_file" class="block text-sm font-medium mb-1 text-slate-700">Avatar (opcional)</label>
-                <input id="avatar_file" name="avatar_file" type="file" accept="image/*" class="field">
-                <p class="text-xs text-slate-500 mt-2">Formatos: imagen. Tamano maximo 2 MB.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                    <label for="password" class="block text-sm font-medium mb-1 text-slate-700">Password</label>
-                    <input id="password" name="password" type="password" required class="field">
-                </div>
-
-                <div>
-                    <label for="password_confirmation" class="block text-sm font-medium mb-1 text-slate-700">Confirmar password</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" required class="field">
-                </div>
-            </div>
-
-            <div>
-                <label for="role" class="block text-sm font-medium mb-1 text-slate-700">Rol</label>
-                <select id="role" name="role" required class="field">
-                    @foreach ($availableRoles as $role)
-                        <option value="{{ $role }}" @selected(old('role') === $role)>{{ $role }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex justify-end">
-                <button type="submit" class="btn-primary bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Crear usuario</button>
-            </div>
-        </form>
+        </aside>
     </div>
 @endsection

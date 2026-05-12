@@ -3,51 +3,87 @@
 @section('title', 'Registro')
 
 @section('content')
-    <div class="space-y-6">
-        <header class="space-y-2">
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Crear cuenta</h1>
-            <p class="text-sm text-slate-600">Tu usuario se registrara con el rol reporter por defecto.</p>
-        </header>
+<div class="auth-card">
 
-        @if ($errors->any())
-            <div class="alert-error bg-red-100 border border-red-300 text-red-800 p-3 rounded-md">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+    <header class="auth-card-header">
+        <div class="auth-card-icon" aria-hidden="true">
+            <x-lucide-user-plus width="20" height="20" stroke-width="2" />
+        </div>
+        <div>
+            <h1 class="auth-card-title">Crear cuenta</h1>
+            <p class="auth-card-subtitle">Tu usuario se registrará con el rol <strong>reporter</strong> por defecto.</p>
+        </div>
+    </header>
+
+    @if ($errors->any())
+        <div class="auth-alert auth-alert--error" role="alert" aria-live="polite">
+            <x-lucide-alert-circle width="16" height="16" stroke-width="2" aria-hidden="true" />
+            <ul class="auth-alert-list">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('register.store') }}" class="auth-form" novalidate>
+        @csrf
+
+        <div class="auth-field">
+            <label for="name" class="auth-label">Nombre completo</label>
+            <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                    <x-lucide-user width="16" height="16" stroke-width="2" />
+                </span>
+                <input id="name" name="name" type="text" value="{{ old('name') }}" required autofocus autocomplete="name" placeholder="Tu nombre completo" class="auth-input {{ $errors->has('name') ? 'auth-input--error' : '' }}">
             </div>
-        @endif
+            @error('name')<p class="auth-field-error" role="alert">{{ $message }}</p>@enderror
+        </div>
 
-        <form method="POST" action="{{ route('register.store') }}" class="stack space-y-4">
-            @csrf
-
-            <div>
-                <label for="name" class="block text-sm font-medium mb-1 text-slate-700">Nombre</label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" required autofocus class="field w-full border rounded-md p-2">
+        <div class="auth-field">
+            <label for="email" class="auth-label">Correo electrónico</label>
+            <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                    <x-lucide-mail width="16" height="16" stroke-width="2" />
+                </span>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" placeholder="usuario@empresa.com" class="auth-input {{ $errors->has('email') ? 'auth-input--error' : '' }}">
             </div>
+            @error('email')<p class="auth-field-error" role="alert">{{ $message }}</p>@enderror
+        </div>
 
-            <div>
-                <label for="email" class="block text-sm font-medium mb-1 text-slate-700">Correo</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" required class="field w-full border rounded-md p-2">
+        <div class="auth-field">
+            <label for="password" class="auth-label">Contraseña</label>
+            <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                    <x-lucide-lock width="16" height="16" stroke-width="2" />
+                </span>
+                <input id="password" name="password" type="password" required autocomplete="new-password" placeholder="Mínimo 8 caracteres" class="auth-input {{ $errors->has('password') ? 'auth-input--error' : '' }}">
             </div>
+            @error('password')<p class="auth-field-error" role="alert">{{ $message }}</p>@enderror
+        </div>
 
-            <div>
-                <label for="password" class="block text-sm font-medium mb-1 text-slate-700">Contrasena</label>
-                <input id="password" name="password" type="password" required class="field w-full border rounded-md p-2">
+        <div class="auth-field">
+            <label for="password_confirmation" class="auth-label">Confirmar contraseña</label>
+            <div class="auth-input-wrap">
+                <span class="auth-input-icon" aria-hidden="true">
+                    <x-lucide-check-circle width="16" height="16" stroke-width="2" />
+                </span>
+                <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password" placeholder="Repite la contraseña" class="auth-input">
             </div>
+        </div>
 
-            <div>
-                <label for="password_confirmation" class="block text-sm font-medium mb-1 text-slate-700">Confirmar contrasena</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" required class="field w-full border rounded-md p-2">
-            </div>
+        <button type="submit" class="auth-submit">
+            <x-lucide-user-plus width="17" height="17" stroke-width="2.2" aria-hidden="true" />
+            Crear mi cuenta
+        </button>
+    </form>
 
-            <div class="actions flex items-center justify-between pt-2">
-                <a href="{{ route('login') }}" class="text-sm text-blue-600 hover:underline">Ya tienes cuenta? Inicia sesion</a>
-                <button type="submit" class="btn-primary bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Registrarme</button>
-            </div>
-        </form>
-
-        <a href="{{ url('/') }}" class="muted-link inline-block text-sm text-slate-600 hover:underline">Volver al inicio</a>
+    <div class="auth-card-footer">
+        <p class="auth-card-footer-text">
+            ¿Ya tienes cuenta?
+            <a href="{{ route('login') }}" class="auth-card-footer-link">Iniciar sesión</a>
+        </p>
     </div>
+
+</div>
 @endsection

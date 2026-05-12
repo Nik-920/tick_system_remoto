@@ -3,146 +3,209 @@
 @section('title', 'Centro Personal Reporter')
 
 @section('content')
-    <div class="role-dashboard role-dashboard-reporter space-y-6">
-        <section class="role-hero role-hero-reporter panel panel-pad overflow-hidden">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="max-w-3xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">{{ $hero['badge'] }}</p>
-                    <h1 class="mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
-                    <p class="mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
-                    <p class="mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
+<div class="role-dashboard role-dashboard-reporter">
+
+    {{-- ══════════════════════ HERO ══════════════════════ --}}
+    <section class="role-hero role-hero-reporter rd-hero" aria-labelledby="reporter-hero-title">
+        <div class="rd-hero-inner">
+            <div class="rd-hero-copy">
+                <span class="rd-badge rd-badge--cyan" role="status">
+                    <span class="rd-badge-dot rd-badge-dot--cyan" aria-hidden="true"></span>
+                    {{ $hero['badge'] }}
+                </span>
+                <h1 id="reporter-hero-title" class="rd-hero-title">{{ $hero['title'] }}</h1>
+                <p class="rd-hero-sub">{{ $hero['subtitle'] }}</p>
+                <p class="rd-role-label">Perfil operativo: <strong>{{ $roleLabel }}</strong></p>
+            </div>
+
+            {{-- Quick ticket tip --}}
+            <div class="rd-hero-tip">
+                <x-lucide-qr-code width="18" height="18" stroke-width="2" aria-hidden="true" />
+                <p>Escanea el QR de la ubicación para reportar una incidencia en segundos.</p>
+            </div>
+        </div>
+
+        <div class="rd-hero-actions" role="navigation" aria-label="Acciones rápidas">
+            @foreach ($quickActions as $action)
+                <a
+                    href="{{ $action['href'] }}"
+                    class="{{ $action['variant'] === 'primary' ? 'rd-btn rd-btn--cyan' : 'rd-btn rd-btn--ghost-cyan' }}"
+                >
+                    {{ $action['label'] }}
+                </a>
+            @endforeach
+        </div>
+    </section>
+
+    {{-- ══════════════════════ KPI GRID ══════════════════════ --}}
+    <section aria-labelledby="reporter-kpi-heading">
+        <h2 id="reporter-kpi-heading" class="sr-only">Indicadores clave</h2>
+        <dl class="rd-kpi-grid">
+            @foreach ($kpis as $i => $kpi)
+                <article
+                    class="rd-kpi-card rd-kpi-card--cyan role-kpi-card"
+                    style="animation-delay: {{ $i * 40 }}ms"
+                    aria-label="{{ $kpi['label'] }}: {{ $kpi['value'] }}"
+                >
+                    <dt class="rd-kpi-label">{{ $kpi['label'] }}</dt>
+                    <dd class="rd-kpi-value">{{ $kpi['value'] }}</dd>
+                    <p class="rd-kpi-hint">{{ $kpi['hint'] }}</p>
+                </article>
+            @endforeach
+        </dl>
+    </section>
+
+    {{-- ══════════════════════ ROW: ALERTS + BREAKDOWN ══════════════════════ --}}
+    <div class="rd-row rd-row--equal">
+
+        {{-- Attention Items --}}
+        <section class="panel panel-pad rd-section-border--cyan" aria-labelledby="reporter-alerts-title">
+            <header class="rd-section-header rd-section-header--between">
+                <div>
+                    <h2 id="reporter-alerts-title" class="rd-section-title">Mis alertas inmediatas</h2>
+                    <p class="rd-section-sub">Prioriza incidencias abiertas y sigue su asignación.</p>
+                </div>
+                @if(count($attentionItems) > 0)
+                    <span class="rd-queue-count rd-queue-count--cyan" aria-label="{{ count($attentionItems) }} alertas activas">{{ count($attentionItems) }}</span>
+                @endif
+            </header>
+
+            <ul class="rd-queue-list" role="list" aria-label="Alertas de tickets activos">
+                @forelse ($attentionItems as $i => $ticket)
+                    <li class="rd-queue-item" style="animation-delay: {{ $i * 35 }}ms">
+                        <div class="rd-queue-item-top">
+                            <div class="rd-queue-item-info">
+                                <p class="rd-queue-item-title">{{ $ticket->title }}</p>
+                                <p class="rd-queue-item-meta">
+                                    @if($ticket->location)
+                                        <x-lucide-map-pin width="11" height="11" stroke-width="2.5" aria-hidden="true" />
+                                        {{ $ticket->location->name }}
+                                    @endif
+                                    @if($ticket->category)
+                                        &nbsp;·&nbsp;{{ $ticket->category->name }}
+                                    @endif
+                                </p>
+                            </div>
+                            <a href="{{ route('tickets.show', $ticket) }}" class="rd-queue-action rd-queue-action--cyan">Abrir</a>
+                        </div>
+                        <div class="rd-queue-tags">
+                            <span class="rd-state-pill rd-state-pill--{{ $ticket->state }}">{{ $stateLabels[$ticket->state] ?? $ticket->state }}</span>
+                            <span class="rd-priority-pill rd-priority-pill--{{ $ticket->priority }}">{{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</span>
+                            <span class="rd-tag-plain">
+                                Asignado: {{ $ticket->assignee?->name ?? 'Pendiente' }}
+                            </span>
+                        </div>
+                    </li>
+                @empty
+                    <li class="rd-empty-state rd-empty-state--success">
+                        <x-lucide-check-circle width="20" height="20" stroke-width="2" aria-hidden="true" />
+                        No hay alertas activas por ahora.
+                    </li>
+                @endforelse
+            </ul>
+        </section>
+
+        {{-- Distribution --}}
+        <section class="panel panel-pad rd-section-border--cyan" aria-labelledby="reporter-dist-title">
+            <header class="rd-section-header">
+                <h2 id="reporter-dist-title" class="rd-section-title">Distribución de mis reportes</h2>
+                <p class="rd-section-sub">Lectura rápida de volumen por estado y prioridad.</p>
+            </header>
+
+            <div class="rd-breakdown-stack">
+                <div class="rd-breakdown-card" aria-labelledby="reporter-states-heading">
+                    <h3 id="reporter-states-heading" class="rd-breakdown-title">Por estado</h3>
+                    @if (count($stateBreakdown) > 0)
+                        <ul class="rd-breakdown-list" role="list">
+                            @foreach ($stateBreakdown as $state => $total)
+                                <li class="rd-breakdown-row">
+                                    <span class="rd-state-dot rd-state-dot--{{ $state }}" aria-hidden="true"></span>
+                                    <span class="rd-breakdown-label">{{ $stateLabels[$state] ?? $state }}</span>
+                                    <div class="rd-breakdown-bar-wrap" aria-hidden="true">
+                                        <div class="rd-breakdown-bar rd-breakdown-bar--cyan" style="width: {{ min(100, ($total / max(array_values($stateBreakdown))) * 100) }}%"></div>
+                                    </div>
+                                    <strong class="rd-breakdown-count">{{ $total }}</strong>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="rd-empty-inline">Sin datos disponibles.</p>
+                    @endif
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    @foreach ($quickActions as $action)
-                        <a
-                            href="{{ $action['href'] }}"
-                            class="{{ $action['variant'] === 'primary' ? 'btn-primary bg-cyan-600 hover:bg-cyan-700 text-white' : 'btn-secondary border border-cyan-200 text-cyan-700 hover:bg-cyan-50' }}"
-                        >
-                            {{ $action['label'] }}
-                        </a>
-                    @endforeach
+                <div class="rd-breakdown-card" aria-labelledby="reporter-priority-heading">
+                    <h3 id="reporter-priority-heading" class="rd-breakdown-title">Por prioridad</h3>
+                    @if (count($priorityBreakdown) > 0)
+                        <ul class="rd-breakdown-list" role="list">
+                            @foreach ($priorityBreakdown as $priority => $total)
+                                <li class="rd-breakdown-row">
+                                    <span class="rd-priority-dot rd-priority-dot--{{ $priority }}" aria-hidden="true"></span>
+                                    <span class="rd-breakdown-label">{{ $priorityLabels[$priority] ?? $priority }}</span>
+                                    <div class="rd-breakdown-bar-wrap" aria-hidden="true">
+                                        <div class="rd-breakdown-bar rd-breakdown-bar--cyan" style="width: {{ min(100, ($total / max(array_values($priorityBreakdown))) * 100) }}%"></div>
+                                    </div>
+                                    <strong class="rd-breakdown-count">{{ $total }}</strong>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="rd-empty-inline">Sin datos disponibles.</p>
+                    @endif
                 </div>
             </div>
         </section>
+    </div>
 
-        <section class="role-kpi-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            @foreach ($kpis as $kpi)
-                <article class="role-kpi-card panel panel-pad border border-cyan-100 bg-cyan-50/40 space-y-2">
-                    <p class="text-xs uppercase tracking-[0.1em] text-cyan-700 font-semibold">{{ $kpi['label'] }}</p>
-                    <p class="text-3xl font-black text-slate-900">{{ $kpi['value'] }}</p>
-                    <p class="text-sm text-slate-600">{{ $kpi['hint'] }}</p>
-                </article>
-            @endforeach
-        </section>
-
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <section class="role-section panel panel-pad border border-cyan-100">
-                <header class="mb-3">
-                    <h2 class="text-lg font-bold text-slate-900">Mis alertas inmediatas</h2>
-                    <p class="text-sm text-slate-600">Prioriza incidentes abiertos y sigue su asignacion.</p>
-                </header>
-
-                <div class="space-y-2">
-                    @forelse ($attentionItems as $ticket)
-                        <article class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="font-semibold text-slate-900">{{ $ticket->title }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">
-                                        {{ $ticket->location?->name ?? 'N/A' }} · {{ $ticket->category?->name ?? 'Sin categoria' }}
-                                    </p>
-                                </div>
-                                <a href="{{ route('tickets.show', $ticket) }}" class="text-cyan-700 text-sm font-semibold hover:underline">Abrir</a>
-                            </div>
-                            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700">Estado: {{ $stateLabels[$ticket->state] ?? $ticket->state }}</span>
-                                <span class="rounded-full bg-cyan-100 px-2 py-1 text-cyan-700">Prioridad: {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</span>
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Asignado: {{ $ticket->assignee?->name ?? 'Pendiente' }}</span>
-                            </div>
-                        </article>
-                    @empty
-                        <p class="text-sm text-slate-600">No hay alertas activas por ahora.</p>
-                    @endforelse
-                </div>
-            </section>
-
-            <section class="role-section panel panel-pad border border-cyan-100">
-                <header class="mb-3">
-                    <h2 class="text-lg font-bold text-slate-900">Distribucion de mis reportes</h2>
-                    <p class="text-sm text-slate-600">Lectura rapida de volumen por estado y prioridad.</p>
-                </header>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="rounded-xl border border-slate-200 bg-white p-3">
-                        <h3 class="text-sm font-semibold text-slate-800 mb-2">Por estado</h3>
-                        @if (count($stateBreakdown) > 0)
-                            <ul class="space-y-1">
-                                @foreach ($stateBreakdown as $state => $total)
-                                    <li class="flex items-center justify-between text-sm">
-                                        <span class="text-slate-600">{{ $stateLabels[$state] ?? $state }}</span>
-                                        <strong class="text-slate-900">{{ $total }}</strong>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p class="text-sm text-slate-500">Sin datos.</p>
-                        @endif
-                    </div>
-
-                    <div class="rounded-xl border border-slate-200 bg-white p-3">
-                        <h3 class="text-sm font-semibold text-slate-800 mb-2">Por prioridad</h3>
-                        @if (count($priorityBreakdown) > 0)
-                            <ul class="space-y-1">
-                                @foreach ($priorityBreakdown as $priority => $total)
-                                    <li class="flex items-center justify-between text-sm">
-                                        <span class="text-slate-600">{{ $priorityLabels[$priority] ?? $priority }}</span>
-                                        <strong class="text-slate-900">{{ $total }}</strong>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p class="text-sm text-slate-500">Sin datos.</p>
-                        @endif
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <section class="role-section panel overflow-hidden border border-cyan-100">
-            <header class="panel-pad border-b border-slate-200">
-                <h2 class="text-lg font-bold text-slate-900">Actividad reciente vinculada</h2>
-                <p class="text-sm text-slate-600 mt-1">Tickets donde participas como reportero o responsable.</p>
-            </header>
-
+    {{-- ══════════════════════ RECENT TIMELINE TABLE ══════════════════════ --}}
+    <section class="panel rd-section-border--cyan rd-table-section" aria-labelledby="reporter-timeline-title">
+        <header class="rd-table-header">
+            <div>
+                <h2 id="reporter-timeline-title" class="rd-section-title">Actividad reciente vinculada</h2>
+                <p class="rd-section-sub">Tickets donde participas como reportero o responsable.</p>
+            </div>
+            <a href="{{ route('tickets.index') }}" class="rd-table-link">Ver todos</a>
+        </header>
+        <div class="rd-table-wrap" role="region" aria-label="Tabla de actividad reciente" tabindex="0">
             <table>
                 <thead>
-                <tr>
-                    <th>Titulo</th>
-                    <th>Estado</th>
-                    <th>Prioridad</th>
-                    <th>Ubicacion</th>
-                    <th>Actualizado</th>
-                    <th>Accion</th>
-                </tr>
+                    <tr>
+                        <th scope="col">Título</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Prioridad</th>
+                        <th scope="col">Ubicación</th>
+                        <th scope="col">Actualizado</th>
+                        <th scope="col" class="text-right">Acción</th>
+                    </tr>
                 </thead>
                 <tbody>
-                @forelse ($myRecentTimeline as $ticket)
-                    <tr>
-                        <td>{{ $ticket->title }}</td>
-                        <td>{{ $stateLabels[$ticket->state] ?? $ticket->state }}</td>
-                        <td>{{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</td>
-                        <td>{{ $ticket->location?->name ?? 'N/A' }}</td>
-                        <td>{{ $ticket->updated_at?->diffForHumans() ?? 'N/A' }}</td>
-                        <td><a href="{{ route('tickets.show', $ticket) }}" class="text-cyan-700 hover:underline">Ver</a></td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="text-slate-600">No hay tickets relacionados para mostrar.</td>
-                    </tr>
-                @endforelse
+                    @forelse ($myRecentTimeline as $ticket)
+                        <tr>
+                            <td class="rd-table-title-cell">{{ $ticket->title }}</td>
+                            <td>
+                                <span class="rd-state-pill rd-state-pill--{{ $ticket->state }}">
+                                    {{ $stateLabels[$ticket->state] ?? $ticket->state }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="rd-priority-pill rd-priority-pill--{{ $ticket->priority }}">
+                                    {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
+                                </span>
+                            </td>
+                            <td class="text-slate-600">{{ $ticket->location?->name ?? 'N/A' }}</td>
+                            <td class="rd-table-time">{{ $ticket->updated_at?->diffForHumans() ?? 'N/A' }}</td>
+                            <td class="text-right">
+                                <a href="{{ route('tickets.show', $ticket) }}" class="rd-table-action rd-table-action--cyan">Ver</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="rd-table-empty">No hay tickets relacionados para mostrar.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
-        </section>
-    </div>
+        </div>
+    </section>
+
+</div>
 @endsection
