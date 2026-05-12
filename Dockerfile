@@ -5,19 +5,12 @@ FROM node:22-alpine AS node-builder
 
 WORKDIR /app
 
-# Copiar manifiestos primero → mejor caché de capas
 COPY package.json package-lock.json ./
-
-# FIX 1: npm ci en vez de npm install → build reproducible y más rápido
 RUN npm ci --prefer-offline
 
-# Copiar todo lo necesario para que Vite compile correctamente
 COPY resources/ ./resources/
 COPY public/     ./public/
 COPY vite.config.js ./
-
-# FIX 2: copiar archivos de configuración de Tailwind/PostCSS
-#         (si no existen en tu repo, estas líneas no rompen el build)
 COPY tailwind.config.js* ./
 COPY postcss.config.js*  ./
 
@@ -28,7 +21,6 @@ RUN npm run build
 # ═══════════════════════════════════════════════════════════
 FROM php:8.2-fpm
 
-# FIX 5: indicar a Laravel que estamos en producción
 ENV APP_ENV=production \
     APP_DEBUG=false
 
@@ -63,7 +55,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && pecl install redis \
     && docker-php-ext-enable redis opcache
 
-# Configuración de OPcache para producción
 RUN echo "opcache.enable=1"                >> /usr/local/etc/php/conf.d/opcache.ini \
  && echo "opcache.memory_consumption=128"  >> /usr/local/etc/php/conf.d/opcache.ini \
  && echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/opcache.ini \
@@ -76,29 +67,23 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# ── Dependencias PHP (caché separada del código fuente) ───
 COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction \
     --prefer-dist \
-    --no-scripts   # Los scripts de artisan van en el entrypoint
+    --no-scripts
 
-# ── Código fuente ─────────────────────────────────────────
 COPY . .
-
-# Traer assets compilados del stage de Node
 COPY --from=node-builder /app/public/build ./public/build
 
-# ── Permisos ──────────────────────────────────────────────
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
 
-#   Los cache:* definitivos los hace el entrypoint cuando ya tiene el .env real
-
 # ── Nginx config ───────────────────────────────────────────
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/sites-enabled/default
+COPY nginx.conf /etc/nginx/conf.d/laravel.conf
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
