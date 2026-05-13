@@ -1,25 +1,31 @@
-name: CD — Deploy
+name: 🚀 CD — Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["🎫 CI Pipeline — Sistema de Incidencias"]
+    types:
+      - completed
     branches:
-      - feature/devops-setup  # temporal para probar, luego será develop/main
-  workflow_dispatch:
+      - develop
+      - main
+      - feature/devops-setup
 
 jobs:
   deploy:
+    name: 🌐 Deploy a Railway
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: staging
       url: ${{ vars.APP_URL }}
     steps:
-      - name: Checkout
+      - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
+      - name: 🚂 Instalar Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Deploy to Railway
+      - name: 🚀 Deploy to Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
@@ -27,10 +33,10 @@ jobs:
             --service ${{ secrets.RAILWAY_SERVICE_ID }} \
             --yes
 
-      - name: Wait for Railway to boot
+      - name: ⏳ Esperar arranque
         run: sleep 45
 
-      - name: Health check
+      - name: 🏥 Health check
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ vars.APP_URL }}/up")
