@@ -1,0 +1,42 @@
+name: CD — Deploy
+
+on:
+  push:
+    branches:
+      - feature/devops-setup  # temporal para probar, luego será develop/main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.APP_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway redeploy \
+            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            --yes
+
+      - name: Wait for Railway to boot
+        run: sleep 45
+
+      - name: Health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ vars.APP_URL }}/up")
+          echo "Health check status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          echo "✅ Deploy exitoso"
