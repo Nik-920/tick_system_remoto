@@ -1,19 +1,15 @@
 name: 🚀 CD — Deploy
 
 on:
-  workflow_run:
-    workflows: ["🎫 CI Pipeline — Sistema de Incidencias"]
-    types:
-      - completed
+  push:
     branches:
+      - feature/devops-setup
       - develop
       - main
-      - feature/devops-setup
 
 jobs:
   deploy:
     name: 🌐 Deploy a Railway
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: staging
