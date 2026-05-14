@@ -1,12 +1,21 @@
 #!/bin/sh
 set -e
 
+# Eliminar configs default de Nginx
+rm -f /etc/nginx/conf.d/default.conf
+rm -f /etc/nginx/conf.d/default
+rm -f /etc/nginx/sites-enabled/default
+
 cd /app
 
-# Permite bootstrap inicial si .env aun no existe en un entorno nuevo.
 if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
+
+# Limpiar cachés siempre al iniciar
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
 
 if [ "${CACHE_CONFIG:-false}" = "true" ]; then
     php artisan config:cache
@@ -18,4 +27,5 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
 
-exec "$@"
+php-fpm -D
+exec nginx -g "daemon off;"
