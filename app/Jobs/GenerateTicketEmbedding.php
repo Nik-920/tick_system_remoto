@@ -67,7 +67,7 @@ class GenerateTicketEmbedding implements ShouldQueue
                 'description_hash' => $hash,
                 'similarity_score' => null,
                 'matched_ticket_id' => null,
-                'is_duplicate' => false,
+                'is_duplicate' => \Illuminate\Support\Facades\DB::raw('false'),
             ]
         );
     }

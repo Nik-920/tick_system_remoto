@@ -71,6 +71,14 @@ class TicketStateService
             event($event);
         }
 
+        event(new \App\Events\TicketStateChanged(
+            ticket: $updatedTicket,
+            actor: $actor,
+            fromState: $fromState,
+            toState: $toState,
+            correlationId: $correlationId,
+        ));
+
         $this->logger->info('ticket.state.transitioned', [
             'ticket_id' => $updatedTicket->id,
             'location_id' => $updatedTicket->location_id,

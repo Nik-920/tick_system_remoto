@@ -10,23 +10,18 @@ use App\Policies\CategoryPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        EventServiceProvider::disableEventDiscovery();
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Gate::policy(Ticket::class, TicketPolicy::class);
