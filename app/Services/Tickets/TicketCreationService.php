@@ -75,10 +75,16 @@ class TicketCreationService
 
             $this->ticketMediaStorage->storeManyForTicket($ticket, $reporter, $mediaFiles);
 
-            event(new TicketCreated($ticket, $correlationId));
-
             return $ticket;
         });
+
+        // Disparar evento FUERA de la transacción
+        // Disparar evento FUERA de la transacción
+        \Illuminate\Support\Facades\Log::info('EVENTO TICKET CREATED DISPARADO', [
+            'ticket_id' => $ticket->id,
+            'time' => now()->toDateTimeString(),
+        ]);
+        event(new TicketCreated($ticket, $correlationId));
 
         $this->logger->info('ticket.creation.succeeded', [
             'ticket_id' => $ticket->id,
