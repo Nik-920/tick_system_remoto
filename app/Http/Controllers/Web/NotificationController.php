@@ -16,14 +16,14 @@ class NotificationController extends Controller
             ->take(30)
             ->get()
             ->map(fn ($n) => [
-                'id'      => $n->id,
-                'type'    => $n->type,
-                'title'   => $n->title,
-                'body'    => $n->body,
-                'url'     => $n->url,
-                'icon'    => $n->icon,
+                'id' => $n->id,
+                'type' => $n->type,
+                'title' => $n->title,
+                'body' => $n->body,
+                'url' => $n->url,
+                'icon' => $n->icon,
                 'read_at' => $n->read_at,
-                'time'    => $n->created_at?->diffForHumans(),
+                'time' => $n->created_at?->diffForHumans(),
             ]);
 
         $unreadCount = $user->appNotifications()
@@ -32,7 +32,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'notifications' => $notifications,
-            'unread_count'  => $unreadCount,
+            'unread_count' => $unreadCount,
         ]);
     }
 

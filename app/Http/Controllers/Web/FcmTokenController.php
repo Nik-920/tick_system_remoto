@@ -21,7 +21,7 @@ class FcmTokenController extends Controller
         FcmToken::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'token'   => $request->token,
+                'token' => $request->token,
             ],
             [
                 'device' => $request->device ?? 'web',

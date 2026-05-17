@@ -20,16 +20,16 @@ class NotificationService
         try {
             Notification::create([
                 'user_id' => $user->id,
-                'type'    => $type,
-                'title'   => $title,
-                'body'    => $body,
-                'url'     => $url,
-                'icon'    => $icon,
+                'type' => $type,
+                'title' => $title,
+                'body' => $body,
+                'url' => $url,
+                'icon' => $icon,
             ]);
         } catch (Throwable $e) {
             Log::error('Error guardando notificación interna.', [
                 'user_id' => $user->id,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

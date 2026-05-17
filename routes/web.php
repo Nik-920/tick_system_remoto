@@ -7,14 +7,15 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Web\FcmTokenController;
-use App\Http\Controllers\Web\NotificationController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -37,7 +38,6 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/reset-password', [NewPasswordController::class, 'store'])
         ->middleware('throttle:5,15')
         ->name('password.update');
-
 
 });
 

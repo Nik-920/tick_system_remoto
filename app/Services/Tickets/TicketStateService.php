@@ -3,6 +3,7 @@
 namespace App\Services\Tickets;
 
 use App\Events\TicketResolved;
+use App\Events\TicketStateChanged;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
@@ -71,7 +72,7 @@ class TicketStateService
             event($event);
         }
 
-        event(new \App\Events\TicketStateChanged(
+        event(new TicketStateChanged(
             ticket: $updatedTicket,
             actor: $actor,
             fromState: $fromState,
