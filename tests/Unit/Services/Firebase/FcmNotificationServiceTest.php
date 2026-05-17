@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Firebase\FcmNotificationService;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Messaging\CloudMessage;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -32,18 +33,15 @@ class FcmNotificationServiceTest extends TestCase
         $messagingSpy->expects($this->never())->method('send');
 
         // Subclase que omite la consulta a BD y devuelve tokens vacíos
-        $service = new class($messagingSpy) extends FcmNotificationService {
+        $service = new class($messagingSpy) extends FcmNotificationService
+        {
             public function __construct(private Messaging $stub) {}
 
             public function sendToUser(User $user, string $title, string $body, array $data = []): void
             {
                 // Simula tokens vacíos sin ir a BD
-                $tokens = [];
-                if (empty($tokens)) {
-                    \Illuminate\Support\Facades\Log::info('FCM: no hay tokens para el usuario', ['user_id' => $user->id]);
-
-                    return;
-                }
+                Log::info('FCM: no hay tokens para el usuario', ['user_id' => $user->id]);
+                return;
             }
 
             protected function getMessaging(): Messaging
@@ -52,11 +50,12 @@ class FcmNotificationServiceTest extends TestCase
             }
         };
 
-        $user     = new User;
+        $user = new User;
         $user->id = 'user-no-tokens';
 
         $service->sendToUser($user, 'Sin tokens', 'Nada');
 
+        /** @phpstan-ignore-next-line */
         Log::shouldHaveReceived('info')
             ->withArgs(fn ($msg) => str_contains((string) $msg, 'FCM'));
 
@@ -75,7 +74,8 @@ class FcmNotificationServiceTest extends TestCase
         $messagingSpy->expects($this->exactly(2))->method('send');
 
         // Subclase que inyecta tokens fijos sin BD
-        $service = new class($messagingSpy, ['token-aaa', 'token-bbb']) extends FcmNotificationService {
+        $service = new class($messagingSpy, ['token-aaa', 'token-bbb']) extends FcmNotificationService
+        {
             public function __construct(
                 private Messaging $stub,
                 private array $fakeTokens
@@ -88,15 +88,15 @@ class FcmNotificationServiceTest extends TestCase
 
             public function sendToTokensPublic(array $tokens, string $title, string $body, array $data = []): void
             {
-                \Illuminate\Support\Facades\Log::info('FCM: enviando push', ['tokens' => $tokens, 'title' => $title]);
+                Log::info('FCM: enviando push', ['tokens' => $tokens, 'title' => $title]);
 
                 foreach ($tokens as $token) {
                     try {
-                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
+                        $message = CloudMessage::withTarget('token', $token)
                             ->withData(array_merge($data, ['title' => $title, 'body' => $body]));
                         $this->stub->send($message);
                     } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning('FCM token inválido.', ['token' => $token]);
+                        Log::warning('FCM token inválido.', ['token' => $token]);
                         FcmToken::where('token', $token)->delete();
                     }
                 }
@@ -108,7 +108,7 @@ class FcmNotificationServiceTest extends TestCase
             }
         };
 
-        $user     = new User;
+        $user = new User;
         $user->id = 'user-with-tokens';
 
         $service->sendToUser($user, 'Hola', 'Mensaje de prueba');
@@ -126,7 +126,8 @@ class FcmNotificationServiceTest extends TestCase
 
         $sendCalls = 0;
 
-        $service = new class($sendCalls) extends FcmNotificationService {
+        $service = new class($sendCalls) extends FcmNotificationService
+        {
             public function __construct(private int &$counter) {}
 
             public function sendToUser(User $user, string $title, string $body, array $data = []): void
@@ -165,7 +166,8 @@ class FcmNotificationServiceTest extends TestCase
 
         $roleCalls = [];
 
-        $service = new class($roleCalls) extends FcmNotificationService {
+        $service = new class($roleCalls) extends FcmNotificationService
+        {
             public function __construct(private array &$roles) {}
 
             public function sendToRole(string $role, string $title, string $body, array $data = []): void
@@ -198,7 +200,8 @@ class FcmNotificationServiceTest extends TestCase
         $messagingStub->method('send')
             ->willThrowException(new RuntimeException('Token not registered'));
 
-        $service = new class($messagingStub, $deletedTokens) extends FcmNotificationService {
+        $service = new class($messagingStub, $deletedTokens) extends FcmNotificationService
+        {
             public function __construct(
                 private Messaging $stub,
                 private array &$deleted
@@ -207,11 +210,11 @@ class FcmNotificationServiceTest extends TestCase
             public function sendToUser(User $user, string $title, string $body, array $data = []): void
             {
                 $fakeTokens = ['bad-token-xyz'];
-                $payload    = array_merge($data, ['title' => $title, 'body' => $body]);
+                $payload = array_merge($data, ['title' => $title, 'body' => $body]);
 
                 foreach ($fakeTokens as $token) {
                     try {
-                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
+                        $message = CloudMessage::withTarget('token', $token)
                             ->withData($payload);
                         $this->stub->send($message);
                     } catch (\Throwable $e) {
@@ -227,7 +230,7 @@ class FcmNotificationServiceTest extends TestCase
             }
         };
 
-        $user     = new User;
+        $user = new User;
         $user->id = 'user-bad-token';
 
         // No lanza excepción
@@ -235,6 +238,7 @@ class FcmNotificationServiceTest extends TestCase
 
         $this->assertContains('bad-token-xyz', $deletedTokens);
 
+        /** @phpstan-ignore-next-line */
         Log::shouldHaveReceived('warning')
             ->withArgs(fn ($msg) => str_contains((string) $msg, 'inválido'));
 

@@ -22,8 +22,8 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         Log::spy();
 
         $reporter = $this->makeUser('reporter-1');
-        $actor    = $this->makeUser('actor-99');
-        $ticket   = $this->makeTicket($reporter);
+        $actor = $this->makeUser('actor-99');
+        $ticket = $this->makeTicket($reporter);
 
         $fcm = $this->createMock(FcmNotificationService::class);
         $fcm->expects($this->once())
@@ -47,7 +47,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
                 icon: $this->isType('string'),
             );
 
-        $event    = new TicketStateChanged($ticket, $actor, 'open', 'in_progress');
+        $event = new TicketStateChanged($ticket, $actor, 'open', 'in_progress');
         $listener = new SendPushNotificationOnTicketStateChanged($fcm, $notif);
         $listener->handle($event);
     }
@@ -60,16 +60,16 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
     {
         Log::spy();
 
-        $user   = $this->makeUser('same-user');
+        $user = $this->makeUser('same-user');
         $ticket = $this->makeTicket($user);
 
-        $fcm   = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(FcmNotificationService::class);
         $fcm->expects($this->never())->method('sendToUser');
 
         $notif = $this->createMock(NotificationService::class);
         $notif->expects($this->never())->method('notifyUser');
 
-        $event    = new TicketStateChanged($ticket, $user, 'open', 'resolved');
+        $event = new TicketStateChanged($ticket, $user, 'open', 'resolved');
         $listener = new SendPushNotificationOnTicketStateChanged($fcm, $notif);
         $listener->handle($event);
     }
@@ -86,8 +86,8 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         Log::spy();
 
         $reporter = $this->makeUser('reporter-2');
-        $actor    = $this->makeUser('actor-2');
-        $ticket   = $this->makeTicket($reporter, 'Mi ticket');
+        $actor = $this->makeUser('actor-2');
+        $ticket = $this->makeTicket($reporter, 'Mi ticket');
 
         $capturedTitle = null;
 
@@ -100,7 +100,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $fcm = $this->createMock(FcmNotificationService::class);
         $fcm->method('sendToUser');
 
-        $event    = new TicketStateChanged($ticket, $actor, 'open', $state);
+        $event = new TicketStateChanged($ticket, $actor, 'open', $state);
         $listener = new SendPushNotificationOnTicketStateChanged($fcm, $notif);
         $listener->handle($event);
 
@@ -112,10 +112,10 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
     public static function stateLabelsProvider(): array
     {
         return [
-            'open'        => ['open',        '🔔'],
+            'open' => ['open',        '🔔'],
             'in_progress' => ['in_progress', '🔧'],
-            'resolved'    => ['resolved',    '✅'],
-            'rejected'    => ['rejected',    '❌'],
+            'resolved' => ['resolved',    '✅'],
+            'rejected' => ['rejected',    '❌'],
             'desconocido' => ['otro_estado', '📋'],
         ];
     }
@@ -128,16 +128,16 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
     {
         Log::spy();
 
-        $actor  = $this->makeUser('actor-99');
+        $actor = $this->makeUser('actor-99');
         $ticket = $this->makeTicket(null);   // sin reporter
 
-        $fcm   = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(FcmNotificationService::class);
         $fcm->expects($this->never())->method('sendToUser');
 
         $notif = $this->createMock(NotificationService::class);
         $notif->expects($this->never())->method('notifyUser');
 
-        $event    = new TicketStateChanged($ticket, $actor, 'open', 'resolved');
+        $event = new TicketStateChanged($ticket, $actor, 'open', 'resolved');
         $listener = new SendPushNotificationOnTicketStateChanged($fcm, $notif);
         $listener->handle($event);
 
@@ -153,8 +153,8 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         Log::spy();
 
         $reporter = $this->makeUser('reporter-3');
-        $actor    = $this->makeUser('actor-3');
-        $ticket   = $this->makeTicket($reporter);
+        $actor = $this->makeUser('actor-3');
+        $ticket = $this->makeTicket($reporter);
 
         $fcm = $this->createMock(FcmNotificationService::class);
         $fcm->method('sendToUser')
@@ -163,12 +163,13 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyUser');
 
-        $event    = new TicketStateChanged($ticket, $actor, 'open', 'resolved');
+        $event = new TicketStateChanged($ticket, $actor, 'open', 'resolved');
         $listener = new SendPushNotificationOnTicketStateChanged($fcm, $notif);
         $listener->handle($event);
 
+        /** @phpstan-ignore-next-line */
         Log::shouldHaveReceived('error')
-            ->withArgs(fn ($msg) => str_contains($msg, 'notificación'));
+            ->withArgs(fn ($msg) => str_contains((string) $msg, 'notificación'));
 
         $this->addToAssertionCount(1);
     }
@@ -179,7 +180,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
 
     private function makeUser(string $id): User
     {
-        $user     = new User;
+        $user = new User;
         $user->id = $id;
 
         return $user;
@@ -187,8 +188,8 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
 
     private function makeTicket(?User $reporter, string $title = 'Ticket de prueba'): Ticket
     {
-        $ticket        = new Ticket;
-        $ticket->id    = 'ticket-state-001';
+        $ticket = new Ticket;
+        $ticket->id = 'ticket-state-001';
         $ticket->title = $title;
         $ticket->setRelation('reporter', $reporter);
 

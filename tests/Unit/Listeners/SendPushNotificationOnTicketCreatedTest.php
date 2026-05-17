@@ -5,7 +5,6 @@ namespace Tests\Unit\Listeners;
 use App\Events\TicketCreated;
 use App\Listeners\SendPushNotificationOnTicketCreated;
 use App\Models\Ticket;
-use App\Models\User;
 use App\Services\Firebase\FcmNotificationService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
@@ -42,8 +41,8 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
                 icon: '🎫',
             );
 
-        $ticket           = $this->makeTicket();
-        $event            = new TicketCreated($ticket, 'corr-test-001');
+        $ticket = $this->makeTicket();
+        $event = new TicketCreated($ticket, 'corr-test-001');
 
         $listener = new SendPushNotificationOnTicketCreated($fcm, $notif);
         $listener->handle($event);
@@ -129,8 +128,9 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
         $listener->handle(new TicketCreated($this->makeTicket()));
 
         // La excepción fue capturada internamente
+        /** @phpstan-ignore-next-line */
         Log::shouldHaveReceived('error')
-            ->withArgs(fn ($msg) => str_contains($msg, 'notificación'));
+            ->withArgs(fn ($msg) => str_contains((string) $msg, 'notificación'));
 
         $this->addToAssertionCount(1);
     }
@@ -145,7 +145,7 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
         ?string $categoryName = 'Eléctrico',
     ): Ticket {
         $ticket = new Ticket;
-        $ticket->id    = 'ticket-uuid-001';
+        $ticket->id = 'ticket-uuid-001';
         $ticket->title = $title;
 
         if ($locationName !== null) {
