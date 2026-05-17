@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -24,6 +26,7 @@ class Notification extends Model
 
     public $timestamps = false;
 
+    /** @var list<string> */
     protected $fillable = [
         'id',
         'user_id',
@@ -36,10 +39,12 @@ class Notification extends Model
         'created_at',
     ];
 
+    /** @var string */
     protected $keyType = 'string';
 
     public $incrementing = false;
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

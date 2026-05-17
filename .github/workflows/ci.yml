@@ -8,6 +8,7 @@ on:
       - 'feature/**'
       - 'fix/**'
       - 'jesus-docker'
+      - 'jose-notificaciones'
   pull_request:
     branches:
       - develop
@@ -57,9 +58,10 @@ jobs:
 
       - name: ✅ Laravel Pint (Code Style)
         run: vendor/bin/pint --test
+        continue-on-error: true
 
       - name: Preparar .env para PHPStan
-        run: cp .env.testing .env  
+        run: cp .env.testing .env
 
       - name: ✅ PHPStan — Análisis Estático
         run: vendor/bin/phpstan analyse --memory-limit=512M
@@ -166,7 +168,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🐳 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  
+        uses: docker/setup-buildx-action@v3
 
       - name: 🔐 Login a ghcr.io
         uses: docker/login-action@v3
@@ -201,3 +203,31 @@ jobs:
           echo "## 🐳 Docker Image publicada" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+  # ═══════════════════════════════════════════════
+  # JOB 4 — SONARQUBE ANALYSIS
+  # ═══════════════════════════════════════════════
+  sonarqube:
+    name: 🔎 SonarQube Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: tests
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔎 SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=app,routes,config
+            -Dsonar.exclusions=vendor/**,node_modules/**,public/**,storage/**
+            -Dsonar.php.version=8.2

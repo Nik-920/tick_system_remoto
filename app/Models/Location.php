@@ -1,21 +1,38 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id
+ * @property string $name
+ * @property string $building
+ * @property string $floor
+ * @property string $room_code
+ * @property string|null $qr_token
+ * @property string|null $qr_image_url
+ * @property string|null $qr_generation_status
+ * @property string|null $qr_last_error
+ * @property string|null $qr_job_id
+ * @property Carbon|null $qr_generated_at
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Location extends Model
 {
     use HasFactory;
     use HasUuids;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'id',
         'name',
@@ -31,19 +48,13 @@ class Location extends Model
         'is_active',
     ];
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $keyType = 'string';
 
-    /**
-     * @var bool
-     */
+    /** @var bool */
     public $incrementing = false;
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -85,7 +96,6 @@ class Location extends Model
 
     private function applyActiveFilter(Builder $query, bool $isActive): Builder
     {
-        // Keep SQL boolean literals to avoid boolean/integer mismatches in PostgreSQL pooler mode.
         $column = $query->getQuery()->getGrammar()->wrap($this->qualifyColumn('is_active'));
         $operator = $isActive ? 'IS TRUE' : 'IS FALSE';
 
