@@ -19,7 +19,10 @@ use Illuminate\Support\ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // No service container bindings required for this provider.
+    }
 
     public function boot(): void
     {
