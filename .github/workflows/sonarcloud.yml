@@ -1,0 +1,115 @@
+name: "Tests & SonarCloud Analysis"
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - develop_Local_Nik
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  tests-and-sonar:
+    name: Tests + Coverage + SonarCloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ──────────────────────────────────────────────
+      # 1. Checkout completo (requerido por SonarCloud
+      #    para analizar el historial de commits)
+      # ──────────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ──────────────────────────────────────────────
+      # 2. Setup PHP 8.2 con PCOV para cobertura
+      #    (PCOV es 5x más rápido que Xdebug en CI)
+      # ──────────────────────────────────────────────
+      - name: Setup PHP 8.2 with PCOV
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: pcov
+          extensions: >-
+            mbstring, xml, ctype, iconv, intl,
+            pdo_sqlite, pdo_pgsql, bcmath, curl,
+            fileinfo, gd, zip, sodium
+
+      # ──────────────────────────────────────────────
+      # 3. Cache de dependencias de Composer
+      # ──────────────────────────────────────────────
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      # ──────────────────────────────────────────────
+      # 4. Instalar dependencias
+      # ──────────────────────────────────────────────
+      - name: Install Composer Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      # ──────────────────────────────────────────────
+      # 5. Preparar entorno Laravel para testing
+      # ──────────────────────────────────────────────
+      - name: Setup Laravel Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # ──────────────────────────────────────────────
+      # 6. Ejecutar tests + generar coverage.xml
+      #    Usa SQLite en memoria: rápido, sin BD externa
+      # ──────────────────────────────────────────────
+      - name: Run PHPUnit Tests with Coverage
+        run: php artisan test --coverage-clover=coverage.xml
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          # Firebase: credenciales vacías para que los tests mockeen el servicio
+          FIREBASE_CREDENTIALS: ""
+          FIREBASE_PROJECT_ID: tick-system-test
+          # HuggingFace: deshabilitado en tests
+          HUGGINGFACE_ENABLED: "false"
+
+      # ──────────────────────────────────────────────
+      # 7. Subir coverage.xml como artefacto de CI
+      #    (útil para debugging si Sonar reporta 0%)
+      # ──────────────────────────────────────────────
+      - name: Upload Coverage Report Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+      # ──────────────────────────────────────────────
+      # 8. Análisis de SonarCloud
+      #    Lee coverage.xml desde sonar-project.properties
+      # ──────────────────────────────────────────────
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
