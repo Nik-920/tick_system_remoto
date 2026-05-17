@@ -29,8 +29,8 @@ if (document.querySelector('.admin-layout')) {
                 showToastNotification(title, body, url);
 
                 // Agregar al dropdown de campanita
-                if (typeof window.addNotification === 'function') {
-                    window.addNotification(title, body, url, icon);
+                if (typeof globalThis.addNotification === 'function') {
+                    globalThis.addNotification(title, body, url, icon);
                 }
             });
         } catch (err) {
@@ -46,7 +46,9 @@ function showToastNotification(title, body, url = null) {
         const audio = new Audio('/sounds/notification.mp3');
         audio.volume = 0.6;
         audio.play().catch(() => {});
-    } catch (e) {}
+    } catch (e) {
+        console.debug('No se pudo reproducir el sonido de notificación');
+    }
 
     const toast = document.createElement('div');
     toast.className = 'fcm-toast';
@@ -63,7 +65,7 @@ function showToastNotification(title, body, url = null) {
         toast.style.cursor = 'pointer';
         toast.addEventListener('click', (e) => {
             if (!e.target.classList.contains('fcm-toast-close')) {
-                window.location.href = url;
+                globalThis.location.href = url;
             }
         });
     }
@@ -76,7 +78,7 @@ function showToastNotification(title, body, url = null) {
     }, 5000);
 }
 
-window.showToastNotification = showToastNotification;
+globalThis.showToastNotification = showToastNotification;
 
 // Carga condicional de scripts por página
 const pageLoaders = [

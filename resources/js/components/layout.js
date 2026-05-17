@@ -138,10 +138,10 @@ function initNotifications() {
                     <span class="notif-item-time">${n.time || ''}</span>
                 </div>
             </a>
-            ${!n.read_at ? `
+            ${n.read_at ? '<span class="notif-item-read-label">Leído</span>' : `
             <button class="notif-item-read-btn" data-id="${n.id}" title="Marcar como leída">
                 ✓
-            </button>` : '<span class="notif-item-read-label">Leído</span>'}
+            </button>`}
         </div>
     `).join('');
 
@@ -210,7 +210,7 @@ function initNotifications() {
     }, 30000);
 
     // Exponer función global para agregar desde Firebase en tiempo real
-    window.addNotification = function(title, body, url = null, icon = '🔔') {
+    globalThis.addNotification = function(title, body, url = null, icon = '🔔') {
         notifications.unshift({
             id:      Date.now().toString(),
             title,
