@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +18,7 @@ class NotificationController extends Controller
         $notifications = $user->appNotifications()
             ->take(30)
             ->get()
-            ->map(fn ($n) => [
+            ->map(fn (Notification $n) => [
                 'id' => $n->id,
                 'type' => $n->type,
                 'title' => $n->title,

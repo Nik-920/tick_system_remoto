@@ -2,65 +2,64 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Web;
+namespace App\Models;
 
-use App\Http\Controllers\Controller;
-use App\Models\Notification;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class NotificationController extends Controller
+/**
+ * @property string $id
+ * @property int $user_id
+ * @property string $type
+ * @property string $title
+ * @property string $body
+ * @property string|null $url
+ * @property string|null $icon
+ * @property Carbon|null $read_at
+ * @property Carbon|null $created_at
+ */
+class Notification extends Model
 {
-    public function index(Request $request): JsonResponse
+    use HasUuids;
+
+    public $timestamps = false;
+
+    /** @var list<string> */
+    protected $fillable = [
+        'id',
+        'user_id',
+        'type',
+        'title',
+        'body',
+        'url',
+        'icon',
+        'read_at',
+        'created_at',
+    ];
+
+    /** @var string */
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    /** @return array<string, string> */
+    protected function casts(): array
     {
-        $user = $request->user();
-
-        $notifications = $user->appNotifications()
-            ->take(30)
-            ->get()
-            ->map(fn (Notification $n) => [
-                'id' => $n->id,
-                'type' => $n->type,
-                'title' => $n->title,
-                'body' => $n->body,
-                'url' => $n->url,
-                'icon' => $n->icon,
-                'read_at' => $n->read_at,
-                'time' => $n->created_at?->diffForHumans(),
-            ]);
-
-        $unreadCount = $user->appNotifications()
-            ->whereNull('read_at')
-            ->count();
-
-        return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => $unreadCount,
-        ]);
+        return [
+            'read_at' => 'datetime',
+            'created_at' => 'datetime',
+        ];
     }
 
-    public function markAsRead(Request $request, string $id): JsonResponse
+    public function user(): BelongsTo
     {
-        $user = $request->user();
-
-        $notification = $user->appNotifications()
-            ->where('id', $id)
-            ->first();
-
-        if ($notification) {
-            $notification->update(['read_at' => now()]);
-        }
-
-        return response()->json(['success' => true]);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function markAllAsRead(Request $request): JsonResponse
+    public function isUnread(): bool
     {
-        $request->user()
-            ->appNotifications()
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-
-        return response()->json(['success' => true]);
+        return is_null($this->read_at);
     }
 }
