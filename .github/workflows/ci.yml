@@ -8,6 +8,7 @@ on:
       - 'feature/**'
       - 'fix/**'
       - 'jesus-docker'
+      - 'jose-notificaciones'
   pull_request:
     branches:
       - develop
