@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,10 +22,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $qr_generation_status
  * @property string|null $qr_last_error
  * @property string|null $qr_job_id
- * @property \Carbon\Carbon|null $qr_generated_at
+ * @property Carbon|null $qr_generated_at
  * @property bool $is_active
- * @property \Carbon\Carbon|null $created_at
- * @property \Carbon\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Location extends Model
 {
