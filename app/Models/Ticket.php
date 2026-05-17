@@ -9,14 +9,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property-read \App\Models\Location|null $location
+ * @property-read \App\Models\Category|null $category
+ * @property-read \App\Models\User|null $reporter
+ * @property-read \App\Models\User|null $assignee
+ */
 class Ticket extends Model
 {
     use HasFactory;
     use HasUuids;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'id',
         'title',
@@ -30,19 +34,13 @@ class Ticket extends Model
         'resolved_at',
     ];
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $keyType = 'string';
 
-    /**
-     * @var bool
-     */
+    /** @var bool */
     public $incrementing = false;
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
