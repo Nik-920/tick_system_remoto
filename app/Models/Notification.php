@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $body
  * @property string|null $url
  * @property string|null $icon
- * @property \Carbon\Carbon|null $read_at
- * @property \Carbon\Carbon|null $created_at
+ * @property Carbon|null $read_at
+ * @property Carbon|null $created_at
  */
 class Notification extends Model
 {
