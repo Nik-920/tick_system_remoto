@@ -45,7 +45,7 @@ function showToastNotification(title, body, url = null) {
     try {
         const audio = new Audio('/sounds/notification.mp3');
         audio.volume = 0.6;
-        audio.play().catch(() => {});
+        audio.play().catch((e) => { console.debug('Audio play interrumpted', e); });
     } catch (e) {
         console.debug('No se pudo reproducir el sonido de notificación');
     }
