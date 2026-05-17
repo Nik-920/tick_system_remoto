@@ -14,11 +14,15 @@ on:
       - master
       - develop
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   tests-and-sonar:
     name: Tests + Coverage + SonarCloud
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       # ──────────────────────────────────────────────
@@ -26,23 +30,23 @@ jobs:
       #    para analizar el historial de commits)
       # ──────────────────────────────────────────────
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       # ──────────────────────────────────────────────
       # 2. Setup PHP 8.2 con PCOV para cobertura
-      #    (PCOV es 5x más rápido que Xdebug en CI)
+      #    (PCOV es más ligero que Xdebug en CI)
       # ──────────────────────────────────────────────
       - name: Setup PHP 8.2 with PCOV
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: "8.2"
           coverage: pcov
           extensions: >-
             mbstring, xml, ctype, iconv, intl,
-            pdo_sqlite, pdo_pgsql, bcmath, curl,
-            fileinfo, gd, zip, sodium
+            pdo_sqlite, bcmath, curl,
+            fileinfo, gd, zip
 
       # ──────────────────────────────────────────────
       # 3. Cache de dependencias de Composer
@@ -52,7 +56,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache Composer Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@d4323d4dc3a882dd6cd22a21f8048c07e0e9e2af # v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -74,7 +78,8 @@ jobs:
 
       # ──────────────────────────────────────────────
       # 6. Ejecutar tests + generar coverage.xml
-      #    Usa SQLite en memoria: rápido, sin BD externa
+      #    La variable XDEBUG_MODE=coverage es necesaria
+      #    para que PCOV/Xdebug generen el reporte
       # ──────────────────────────────────────────────
       - name: Run PHPUnit Tests with Coverage
         run: php artisan test --coverage-clover=coverage.xml
@@ -86,18 +91,27 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-          # Firebase: credenciales vacías para que los tests mockeen el servicio
           FIREBASE_CREDENTIALS: ""
           FIREBASE_PROJECT_ID: tick-system-test
-          # HuggingFace: deshabilitado en tests
           HUGGINGFACE_ENABLED: "false"
 
       # ──────────────────────────────────────────────
-      # 7. Subir coverage.xml como artefacto de CI
-      #    (útil para debugging si Sonar reporta 0%)
+      # 7. Verificar que coverage.xml existe y tiene contenido
+      #    (diagnóstico — evita que Sonar reciba 0%)
+      # ──────────────────────────────────────────────
+      - name: Verify coverage.xml exists
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "❌ coverage.xml no fue generado"
+            exit 1
+          fi
+          echo "✅ coverage.xml generado correctamente ($(wc -l < coverage.xml) líneas)"
+
+      # ──────────────────────────────────────────────
+      # 8. Subir coverage.xml como artefacto de CI
       # ──────────────────────────────────────────────
       - name: Upload Coverage Report Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         if: always()
         with:
           name: coverage-report
@@ -105,11 +119,12 @@ jobs:
           retention-days: 7
 
       # ──────────────────────────────────────────────
-      # 8. Análisis de SonarCloud
-      #    Lee coverage.xml desde sonar-project.properties
+      # 9. Análisis de SonarCloud
+      #    Lee coverage.xml vía sonar-project.properties:
+      #    sonar.php.coverage.reportPaths=coverage.xml
       # ──────────────────────────────────────────────
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@49e6cd3b187936a73b8280d59ffd9da69df63ec9 # v3.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
