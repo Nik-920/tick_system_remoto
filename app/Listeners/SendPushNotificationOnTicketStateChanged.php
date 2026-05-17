@@ -19,7 +19,7 @@ class SendPushNotificationOnTicketStateChanged
     public function handle(TicketStateChanged $event): void
     {
         try {
-            $ticket   = $event->ticket;
+            $ticket = $event->ticket;
             $reporter = $ticket->reporter;
 
             if (! $reporter instanceof User) {
@@ -31,36 +31,36 @@ class SendPushNotificationOnTicketStateChanged
             }
 
             $stateLabels = [
-                'open'        => '🔔 Reabierto',
+                'open' => '🔔 Reabierto',
                 'in_progress' => '🔧 En progreso',
-                'resolved'    => '✅ Resuelto',
-                'rejected'    => '❌ Rechazado',
+                'resolved' => '✅ Resuelto',
+                'rejected' => '❌ Rechazado',
             ];
 
             $label = $stateLabels[$event->newState] ?? '📋 Actualizado';
-            $url   = route('tickets.show', $ticket);
+            $url = route('tickets.show', $ticket);
 
             $title = "{$label}: {$ticket->title}";
-            $body  = "Tu ticket ha sido actualizado a: {$event->newState}";
+            $body = "Tu ticket ha sido actualizado a: {$event->newState}";
 
             $this->notificationService->notifyUser(
-                user:  $reporter,
-                type:  'ticket_state_changed',
+                user: $reporter,
+                type: 'ticket_state_changed',
                 title: $title,
-                body:  $body,
-                url:   $url,
-                icon:  $label
+                body: $body,
+                url: $url,
+                icon: $label
             );
 
             $this->fcm->sendToUser(
-                user:  $reporter,
+                user: $reporter,
                 title: $title,
-                body:  $body,
-                data:  [
+                body: $body,
+                data: [
                     'ticket_id' => $ticket->id,
-                    'url'       => $url,
-                    'type'      => 'ticket_state_changed',
-                    'state'     => $event->newState,
+                    'url' => $url,
+                    'type' => 'ticket_state_changed',
+                    'state' => $event->newState,
                 ]
             );
         } catch (Throwable $e) {
