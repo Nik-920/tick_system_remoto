@@ -58,9 +58,7 @@ jobs:
 
       - name: ✅ Laravel Pint (Code Style)
         run: vendor/bin/pint --test
-               - name: ✅ Laravel Pint (Code Style)
-               run: vendor/bin/pint --test
-               continue-on-error: true
+        continue-on-error: true
 
       - name: Preparar .env para PHPStan
         run: cp .env.testing .env
