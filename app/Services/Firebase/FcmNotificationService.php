@@ -15,6 +15,7 @@ class FcmNotificationService
     {
         $credentialsPath = base_path(config('services.firebase.credentials'));
         $factory = (new Factory)->withServiceAccount($credentialsPath);
+
         return $factory->createMessaging();
     }
 
@@ -26,6 +27,7 @@ class FcmNotificationService
 
         if (empty($tokens)) {
             Log::info('FCM: no hay tokens para el usuario', ['user_id' => $user->id]);
+
             return;
         }
 
@@ -51,8 +53,8 @@ class FcmNotificationService
     private function sendToTokens(array $tokens, string $title, string $body, array $data = []): void
     {
         Log::info('FCM: enviando push', [
-            'tokens' => array_map(fn($t) => substr($t, 0, 20).'...', $tokens),
-            'title'  => $title,
+            'tokens' => array_map(fn ($t) => substr($t, 0, 20).'...', $tokens),
+            'title' => $title,
         ]);
 
         try {
@@ -61,7 +63,7 @@ class FcmNotificationService
             // Solo data, sin notification — el SW maneja la notificación
             $payload = array_merge($data, [
                 'title' => $title,
-                'body'  => $body,
+                'body' => $body,
             ]);
 
             foreach ($tokens as $token) {

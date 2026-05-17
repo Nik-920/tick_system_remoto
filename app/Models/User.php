@@ -88,7 +88,7 @@ class User extends Authenticatable
 
     public function appNotifications(): HasMany
     {
-        return $this->hasMany(\App\Models\Notification::class, 'user_id')
+        return $this->hasMany(Notification::class, 'user_id')
             ->latest('created_at');
     }
 }
