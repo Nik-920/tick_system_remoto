@@ -37,11 +37,11 @@ class SendPushNotificationOnTicketStateChanged
                 'rejected' => '❌ Rechazado',
             ];
 
-            $label = $stateLabels[$event->newState] ?? '📋 Actualizado';
+            $label = $stateLabels[$event->toState] ?? '📋 Actualizado';
             $url = route('tickets.show', $ticket);
 
             $title = "{$label}: {$ticket->title}";
-            $body = "Tu ticket ha sido actualizado a: {$event->newState}";
+            $body = "Tu ticket ha sido actualizado a: {$event->toState}";
 
             $this->notificationService->notifyUser(
                 user: $reporter,
@@ -60,7 +60,7 @@ class SendPushNotificationOnTicketStateChanged
                     'ticket_id' => $ticket->id,
                     'url' => $url,
                     'type' => 'ticket_state_changed',
-                    'state' => $event->newState,
+                    'state' => $event->toState,
                 ]
             );
         } catch (Throwable $e) {
