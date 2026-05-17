@@ -6,6 +6,17 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property int $user_id
+ * @property string $type
+ * @property string $title
+ * @property string $body
+ * @property string|null $url
+ * @property string|null $icon
+ * @property \Carbon\Carbon|null $read_at
+ * @property \Carbon\Carbon|null $created_at
+ */
 class Notification extends Model
 {
     use HasUuids;
