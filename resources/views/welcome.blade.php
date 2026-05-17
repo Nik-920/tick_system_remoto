@@ -3,8 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    {{-- OWASP: Cabeceras de seguridad básicas en HTML --}}
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>Tick System Onn — Sistema de Gestión</title>
     <meta name="description" content="Plataforma centralizada para reportar, asignar y resolver incidencias operativas en tiempo real.">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

@@ -49,11 +49,18 @@
                     <div class="profile-avatar-zone">
                         {{-- Avatar actual grande --}}
                         <div class="profile-avatar-current">
-                            @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
-                                <img src="{{ $profileUser->avatar_url }}" alt="Avatar" class="profile-avatar-img" id="avatarPreview">
+                            @php
+                                $userName = $profileUser?->name ?? 'Usuario';
+                                $nameParts = explode(' ', $userName);
+                                $initials = strtoupper(substr($userName, 0, 1)) . strtoupper(substr($nameParts[1] ?? '', 0, 1));
+                                $hasAvatar = is_string($profileUser?->avatar_url) && trim($profileUser?->avatar_url ?? '') !== '';
+                            @endphp
+                            
+                            @if ($hasAvatar)
+                                <img src="{{ $profileUser?->avatar_url }}" alt="Avatar" class="profile-avatar-img" id="avatarPreview">
                             @else
                                 <div class="profile-avatar-initials" id="avatarPreview">
-                                    {{ strtoupper(substr($profileUser->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', $profileUser->name)[1] ?? '', 0, 1)) }}
+                                    {{ $initials }}
                                 </div>
                             @endif
                             <div class="profile-avatar-badge">
@@ -77,7 +84,7 @@
 
                     <div class="profile-form-actions">
                         <button type="submit" class="btn-primary">Actualizar foto</button>
-                        @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+                        @if (is_string($profileUser?->avatar_url) && trim($profileUser?->avatar_url ?? '') !== '')
                             <button type="button" class="btn-danger" onclick="openDeleteAvatarModal()">
                                 Eliminar foto
                             </button>
@@ -86,7 +93,7 @@
                 </div>
             </form>
 
-            @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
+            @if (is_string($profileUser?->avatar_url) && trim($profileUser?->avatar_url ?? '') !== '')
                 <form id="delete-avatar-form" action="{{ route('profile.delete-avatar') }}" method="POST" style="display: none;">
                     @csrf
                     @method('DELETE')
@@ -113,14 +120,14 @@
                         <div class="profile-form-group">
                             <label for="name" class="profile-field-label">Nombre *</label>
                             <input id="name" name="name" type="text"
-                                   value="{{ old('name', $profileUser->name) }}" required
+                                   value="{{ old('name', $profileUser?->name) }}" required
                                    class="profile-field">
                             @error('name')<p class="profile-field-error">{{ $message }}</p>@enderror
                         </div>
                         <div class="profile-form-group">
                             <label for="last_name" class="profile-field-label">Apellido *</label>
                             <input id="last_name" name="last_name" type="text"
-                                   value="{{ old('last_name', $profileUser->last_name) }}" required
+                                   value="{{ old('last_name', $profileUser?->last_name) }}" required
                                    class="profile-field">
                             @error('last_name')<p class="profile-field-error">{{ $message }}</p>@enderror
                         </div>
@@ -129,7 +136,7 @@
                     <div class="profile-form-group">
                         <label for="email" class="profile-field-label">Email *</label>
                         <input id="email" name="email" type="email"
-                               value="{{ old('email', $profileUser->email) }}" required
+                               value="{{ old('email', $profileUser?->email) }}" required
                                class="profile-field">
                         @error('email')<p class="profile-field-error">{{ $message }}</p>@enderror
                     </div>
@@ -137,7 +144,7 @@
                     <div class="profile-form-group">
                         <label for="phone" class="profile-field-label">Teléfono</label>
                         <input id="phone" name="phone" type="text"
-                               value="{{ old('phone', $profileUser->phone) }}" maxlength="30"
+                               value="{{ old('phone', $profileUser?->phone) }}" maxlength="30"
                                placeholder="+51 999 888 777"
                                class="profile-field">
                         @error('phone')<p class="profile-field-error">{{ $message }}</p>@enderror
@@ -158,17 +165,17 @@
             {{-- Tarjeta de perfil visual --}}
             <div class="profile-sidebar-card profile-sidebar-identity">
                 <div class="profile-identity-avatar">
-                    @if (is_string($profileUser->avatar_url) && trim($profileUser->avatar_url) !== '')
-                        <img src="{{ $profileUser->avatar_url }}" alt="{{ $profileUser->name }}" class="profile-identity-img">
+                    @if ($hasAvatar)
+                        <img src="{{ $profileUser->avatar_url }}" alt="{{ $profileUser?->name ?? 'Avatar' }}" class="profile-identity-img">
                     @else
                         <span class="profile-identity-initials">
-                            {{ strtoupper(substr($profileUser->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', $profileUser->name)[1] ?? '', 0, 1)) }}
+                            {{ $initials ?? 'US' }}
                         </span>
                     @endif
                 </div>
-                <h3 class="profile-identity-name">{{ $profileUser->name }}</h3>
-                <p class="profile-identity-email">{{ $profileUser->email }}</p>
-                @php $role = $profileUser->roles->pluck('name')->first() ?? 'reporter'; @endphp
+                <h3 class="profile-identity-name">{{ $profileUser?->name ?? 'Usuario' }}</h3>
+                <p class="profile-identity-email">{{ $profileUser?->email ?? 'Sin correo' }}</p>
+                @php $role = optional($profileUser?->roles)->pluck('name')->first() ?? 'reporter'; @endphp
                 <span class="users-role-badge users-role-badge--{{ $role }}">{{ str_replace('_', ' ', $role) }}</span>
             </div>
 
@@ -178,11 +185,11 @@
                 <ul class="profile-sidebar-info-list">
                     <li>
                         <span class="profile-sidebar-info-label">Miembro desde</span>
-                        <span class="profile-sidebar-info-val">{{ optional($profileUser->created_at)->format('d/m/Y') }}</span>
+                        <span class="profile-sidebar-info-val">{{ $profileUser?->created_at?->format('d/m/Y') ?? '—' }}</span>
                     </li>
                     <li>
                         <span class="profile-sidebar-info-label">Teléfono</span>
-                        <span class="profile-sidebar-info-val">{{ $profileUser->phone ?? '—' }}</span>
+                        <span class="profile-sidebar-info-val">{{ $profileUser?->phone ?? '—' }}</span>
                     </li>
                     <li>
                         <span class="profile-sidebar-info-label">Rol</span>
@@ -281,7 +288,7 @@ function closeDeleteAvatarModal() {
 {{-- Custom Delete Modal Overlay --}}
 <div id="deleteAvatarModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
     <!-- Backdrop oscuro -->
-    <div class="absolute inset-0" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteAvatarModal()"></div>
+    <button type="button" class="absolute inset-0 w-full h-full border-0 p-0 m-0 cursor-default" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteAvatarModal()" aria-label="Cerrar modal" tabindex="-1"></button>
 
     <!-- Contenido del Modal -->
     <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">

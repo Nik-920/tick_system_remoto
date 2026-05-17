@@ -165,7 +165,7 @@
             </div>
             <a href="{{ route('tickets.index') }}" class="rd-table-link">Ver todos</a>
         </header>
-        <div class="rd-table-wrap" role="region" aria-label="Tabla de actividad reciente" tabindex="0">
+        <div class="rd-table-wrap" role="region" aria-label="Tabla de actividad reciente">
             <table>
                 <thead>
                     <tr>

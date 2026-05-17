@@ -69,7 +69,7 @@
             <div class="auth-label-row">
                 <label for="password" class="auth-label">Contraseña</label>
                 @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" class="auth-label-link" tabindex="5">
+                    <a href="{{ route('password.request') }}" class="auth-label-link">
                         ¿Olvidaste tu contraseña?
                     </a>
                 @endif

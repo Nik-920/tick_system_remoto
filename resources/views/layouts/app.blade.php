@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    {{-- OWASP: Cabeceras de seguridad básicas en HTML --}}
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>@yield('title', 'Tick System Onn')</title>
 
     {{-- Firebase user meta --}}

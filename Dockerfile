@@ -1,7 +1,8 @@
 # ═══════════════════════════════════════════════════════════
 # STAGE 1 — Node Builder
 # ═══════════════════════════════════════════════════════════
-FROM node:22-alpine AS node-builder
+# OWASP/SonarCloud: Se recomienda fijar el hash de la imagen (sha256:...)
+FROM node:22-alpine@sha256:c13b26e7e606ef32729930baafed055375eb017c69da9799292b3aee193df1a1 AS node-builder
 
 WORKDIR /app
 
@@ -19,7 +20,8 @@ RUN npm run build
 # ═══════════════════════════════════════════════════════════
 # STAGE 2 — PHP-FPM Runtime
 # ═══════════════════════════════════════════════════════════
-FROM php:8.2-fpm
+# OWASP/SonarCloud: Se recomienda fijar el hash de la imagen
+FROM php:8.2-fpm@sha256:5efb1fc9661448fb837a29dc5eef63dd2475e4785461c37b3ceab2a02cbfde10
 
 ENV APP_ENV=production \
     APP_DEBUG=false
@@ -38,6 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     nginx \
+    libcap2-bin \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -75,8 +79,10 @@ RUN composer install \
 COPY . .
 COPY --from=node-builder /app/public/build ./public/build
 
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache \
-    && chmod -R 775 /app/storage /app/bootstrap/cache
+# OWASP/SonarCloud: Permisos mínimos de Nginx y Laravel para ejecutar sin root
+RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+    && chown -R www-data:www-data /app /var/log/nginx /var/lib/nginx /run \
+    && chmod -R 775 /app/storage /app/bootstrap/cache /var/log/nginx /var/lib/nginx /run
 
 # ── Nginx config ───────────────────────────────────────────
 COPY nginx.conf /etc/nginx/conf.d/laravel.conf
@@ -86,6 +92,9 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
+
+# OWASP/SonarCloud: Evitar correr el contenedor como root
+USER www-data
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]

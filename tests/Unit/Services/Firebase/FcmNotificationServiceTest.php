@@ -41,7 +41,7 @@ class FcmNotificationServiceTest extends TestCase
             {
                 // Simula tokens vacíos sin ir a BD
                 Log::info('FCM: no hay tokens para el usuario', ['user_id' => $user->id]);
-                return;
+
             }
 
             protected function getMessaging(): Messaging
