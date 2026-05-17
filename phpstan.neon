@@ -8,7 +8,7 @@ parameters:
         - database
         - routes
         - tests
-    level: 1
+    level: 3
     tmpDir: storage/phpstan
     excludePaths:
         - bootstrap/cache/*
