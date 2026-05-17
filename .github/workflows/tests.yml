@@ -26,11 +26,11 @@ jobs:
     steps:
       - name: Checkout code
         # OWASP: Se fija la versión usando un hash SHA en lugar de tags mutables como "v4"
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup PHP
         # OWASP: Se fija la versión usando un hash SHA en lugar de tags mutables como "v2"
-        uses: shivammathur/setup-php@b7dfee87981ef78d0aa00ae72a29ea9796e9cbbe # v2.30.4
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, gd

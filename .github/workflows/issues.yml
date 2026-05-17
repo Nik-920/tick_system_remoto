@@ -11,4 +11,4 @@ jobs:
   help-wanted:
     # OWASP/SonarCloud: Evitar referenciar ramas mutables como "main" o "master"
     # Reemplaza el SHA por el commit real y seguro que deseas usar de esa acción.
-    uses: laravel/.github/.github/workflows/issues.yml@b6f4cc920b7ba40fa0fa82cd93dd09d43ed0b5b2
+    uses: laravel/.github/.github/workflows/issues.yml@9c15e86fffce728fb6c50ebeae24fd63e98f4d1d

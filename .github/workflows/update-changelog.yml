@@ -11,4 +11,4 @@ jobs:
     permissions:
       contents: write
     # OWASP/SonarCloud: Evitar referenciar ramas mutables como "main" o "master"
-    uses: laravel/.github/.github/workflows/update-changelog.yml@b6f4cc920b7ba40fa0fa82cd93dd09d43ed0b5b2
+    uses: laravel/.github/.github/workflows/update-changelog.yml@9c15e86fffce728fb6c50ebeae24fd63e98f4d1d
