@@ -47,7 +47,7 @@ function showToastNotification(title, body, url = null) {
         audio.volume = 0.6;
         audio.play().catch((e) => { console.debug('Audio play interrumpted', e); });
     } catch (e) {
-        console.debug('No se pudo reproducir el sonido de notificación');
+        console.warn('No se pudo reproducir el sonido de notificación:', e);
     }
 
     const toast = document.createElement('div');
