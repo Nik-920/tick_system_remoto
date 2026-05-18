@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Sentry\State\Scope;
 use Throwable;
@@ -67,7 +68,7 @@ class GenerateTicketEmbedding implements ShouldQueue
                 'description_hash' => $hash,
                 'similarity_score' => null,
                 'matched_ticket_id' => null,
-                'is_duplicate' => false,
+                'is_duplicate' => DB::raw('false'),
             ]
         );
     }

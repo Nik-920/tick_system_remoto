@@ -1,0 +1,207 @@
+name: 🎫 CI Pipeline — Sistema de Incidencias
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'jesus-docker'
+      - 'jose-notificaciones'
+  pull_request:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PHP_VERSION: '8.2'
+  NODE_VERSION: '22'
+
+# ═══════════════════════════════════════════════
+# JOB 1 — LINT & CODE QUALITY
+# ═══════════════════════════════════════════════
+jobs:
+  lint:
+    name: 🔍 Lint & Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
+          coverage: none
+          tools: composer:v2
+
+      - name: 📦 Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: 📦 Instalar dependencias PHP
+        run: composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader --no-scripts
+
+      - name: ✅ PHP Syntax Check
+        run: find app config routes -name "*.php" | xargs php -l
+
+      - name: ✅ Laravel Pint (Code Style)
+        run: vendor/bin/pint --test
+        continue-on-error: true
+
+      - name: Preparar .env para PHPStan
+        run: cp .env.testing .env
+
+      - name: ✅ PHPStan — Análisis Estático
+        run: vendor/bin/phpstan analyse --memory-limit=512M
+
+      - name: ✅ PHP CS Fixer (dry-run)
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
+        continue-on-error: true
+
+# ═══════════════════════════════════════════════
+# JOB 2 — TEST SUITE
+# ═══════════════════════════════════════════════
+  tests:
+    name: 🧪 Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint
+
+    services:
+      supabase-db:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testing
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
+          coverage: xdebug
+
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: ⚙️ Preparar .env desde .env.testing
+        run: cp .env.testing .env
+
+      - name: 📦 Instalar dependencias PHP
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: 📦 Instalar dependencias Node
+        run: npm ci
+
+      - name: 🏗️ Build frontend
+        run: npm run build
+
+      - name: Generar APP_KEY
+        run: php artisan key:generate --env=testing
+
+      - name: 🗄️ Ejecutar migraciones
+        run: php artisan migrate --force
+
+      - name: 🧪 PHPUnit / Pest
+        run: |
+          vendor/bin/phpunit \
+            --log-junit storage/logs/junit-report.xml \
+            --testdox
+
+      - name: 📊 Publicar reporte de tests
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: storage/logs/junit-report.xml
+          check_name: 'Test Results'
+
+# ═══════════════════════════════════════════════
+# JOB 3 — BUILD DOCKER IMAGE
+# ═══════════════════════════════════════════════
+  build:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: tests
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/devops-setup')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login a ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=,format=short
+
+      - name: 🐳 Build & Push imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/nik-920/tick_system_remoto:buildcache
+          cache-to: type=registry,ref=ghcr.io/nik-920/tick_system_remoto:buildcache,mode=max
+
+      - name: 📋 Resumen del build
+        run: |
+          echo "## 🐳 Docker Image publicada" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+

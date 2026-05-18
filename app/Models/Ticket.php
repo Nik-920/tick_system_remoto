@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -9,14 +11,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property string $id
+ * @property string $title
+ * @property string|null $description
+ * @property-read Location|null $location
+ * @property-read Category|null $category
+ * @property-read User|null $reporter
+ * @property-read User|null $assignee
+ */
 class Ticket extends Model
 {
     use HasFactory;
     use HasUuids;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     protected $fillable = [
         'id',
         'title',
@@ -30,19 +39,13 @@ class Ticket extends Model
         'resolved_at',
     ];
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $keyType = 'string';
 
-    /**
-     * @var bool
-     */
+    /** @var bool */
     public $incrementing = false;
 
-    /**
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

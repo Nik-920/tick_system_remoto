@@ -12,6 +12,7 @@ use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class TicketCreationService
@@ -53,7 +54,7 @@ class TicketCreationService
             ];
         }
 
-        $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles, $correlationId): Ticket {
+        $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles): Ticket {
             $ticket = Ticket::create([
                 'title' => (string) $payload['title'],
                 'description' => (string) $payload['description'],
@@ -75,10 +76,16 @@ class TicketCreationService
 
             $this->ticketMediaStorage->storeManyForTicket($ticket, $reporter, $mediaFiles);
 
-            event(new TicketCreated($ticket, $correlationId));
-
             return $ticket;
         });
+
+        // Disparar evento FUERA de la transacción
+        // Disparar evento FUERA de la transacción
+        Log::info('EVENTO TICKET CREATED DISPARADO', [
+            'ticket_id' => $ticket->id,
+            'time' => now()->toDateTimeString(),
+        ]);
+        event(new TicketCreated($ticket, $correlationId));
 
         $this->logger->info('ticket.creation.succeeded', [
             'ticket_id' => $ticket->id,

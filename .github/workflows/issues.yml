@@ -9,4 +9,6 @@ permissions:
 
 jobs:
   help-wanted:
-    uses: laravel/.github/.github/workflows/issues.yml@main
+    # OWASP/SonarCloud: Evitar referenciar ramas mutables como "main" o "master"
+    # Reemplaza el SHA por el commit real y seguro que deseas usar de esa acción.
+    uses: laravel/.github/.github/workflows/issues.yml@9c15e86fffce728fb6c50ebeae24fd63e98f4d1d

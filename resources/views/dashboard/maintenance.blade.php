@@ -70,7 +70,7 @@
                 @endif
             </header>
 
-            <ul class="rd-queue-list" role="list" aria-label="Cola de tickets asignados">
+            <ul class="rd-queue-list" aria-label="Cola de tickets asignados">
                 @forelse ($workloadQueue as $i => $ticket)
                     <li class="rd-queue-item" style="animation-delay: {{ $i * 35 }}ms">
                         <div class="rd-queue-item-top">
@@ -116,7 +116,7 @@
                 <div class="rd-breakdown-card" aria-labelledby="maint-states-heading">
                     <h3 id="maint-states-heading" class="rd-breakdown-title">Estados activos</h3>
                     @if (count($stateBreakdown) > 0)
-                        <ul class="rd-breakdown-list" role="list">
+                        <ul class="rd-breakdown-list">
                             @foreach ($stateBreakdown as $state => $total)
                                 <li class="rd-breakdown-row">
                                     <span class="rd-state-dot rd-state-dot--{{ $state }}" aria-hidden="true"></span>
@@ -136,7 +136,7 @@
                 <div class="rd-breakdown-card" aria-labelledby="maint-priority-heading">
                     <h3 id="maint-priority-heading" class="rd-breakdown-title">Carga por prioridad</h3>
                     @if (count($priorityBreakdown) > 0)
-                        <ul class="rd-breakdown-list" role="list">
+                        <ul class="rd-breakdown-list">
                             @foreach ($priorityBreakdown as $priority => $total)
                                 <li class="rd-breakdown-row">
                                     <span class="rd-priority-dot rd-priority-dot--{{ $priority }}" aria-hidden="true"></span>
@@ -165,7 +165,7 @@
             </div>
             <a href="{{ route('tickets.index') }}" class="rd-table-link">Ver historial</a>
         </header>
-        <div class="rd-table-wrap" role="region" aria-label="Tabla de tickets resueltos" tabindex="0">
+        <div class="rd-table-wrap" role="region" aria-label="Tabla de tickets resueltos">
             <table>
                 <thead>
                     <tr>

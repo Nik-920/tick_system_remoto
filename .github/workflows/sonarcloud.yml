@@ -1,0 +1,130 @@
+name: "Tests & SonarCloud Analysis"
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - develop_Local_Nik
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - master
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  tests-and-sonar:
+    name: Tests + Coverage + SonarCloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ──────────────────────────────────────────────
+      # 1. Checkout completo (requerido por SonarCloud
+      #    para analizar el historial de commits)
+      # ──────────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      # ──────────────────────────────────────────────
+      # 2. Setup PHP 8.2 con PCOV para cobertura
+      #    (PCOV es más ligero que Xdebug en CI)
+      # ──────────────────────────────────────────────
+      - name: Setup PHP 8.2 with PCOV
+        uses: shivammathur/setup-php@8358ee0e2e8afe63c2fb8253d1d52085811ab1e5 # v2
+        with:
+          php-version: "8.2"
+          coverage: pcov
+          extensions: >-
+            mbstring, xml, ctype, iconv, intl,
+            pdo_sqlite, bcmath, curl,
+            fileinfo, gd, zip
+
+      # ──────────────────────────────────────────────
+      # 3. Cache de dependencias de Composer
+      # ──────────────────────────────────────────────
+      - name: Get Composer Cache Directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      # ──────────────────────────────────────────────
+      # 4. Instalar dependencias
+      # ──────────────────────────────────────────────
+      - name: Install Composer Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      # ──────────────────────────────────────────────
+      # 5. Preparar entorno Laravel para testing
+      # ──────────────────────────────────────────────
+      - name: Setup Laravel Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # ──────────────────────────────────────────────
+      # 6. Ejecutar tests + generar coverage.xml
+      #    La variable XDEBUG_MODE=coverage es necesaria
+      #    para que PCOV/Xdebug generen el reporte
+      # ──────────────────────────────────────────────
+      - name: Run PHPUnit Tests with Coverage
+        run: php artisan test --coverage-clover=coverage.xml
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          FIREBASE_CREDENTIALS: ""
+          FIREBASE_PROJECT_ID: tick-system-test
+          HUGGINGFACE_ENABLED: "false"
+
+      # ──────────────────────────────────────────────
+      # 7. Verificar que coverage.xml existe y tiene contenido
+      #    (diagnóstico — evita que Sonar reciba 0%)
+      # ──────────────────────────────────────────────
+      - name: Verify coverage.xml exists
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "❌ coverage.xml no fue generado"
+            exit 1
+          fi
+          echo "✅ coverage.xml generado correctamente ($(wc -l < coverage.xml) líneas)"
+
+      # ──────────────────────────────────────────────
+      # 8. Subir coverage.xml como artefacto de CI
+      # ──────────────────────────────────────────────
+      - name: Upload Coverage Report Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+      # ──────────────────────────────────────────────
+      # 9. Análisis de SonarCloud
+      #    Lee coverage.xml vía sonar-project.properties:
+      #    sonar.php.coverage.reportPaths=coverage.xml
+      # ──────────────────────────────────────────────
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

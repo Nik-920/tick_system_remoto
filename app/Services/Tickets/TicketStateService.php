@@ -3,6 +3,7 @@
 namespace App\Services\Tickets;
 
 use App\Events\TicketResolved;
+use App\Events\TicketStateChanged;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
@@ -70,6 +71,14 @@ class TicketStateService
         if ($event !== null) {
             event($event);
         }
+
+        event(new TicketStateChanged(
+            ticket: $updatedTicket,
+            actor: $actor,
+            fromState: $fromState,
+            toState: $toState,
+            correlationId: $correlationId,
+        ));
 
         $this->logger->info('ticket.state.transitioned', [
             'ticket_id' => $updatedTicket->id,

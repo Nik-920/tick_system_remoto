@@ -1,3 +1,4 @@
+
 def runCommand(String unixCommand, String windowsCommand) {
 	if (isUnix()) {
 		sh unixCommand
