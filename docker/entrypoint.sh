@@ -6,6 +6,9 @@ rm -f /etc/nginx/conf.d/default || true
 rm -f /etc/nginx/sites-enabled/default || true
 rm -f /etc/nginx/sites-available/default || true
 
+# Sobrescribir default con vacío si aún existe
+echo "" > /etc/nginx/sites-available/default 2>/dev/null || true
+
 cd /app
 
 if [ ! -f .env ] && [ -f .env.example ]; then
@@ -26,7 +29,6 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
 
-# Mostrar configs de nginx cargados
 echo "=== NGINX CONFIGS ==="
 ls -la /etc/nginx/conf.d/ || true
 ls -la /etc/nginx/sites-enabled/ || true
