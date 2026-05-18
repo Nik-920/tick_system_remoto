@@ -290,10 +290,7 @@ VERIFICACIÓN:
 
 ================================================="""
                     
-                    runCommand(
-                        "echo '''${releaseInfo}''' > ${PACKAGE_DIR}/release-info.txt",
-                        "powershell -Command \"'''${releaseInfo}''' | Out-File '${PACKAGE_DIR.replace('/', '\\\\')}\\release-info.txt' -Encoding UTF8\""
-                    )
+                    writeFile file: "${PACKAGE_DIR}/release-info.txt", text: releaseInfo, encoding: 'UTF-8'
                 }
             }
         }
@@ -352,7 +349,7 @@ VERIFICACIÓN:
         always {
             script {
                 echo "📦 Artifacts generados:"
-                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'dir %PACKAGE_DIR_WIN%')
+                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'if exist %PACKAGE_DIR_WIN% dir %PACKAGE_DIR_WIN%')
             }
         }
         
