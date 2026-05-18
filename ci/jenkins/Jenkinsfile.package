@@ -36,6 +36,8 @@ pipeline {
         COMPOSER_NO_INTERACTION = '1'
         PACKAGE_DIR = 'storage/package'
         RELEASE_DIR = 'release-artifacts'
+        PACKAGE_DIR_WIN = 'storage\\package'
+        RELEASE_DIR_WIN = 'release-artifacts'
     }
 
     stages {
@@ -123,7 +125,7 @@ pipeline {
                     echo "Preparando estructura de empaquetado..."
                     runCommand(
                         "mkdir -p ${PACKAGE_DIR} ${RELEASE_DIR}",
-                        "if not exist ${PACKAGE_DIR} mkdir ${PACKAGE_DIR} && if not exist ${RELEASE_DIR} mkdir ${RELEASE_DIR}"
+                        'if not exist %PACKAGE_DIR_WIN% mkdir %PACKAGE_DIR_WIN% && if not exist %RELEASE_DIR_WIN% mkdir %RELEASE_DIR_WIN%'
                     )
                 }
             }
@@ -135,7 +137,7 @@ pipeline {
                     echo "Generando ZIP de código fuente..."
                     runCommand(
                         'git archive --format=zip --output=${PACKAGE_DIR}/system_app-source-${BUILD_NUMBER}.zip HEAD',
-                        'git archive --format=zip --output=${PACKAGE_DIR}\\system_app-source-%BUILD_NUMBER%.zip HEAD'
+                        'git archive --format=zip --output=%PACKAGE_DIR_WIN%\\system_app-source-%BUILD_NUMBER%.zip HEAD'
                     )
                     echo "✅ ZIP de fuente generado"
                 }
@@ -162,26 +164,26 @@ pipeline {
                         '''
                     } else {
                         bat '''
-                            if exist ${RELEASE_DIR}\\temp rmdir /s /q ${RELEASE_DIR}\\temp
-                            mkdir ${RELEASE_DIR}\\temp
-                            xcopy app ${RELEASE_DIR}\\temp\\app\\ /E /I /Y >nul
-                            xcopy bootstrap ${RELEASE_DIR}\\temp\\bootstrap\\ /E /I /Y >nul
-                            xcopy config ${RELEASE_DIR}\\temp\\config\\ /E /I /Y >nul
-                            xcopy database ${RELEASE_DIR}\\temp\\database\\ /E /I /Y >nul
-                            xcopy docker ${RELEASE_DIR}\\temp\\docker\\ /E /I /Y >nul 2>&1 || echo OK
-                            xcopy public ${RELEASE_DIR}\\temp\\public\\ /E /I /Y >nul
-                            xcopy resources ${RELEASE_DIR}\\temp\\resources\\ /E /I /Y >nul
-                            xcopy routes ${RELEASE_DIR}\\temp\\routes\\ /E /I /Y >nul
-                            xcopy vendor ${RELEASE_DIR}\\temp\\vendor\\ /E /I /Y >nul
-                            mkdir ${RELEASE_DIR}\\temp\\storage\\app
-                            mkdir ${RELEASE_DIR}\\temp\\storage\\framework
-                            mkdir ${RELEASE_DIR}\\temp\\storage\\logs
-                            copy /Y artisan ${RELEASE_DIR}\\temp\\ >nul
-                            copy /Y composer.json ${RELEASE_DIR}\\temp\\ >nul
-                            copy /Y composer.lock ${RELEASE_DIR}\\temp\\ >nul
-                            copy /Y .env.example ${RELEASE_DIR}\\temp\\ >nul 2>&1 || echo OK
-                            powershell -NoProfile -Command "Compress-Archive -Path '${RELEASE_DIR}\\temp\\*' -DestinationPath '${PACKAGE_DIR}\\system_app-release-%BUILD_NUMBER%.zip' -Force"
-                            rmdir /s /q ${RELEASE_DIR}\\temp
+                            if exist %RELEASE_DIR_WIN%\\temp rmdir /s /q %RELEASE_DIR_WIN%\\temp
+                            mkdir %RELEASE_DIR_WIN%\\temp
+                            xcopy app %RELEASE_DIR_WIN%\\temp\\app\\ /E /I /Y >nul
+                            xcopy bootstrap %RELEASE_DIR_WIN%\\temp\\bootstrap\\ /E /I /Y >nul
+                            xcopy config %RELEASE_DIR_WIN%\\temp\\config\\ /E /I /Y >nul
+                            xcopy database %RELEASE_DIR_WIN%\\temp\\database\\ /E /I /Y >nul
+                            xcopy docker %RELEASE_DIR_WIN%\\temp\\docker\\ /E /I /Y >nul 2>&1 || echo OK
+                            xcopy public %RELEASE_DIR_WIN%\\temp\\public\\ /E /I /Y >nul
+                            xcopy resources %RELEASE_DIR_WIN%\\temp\\resources\\ /E /I /Y >nul
+                            xcopy routes %RELEASE_DIR_WIN%\\temp\\routes\\ /E /I /Y >nul
+                            xcopy vendor %RELEASE_DIR_WIN%\\temp\\vendor\\ /E /I /Y >nul
+                            mkdir %RELEASE_DIR_WIN%\\temp\\storage\\app
+                            mkdir %RELEASE_DIR_WIN%\\temp\\storage\\framework
+                            mkdir %RELEASE_DIR_WIN%\\temp\\storage\\logs
+                            copy /Y artisan %RELEASE_DIR_WIN%\\temp\\ >nul
+                            copy /Y composer.json %RELEASE_DIR_WIN%\\temp\\ >nul
+                            copy /Y composer.lock %RELEASE_DIR_WIN%\\temp\\ >nul
+                            copy /Y .env.example %RELEASE_DIR_WIN%\\temp\\ >nul 2>&1 || echo OK
+                            powershell -NoProfile -Command "Compress-Archive -Path '%RELEASE_DIR_WIN%\\temp\\*' -DestinationPath '%PACKAGE_DIR_WIN%\\system_app-release-%BUILD_NUMBER%.zip' -Force"
+                            rmdir /s /q %RELEASE_DIR_WIN%\\temp
                             echo ✅ ZIP de release generado
                         '''
                     }
@@ -201,7 +203,7 @@ pipeline {
                         ''',
                         '''
                         if exist public\\build (
-                            xcopy public\\build ${RELEASE_DIR}\\build\\ /E /Y >nul
+                            xcopy public\\build %RELEASE_DIR_WIN%\\build\\ /E /Y >nul
                         )
                         '''
                     )
@@ -224,7 +226,7 @@ pipeline {
                         ''',
                         '''
                         if exist storage\\test-results\\phpunit.xml (
-                            copy /Y storage\\test-results\\phpunit.xml ${RELEASE_DIR}\\ >nul
+                            copy /Y storage\\test-results\\phpunit.xml %RELEASE_DIR_WIN%\\ >nul
                         )
                         '''
                     )
@@ -243,7 +245,7 @@ pipeline {
                         cat checksums.sha256
                         ''',
                         '''
-                        cd ${PACKAGE_DIR}
+                        cd %PACKAGE_DIR_WIN%
                         powershell -NoProfile -Command "$files = Get-ChildItem -Path . -Filter *.zip; $files | ForEach-Object { $h = Get-FileHash -Algorithm SHA256 $_.FullName; \"$($h.Hash)  $($_.Name)\" } | Set-Content checksums.sha256"
                         type checksums.sha256
                         '''
@@ -290,7 +292,7 @@ VERIFICACIÓN:
                     
                     runCommand(
                         "echo '''${releaseInfo}''' > ${PACKAGE_DIR}/release-info.txt",
-                        "powershell -Command \"'''${releaseInfo}''' | Out-File '${PACKAGE_DIR}\\release-info.txt' -Encoding UTF8\""
+                        "powershell -Command \"'''${releaseInfo}''' | Out-File '${PACKAGE_DIR.replace('/', '\\\\')}\\release-info.txt' -Encoding UTF8\""
                     )
                 }
             }
@@ -350,7 +352,7 @@ VERIFICACIÓN:
         always {
             script {
                 echo "📦 Artifacts generados:"
-                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'dir ${PACKAGE_DIR}')
+                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'dir %PACKAGE_DIR_WIN%')
             }
         }
         
