@@ -21,7 +21,7 @@ RUN npm run build
 # STAGE 2 — PHP-FPM Runtime
 # ═══════════════════════════════════════════════════════════
 # OWASP/SonarCloud: Se recomienda fijar el hash de la imagen
-FROM php:8.2-fpm@sha256:5efb1fc9661448fb837a29dc5eef63dd2475e4785461c37b3ceab2a02cbfde10
+FROM php:8.2-fpm@sha256:61f68255ebab17fa34822c6130ba98f392418eebf4fece1856f0d2702bfd3076
 
 ENV APP_ENV=production \
     APP_DEBUG=false
