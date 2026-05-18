@@ -70,11 +70,19 @@ pipeline {
         stage('📦 Instalar Backend') {
             steps {
                 script {
-                    echo "Instalando dependencias PHP (sin dev)..."
-                    runCommand(
-                        'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative',
-                        'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative'
-                    )
+                    if (params.RUN_TESTS) {
+                        echo "Instalando dependencias PHP (con dev para pruebas)..."
+                        runCommand(
+                            'composer install --prefer-dist --no-progress',
+                            'composer install --prefer-dist --no-progress'
+                        )
+                    } else {
+                        echo "Instalando dependencias PHP (sin dev)..."
+                        runCommand(
+                            'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative',
+                            'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative'
+                        )
+                    }
                 }
             }
         }
@@ -100,6 +108,21 @@ pipeline {
                         echo "⚠️ Tests fallaron pero continuamos con empaquetado"
                         currentBuild.result = 'UNSTABLE'
                     }
+                }
+            }
+        }
+
+        stage('🧹 Limpiar Backend (Prod)') {
+            when {
+                expression { params.RUN_TESTS }
+            }
+            steps {
+                script {
+                    echo "Removiendo dependencias dev para empaquetado..."
+                    runCommand(
+                        'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative',
+                        'composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --classmap-authoritative'
+                    )
                 }
             }
         }
