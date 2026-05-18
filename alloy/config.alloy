@@ -1,7 +1,8 @@
 prometheus.scrape "laravel" {
   targets = [{
-    __address__ = "ticksystemremoto-production.up.railway.app",
+    __address__ = "ticksystemremoto-production.up.railway.app:443",
   }]
+  scheme          = "https"
   metrics_path    = "/metrics"
   scrape_interval = "15s"
   forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
