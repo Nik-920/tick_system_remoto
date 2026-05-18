@@ -87,6 +87,9 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
 # ── Nginx config ───────────────────────────────────────────
 COPY nginx.conf /etc/nginx/conf.d/laravel.conf
 
+# Eliminar nginx default config
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
+
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
