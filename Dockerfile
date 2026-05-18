@@ -43,8 +43,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Eliminar nginx default config ANTES de cambiar permisos (somos root aquí)
-RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default \
-    && rm -f /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/default.conf \
+    && rm -f /etc/nginx/sites-available/default \
+    && rm -f /etc/nginx/sites-enabled/default \
+    && ln -sf /dev/null /etc/nginx/sites-enabled/default
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
