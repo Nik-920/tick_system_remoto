@@ -29,9 +29,10 @@ class MetricsController extends Controller
             ->get();
 
         foreach ($states as $row) {
-            $ticketsByState->set($row->total, [$row->state]);
+            /** @var int $total */
+            $total = $row->getAttribute('total');
+            $ticketsByState->set((float) $total, [$row->state]);
         }
-
         // Total usuarios
         $totalUsers = $registry->registerGauge(
             'tick_system',
