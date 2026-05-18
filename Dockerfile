@@ -1,7 +1,6 @@
 # ═══════════════════════════════════════════════════════════
 # STAGE 1 — Node Builder
 # ═══════════════════════════════════════════════════════════
-# OWASP/SonarCloud: Se recomienda fijar el hash de la imagen (sha256:...)
 FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS node-builder
 
 WORKDIR /app
@@ -20,7 +19,6 @@ RUN npm run build
 # ═══════════════════════════════════════════════════════════
 # STAGE 2 — PHP-FPM Runtime
 # ═══════════════════════════════════════════════════════════
-# OWASP/SonarCloud: Se recomienda fijar el hash de la imagen
 FROM php:8.2-fpm@sha256:61f68255ebab17fa34822c6130ba98f392418eebf4fece1856f0d2702bfd3076
 
 ENV APP_ENV=production \
@@ -43,6 +41,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcap2-bin \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Eliminar nginx default config ANTES de cambiar permisos (somos root aquí)
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
@@ -86,9 +87,6 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
 
 # ── Nginx config ───────────────────────────────────────────
 COPY nginx.conf /etc/nginx/conf.d/laravel.conf
-
-# Eliminar nginx default config
-RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
