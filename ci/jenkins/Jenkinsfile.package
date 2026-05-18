@@ -313,33 +313,33 @@ VERIFICACIÓN:
             steps {
                 script {
                     echo """
-╔════════════════════════════════════════════════════╗
-║          ✅ BUILD COMPLETADO EXITOSAMENTE         ║
-╚════════════════════════════════════════════════════╝
+                        ╔════════════════════════════════════════════════════╗
+                        ║          ✅ BUILD COMPLETADO EXITOSAMENTE         ║
+                        ╚════════════════════════════════════════════════════╝
 
-📦 ARTIFACTS EN storage/package/:
-   • system_app-source-${BUILD_NUMBER}.zip
-   • system_app-release-${BUILD_NUMBER}.zip
-   • checksums.sha256
-   • release-info.txt
+                        📦 ARTIFACTS EN storage/package/:
+                        • system_app-source-${BUILD_NUMBER}.zip
+                        • system_app-release-${BUILD_NUMBER}.zip
+                        • checksums.sha256
+                        • release-info.txt
 
-📁 ARTIFACTS EN release-artifacts/:
-   • public/build/** (frontend compilado)
-   • phpunit.xml (reporte de tests)
+                        📁 ARTIFACTS EN release-artifacts/:
+                        • public/build/** (frontend compilado)
+                        • phpunit.xml (reporte de tests)
 
-🔐 VERIFICAR INTEGRIDAD:
-   sha256sum -c ${PACKAGE_DIR}/checksums.sha256
+                        🔐 VERIFICAR INTEGRIDAD:
+                        sha256sum -c ${PACKAGE_DIR}/checksums.sha256
 
-🚀 PRÓXIMOS PASOS:
-   1. Usar ZIP de release para deploy
-   2. Validar checksums
-   3. Ejecutar migraciones post-deploy
+                        🚀 PRÓXIMOS PASOS:
+                        1. Usar ZIP de release para deploy
+                        2. Validar checksums
+                        3. Ejecutar migraciones post-deploy
 
-📥 DESCARGAR:
-   ${BUILD_URL}artifact/
+                        📥 DESCARGAR:
+                        ${BUILD_URL}artifact/
 
-════════════════════════════════════════════════════
-"""
+                        ════════════════════════════════════════════════════
+                        """
                 }
             }
         }
@@ -349,7 +349,7 @@ VERIFICACIÓN:
         always {
             script {
                 echo "📦 Artifacts generados:"
-                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'if exist %PACKAGE_DIR_WIN% dir %PACKAGE_DIR_WIN%')
+                runCommand('ls -lh ${PACKAGE_DIR}/ || true', 'dir %PACKAGE_DIR_WIN%')
             }
         }
         
