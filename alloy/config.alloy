@@ -1,0 +1,20 @@
+prometheus.scrape "laravel" {
+  targets = [{
+    __address__ = "ticksystemremoto-production.up.railway.app:443",
+  }]
+  scheme          = "https"
+  metrics_path    = "/metrics"
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = "https://prometheus-prod-40-prod-sa-east-1.grafana.net/api/prom/push"
+
+    basic_auth {
+      username = "3161228"
+      password = env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+}
