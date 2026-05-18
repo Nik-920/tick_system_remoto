@@ -2,9 +2,9 @@
 set -e
 
 # Eliminar configs default de Nginx
-rm -f /etc/nginx/conf.d/default.conf
-rm -f /etc/nginx/conf.d/default
-rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/conf.d/default.conf || true
+rm -f /etc/nginx/conf.d/default || true
+rm -f /etc/nginx/sites-enabled/default || true
 
 cd /app
 
@@ -12,7 +12,6 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
 
-# Limpiar cachés siempre al iniciar
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
