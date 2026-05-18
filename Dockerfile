@@ -2,7 +2,7 @@
 # STAGE 1 — Node Builder
 # ═══════════════════════════════════════════════════════════
 # OWASP/SonarCloud: Se recomienda fijar el hash de la imagen (sha256:...)
-FROM node:22-alpine@sha256:c13b26e7e606ef32729930baafed055375eb017c69da9799292b3aee193df1a1 AS node-builder
+FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS node-builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm run build
 # STAGE 2 — PHP-FPM Runtime
 # ═══════════════════════════════════════════════════════════
 # OWASP/SonarCloud: Se recomienda fijar el hash de la imagen
-FROM php:8.2-fpm@sha256:5efb1fc9661448fb837a29dc5eef63dd2475e4785461c37b3ceab2a02cbfde10
+FROM php:8.2-fpm@sha256:61f68255ebab17fa34822c6130ba98f392418eebf4fece1856f0d2702bfd3076
 
 ENV APP_ENV=production \
     APP_DEBUG=false
