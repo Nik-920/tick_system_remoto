@@ -71,13 +71,79 @@ jobs:
         continue-on-error: true
 
 # ═══════════════════════════════════════════════
-# JOB 2 — TEST SUITE
+# JOB 2 — SETUP DATABASE (Prerequisito para tests)
 # ═══════════════════════════════════════════════
-  tests:
-    name: 🧪 Test Suite
+  setup-db:
+    name: 🗄️ Setup Database
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     needs: lint
+
+    services:
+      supabase-db:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testing
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
+          coverage: none
+
+      - name: 📦 Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: ⚙️ Preparar .env desde .env.testing
+        run: cp .env.testing .env
+
+      - name: 📦 Instalar dependencias PHP
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Generar APP_KEY
+        run: php artisan key:generate --env=testing
+
+      - name: 🗄️ Ejecutar migraciones
+        run: php artisan migrate --force
+
+# ═══════════════════════════════════════════════
+# JOB 3 — PARALLEL TESTS BY MODULE
+# ═══════════════════════════════════════════════
+  test-modules:
+    name: 🧪 Test ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: setup-db
+    strategy:
+      matrix:
+        module:
+          - 'Feature/AI'
+          - 'Feature/Api'
+          - 'Feature/Auth'
+          - 'Feature/Console'
+          - 'Feature/Web'
+          - 'Unit/Listeners'
+          - 'Unit/Models'
+          - 'Unit/Providers'
+          - 'Unit/Services'
 
     services:
       supabase-db:
@@ -124,10 +190,12 @@ jobs:
       - name: 📦 Instalar dependencias PHP
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: 📦 Instalar dependencias Node
+      - name: 📦 Instalar dependencias Node (solo en Feature tests)
+        if: startsWith(matrix.module, 'Feature')
         run: npm ci
 
-      - name: 🏗️ Build frontend
+      - name: 🏗️ Build frontend (solo en Feature tests)
+        if: startsWith(matrix.module, 'Feature')
         run: npm run build
 
       - name: Generar APP_KEY
@@ -136,27 +204,28 @@ jobs:
       - name: 🗄️ Ejecutar migraciones
         run: php artisan migrate --force
 
-      - name: 🧪 PHPUnit / Pest
+      - name: 🧪 PHPUnit — ${{ matrix.module }}
         run: |
           vendor/bin/phpunit \
-            --log-junit storage/logs/junit-report.xml \
+            tests/${{ matrix.module }} \
+            --log-junit storage/logs/junit-${{ matrix.module }}.xml \
             --testdox
 
-      - name: 📊 Publicar reporte de tests
+      - name: 📊 Publicar reporte de tests — ${{ matrix.module }}
         uses: mikepenz/action-junit-report@v4
         if: always()
         with:
-          report_paths: storage/logs/junit-report.xml
-          check_name: 'Test Results'
+          report_paths: storage/logs/junit-${{ matrix.module }}.xml
+          check_name: 'Test Results — ${{ matrix.module }}'
 
 # ═══════════════════════════════════════════════
-# JOB 3 — BUILD DOCKER IMAGE
+# JOB 4 — BUILD DOCKER IMAGE
 # ═══════════════════════════════════════════════
   build:
     name: 🐳 Build & Push Docker Image
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: tests
+    needs: test-modules
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/devops-setup')
 
     permissions:
