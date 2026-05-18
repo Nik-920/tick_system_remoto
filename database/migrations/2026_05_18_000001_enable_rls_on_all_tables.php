@@ -81,47 +81,47 @@ return new class extends Migration
         }
 
         // users table: authenticated users may see themselves; service_role manages all
-        DB::statement("GRANT SELECT ON public.users TO authenticated");
-        DB::statement("GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO service_role");
+        DB::statement('GRANT SELECT ON public.users TO authenticated');
+        DB::statement('GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO service_role');
 
         // ── 3. ROW LEVEL SECURITY POLICIES ───────────────────────────────────────
 
         // ─── categories: anyone authenticated can read; only service_role mutates ───
-        DB::statement("
-            CREATE POLICY \"categories_read_for_authenticated\"
+        DB::statement('
+            CREATE POLICY "categories_read_for_authenticated"
             ON public.categories
             FOR SELECT
             TO authenticated
             USING (true)
-        ");
-        DB::statement("
-            CREATE POLICY \"categories_anon_read\"
+        ');
+        DB::statement('
+            CREATE POLICY "categories_anon_read"
             ON public.categories
             FOR SELECT
             TO anon
             USING (true)
-        ");
+        ');
 
         // ─── locations: anyone authenticated can read; only service_role mutates ───
-        DB::statement("
-            CREATE POLICY \"locations_read_for_authenticated\"
+        DB::statement('
+            CREATE POLICY "locations_read_for_authenticated"
             ON public.locations
             FOR SELECT
             TO authenticated
             USING (true)
-        ");
-        DB::statement("
-            CREATE POLICY \"locations_anon_read\"
+        ');
+        DB::statement('
+            CREATE POLICY "locations_anon_read"
             ON public.locations
             FOR SELECT
             TO anon
             USING (true)
-        ");
+        ');
 
         // ─── tickets: reporters see own; technicians/admins see all ──────────────
         // SELECT: users see tickets they reported OR are assigned to
-        DB::statement("
-            CREATE POLICY \"tickets_select_own_or_assigned\"
+        DB::statement('
+            CREATE POLICY "tickets_select_own_or_assigned"
             ON public.tickets
             FOR SELECT
             TO authenticated
@@ -129,52 +129,52 @@ return new class extends Migration
                 auth.uid()::text = reporter_id::text
                 OR auth.uid()::text = assigned_to::text
             )
-        ");
+        ');
         // INSERT: any authenticated user can create a ticket
-        DB::statement("
-            CREATE POLICY \"tickets_insert_authenticated\"
+        DB::statement('
+            CREATE POLICY "tickets_insert_authenticated"
             ON public.tickets
             FOR INSERT
             TO authenticated
             WITH CHECK (auth.uid()::text = reporter_id::text)
-        ");
+        ');
         // UPDATE/DELETE: only the assigned technician or service_role
-        DB::statement("
-            CREATE POLICY \"tickets_update_assigned\"
+        DB::statement('
+            CREATE POLICY "tickets_update_assigned"
             ON public.tickets
             FOR UPDATE
             TO authenticated
             USING (auth.uid()::text = assigned_to::text)
-        ");
+        ');
 
         // ─── notifications: users see only their own ──────────────────────────────
-        DB::statement("
-            CREATE POLICY \"notifications_own_rows\"
+        DB::statement('
+            CREATE POLICY "notifications_own_rows"
             ON public.notifications
             FOR ALL
             TO authenticated
             USING (auth.uid()::text = user_id::text)
             WITH CHECK (auth.uid()::text = user_id::text)
-        ");
+        ');
 
         // ─── fcm_tokens: users manage only their own tokens ──────────────────────
-        DB::statement("
-            CREATE POLICY \"fcm_tokens_own_rows\"
+        DB::statement('
+            CREATE POLICY "fcm_tokens_own_rows"
             ON public.fcm_tokens
             FOR ALL
             TO authenticated
             USING (auth.uid()::text = user_id::text)
             WITH CHECK (auth.uid()::text = user_id::text)
-        ");
+        ');
 
         // ─── state_history: authenticated can read ticket history they can see ────
-        DB::statement("
-            CREATE POLICY \"state_history_read_authenticated\"
+        DB::statement('
+            CREATE POLICY "state_history_read_authenticated"
             ON public.state_history
             FOR SELECT
             TO authenticated
             USING (true)
-        ");
+        ');
     }
 
     public function down(): void
