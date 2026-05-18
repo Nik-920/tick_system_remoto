@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
@@ -21,6 +22,9 @@ Route::get('/', function () {
 });
 
 Route::get('/health', HealthController::class)->name('health.show');
+Route::get('/metrics', MetricsController::class)
+    ->middleware('throttle:60,1')
+    ->name('metrics');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -38,26 +42,27 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/reset-password', [NewPasswordController::class, 'store'])
         ->middleware('throttle:5,15')
         ->name('password.update');
-
 });
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-    // FCM Tokens
+
     Route::post('/fcm-tokens', [FcmTokenController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('fcm.store');
     Route::delete('/fcm-tokens', [FcmTokenController::class, 'destroy'])
         ->middleware('throttle:10,1')
         ->name('fcm.destroy');
-    // Notificaciones internas
+
     Route::get('/notifications', [NotificationController::class, 'index'])
         ->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])
         ->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
         ->name('notifications.readAll');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])
         ->middleware('throttle:5,1')
