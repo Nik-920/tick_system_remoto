@@ -1,10 +1,10 @@
 #!/bin/sh
-set -e
 
 # Eliminar configs default de Nginx
 rm -f /etc/nginx/conf.d/default.conf || true
 rm -f /etc/nginx/conf.d/default || true
 rm -f /etc/nginx/sites-enabled/default || true
+rm -f /etc/nginx/sites-available/default || true
 
 cd /app
 
@@ -25,6 +25,12 @@ fi
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
+
+# Mostrar configs de nginx cargados
+echo "=== NGINX CONFIGS ==="
+ls -la /etc/nginx/conf.d/ || true
+ls -la /etc/nginx/sites-enabled/ || true
+nginx -t || true
 
 php-fpm -D
 exec nginx -g "daemon off;"
