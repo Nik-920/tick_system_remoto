@@ -26,14 +26,15 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
 
+echo "=== LARAVEL ROUTES ==="
+php artisan route:list --path=metrics 2>&1 || true
+
 echo "=== NGINX CONFIGS ==="
 ls -la /etc/nginx/conf.d/ || true
 ls -la /etc/nginx/sites-enabled/ || true
 nginx -t || true
 
-# Arrancar PHP-FPM en background y esperar que levante antes que nginx
 php-fpm -D
 sleep 1
 
-# nginx toma el proceso principal (PID 1)
 exec nginx -g "daemon off;"
