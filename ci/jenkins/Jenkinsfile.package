@@ -246,7 +246,7 @@ pipeline {
                         ''',
                         '''
                         cd %PACKAGE_DIR_WIN%
-                        powershell -NoProfile -Command "$files = Get-ChildItem -Path . -Filter *.zip; $files | ForEach-Object { $h = Get-FileHash -Algorithm SHA256 $_.FullName; \"$($h.Hash)  $($_.Name)\" } | Set-Content checksums.sha256"
+                        powershell -NoProfile -Command "$files = Get-ChildItem -Path . -Filter *.zip; $files | ForEach-Object { $h = Get-FileHash -Algorithm SHA256 $_.FullName; '{0}  {1}' -f $h.Hash, $_.Name } | Set-Content checksums.sha256"
                         type checksums.sha256
                         '''
                     )
