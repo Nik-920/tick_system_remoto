@@ -43,7 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Eliminar nginx default config ANTES de cambiar permisos (somos root aquí)
-RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default \
+    && rm -f /etc/nginx/conf.d/default.conf
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
@@ -85,8 +86,8 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && chown -R www-data:www-data /app /var/log/nginx /var/lib/nginx /run \
     && chmod -R 775 /app/storage /app/bootstrap/cache /var/log/nginx /var/lib/nginx /run
 
-# ── Nginx config ───────────────────────────────────────────
-COPY nginx.conf /etc/nginx/conf.d/laravel.conf
+# ── Nginx config (00- para tomar precedencia alfabética sobre cualquier default) ──
+COPY nginx.conf /etc/nginx/conf.d/00-laravel.conf
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh

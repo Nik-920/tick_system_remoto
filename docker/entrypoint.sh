@@ -1,13 +1,10 @@
 #!/bin/sh
 
-# Eliminar configs default de Nginx
+# Eliminar configs default de Nginx (por si acaso, aunque ya se hace en build)
 rm -f /etc/nginx/conf.d/default.conf || true
 rm -f /etc/nginx/conf.d/default || true
 rm -f /etc/nginx/sites-enabled/default || true
 rm -f /etc/nginx/sites-available/default || true
-
-# Sobrescribir default con vacío si aún existe
-echo "" > /etc/nginx/sites-available/default 2>/dev/null || true
 
 cd /app
 
@@ -34,5 +31,9 @@ ls -la /etc/nginx/conf.d/ || true
 ls -la /etc/nginx/sites-enabled/ || true
 nginx -t || true
 
+# Arrancar PHP-FPM en background y esperar que levante antes que nginx
 php-fpm -D
+sleep 1
+
+# nginx toma el proceso principal (PID 1)
 exec nginx -g "daemon off;"
