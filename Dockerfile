@@ -2,7 +2,7 @@
 # STAGE 1 — Node Builder
 # ═══════════════════════════════════════════════════════════
 # OWASP/SonarCloud: Se recomienda fijar el hash de la imagen (sha256:...)
-FROM node:22-alpine@sha256:c13b26e7e606ef32729930baafed055375eb017c69da9799292b3aee193df1a1 AS node-builder
+FROM node:22-alpine@sha256:968df39aedcea65eeb078fb336ed7191baf48f972b4479711397108be0966920 AS node-builder
 
 WORKDIR /app
 
