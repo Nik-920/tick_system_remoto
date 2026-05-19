@@ -85,7 +85,7 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && chmod -R 775 /app/storage /app/bootstrap/cache /var/log/nginx /var/lib/nginx /run
 
 # ── Nginx config ───────────────────────────────────────────
-COPY nginx.conf /etc/nginx/conf.d/laravel.conf
+COPY nginx.conf /etc/nginx/conf.d/00-laravel.conf
 
 # ── Entrypoint ────────────────────────────────────────────
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
