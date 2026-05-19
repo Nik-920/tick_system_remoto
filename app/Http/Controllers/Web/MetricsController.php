@@ -33,6 +33,7 @@ class MetricsController extends Controller
             $total = $row->getAttribute('total');
             $ticketsByState->set((float) $total, [$row->state]);
         }
+
         // Total usuarios
         $totalUsers = $registry->registerGauge(
             'tick_system',

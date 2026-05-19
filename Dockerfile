@@ -88,7 +88,7 @@ RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && chown -R www-data:www-data /app /var/log/nginx /var/lib/nginx /run \
     && chmod -R 775 /app/storage /app/bootstrap/cache /var/log/nginx /var/lib/nginx /run
 
-# ── Nginx config (00- para tomar precedencia alfabética sobre cualquier default) ──
+# ── Nginx config ───────────────────────────────────────────
 COPY nginx.conf /etc/nginx/conf.d/00-laravel.conf
 
 # ── Entrypoint ────────────────────────────────────────────

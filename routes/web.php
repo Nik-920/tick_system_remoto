@@ -23,7 +23,6 @@ Route::get('/', function () {
 
 Route::get('/health', HealthController::class)->name('health.show');
 Route::get('/metrics', MetricsController::class)
-    ->middleware('throttle:60,1')
     ->name('metrics');
 
 Route::middleware('guest')->group(function (): void {

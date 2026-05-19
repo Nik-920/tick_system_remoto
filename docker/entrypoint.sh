@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# Eliminar configs default de Nginx (por si acaso, aunque ya se hace en build)
 rm -f /etc/nginx/conf.d/default.conf || true
 rm -f /etc/nginx/conf.d/default || true
 rm -f /etc/nginx/sites-enabled/default || true
@@ -10,6 +9,11 @@ cd /app
 
 if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
+fi
+
+# Generar APP_KEY si está vacío
+if grep -q "^APP_KEY=$" .env 2>/dev/null; then
+    php artisan key:generate --force
 fi
 
 php artisan config:clear
@@ -25,14 +29,6 @@ fi
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
-
-echo "=== LARAVEL ROUTES ==="
-php artisan route:list --path=metrics 2>&1 || true
-
-echo "=== NGINX CONFIGS ==="
-ls -la /etc/nginx/conf.d/ || true
-ls -la /etc/nginx/sites-enabled/ || true
-nginx -t || true
 
 php-fpm -D
 sleep 1
