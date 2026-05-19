@@ -44,4 +44,7 @@ nginx -t || true
 php-fpm -D
 sleep 1
 
+# Tail Laravel logs en background para verlos en Railway
+tail -f /app/storage/logs/laravel.log 2>/dev/null &
+
 exec nginx -g "daemon off;"

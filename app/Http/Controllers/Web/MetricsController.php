@@ -13,45 +13,54 @@ class MetricsController extends Controller
 {
     public function __invoke()
     {
-        $registry = new CollectorRegistry(new InMemory());
+        \Log::info('MetricsController invoked');
 
-        // Tickets por estado
-        $ticketsByState = $registry->registerGauge(
-            'tick_system',
-            'tickets_by_state',
-            'Tickets grouped by state',
-            ['state']
-        );
+        try {
+            $registry = new CollectorRegistry(new InMemory());
 
-        $states = Ticket::query()
-            ->selectRaw('state, count(*) as total')
-            ->groupBy('state')
-            ->get();
+            // Tickets por estado
+            $ticketsByState = $registry->registerGauge(
+                'tick_system',
+                'tickets_by_state',
+                'Tickets grouped by state',
+                ['state']
+            );
 
-        foreach ($states as $row) {
-            /** @var int $total */
-            $total = $row->getAttribute('total');
-            $ticketsByState->set((float) $total, [$row->state]);
+            $states = Ticket::query()
+                ->selectRaw('state, count(*) as total')
+                ->groupBy('state')
+                ->get();
+
+            foreach ($states as $row) {
+                /** @var int $total */
+                $total = $row->getAttribute('total');
+                $ticketsByState->set((float) $total, [$row->state]);
+            }
+
+            // Total usuarios
+            $totalUsers = $registry->registerGauge(
+                'tick_system',
+                'total_users',
+                'Total registered users'
+            );
+            $totalUsers->set(User::count());
+
+            // Tickets creados hoy
+            $ticketsToday = $registry->registerGauge(
+                'tick_system',
+                'tickets_created_today',
+                'Tickets created today'
+            );
+            $ticketsToday->set(Ticket::whereDate('created_at', today())->count());
+
+            $renderer = new RenderTextFormat();
+            $result = $renderer->render($registry->getMetricFamilySamples());
+
+            return response($result, 200)->header('Content-Type', RenderTextFormat::MIME_TYPE);
+
+        } catch (\Throwable $e) {
+            \Log::error('MetricsController error: ' . $e->getMessage());
+            return response('Error: ' . $e->getMessage(), 500);
         }
-        // Total usuarios
-        $totalUsers = $registry->registerGauge(
-            'tick_system',
-            'total_users',
-            'Total registered users'
-        );
-        $totalUsers->set(User::count());
-
-        // Tickets creados hoy
-        $ticketsToday = $registry->registerGauge(
-            'tick_system',
-            'tickets_created_today',
-            'Tickets created today'
-        );
-        $ticketsToday->set(Ticket::whereDate('created_at', today())->count());
-
-        $renderer = new RenderTextFormat();
-        $result = $renderer->render($registry->getMetricFamilySamples());
-
-        return response($result, 200)->header('Content-Type', RenderTextFormat::MIME_TYPE);
     }
 }
