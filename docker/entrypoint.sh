@@ -30,21 +30,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
 
-echo "=== APP ENV ==="
-php artisan env 2>&1 || true
-
-echo "=== LARAVEL ROUTES ==="
-php artisan route:list --path=metrics 2>&1 || true
-
-echo "=== NGINX CONFIGS ==="
-ls -la /etc/nginx/conf.d/ || true
-ls -la /etc/nginx/sites-enabled/ || true
-nginx -t || true
-
 php-fpm -D
 sleep 1
-
-# Tail Laravel logs en background para verlos en Railway
-tail -f /app/storage/logs/laravel.log 2>/dev/null &
 
 exec nginx -g "daemon off;"

@@ -1,6 +1,6 @@
 prometheus.scrape "laravel" {
   targets = [{
-    __address__ = "ticksystemremoto-production.up.railway.app:443",
+    __address__ = "ticksystemremoto-production-6276.up.railway.app:443",
   }]
   scheme          = "https"
   metrics_path    = "/metrics"
