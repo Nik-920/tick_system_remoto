@@ -22,7 +22,7 @@ RUN npm run build
 FROM php:8.2-fpm@sha256:61f68255ebab17fa34822c6130ba98f392418eebf4fece1856f0d2702bfd3076
 
 ENV APP_ENV=production \
-    APP_DEBUG=false
+    APP_DEBUG=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
