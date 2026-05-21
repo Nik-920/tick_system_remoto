@@ -22,7 +22,7 @@ class MetricsController extends Controller
             'Tickets grouped by state', ['state']
         );
         foreach (Ticket::query()->selectRaw('state, count(*) as total')->groupBy('state')->get() as $row) {
-            $ticketsByState->set((float) $row->total, [$row->state]);
+            $ticketsByState->set((float) ($row->getAttribute('total') ?? 0), [$row->state]);
         }
 
         // 2. Total usuarios
@@ -48,7 +48,7 @@ class MetricsController extends Controller
             ->groupBy('categories.name')
             ->get();
         foreach ($categories as $row) {
-            $ticketsByCategory->set((float) $row->total, [$row->category]);
+            $ticketsByCategory->set((float) ($row->total ?? 0), [$row->category]);
         }
 
         // 5. Tickets por ubicación
@@ -62,7 +62,7 @@ class MetricsController extends Controller
             ->groupBy('locations.name')
             ->get();
         foreach ($locations as $row) {
-            $ticketsByLocation->set((float) $row->total, [$row->location]);
+            $ticketsByLocation->set((float) ($row->total ?? 0), [$row->location]);
         }
 
         // 6. Usuarios por rol
@@ -76,7 +76,7 @@ class MetricsController extends Controller
             ->groupBy('roles.name')
             ->get();
         foreach ($roles as $row) {
-            $usersByRole->set((float) $row->total, [$row->role]);
+            $usersByRole->set((float) ($row->total ?? 0), [$row->role]);
         }
 
         // 7. Tickets resueltos esta semana
@@ -107,7 +107,7 @@ class MetricsController extends Controller
             'Tickets grouped by priority', ['priority']
         );
         foreach (Ticket::query()->selectRaw('priority, count(*) as total')->groupBy('priority')->get() as $row) {
-            $ticketsByPriority->set((float) $row->total, [$row->priority ?? 'none']);
+            $ticketsByPriority->set((float) ($row->getAttribute('total') ?? 0), [$row->priority ?? 'none']);
         }
 
         $renderer = new RenderTextFormat();
