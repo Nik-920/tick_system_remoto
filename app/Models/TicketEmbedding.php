@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string $ticket_id
+ * @property array<float> $embedding_vector
+ * @property string $description_hash
+ * @property float|null $similarity_score
+ * @property string|null $matched_ticket_id
+ * @property bool $is_duplicate
+ * @property-read Ticket $ticket
+ * @property-read Ticket|null $matchedTicket
+ */
 class TicketEmbedding extends Model
 {
     use HasFactory;
