@@ -187,6 +187,7 @@
             .btn-secondary:hover { background: var(--bg-soft); border-color: #cbd5e1; }
             .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: var(--radius-xs); padding: 0.8rem 1rem; font-size: 0.875rem; font-weight: 600; }
             .alert-error { background: #fff1f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: var(--radius-xs); padding: 0.8rem 1rem; font-size: 0.875rem; }
+            .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; border-radius: var(--radius-xs); padding: 0.8rem 1rem; font-size: 0.875rem; font-weight: 600; }
             .overflow-hidden { overflow: hidden; }
             .table-wrap { overflow-x: auto; }
             table { width: 100%; border-collapse: collapse; }
