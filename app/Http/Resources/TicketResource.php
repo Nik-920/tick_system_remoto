@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -24,6 +25,14 @@ class TicketResource extends JsonResource
         $resolvedAt = $this->resolved_at;
         $createdAt = $this->created_at;
         $updatedAt = $this->updated_at;
+        /** @var TicketEmbedding|null $embedding */
+        $embedding = $this->relationLoaded('embedding') ? $this->embedding : null;
+        /** @var Ticket|null $matchedTicket */
+        $matchedTicket = $embedding && $embedding->relationLoaded('matchedTicket') ? $embedding->matchedTicket : null;
+        $duplicateWarning = $embedding
+            && $embedding->is_duplicate
+            && $matchedTicket
+            && in_array($matchedTicket->state, ['open', 'in_progress'], true);
 
         return [
             'id' => $this->id,
@@ -34,6 +43,14 @@ class TicketResource extends JsonResource
             'resolved_at' => $resolvedAt instanceof \DateTimeInterface ? $resolvedAt->format(DATE_ATOM) : null,
             'created_at' => $createdAt instanceof \DateTimeInterface ? $createdAt->format(DATE_ATOM) : null,
             'updated_at' => $updatedAt instanceof \DateTimeInterface ? $updatedAt->format(DATE_ATOM) : null,
+            'duplicate_warning' => $duplicateWarning,
+            'similar_ticket' => $duplicateWarning ? [
+                'id' => $matchedTicket->id,
+                'title' => $matchedTicket->title,
+                'state' => $matchedTicket->state,
+                'created_at' => $matchedTicket->created_at?->format(DATE_ATOM),
+                'similarity_score' => $embedding->similarity_score,
+            ] : null,
             'reporter' => $this->whenLoaded('reporter', function (): ?array {
                 /** @var User|null $reporter */
                 $reporter = $this->reporter;
