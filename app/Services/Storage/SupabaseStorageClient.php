@@ -205,7 +205,7 @@ class SupabaseStorageClient
 
     private function normalizePath(string $path): string
     {
-        $normalizedPath = trim(str_replace('\\', '/', $path), '/');
+        $normalizedPath = trim(str_replace('\\', '/', trim($path)), '/');
 
         if ($normalizedPath === '') {
             throw new RuntimeException('La ruta de storage no puede estar vacia.');
