@@ -135,7 +135,7 @@ jobs:
     strategy:
       matrix:
         module:
-          - 'Feature/AI'
+          - 'Feature/Ai'
           - 'Feature/Api'
           - 'Feature/Auth'
           - 'Feature/Console'
