@@ -79,7 +79,7 @@ class TicketCreationService
         ]);
 
         $warning = $this->resolveDuplicateWarning($ticket);
-        $warningPending = $warning === null && $this->isDedupEnabled() && (bool) config('ai.automation.async_processing', true);
+        $warningPending = $warning === null && $this->isDedupEnabled() && $this->isAsyncProcessing();
 
         return [
             'created' => true,
@@ -122,36 +122,40 @@ class TicketCreationService
      */
     private function resolveDuplicateWarning(Ticket $ticket): ?array
     {
-        if (! $this->isDedupEnabled()) {
-            return null;
+        $warning = null;
+
+        if ($this->isDedupEnabled() && ! $this->isAsyncProcessing()) {
+            $embedding = TicketEmbedding::query()
+                ->with('matchedTicket')
+                ->where('ticket_id', $ticket->id)
+                ->first();
+
+            if ($embedding && $embedding->is_duplicate) {
+                /** @var Ticket|null $matched */
+                $matched = $embedding->matchedTicket;
+
+                if ($matched && in_array($matched->state, ['open', 'in_progress'], true)) {
+                    $warning = [
+                        'id' => $matched->id,
+                        'title' => $matched->title,
+                        'state' => $matched->state,
+                        'created_at' => $matched->created_at?->toIso8601String(),
+                        'similarity_score' => $embedding->similarity_score,
+                    ];
+                }
+            }
         }
 
-        if ((bool) config('ai.automation.async_processing', true)) {
-            return null;
+        return $warning;
+    }
+
+    private function isAsyncProcessing(): bool
+    {
+        if (! (bool) config('ai.automation.async_processing', true)) {
+            return false;
         }
 
-        $embedding = TicketEmbedding::query()
-            ->with('matchedTicket')
-            ->where('ticket_id', $ticket->id)
-            ->first();
-
-        if (! $embedding || ! $embedding->is_duplicate) {
-            return null;
-        }
-
-        /** @var Ticket|null $matched */
-        $matched = $embedding->matchedTicket;
-        if (! $matched || ! in_array($matched->state, ['open', 'in_progress'], true)) {
-            return null;
-        }
-
-        return [
-            'id' => $matched->id,
-            'title' => $matched->title,
-            'state' => $matched->state,
-            'created_at' => $matched->created_at?->toIso8601String(),
-            'similarity_score' => $embedding->similarity_score,
-        ];
+        return (string) config('queue.default') !== 'sync';
     }
 
     private function isDedupEnabled(): bool

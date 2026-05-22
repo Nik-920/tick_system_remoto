@@ -22,17 +22,9 @@ class TicketResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $resolvedAt = $this->resolved_at;
-        $createdAt = $this->created_at;
-        $updatedAt = $this->updated_at;
         /** @var TicketEmbedding|null $embedding */
         $embedding = $this->relationLoaded('embedding') ? $this->embedding : null;
-        /** @var Ticket|null $matchedTicket */
-        $matchedTicket = $embedding && $embedding->relationLoaded('matchedTicket') ? $embedding->matchedTicket : null;
-        $duplicateWarning = $embedding
-            && $embedding->is_duplicate
-            && $matchedTicket
-            && in_array($matchedTicket->state, ['open', 'in_progress'], true);
+        $duplicateData = $this->duplicateWarningData($embedding);
 
         return [
             'id' => $this->id,
@@ -40,94 +32,128 @@ class TicketResource extends JsonResource
             'description' => $this->description,
             'state' => $this->state,
             'priority' => $this->priority,
-            'resolved_at' => $resolvedAt instanceof \DateTimeInterface ? $resolvedAt->format(DATE_ATOM) : null,
-            'created_at' => $createdAt instanceof \DateTimeInterface ? $createdAt->format(DATE_ATOM) : null,
-            'updated_at' => $updatedAt instanceof \DateTimeInterface ? $updatedAt->format(DATE_ATOM) : null,
-            'duplicate_warning' => $duplicateWarning,
-            'similar_ticket' => $duplicateWarning ? [
-                'id' => $matchedTicket->id,
-                'title' => $matchedTicket->title,
-                'state' => $matchedTicket->state,
-                'created_at' => $matchedTicket->created_at?->format(DATE_ATOM),
-                'similarity_score' => $embedding->similarity_score,
-            ] : null,
-            'reporter' => $this->whenLoaded('reporter', function (): ?array {
-                /** @var User|null $reporter */
-                $reporter = $this->reporter;
-
-                if ($reporter === null) {
-                    return null;
-                }
-
-                return [
-                    'id' => $reporter->id,
-                    'name' => $reporter->name,
-                    'email' => $reporter->email,
-                ];
-            }),
-            'assignee' => $this->whenLoaded('assignee', function (): ?array {
-                /** @var User|null $assignee */
-                $assignee = $this->assignee;
-
-                if ($assignee === null) {
-                    return null;
-                }
-
-                return [
-                    'id' => $assignee->id,
-                    'name' => $assignee->name,
-                    'email' => $assignee->email,
-                ];
-            }),
-            'location' => $this->whenLoaded('location', function (): ?array {
-                /** @var Location|null $location */
-                $location = $this->location;
-
-                if ($location === null) {
-                    return null;
-                }
-
-                return [
-                    'id' => $location->id,
-                    'name' => $location->name,
-                    'building' => $location->building,
-                    'floor' => $location->floor,
-                    'room_code' => $location->room_code,
-                ];
-            }),
-            'category' => $this->whenLoaded('category', function (): ?array {
-                /** @var Category|null $category */
-                $category = $this->category;
-
-                if ($category === null) {
-                    return null;
-                }
-
-                return [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'icon' => $category->icon,
-                ];
-            }),
-            'state_history' => $this->whenLoaded('stateHistory', fn () => $this->stateHistory->map(function (StateHistory $entry): array {
-                return [
-                    'id' => $entry->id,
-                    'from_state' => $entry->from_state,
-                    'to_state' => $entry->to_state,
-                    'changed_by' => $entry->changed_by,
-                    'comment' => $entry->comment,
-                    'created_at' => $entry->created_at?->toIso8601String(),
-                ];
-            })->values()->all()),
-            'media' => $this->whenLoaded('media', fn () => $this->media->map(function (TicketMedia $media): array {
-                return [
-                    'id' => $media->id,
-                    'file_url' => $media->file_url,
-                    'file_type' => $media->file_type,
-                    'uploaded_by' => $media->uploaded_by,
-                    'created_at' => $media->created_at?->toIso8601String(),
-                ];
-            })->values()->all()),
+            'resolved_at' => $this->formatDate($this->resolved_at),
+            'created_at' => $this->formatDate($this->created_at),
+            'updated_at' => $this->formatDate($this->updated_at),
+            'duplicate_warning' => $duplicateData['duplicate_warning'],
+            'similar_ticket' => $duplicateData['similar_ticket'],
+            'reporter' => $this->whenLoaded('reporter', fn () => $this->mapUser($this->reporter)),
+            'assignee' => $this->whenLoaded('assignee', fn () => $this->mapUser($this->assignee)),
+            'location' => $this->whenLoaded('location', fn () => $this->mapLocation($this->location)),
+            'category' => $this->whenLoaded('category', fn () => $this->mapCategory($this->category)),
+            'state_history' => $this->whenLoaded('stateHistory', fn () => $this->mapStateHistory($this->stateHistory)),
+            'media' => $this->whenLoaded('media', fn () => $this->mapMedia($this->media)),
         ];
+    }
+
+    private function formatDate(?\DateTimeInterface $value): ?string
+    {
+        return $value ? $value->format(DATE_ATOM) : null;
+    }
+
+    /**
+     * @return array{duplicate_warning: bool, similar_ticket: array<string, mixed>|null}
+     */
+    private function duplicateWarningData(?TicketEmbedding $embedding): array
+    {
+        $duplicateWarning = false;
+        $similarTicket = null;
+
+        if ($embedding && $embedding->is_duplicate) {
+            /** @var Ticket|null $matchedTicket */
+            $matchedTicket = $embedding->relationLoaded('matchedTicket') ? $embedding->matchedTicket : null;
+
+            if ($matchedTicket && in_array($matchedTicket->state, ['open', 'in_progress'], true)) {
+                $duplicateWarning = true;
+                $similarTicket = [
+                    'id' => $matchedTicket->id,
+                    'title' => $matchedTicket->title,
+                    'state' => $matchedTicket->state,
+                    'created_at' => $matchedTicket->created_at?->format(DATE_ATOM),
+                    'similarity_score' => $embedding->similarity_score,
+                ];
+            }
+        }
+
+        return [
+            'duplicate_warning' => $duplicateWarning,
+            'similar_ticket' => $similarTicket,
+        ];
+    }
+
+    private function mapUser(?User $user): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ];
+    }
+
+    private function mapLocation(?Location $location): ?array
+    {
+        if ($location === null) {
+            return null;
+        }
+
+        return [
+            'id' => $location->id,
+            'name' => $location->name,
+            'building' => $location->building,
+            'floor' => $location->floor,
+            'room_code' => $location->room_code,
+        ];
+    }
+
+    private function mapCategory(?Category $category): ?array
+    {
+        if ($category === null) {
+            return null;
+        }
+
+        return [
+            'id' => $category->id,
+            'name' => $category->name,
+            'icon' => $category->icon,
+        ];
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, StateHistory> $entries
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapStateHistory($entries): array
+    {
+        return $entries->map(function (StateHistory $entry): array {
+            return [
+                'id' => $entry->id,
+                'from_state' => $entry->from_state,
+                'to_state' => $entry->to_state,
+                'changed_by' => $entry->changed_by,
+                'comment' => $entry->comment,
+                'created_at' => $entry->created_at?->toIso8601String(),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, TicketMedia> $entries
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapMedia($entries): array
+    {
+        return $entries->map(function (TicketMedia $media): array {
+            return [
+                'id' => $media->id,
+                'file_url' => $media->file_url,
+                'file_type' => $media->file_type,
+                'uploaded_by' => $media->uploaded_by,
+                'created_at' => $media->created_at?->toIso8601String(),
+            ];
+        })->values()->all();
     }
 }

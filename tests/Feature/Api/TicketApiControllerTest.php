@@ -180,6 +180,7 @@ class TicketApiControllerTest extends TestCase
             'ai.enabled' => true,
             'ai.dedup.enabled' => true,
             'ai.automation.async_processing' => true,
+            'queue.default' => 'database',
         ]);
 
         $user = $this->createUserWithRole('reporter');
