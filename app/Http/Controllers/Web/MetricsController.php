@@ -5,16 +5,16 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Prometheus\CollectorRegistry;
 use Prometheus\RenderTextFormat;
 use Prometheus\Storage\InMemory;
-use Illuminate\Support\Facades\DB;
 
 class MetricsController extends Controller
 {
     public function __invoke()
     {
-        $registry = new CollectorRegistry(new InMemory());
+        $registry = new CollectorRegistry(new InMemory);
 
         // 1. Tickets por estado
         $ticketsByState = $registry->registerGauge(
@@ -110,7 +110,7 @@ class MetricsController extends Controller
             $ticketsByPriority->set((float) ($row->getAttribute('total') ?? 0), [$row->priority ?? 'none']);
         }
 
-        $renderer = new RenderTextFormat();
+        $renderer = new RenderTextFormat;
         $result = $renderer->render($registry->getMetricFamilySamples());
 
         return response($result, 200)->header('Content-Type', RenderTextFormat::MIME_TYPE);

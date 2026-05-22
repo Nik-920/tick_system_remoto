@@ -1,15 +1,18 @@
 name: 🚀 CD — Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["🎫 CI Pipeline — Sistema de Incidencias"]
+    types:
+      - completed
     branches:
-      - feature/devops-setup
-      - develop
       - main
+      - develop
 
 jobs:
   deploy:
     name: 🌐 Deploy a Railway
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -33,12 +36,47 @@ jobs:
         run: sleep 45
 
       - name: 🏥 Health check
+        id: healthcheck
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ vars.APP_URL }}/up")
           echo "Health check status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "❌ Health check failed"
+            echo "❌ Health check failed — iniciando rollback"
             exit 1
           fi
           echo "✅ Deploy exitoso"
+
+      - name: 🔄 Rollback automático
+        if: failure() && steps.healthcheck.outcome == 'failure'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "⚠️ Ejecutando rollback automático..."
+          railway rollback \
+            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            --yes
+          echo "✅ Rollback ejecutado"
+
+      - name: ⏳ Esperar rollback
+        if: failure() && steps.healthcheck.outcome == 'failure'
+        run: sleep 30
+
+      - name: 🏥 Verificar rollback
+        if: failure() && steps.healthcheck.outcome == 'failure'
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ vars.APP_URL }}/up")
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Rollback también falló — intervención manual requerida"
+            exit 1
+          fi
+          echo "✅ Rollback exitoso — versión anterior restaurada"
+
+      - name: 📋 Resumen
+        if: always()
+        run: |
+          echo "## 🚀 CD Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Hora:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ vars.APP_URL }}" >> $GITHUB_STEP_SUMMARY
