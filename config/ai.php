@@ -17,7 +17,7 @@ return [
 
     'dedup' => [
         'enabled' => env('FEATURE_SEMANTIC_DEDUP', true),
-        'similarity_threshold' => floatval(env('TICKET_DEDUP_SIMILARITY_THRESHOLD', 0.70)),
+        'similarity_threshold' => floatval(env('TICKET_DEDUP_SIMILARITY_THRESHOLD', 0.82)),
         'window_hours' => intval(env('TICKET_DEDUP_WINDOW_HOURS', 24)),
     ],
 
