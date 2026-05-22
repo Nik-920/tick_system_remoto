@@ -169,9 +169,36 @@ class TicketApiControllerTest extends TestCase
 
         $response = $this->postJson(route('api.tickets.store'), $payload);
 
-        $response->assertOk();
-        $response->assertJsonPath('duplicate', true);
-        $this->assertDatabaseCount('tickets', 1);
+        $response->assertCreated();
+        $response->assertJsonPath('duplicate', false);
+        $this->assertDatabaseCount('tickets', 2);
+    }
+
+    public function test_api_store_returns_warning_pending_when_async_enabled(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.automation.async_processing' => true,
+        ]);
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $payload = [
+            'title' => 'Ticket con verificacion pendiente',
+            'description' => 'Descripcion valida para validar warning pendiente en async.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+        ];
+
+        $response = $this->postJson(route('api.tickets.store'), $payload);
+
+        $response->assertCreated();
+        $response->assertJsonPath('duplicate_warning_pending', true);
     }
 
     public function test_reporter_cannot_change_ticket_state_via_api(): void

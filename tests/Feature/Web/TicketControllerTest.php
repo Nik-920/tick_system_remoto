@@ -74,7 +74,13 @@ class TicketControllerTest extends TestCase
             ->post(route('tickets.store'), $payload);
 
         $response->assertRedirect();
-        $response->assertSessionHas('status', 'Ticket creado correctamente.');
+        // Message may include warning_pending text depending on queue configuration
+        $response->assertSessionHas('status');
+        $this->assertStringStartsWith(
+            'Ticket creado correctamente',
+            (string) session('status'),
+            'Expected status message to start with "Ticket creado correctamente"'
+        );
         $this->assertDatabaseCount('tickets', 1);
         $this->assertDatabaseHas('tickets', [
             'title' => 'Enchufe sin corriente',
@@ -110,7 +116,13 @@ class TicketControllerTest extends TestCase
             ]);
 
         $response->assertRedirect();
-        $response->assertSessionHas('status', 'Ticket creado correctamente.');
+        // Message may include warning_pending text depending on queue configuration
+        $response->assertSessionHas('status');
+        $this->assertStringStartsWith(
+            'Ticket creado correctamente',
+            (string) session('status'),
+            'Expected status message to start with "Ticket creado correctamente"'
+        );
 
         $ticket = Ticket::query()->where('title', 'Ticket Web con adjuntos')->firstOrFail();
         $this->assertDatabaseHas('ticket_media', [
