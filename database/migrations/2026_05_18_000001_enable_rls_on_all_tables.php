@@ -75,7 +75,7 @@ return new class extends Migration
                 DB::statement("ALTER TABLE public.{$table} ENABLE ROW LEVEL SECURITY");
                 // FORCE ensures the table owner (postgres superuser) is also subject to RLS
                 // when accessed through PostgREST. Comment this line if it causes issues.
-                DB::statement("ALTER TABLE public.{$table} FORCE ROW LEVEL SECURITY");
+                // DB::statement("ALTER TABLE public.{$table} FORCE ROW LEVEL SECURITY");
             }
         }
 
@@ -229,7 +229,7 @@ return new class extends Migration
 
         foreach ($tables as $table) {
             if (Schema::hasTable($table)) {
-                DB::statement("ALTER TABLE public.{$table} NO FORCE ROW LEVEL SECURITY");
+                // DB::statement("ALTER TABLE public.{$table} NO FORCE ROW LEVEL SECURITY");
                 DB::statement("ALTER TABLE public.{$table} DISABLE ROW LEVEL SECURITY");
             }
         }
