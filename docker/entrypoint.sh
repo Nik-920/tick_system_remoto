@@ -1,10 +1,9 @@
 #!/bin/sh
-set -e
 
-# Eliminar configs default de Nginx
-rm -f /etc/nginx/conf.d/default.conf
-rm -f /etc/nginx/conf.d/default
-rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/conf.d/default.conf || true
+rm -f /etc/nginx/conf.d/default || true
+rm -f /etc/nginx/sites-enabled/default || true
+rm -f /etc/nginx/sites-available/default || true
 
 cd /app
 
@@ -12,7 +11,11 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
 
-# Limpiar cachés siempre al iniciar
+# Generar APP_KEY si está vacío
+if grep -q "^APP_KEY=$" .env 2>/dev/null; then
+    php artisan key:generate --force
+fi
+
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
@@ -28,4 +31,6 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
 fi
 
 php-fpm -D
+sleep 1
+
 exec nginx -g "daemon off;"
