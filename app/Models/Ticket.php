@@ -94,4 +94,27 @@ class Ticket extends Model
     {
         return $this->hasMany(StateHistory::class, 'ticket_id');
     }
+
+    public function embeddingText(): string
+    {
+        $title = trim((string) $this->title);
+        $description = trim((string) $this->description);
+        $state = trim((string) $this->state);
+
+        $parts = [];
+        if ($title !== '') {
+            $parts[] = $title;
+            $parts[] = $title;
+        }
+
+        if ($description !== '') {
+            $parts[] = $description;
+        }
+
+        if ($state !== '') {
+            $parts[] = 'Estado: '.$state;
+        }
+
+        return trim(implode('. ', $parts));
+    }
 }
