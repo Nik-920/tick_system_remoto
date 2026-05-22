@@ -39,8 +39,8 @@ class TicketController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'filters' => $filters,
-            'locations' => Location::query()->active()->orderBy('name')->get(),
-            'categories' => Category::query()->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
+            'categories' => Category::query()->orderBy('name', 'asc')->get(),
         ]);
     }
 
@@ -63,8 +63,8 @@ class TicketController extends Controller
         }
 
         return view('tickets.create', [
-            'locations' => Location::query()->active()->orderBy('name')->get(),
-            'categories' => Category::query()->orderBy('name')->get(),
+            'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
+            'categories' => Category::query()->orderBy('name', 'asc')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'selectedLocationId' => $selectedLocationId,
         ]);
@@ -80,16 +80,19 @@ class TicketController extends Controller
             $request->file('media_files', [])
         );
         $ticket = $result['ticket'];
+        $warning = $result['warning'] ?? null;
+        $warningPending = (bool) ($result['warning_pending'] ?? false);
 
-        if (! $result['created']) {
-            return redirect()
-                ->route('tickets.show', $ticket)
-                ->with('status', 'Se detecto un ticket activo para la misma ubicacion y categoria.');
+        $message = 'Ticket creado correctamente.';
+        if (is_array($warning)) {
+            $message = 'Ticket creado correctamente, pero se detecto un posible duplicado.';
+        } elseif ($warningPending) {
+            $message = 'Ticket creado correctamente. La verificacion de duplicados esta en proceso.';
         }
 
         return redirect()
             ->route('tickets.show', $ticket)
-            ->with('status', 'Ticket creado correctamente.');
+            ->with('status', $message);
     }
 
     public function show(Ticket $ticket): View
@@ -103,6 +106,7 @@ class TicketController extends Controller
             'category',
             'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
+            'embedding.matchedTicket',
         ]);
 
         return view('tickets.show', [
@@ -119,7 +123,7 @@ class TicketController extends Controller
         $mediaUrls = $ticket->media()->pluck('file_url')->all();
 
         DB::transaction(function () use ($ticket): void {
-            $ticket->delete();
+            Ticket::query()->whereKey($ticket->id)->delete();
         });
 
         try {
