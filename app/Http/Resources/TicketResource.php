@@ -11,6 +11,7 @@ use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 
 /** @mixin Ticket */
 class TicketResource extends JsonResource
@@ -123,7 +124,7 @@ class TicketResource extends JsonResource
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, StateHistory> $entries
+     * @param  Collection<int, StateHistory>  $entries
      * @return array<int, array<string, mixed>>
      */
     private function mapStateHistory($entries): array
@@ -141,7 +142,7 @@ class TicketResource extends JsonResource
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, TicketMedia> $entries
+     * @param  Collection<int, TicketMedia>  $entries
      * @return array<int, array<string, mixed>>
      */
     private function mapMedia($entries): array
