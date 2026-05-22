@@ -35,6 +35,28 @@ return new class extends Migration
             return;
         }
 
+        // Crear roles y esquema auth de Supabase en entornos locales/CI de Postgres si no existen
+        DB::statement("
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'anon') THEN
+                    CREATE ROLE anon;
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticated') THEN
+                    CREATE ROLE authenticated;
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'service_role') THEN
+                    CREATE ROLE service_role;
+                END IF;
+
+                IF NOT EXISTS (SELECT FROM information_schema.schemata WHERE schema_name = 'auth') THEN
+                    CREATE SCHEMA auth;
+                    CREATE FUNCTION auth.uid() RETURNS uuid AS 'SELECT NULL::uuid;' LANGUAGE SQL STABLE;
+                END IF;
+            END
+            $$;
+        ");
+
         // ── 1. ENABLE RLS on all application tables ──────────────────────────────
         $tables = [
             'users',
