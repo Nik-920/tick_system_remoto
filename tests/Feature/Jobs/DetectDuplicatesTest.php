@@ -249,8 +249,7 @@ class DetectDuplicatesTest extends TestCase
         ?string $locationId = null,
         ?string $categoryId = null,
         ?string $description = null
-    ): Ticket
-    {
+    ): Ticket {
         $user = User::factory()->create();
 
         $location = $locationId
@@ -312,5 +311,105 @@ class DetectDuplicatesTest extends TestCase
              */
             public function warning(string $eventName, array $context = []): void {}
         };
+    }
+
+    public function test_job_does_not_clear_review_status_when_no_candidates_found(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Ticket con revisión previa');
+        $reviewer = User::factory()->create();
+
+        // Setup: embedding already dismissed by a human
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+            'review_status' => 'dismissed',
+            'reviewed_by' => $reviewer->id,
+            'reviewed_at' => now(),
+            'review_note' => 'Falso positivo.',
+        ]);
+
+        // Run job with no competing candidates → triggers resetEmbeddingMatch()
+        $job = new DetectDuplicates($ticket, 'corr-review-001');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        // AI columns were reset by the job
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->similarity_score);
+        $this->assertNull($embedding->matched_ticket_id);
+
+        // Human review columns MUST be preserved
+        $this->assertSame('dismissed', $embedding->review_status);
+        $this->assertSame($reviewer->id, $embedding->reviewed_by);
+        $this->assertNotNull($embedding->reviewed_at);
+        $this->assertSame('Falso positivo.', $embedding->review_note);
+    }
+
+    public function test_job_does_not_clear_review_status_when_duplicate_found(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket('Proyector sala B-101');
+        $matched = $this->createTicket('Proyector sala B-101 sin imagen', $ticket->location_id, $ticket->category_id);
+        $reviewer = User::factory()->create();
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+            'review_status' => 'dismissed',
+            'reviewed_by' => $reviewer->id,
+            'review_note' => 'Revisado previamente.',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-review-002');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        // AI updated is_duplicate = true again
+        $this->assertTrue($embedding->is_duplicate);
+
+        // Human review NOT cleared
+        $this->assertSame('dismissed', $embedding->review_status);
+        $this->assertSame($reviewer->id, $embedding->reviewed_by);
+        $this->assertSame('Revisado previamente.', $embedding->review_note);
     }
 }

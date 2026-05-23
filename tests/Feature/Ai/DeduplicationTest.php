@@ -4,11 +4,10 @@ namespace Tests\Feature\Ai;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
-/**
- * @group ai
- */
+#[Group('ai')]
 class DeduplicationTest extends TestCase
 {
     public function test_dedup_similarity_threshold_is_respected(): void
