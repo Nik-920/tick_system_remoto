@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ListTicketsRequest;
+use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Http\Resources\TicketResource;
@@ -14,6 +15,7 @@ use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +30,16 @@ class TicketController extends Controller
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
-        $query = Ticket::query()->with(['reporter', 'assignee', 'location', 'category']);
+
+        // Eager-load embedding and matchedTicket to expose duplicate data without N+1
+        $query = Ticket::query()->with([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'embedding.matchedTicket',
+        ]);
+
         $this->applyFilters($query, $filters);
 
         $tickets = $query
@@ -55,7 +66,14 @@ class TicketController extends Controller
             $request->file('media_files', []),
             $correlationId
         );
-        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category', 'media', 'embedding.matchedTicket']);
+        $ticket = $result['ticket']->load([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'media',
+            'embedding.matchedTicket',
+        ]);
         $warning = $result['warning'] ?? null;
         $warningPending = (bool) ($result['warning_pending'] ?? false);
 
@@ -76,7 +94,7 @@ class TicketController extends Controller
         ], 201);
     }
 
-    public function show(Ticket $ticket): TicketResource
+    public function show(Request $request, Ticket $ticket): JsonResponse
     {
         $this->authorize('view', $ticket);
 
@@ -88,9 +106,10 @@ class TicketController extends Controller
             'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
             'embedding.matchedTicket',
+            'embedding.reviewer',
         ]);
 
-        return new TicketResource($ticket);
+        return response()->json((new TicketResource($ticket))->resolve($request));
     }
 
     public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): JsonResponse
@@ -172,6 +191,48 @@ class TicketController extends Controller
     }
 
     /**
+     * PATCH /api/tickets/{ticket}/duplicate-review
+     * Allows maintenance/admin/super_admin to confirm or dismiss an AI duplicate.
+     */
+    public function reviewDuplicate(ReviewDuplicateRequest $request, Ticket $ticket): JsonResponse
+    {
+        $this->authorize('reviewDuplicate', $ticket);
+
+        $embedding = $ticket->embedding;
+
+        if (! $embedding) {
+            return response()->json([
+                'message' => 'Este ticket aún no tiene análisis de duplicados generado por la IA.',
+                'errors' => ['review' => ['Sin embedding disponible.']],
+            ], 422);
+        }
+
+        $validated = $request->validated();
+
+        // Update only human-review columns — AI columns are intentionally untouched
+        $embedding->review_status = $validated['review_status'];
+        $embedding->reviewed_by = $request->user()->id;
+        $embedding->reviewed_at = now();
+        $embedding->review_note = $validated['review_note'] ?? null;
+        $embedding->save();
+
+        // Reload relations for the resource response
+        $ticket->load([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'embedding.matchedTicket',
+            'embedding.reviewer',
+        ]);
+
+        return response()->json([
+            'message' => 'Revisión de duplicado actualizada.',
+            'data' => (new TicketResource($ticket))->resolve($request),
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
@@ -207,6 +268,13 @@ class TicketController extends Controller
 
         if (! empty($filters['to'])) {
             $query->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        // Duplicate filter: effective_duplicate = true (sql-equivalent)
+        if (! empty($filters['duplicates'])) {
+            $query->whereHas('embedding', function (Builder $q): void {
+                $q->effectiveDuplicates();
+            });
         }
     }
 }

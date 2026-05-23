@@ -89,6 +89,9 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware('throttle:5,1')
         ->name('tickets.update-state');
+    Route::patch('/tickets/{ticket}/duplicate-review', [TicketController::class, 'reviewDuplicate'])
+        ->middleware('throttle:10,1')
+        ->name('tickets.duplicate-review.update');
 
     Route::middleware('role:admin|super_admin')->group(function (): void {
         Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
