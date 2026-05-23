@@ -5,10 +5,11 @@ on:
     branches:
       - master
       - '*.x'
+      - 'review_Huarcaya'
   pull_request:
   schedule:
     - cron: '0 0 * * *'
-
+    
 permissions:
   contents: read
 
