@@ -36,17 +36,22 @@ class DetectDuplicates implements ShouldQueue
         }
 
         $ticket = $this->ticket;
-        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
-        $vector = $embedding?->embedding_vector;
+        $embedding = TicketEmbedding::where('ticket_id', '=', $ticket->id, 'and')->first();
+        $text = $ticket->embeddingText();
+        if ($text === '') {
+            return;
+        }
+
+        $hash = hash('sha256', $text);
+        $vector = null;
+
+        if ($embedding && $embedding->description_hash === $hash && is_array($embedding->embedding_vector)) {
+            $vector = $embedding->embedding_vector;
+        }
 
         if (! is_array($vector)) {
-            $description = trim((string) $ticket->description);
-            if ($description === '') {
-                return;
-            }
-
             try {
-                $vector = $embeddings->generate($description);
+                $vector = $embeddings->generate($text);
             } catch (Throwable $exception) {
                 $context = [
                     'ticket_id' => $ticket->id,
@@ -68,7 +73,7 @@ class DetectDuplicates implements ShouldQueue
                 ['ticket_id' => $ticket->id],
                 [
                     'embedding_vector' => $vector,
-                    'description_hash' => hash('sha256', $description),
+                    'description_hash' => $hash,
                     'similarity_score' => null,
                     'matched_ticket_id' => null,
                     'is_duplicate' => false,
@@ -78,12 +83,12 @@ class DetectDuplicates implements ShouldQueue
 
         $windowStart = now()->subHours($deduplication->windowHours());
         $candidates = TicketEmbedding::query()
-            ->where('ticket_id', '!=', $ticket->id)
+            ->where('ticket_id', '!=', $ticket->id, 'and')
             ->whereHas('ticket', function ($query) use ($ticket, $windowStart): void {
-                $query->where('location_id', $ticket->location_id)
-                    ->where('category_id', $ticket->category_id)
+                $query->where('location_id', '=', $ticket->location_id, 'and')
+                    ->where('category_id', '=', $ticket->category_id, 'and')
                     ->whereIn('state', ['open', 'in_progress'])
-                    ->where('created_at', '>=', $windowStart);
+                    ->where('created_at', '>=', $windowStart, 'and');
             })
             ->with('ticket')
             ->get();
@@ -101,6 +106,13 @@ class DetectDuplicates implements ShouldQueue
         }
 
         if ($candidateRows === []) {
+            if ($embedding) {
+                $embedding->similarity_score = null;
+                $embedding->matched_ticket_id = null;
+                $embedding->is_duplicate = false;
+                $embedding->save();
+            }
+
             return;
         }
 

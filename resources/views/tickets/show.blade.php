@@ -28,6 +28,27 @@
             <div class="alert-success">{{ session('status') }}</div>
         @endif
 
+        @php
+            $embedding = $ticket?->embedding;
+            $matchedTicket = $embedding?->matchedTicket;
+            $showDuplicateWarning = $embedding
+                && $embedding->is_duplicate
+                && $matchedTicket
+                && in_array($matchedTicket->state, ['open', 'in_progress'], true);
+        @endphp
+
+        @if ($showDuplicateWarning)
+            <div class="alert-warning">
+                <strong>Posible duplicado detectado.</strong>
+                <span>Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
+                <span>(Estado: {{ $matchedTicket?->state ?? 'N/A' }})</span>
+                <span>Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
+                @if ($matchedTicket)
+                    <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary" style="margin-left: 0.5rem;">Ver ticket</a>
+                @endif
+            </div>
+        @endif
+
         @if (isset($errors) && $errors->any())
             <div class="alert-error">
                 <p class="font-semibold mb-2">Errores en la actualización:</p>

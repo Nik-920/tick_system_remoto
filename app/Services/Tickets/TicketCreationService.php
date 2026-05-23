@@ -5,8 +5,8 @@ namespace App\Services\Tickets;
 use App\Events\TicketCreated;
 use App\Models\StateHistory;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\User;
-use App\Services\Ai\DeduplicationService;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Http\Request;
@@ -18,7 +18,6 @@ use Illuminate\Support\Str;
 class TicketCreationService
 {
     public function __construct(
-        private DeduplicationService $deduplication,
         private TicketQrLogger $logger,
         private TicketMediaStorageService $ticketMediaStorage,
     ) {}
@@ -26,7 +25,7 @@ class TicketCreationService
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<int, UploadedFile>  $mediaFiles
-     * @return array{created: bool, ticket: Ticket, reason: string|null}
+     * @return array{created: bool, ticket: Ticket, reason: string|null, warning: array<string, mixed>|null, warning_pending: bool}
      */
     public function create(
         User $reporter,
@@ -35,24 +34,6 @@ class TicketCreationService
         string $correlationId = ''
     ): array {
         $correlationId = $this->resolveCorrelationId($correlationId);
-
-        $existing = $this->findExistingTicket((string) $payload['location_id'], (string) $payload['category_id']);
-        if ($existing !== null) {
-            $this->logger->info('ticket.creation.duplicate_detected', [
-                'ticket_id' => $existing->id,
-                'location_id' => $existing->location_id,
-                'category_id' => $existing->category_id,
-                'reporter_id' => $reporter->id,
-                'correlation_id' => $correlationId,
-                'reason' => 'active_ticket_exists',
-            ]);
-
-            return [
-                'created' => false,
-                'ticket' => $existing,
-                'reason' => 'duplicate',
-            ];
-        }
 
         $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles): Ticket {
             $ticket = Ticket::create([
@@ -97,22 +78,16 @@ class TicketCreationService
             'priority' => $ticket->priority,
         ]);
 
+        $warning = $this->resolveDuplicateWarning($ticket);
+        $warningPending = $warning === null && $this->isDedupEnabled() && $this->isAsyncProcessing();
+
         return [
             'created' => true,
             'ticket' => $ticket,
             'reason' => null,
+            'warning' => $warning,
+            'warning_pending' => $warningPending,
         ];
-    }
-
-    private function findExistingTicket(string $locationId, string $categoryId): ?Ticket
-    {
-        return Ticket::query()
-            ->where('location_id', $locationId)
-            ->where('category_id', $categoryId)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->where('created_at', '>=', now()->subHours($this->deduplication->windowHours()))
-            ->latest('created_at')
-            ->first();
     }
 
     private function resolveCorrelationId(string $correlationId): string
@@ -140,5 +115,51 @@ class TicketCreationService
         }
 
         return (string) Str::uuid();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveDuplicateWarning(Ticket $ticket): ?array
+    {
+        $warning = null;
+
+        if ($this->isDedupEnabled() && ! $this->isAsyncProcessing()) {
+            $embedding = TicketEmbedding::query()
+                ->with('matchedTicket')
+                ->where('ticket_id', $ticket->id)
+                ->first();
+
+            if ($embedding && $embedding->is_duplicate) {
+                /** @var Ticket|null $matched */
+                $matched = $embedding->matchedTicket;
+
+                if ($matched && in_array($matched->state, ['open', 'in_progress'], true)) {
+                    $warning = [
+                        'id' => $matched->id,
+                        'title' => $matched->title,
+                        'state' => $matched->state,
+                        'created_at' => $matched->created_at?->toIso8601String(),
+                        'similarity_score' => $embedding->similarity_score,
+                    ];
+                }
+            }
+        }
+
+        return $warning;
+    }
+
+    private function isAsyncProcessing(): bool
+    {
+        if (! (bool) config('ai.automation.async_processing', true)) {
+            return false;
+        }
+
+        return (string) config('queue.default') !== 'sync';
+    }
+
+    private function isDedupEnabled(): bool
+    {
+        return (bool) config('ai.enabled') && (bool) config('ai.dedup.enabled');
     }
 }

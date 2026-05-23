@@ -31,19 +31,19 @@ class GenerateTicketEmbedding implements ShouldQueue
             return;
         }
 
-        $description = trim((string) $this->ticket->description);
-        if ($description === '') {
+        $text = $this->ticket->embeddingText();
+        if ($text === '') {
             return;
         }
 
-        $hash = hash('sha256', $description);
-        $existing = TicketEmbedding::where('ticket_id', $this->ticket->id)->first();
+        $hash = hash('sha256', $text);
+        $existing = TicketEmbedding::where('ticket_id', '=', $this->ticket->id, 'and')->first();
         if ($existing && $existing->description_hash === $hash && is_array($existing->embedding_vector)) {
             return;
         }
 
         try {
-            $vector = $embeddings->generate($description);
+            $vector = $embeddings->generate($text);
         } catch (Throwable $exception) {
             $context = [
                 'ticket_id' => $this->ticket->id,

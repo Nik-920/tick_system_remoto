@@ -55,19 +55,23 @@ class TicketController extends Controller
             $request->file('media_files', []),
             $correlationId
         );
-        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category', 'media']);
+        $ticket = $result['ticket']->load(['reporter', 'assignee', 'location', 'category', 'media', 'embedding.matchedTicket']);
+        $warning = $result['warning'] ?? null;
+        $warningPending = (bool) ($result['warning_pending'] ?? false);
 
-        if (! $result['created']) {
-            return response()->json([
-                'message' => 'Se detecto un ticket activo para la misma ubicacion y categoria.',
-                'duplicate' => true,
-                'data' => (new TicketResource($ticket))->resolve($request),
-            ]);
+        $message = 'Ticket creado correctamente.';
+        if (is_array($warning)) {
+            $message = 'Ticket creado correctamente, pero se detecto un posible duplicado.';
+        } elseif ($warningPending) {
+            $message = 'Ticket creado correctamente. La verificacion de duplicados esta en proceso.';
         }
 
         return response()->json([
-            'message' => 'Ticket creado correctamente.',
+            'message' => $message,
             'duplicate' => false,
+            'duplicate_warning' => is_array($warning),
+            'duplicate_warning_pending' => ! is_array($warning) && $warningPending,
+            'similar_ticket' => $warning,
             'data' => (new TicketResource($ticket))->resolve($request),
         ], 201);
     }
@@ -83,6 +87,7 @@ class TicketController extends Controller
             'category',
             'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
+            'embedding.matchedTicket',
         ]);
 
         return new TicketResource($ticket);
@@ -96,7 +101,7 @@ class TicketController extends Controller
         $mediaUrls = $ticket->media()->pluck('file_url')->all();
 
         DB::transaction(function () use ($ticket): void {
-            $ticket->delete();
+            Ticket::query()->whereKey($ticket->id)->delete();
         });
 
         try {

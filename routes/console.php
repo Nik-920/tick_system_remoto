@@ -1,7 +1,9 @@
 <?php
 
+use App\Jobs\GenerateTicketEmbedding;
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
 use App\Services\Ai\HuggingFaceService;
@@ -78,6 +80,42 @@ Artisan::command(
         return Command::SUCCESS;
     }
 )->purpose('Ping real a Hugging Face para verificar zero-shot classification');
+
+Artisan::command(
+    'app:ticket-embeddings-backfill {--chunk=200 : Cantidad de registros por lote} {--queue : Encola jobs en lugar de ejecutar sync}',
+    function (): int {
+        if (! (bool) config('ai.enabled') || ! (bool) config('ai.huggingface.enabled')) {
+            $this->error('IA o Hugging Face estan deshabilitados.');
+
+            return Command::FAILURE;
+        }
+
+        $chunkSize = max(1, (int) $this->option('chunk'));
+        $useQueue = (bool) $this->option('queue');
+        $correlationId = 'ticket-embeddings-backfill-'.now()->format('YmdHis');
+        $total = 0;
+
+        $this->info('Iniciando backfill de embeddings de tickets...');
+
+        Ticket::query()
+            ->orderBy('id', 'asc')
+            ->chunk($chunkSize, function ($tickets) use ($useQueue, $correlationId, &$total): void {
+                foreach ($tickets as $ticket) {
+                    if ($useQueue) {
+                        GenerateTicketEmbedding::dispatch($ticket, $correlationId);
+                    } else {
+                        GenerateTicketEmbedding::dispatchSync($ticket, $correlationId);
+                    }
+
+                    $total++;
+                }
+            });
+
+        $this->info('Backfill completado. Tickets procesados: '.$total);
+
+        return Command::SUCCESS;
+    }
+)->purpose('Regenera embeddings de tickets con el texto semantico actualizado');
 
 Artisan::command(
     'app:migrate-storage-urls
