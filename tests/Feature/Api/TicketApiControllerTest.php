@@ -8,8 +8,12 @@ use App\Jobs\UpdateRecurrenceHistory;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Services\Ai\DeduplicationService;
+use App\Services\Ai\EmbeddingService;
+use App\Services\Ai\HuggingFaceService;
 use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -200,6 +204,80 @@ class TicketApiControllerTest extends TestCase
 
         $response->assertCreated();
         $response->assertJsonPath('duplicate_warning_pending', true);
+    }
+
+    public function test_api_store_survives_deduplication_exception_in_sync_mode(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.automation.async_processing' => false,
+            'queue.default' => 'sync',
+        ]);
+
+        $this->app->bind(EmbeddingService::class, function () {
+            $huggingFace = new class extends HuggingFaceService
+            {
+                public function embedding(string $text, ?string $model = null): array
+                {
+                    return [1.0, 0.0];
+                }
+            };
+
+            return new EmbeddingService($huggingFace);
+        });
+
+        $this->app->bind(DeduplicationService::class, function () {
+            $embeddings = app(EmbeddingService::class);
+
+            return new class($embeddings) extends DeduplicationService
+            {
+                public function findBestMatch(array $sourceEmbedding, array $candidates): ?array
+                {
+                    throw new RuntimeException('dedup failure');
+                }
+            };
+        });
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $existing = Ticket::create([
+            'title' => 'Proyector sala A-201 no enciende',
+            'description' => 'Ticket existente para dedup.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $existing->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $existing->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $payload = [
+            'title' => 'Mesa rota en sala A-201',
+            'description' => 'La mesa tiene una pata rota y se mueve al apoyarse.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'high',
+        ];
+
+        $response = $this->postJson(route('api.tickets.store'), $payload);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Mesa rota en sala A-201',
+            'reporter_id' => $user->id,
+        ]);
     }
 
     public function test_reporter_cannot_change_ticket_state_via_api(): void
