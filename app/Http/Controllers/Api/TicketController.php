@@ -273,6 +273,7 @@ class TicketController extends Controller
         // Duplicate filter: effective_duplicate = true (sql-equivalent)
         if (! empty($filters['duplicates'])) {
             $query->whereHas('embedding', function (Builder $q): void {
+                /** @phpstan-ignore-next-line */
                 $q->effectiveDuplicates();
             });
         }
