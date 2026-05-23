@@ -213,6 +213,9 @@ class DetectDuplicates implements ShouldQueue
             return;
         }
 
+        // Reset AI-managed columns only.
+        // Human review columns (review_status, reviewed_by, reviewed_at, review_note)
+        // are intentionally left untouched.
         $embedding->similarity_score = null;
         $embedding->matched_ticket_id = null;
         $embedding->is_duplicate = false;
