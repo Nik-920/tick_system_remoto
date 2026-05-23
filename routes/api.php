@@ -45,6 +45,9 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware('throttle:5,1')
         ->name('api.tickets.update-state');
+    Route::patch('/tickets/{ticket}/duplicate-review', [TicketController::class, 'reviewDuplicate'])
+        ->middleware('throttle:10,1')
+        ->name('api.tickets.duplicate-review.update');
 
     Route::get('/users', [UserController::class, 'index'])->name('api.users.index');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('api.users.show');
