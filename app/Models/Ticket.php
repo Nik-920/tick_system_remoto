@@ -104,7 +104,6 @@ class Ticket extends Model
         $parts = [];
         if ($title !== '') {
             $parts[] = $title;
-            $parts[] = $title;
         }
 
         if ($description !== '') {
