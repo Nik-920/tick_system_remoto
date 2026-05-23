@@ -31,114 +31,160 @@ class DetectDuplicates implements ShouldQueue
         EmbeddingService $embeddings,
         TicketQrLogger $logger
     ): void {
-        if (! $deduplication->isEnabled()) {
-            return;
-        }
-
         $ticket = $this->ticket;
-        $embedding = TicketEmbedding::where('ticket_id', '=', $ticket->id, 'and')->first();
-        $text = $ticket->embeddingText();
-        if ($text === '') {
-            return;
-        }
 
-        $hash = hash('sha256', $text);
-        $vector = null;
+        try {
+            if (! $deduplication->isEnabled()) {
+                return;
+            }
 
-        if ($embedding && $embedding->description_hash === $hash && is_array($embedding->embedding_vector)) {
-            $vector = $embedding->embedding_vector;
-        }
+            $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+            $text = $ticket->embeddingText();
+            if ($text === '') {
+                return;
+            }
 
-        if (! is_array($vector)) {
-            try {
-                $vector = $embeddings->generate($text);
-            } catch (Throwable $exception) {
-                $context = [
-                    'ticket_id' => $ticket->id,
-                    'location_id' => $ticket->location_id,
-                    'category_id' => $ticket->category_id,
-                    'correlation_id' => $this->correlationId,
-                    'operation_type' => 'duplicate_detection',
-                    'exception_class' => $exception::class,
-                    'error_message' => Str::limit($exception->getMessage(), 500, ''),
+            $hash = hash('sha256', $text);
+            $vector = null;
+
+            if ($embedding && $embedding->description_hash === $hash && is_array($embedding->embedding_vector)) {
+                $vector = $embedding->embedding_vector;
+            }
+
+            if (! is_array($vector)) {
+                try {
+                    $vector = $embeddings->generate($text);
+                } catch (Throwable $exception) {
+                    $context = [
+                        'ticket_id' => $ticket->id,
+                        'location_id' => $ticket->location_id,
+                        'category_id' => $ticket->category_id,
+                        'correlation_id' => $this->correlationId,
+                        'operation_type' => 'duplicate_detection',
+                        'exception_class' => $exception::class,
+                        'error_message' => Str::limit($exception->getMessage(), 500, ''),
+                    ];
+
+                    $logger->warning('ticket.duplicate.embedding_failed', $context);
+                    $this->reportToSentry($exception, $context);
+
+                    return;
+                }
+
+                $embedding = TicketEmbedding::updateOrCreate(
+                    ['ticket_id' => $ticket->id],
+                    [
+                        'embedding_vector' => $vector,
+                        'description_hash' => $hash,
+                        'similarity_score' => null,
+                        'matched_ticket_id' => null,
+                        'is_duplicate' => false,
+                    ]
+                );
+            }
+
+            $windowStart = now()->subHours($deduplication->windowHours());
+            $candidates = TicketEmbedding::query()
+                ->where('ticket_id', '!=', $ticket->id)
+                ->whereHas('ticket', function ($query) use ($ticket, $windowStart): void {
+                    $query->where('location_id', $ticket->location_id)
+                        ->where('category_id', $ticket->category_id)
+                        ->whereIn('state', ['open', 'in_progress'])
+                        ->where('created_at', '>=', $windowStart);
+                })
+                ->with('ticket')
+                ->get();
+
+            $candidateRows = [];
+            foreach ($candidates as $candidate) {
+                if (! is_array($candidate->embedding_vector)) {
+                    continue;
+                }
+
+                $candidateRows[] = [
+                    'ticket' => $candidate->ticket,
+                    'embedding' => $candidate->embedding_vector,
                 ];
+            }
 
-                $logger->warning('ticket.duplicate.embedding_failed', $context);
-                $this->reportToSentry($exception, $context);
+            if ($candidateRows === []) {
+                $this->resetEmbeddingMatch($embedding);
 
                 return;
             }
 
-            $embedding = TicketEmbedding::updateOrCreate(
-                ['ticket_id' => $ticket->id],
-                [
-                    'embedding_vector' => $vector,
-                    'description_hash' => $hash,
-                    'similarity_score' => null,
-                    'matched_ticket_id' => null,
-                    'is_duplicate' => false,
-                ]
-            );
-        }
+            $best = $deduplication->findBestMatch($vector, $candidateRows);
+            if ($best === null) {
+                $this->resetEmbeddingMatch($embedding);
 
-        $windowStart = now()->subHours($deduplication->windowHours());
-        $candidates = TicketEmbedding::query()
-            ->where('ticket_id', '!=', $ticket->id, 'and')
-            ->whereHas('ticket', function ($query) use ($ticket, $windowStart): void {
-                $query->where('location_id', '=', $ticket->location_id, 'and')
-                    ->where('category_id', '=', $ticket->category_id, 'and')
-                    ->whereIn('state', ['open', 'in_progress'])
-                    ->where('created_at', '>=', $windowStart, 'and');
-            })
-            ->with('ticket')
-            ->get();
-
-        $candidateRows = [];
-        foreach ($candidates as $candidate) {
-            if (! is_array($candidate->embedding_vector)) {
-                continue;
+                return;
             }
 
-            $candidateRows[] = [
-                'ticket' => $candidate->ticket,
-                'embedding' => $candidate->embedding_vector,
-            ];
-        }
+            $matchedTicket = $best['ticket'] ?? null;
+            $similarity = $best['similarity'] ?? null;
 
-        if ($candidateRows === []) {
+            if (! $matchedTicket || ! is_numeric($similarity)) {
+                $this->resetEmbeddingMatch($embedding);
+
+                return;
+            }
+
+            $similarity = (float) $similarity;
+            $titleAligned = $deduplication->titleOverlapSatisfied($ticket->title ?? '', $matchedTicket->title ?? '');
+            $isDuplicate = $deduplication->isStrongDuplicate($similarity, $titleAligned);
+            $isObserved = $deduplication->isObservationCandidate($similarity, $titleAligned);
+
             if ($embedding) {
-                $embedding->similarity_score = null;
-                $embedding->matched_ticket_id = null;
-                $embedding->is_duplicate = false;
+                if ($isDuplicate || $isObserved) {
+                    $embedding->similarity_score = $similarity;
+                    $embedding->matched_ticket_id = $matchedTicket->id;
+                    $embedding->is_duplicate = $isDuplicate;
+                } else {
+                    $embedding->similarity_score = null;
+                    $embedding->matched_ticket_id = null;
+                    $embedding->is_duplicate = false;
+                }
+
                 $embedding->save();
             }
 
-            return;
-        }
+            $observationThreshold = $deduplication->observationThreshold();
+            $strongThreshold = $deduplication->similarityThreshold();
 
-        $best = $deduplication->findBestMatch($vector, $candidateRows);
-        if ($best === null) {
-            return;
-        }
+            if ($similarity >= $observationThreshold && $similarity < $strongThreshold) {
+                $logger->info('ticket.duplicate.observation', [
+                    'ticket_id' => $ticket->id,
+                    'matched_ticket_id' => $matchedTicket->id,
+                    'similarity_score' => $similarity,
+                    'threshold' => $strongThreshold,
+                    'observation_threshold' => $observationThreshold,
+                    'title_overlap' => $titleAligned,
+                    'correlation_id' => $this->correlationId,
+                    'operation_type' => 'duplicate_detection',
+                ]);
+            }
 
-        $matchedTicket = $best['ticket'] ?? null;
-        $similarity = $best['similarity'] ?? null;
-        $isDuplicate = (bool) ($best['is_duplicate'] ?? false);
+            if ($isDuplicate) {
+                event(new DuplicateDetected(
+                    $ticket,
+                    $matchedTicket,
+                    $similarity,
+                    $this->correlationId,
+                ));
+            }
+        } catch (Throwable $exception) {
+            $context = [
+                'ticket_id' => $ticket->id,
+                'location_id' => $ticket->location_id,
+                'category_id' => $ticket->category_id,
+                'correlation_id' => $this->correlationId,
+                'operation_type' => 'duplicate_detection',
+                'exception_class' => $exception::class,
+                'error_message' => Str::limit($exception->getMessage(), 500, ''),
+            ];
 
-        if ($embedding) {
-            $embedding->similarity_score = is_numeric($similarity) ? (float) $similarity : null;
-            $embedding->matched_ticket_id = $matchedTicket?->id;
-            $embedding->is_duplicate = $isDuplicate;
-            $embedding->save();
-        }
-
-        if ($isDuplicate && $matchedTicket !== null) {
-            event(new DuplicateDetected(
-                $ticket,
-                $matchedTicket,
-                is_numeric($similarity) ? (float) $similarity : null,
-                $this->correlationId,
-            ));
+            $logger->error('ticket.duplicate.failed', $context);
+            $this->reportToSentry($exception, $context);
         }
     }
 
@@ -159,5 +205,17 @@ class DetectDuplicates implements ShouldQueue
         });
 
         \Sentry\captureException($exception);
+    }
+
+    private function resetEmbeddingMatch(?TicketEmbedding $embedding): void
+    {
+        if (! $embedding) {
+            return;
+        }
+
+        $embedding->similarity_score = null;
+        $embedding->matched_ticket_id = null;
+        $embedding->is_duplicate = false;
+        $embedding->save();
     }
 }
