@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read Category|null $category
  * @property-read User|null $reporter
  * @property-read User|null $assignee
+ * @property-read TicketEmbedding|null $embedding
  */
 class Ticket extends Model
 {
