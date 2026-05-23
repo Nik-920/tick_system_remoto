@@ -2,11 +2,10 @@
 
 namespace Tests\Unit\Services;
 
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
-/**
- * @group ai
- */
+#[Group('ai')]
 class AiConfigTest extends TestCase
 {
     public function test_ai_config_has_expected_sections(): void
