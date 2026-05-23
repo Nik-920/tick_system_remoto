@@ -11,7 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Sentry\State\Scope;
 use Throwable;
@@ -37,7 +36,7 @@ class GenerateTicketEmbedding implements ShouldQueue
         }
 
         $hash = hash('sha256', $text);
-        $existing = TicketEmbedding::where('ticket_id', '=', $this->ticket->id, 'and')->first();
+        $existing = TicketEmbedding::where('ticket_id', $this->ticket->id)->first();
         if ($existing && $existing->description_hash === $hash && is_array($existing->embedding_vector)) {
             return;
         }
@@ -68,7 +67,7 @@ class GenerateTicketEmbedding implements ShouldQueue
                 'description_hash' => $hash,
                 'similarity_score' => null,
                 'matched_ticket_id' => null,
-                'is_duplicate' => DB::raw('false'),
+                'is_duplicate' => false,
             ]
         );
     }
