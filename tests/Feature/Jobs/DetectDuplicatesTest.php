@@ -26,12 +26,14 @@ class DetectDuplicatesTest extends TestCase
         config([
             'ai.enabled' => true,
             'ai.dedup.enabled' => true,
-            'ai.dedup.similarity_threshold' => 0.8,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
             'ai.dedup.window_hours' => 24,
         ]);
 
-        $ticket = $this->createTicket('Ticket principal');
-        $matched = $this->createTicket('Ticket comparado', $ticket->location_id, $ticket->category_id);
+        $ticket = $this->createTicket('Proyector principal');
+        $matched = $this->createTicket('Proyector comparado', $ticket->location_id, $ticket->category_id);
 
         $vector = [1.0, 0.0];
         $hash = hash('sha256', $ticket->embeddingText());
@@ -75,7 +77,9 @@ class DetectDuplicatesTest extends TestCase
         config([
             'ai.enabled' => true,
             'ai.dedup.enabled' => true,
-            'ai.dedup.similarity_threshold' => 0.8,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
             'ai.dedup.window_hours' => 24,
         ]);
 
@@ -112,6 +116,9 @@ class DetectDuplicatesTest extends TestCase
         config([
             'ai.enabled' => true,
             'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
         ]);
 
         $ticket = $this->createTicket('Ticket con error');
@@ -142,7 +149,107 @@ class DetectDuplicatesTest extends TestCase
         $this->assertDatabaseMissing('ticket_embeddings', ['ticket_id' => $ticket->id]);
     }
 
-    private function createTicket(string $title, ?string $locationId = null, ?string $categoryId = null): Ticket
+    public function test_job_does_not_flag_duplicate_when_title_mismatch_in_observation_zone(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket(
+            'Mesa rota en sala A-201',
+            null,
+            null,
+            'La mesa del laboratorio A-201 tiene una pata rota y se mueve al apoyarse.'
+        );
+        $matched = $this->createTicket(
+            'Proyector sala A-201 no enciende',
+            $ticket->location_id,
+            $ticket->category_id,
+            'El proyector de la sala A-201 no responde al intentar encenderlo.'
+        );
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [0.86, 0.51],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-dup-004');
+        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger());
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->matched_ticket_id);
+        $this->assertNull($embedding->similarity_score);
+    }
+
+    public function test_job_flags_duplicate_when_title_overlap_and_score_is_high(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket(
+            'Proyector sala A-201 no enciende',
+            null,
+            null,
+            'El proyector de la sala A-201 no responde al intentar encenderlo.'
+        );
+        $matched = $this->createTicket(
+            'Problema con proyector en sala A-201',
+            $ticket->location_id,
+            $ticket->category_id,
+            'El proyector no prende y la luz power parpadea.'
+        );
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-dup-005');
+        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger());
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertTrue($embedding->is_duplicate);
+        $this->assertSame($matched->id, $embedding->matched_ticket_id);
+    }
+
+    private function createTicket(
+        string $title,
+        ?string $locationId = null,
+        ?string $categoryId = null,
+        ?string $description = null
+    ): Ticket
     {
         $user = User::factory()->create();
 
@@ -167,7 +274,7 @@ class DetectDuplicatesTest extends TestCase
 
         return Ticket::create([
             'title' => $title,
-            'description' => 'Descripcion para duplicados.',
+            'description' => $description ?? 'Descripcion para duplicados.',
             'reporter_id' => $user->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
