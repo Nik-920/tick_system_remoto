@@ -67,9 +67,7 @@ class GenerateTicketEmbeddingTest extends TestCase
 
     public function test_is_duplicate_persists_as_postgres_boolean(): void
     {
-        if (DB::connection()->getDriverName() !== 'pgsql') {
-            $this->markTestSkipped('PostgreSQL only assertion.');
-        }
+        $driver = DB::connection()->getDriverName();
 
         $ticket = $this->createTicket('Ticket bool');
 
@@ -80,12 +78,23 @@ class GenerateTicketEmbeddingTest extends TestCase
             'is_duplicate' => true,
         ]);
 
+        if ($driver === 'pgsql') {
+            $row = DB::selectOne(
+                'select is_duplicate::text as value from ticket_embeddings where ticket_id = ?',
+                [$ticket->id]
+            );
+
+            $this->assertSame('true', $row?->value);
+
+            return;
+        }
+
         $row = DB::selectOne(
-            'select is_duplicate::text as value from ticket_embeddings where ticket_id = ?',
+            'select is_duplicate as value from ticket_embeddings where ticket_id = ?',
             [$ticket->id]
         );
 
-        $this->assertSame('true', $row?->value);
+        $this->assertSame(1, (int) ($row?->value ?? 0));
     }
 
     private function createTicket(string $title): Ticket
