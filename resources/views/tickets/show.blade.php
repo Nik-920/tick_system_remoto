@@ -29,24 +29,99 @@
         @endif
 
         @php
-            $embedding = $ticket?->embedding;
-            $matchedTicket = $embedding?->matchedTicket;
+            $embedding      = $ticket?->embedding;
+            $matchedTicket  = $embedding?->matchedTicket;
+            $reviewer       = $embedding?->reviewer;
+
+            // Use effective_duplicate (respects human review_status override)
             $showDuplicateWarning = $embedding
-                && $embedding->is_duplicate
+                && $embedding->effective_duplicate
                 && $matchedTicket
                 && in_array($matchedTicket->state, ['open', 'in_progress'], true);
+
+            $reviewStatus   = $embedding?->review_status;
+            $canReview      = $ticket && Auth::user()?->can('reviewDuplicate', $ticket);
         @endphp
 
+        {{-- ===== DUPLICATE WARNING BANNER ===== --}}
         @if ($showDuplicateWarning)
             <div class="alert-warning">
-                <strong>Posible duplicado detectado.</strong>
-                <span>Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
-                <span>(Estado: {{ $matchedTicket?->state ?? 'N/A' }})</span>
-                <span>Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
-                @if ($matchedTicket)
-                    <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary" style="margin-left: 0.5rem;">Ver ticket</a>
-                @endif
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <strong>
+                            @if ($reviewStatus === 'confirmed')
+                                ✅ Duplicado confirmado manualmente.
+                            @else
+                                ⚠️ Posible duplicado detectado por IA.
+                            @endif
+                        </strong>
+                        <span>Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
+                        <span>(Estado: {{ $matchedTicket?->state ?? 'N/A' }})</span>
+                        @can('reviewDuplicate', $ticket)
+                            <span>Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
+                        @endcan
+                        @if ($matchedTicket)
+                            <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary" style="margin-left:0.5rem;">Ver ticket</a>
+                        @endif
+                    </div>
+
+                    {{-- Manual review info --}}
+                    @if ($reviewer && $reviewStatus)
+                        <div style="font-size:0.85rem; opacity:0.85;">
+                            Revisado por <strong>{{ $reviewer->name ?? $reviewer->email }}</strong>
+                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
+                            @if ($embedding->review_note)
+                                Nota: <em>{{ $embedding->review_note }}</em>
+                            @endif
+                        </div>
+                    @endif
+
+                    {{-- Review actions --}}
+                    @can('reviewDuplicate', $ticket)
+                        <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
+                              style="display:flex; gap:0.5rem; align-items:flex-start; flex-wrap:wrap; margin-top:0.25rem;">
+                            @csrf
+                            @method('PATCH')
+                            <textarea name="review_note" rows="1" maxlength="1000"
+                                      placeholder="Nota de revisión (opcional)"
+                                      style="flex:1; min-width:180px; resize:vertical; padding:0.25rem 0.5rem; border-radius:6px; border:1px solid var(--border-default); background:var(--bg-surface); color:var(--text-primary); font-size:0.85rem;">{{ $embedding?->review_note }}</textarea>
+                            <button type="submit" name="review_status" value="dismissed" class="btn-secondary">
+                                🚫 Marcar como no duplicado
+                            </button>
+                            <button type="submit" name="review_status" value="confirmed" class="btn-primary">
+                                ✅ Confirmar duplicado
+                            </button>
+                        </form>
+                        @error('review')
+                            <p style="color:var(--color-danger); font-size:0.85rem;">{{ $message }}</p>
+                        @enderror
+                    @endcan
+                </div>
             </div>
+        @elseif ($embedding && $embedding->isDismissedDuplicate())
+            {{-- Show dismissed badge for authorized users only --}}
+            @can('reviewDuplicate', $ticket)
+                <div class="alert-success" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                    <span>🚫 Duplicado descartado manualmente.</span>
+                    @if ($reviewer)
+                        <span style="font-size:0.85rem; opacity:0.8;">
+                            Por {{ $reviewer->name ?? $reviewer->email }}
+                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
+                            @if ($embedding->review_note) — <em>{{ $embedding->review_note }}</em> @endif
+                        </span>
+                    @endif
+                    {{-- Allow re-review --}}
+                    <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
+                          style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="review_note" value="{{ $embedding->review_note ?? '' }}">
+                        <button type="submit" name="review_status" value="confirmed" class="btn-secondary" style="font-size:0.82rem;">
+                            ↩ Reabrir como duplicado
+                        </button>
+                    </form>
+                </div>
+            @endcan
         @endif
 
         @if (isset($errors) && $errors->any())

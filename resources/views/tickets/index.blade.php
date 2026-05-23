@@ -4,34 +4,38 @@
 
 @section('content')
 @php
-$searchValue = (string) ($filters['search'] ?? '');
-$stateValue = (string) ($filters['state'] ?? '');
-$priorityValue = (string) ($filters['priority'] ?? '');
-$locationValue = (string) ($filters['location_id'] ?? '');
-$categoryValue = (string) ($filters['category_id'] ?? '');
-$perPageValue = (string) ($filters['per_page'] ?? '');
-$fromValue = (string) ($filters['from'] ?? '');
-$toValue = (string) ($filters['to'] ?? '');
+$searchValue   = (string) ($filters['search']      ?? '');
+$stateValue    = (string) ($filters['state']        ?? '');
+$priorityValue = (string) ($filters['priority']     ?? '');
+$locationValue = (string) ($filters['location_id']  ?? '');
+$categoryValue = (string) ($filters['category_id']  ?? '');
+$perPageValue  = (string) ($filters['per_page']     ?? '');
+$fromValue     = (string) ($filters['from']         ?? '');
+$toValue       = (string) ($filters['to']           ?? '');
+$duplicatesOn  = ! empty($filters['duplicates']);
 
 $activeFilterCount = 0;
 foreach ([$searchValue, $stateValue, $priorityValue, $locationValue, $categoryValue, $fromValue, $toValue] as $filterValue) {
-if ($filterValue !== '') {
-$activeFilterCount++;
+    if ($filterValue !== '') {
+        $activeFilterCount++;
+    }
 }
+if ($duplicatesOn) {
+    $activeFilterCount++;
 }
 
 $stateLabels = [
-'open' => 'Abierto',
-'in_progress' => 'En progreso',
-'resolved' => 'Resuelto',
-'rejected' => 'Rechazado',
+    'open'        => 'Abierto',
+    'in_progress' => 'En progreso',
+    'resolved'    => 'Resuelto',
+    'rejected'    => 'Rechazado',
 ];
 
 $priorityLabels = [
-'low' => 'Baja',
-'medium' => 'Media',
-'high' => 'Alta',
-'critical' => 'Crítica',
+    'low'      => 'Baja',
+    'medium'   => 'Media',
+    'high'     => 'Alta',
+    'critical' => 'Crítica',
 ];
 @endphp
 
@@ -137,6 +141,21 @@ $priorityLabels = [
                     <a href="{{ route('tickets.index') }}" class="btn-secondary">Limpiar</a>
                 </div>
             </div>
+
+            {{-- Duplicate quick-filter --}}
+            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <span style="font-size:0.85rem; font-weight:600; opacity:0.7;">Vista rápida:</span>
+                <a href="{{ route('tickets.index', array_merge(request()->except(['duplicates', 'page']), [])) }}"
+                   class="{{ ! $duplicatesOn ? 'btn-primary' : 'btn-secondary' }}"
+                   style="font-size:0.82rem; padding:0.25rem 0.75rem;">
+                   Todos
+                </a>
+                <a href="{{ route('tickets.index', array_merge(request()->except(['duplicates', 'page']), ['duplicates' => '1'])) }}"
+                   class="{{ $duplicatesOn ? 'btn-primary' : 'btn-secondary' }}"
+                   style="font-size:0.82rem; padding:0.25rem 0.75rem;">
+                   ⚠️ Posibles duplicados
+                </a>
+            </div>
         </form>
     </section>
 
@@ -161,8 +180,30 @@ $priorityLabels = [
                 </thead>
                 <tbody>
                     @forelse ($tickets as $ticket)
+                    @php
+                        $te             = $ticket->relationLoaded('embedding') ? $ticket->embedding : null;
+                        $teMatch        = $te?->relationLoaded('matchedTicket') ? $te->matchedTicket : null;
+                        $effectiveDup   = $te && $te->effective_duplicate
+                                          && $teMatch
+                                          && in_array($teMatch->state, ['open', 'in_progress'], true);
+                        $reviewStatus   = $te?->review_status;
+                    @endphp
                     <tr>
-                        <td class="tickets-td-title">{{ $ticket->title }}</td>
+                        <td class="tickets-td-title">
+                            {{ $ticket->title }}
+                            {{-- Duplicate badge --}}
+                            @if ($effectiveDup)
+                                @if ($reviewStatus === 'confirmed')
+                                    <span class="ticket-badge ticket-badge--warning" title="Duplicado confirmado manualmente" style="font-size:0.72rem; margin-left:0.3rem;">
+                                        ✅ Duplicado confirmado
+                                    </span>
+                                @else
+                                    <span class="ticket-badge ticket-badge--warning" title="Posible duplicado detectado por IA" style="font-size:0.72rem; margin-left:0.3rem;">
+                                        ⚠️ Posible duplicado
+                                    </span>
+                                @endif
+                            @endif
+                        </td>
                         <td>
                             <span class="ticket-badge ticket-badge--{{ $ticket->state }}">
                                 {{ $stateLabels[$ticket->state] ?? str_replace('_', ' ', $ticket->state) }}
