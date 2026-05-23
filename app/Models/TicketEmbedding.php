@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Query\Expression;
 
 /**
  * @property string $id
@@ -58,6 +60,23 @@ class TicketEmbedding extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    protected function isDuplicate(): Attribute
+    {
+        return Attribute::make(
+            set: function (mixed $value) {
+                if ($value instanceof Expression) {
+                    return $value;
+                }
+
+                if ($value === null) {
+                    return null;
+                }
+
+                return $value ? 'true' : 'false';
+            }
+        );
     }
 
     public function ticket(): BelongsTo
