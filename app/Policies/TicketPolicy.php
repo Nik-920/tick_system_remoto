@@ -45,6 +45,15 @@ class TicketPolicy
     }
 
     /**
+     * Ability to confirm or dismiss a duplicate detected by the AI.
+     * Allowed roles: maintenance, admin, super_admin.
+     */
+    public function reviewDuplicate(User $user, Ticket $ticket): bool
+    {
+        return $this->hasAnyRole($user, ['maintenance', 'admin', 'super_admin']);
+    }
+
+    /**
      * @param  list<string>  $roles
      */
     private function hasAnyRole(User $user, array $roles): bool

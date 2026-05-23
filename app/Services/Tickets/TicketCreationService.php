@@ -130,7 +130,8 @@ class TicketCreationService
                 ->where('ticket_id', $ticket->id)
                 ->first();
 
-            if ($embedding && $embedding->is_duplicate) {
+            // Use effective_duplicate: respects human review_status override
+            if ($embedding && $embedding->effective_duplicate) {
                 /** @var Ticket|null $matched */
                 $matched = $embedding->matchedTicket;
 
