@@ -48,6 +48,50 @@ class UpdateRecurrenceHistoryTest extends TestCase
         );
     }
 
+    public function test_job_does_not_update_when_recurrence_disabled(): void
+    {
+        config(['ai.recurrence.enabled' => false]);
+
+        $createdAt = Carbon::parse('2026-05-22 09:00:00');
+        $resolvedAt = Carbon::parse('2026-05-22 09:00:30');
+
+        $ticket = $this->createTicket($createdAt, $resolvedAt);
+
+        $job = new UpdateRecurrenceHistory($ticket, 'corr-rec-002');
+        $job->handle();
+
+        $this->assertDatabaseCount('location_incident_history', 0);
+    }
+
+    public function test_job_updates_average_using_mm_ss_interval(): void
+    {
+        config(['ai.recurrence.enabled' => true]);
+
+        $createdAt = Carbon::parse('2026-05-22 09:00:00');
+        $resolvedAt = Carbon::parse('2026-05-22 09:00:30');
+
+        $ticket = $this->createTicket($createdAt, $resolvedAt);
+
+        LocationIncidentHistory::create([
+            'location_id' => $ticket->location_id,
+            'category_id' => $ticket->category_id,
+            'last_resolved_at' => $createdAt,
+            'recurrence_count' => 2,
+            'avg_resolution_time' => '01:30',
+        ]);
+
+        $job = new UpdateRecurrenceHistory($ticket, 'corr-rec-003');
+        $job->handle();
+
+        $history = LocationIncidentHistory::where('location_id', '=', $ticket->location_id, 'and')
+            ->where('category_id', '=', $ticket->category_id, 'and')
+            ->first();
+
+        $this->assertNotNull($history);
+        $this->assertSame(3, $history->recurrence_count);
+        $this->assertSame('00:01:10', $history->avg_resolution_time);
+    }
+
     private function createTicket(Carbon $createdAt, Carbon $resolvedAt): Ticket
     {
         $user = User::factory()->create();
