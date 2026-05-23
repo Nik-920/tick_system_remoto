@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ListTicketsRequest;
+use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
@@ -28,7 +29,16 @@ class TicketController extends Controller
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
-        $query = Ticket::query()->with(['reporter', 'assignee', 'location', 'category']);
+
+        // Eager-load embedding and matchedTicket to show duplicate badge without N+1
+        $query = Ticket::query()->with([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'embedding.matchedTicket',
+        ]);
+
         $this->applyFilters($query, $filters);
 
         $tickets = $query
@@ -107,6 +117,7 @@ class TicketController extends Controller
             'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
             'embedding.matchedTicket',
+            'embedding.reviewer',
         ]);
 
         return view('tickets.show', [
@@ -166,6 +177,36 @@ class TicketController extends Controller
     }
 
     /**
+     * PATCH /tickets/{ticket}/duplicate-review
+     * Allows maintenance/admin/super_admin to confirm or dismiss an AI duplicate.
+     */
+    public function reviewDuplicate(ReviewDuplicateRequest $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('reviewDuplicate', $ticket);
+
+        $embedding = $ticket->embedding;
+
+        if (! $embedding) {
+            return back()->withErrors([
+                'review' => 'Este ticket aún no tiene análisis de duplicados generado por la IA.',
+            ]);
+        }
+
+        $validated = $request->validated();
+
+        // Update only human-review columns — AI columns are intentionally untouched
+        $embedding->review_status = $validated['review_status'];
+        $embedding->reviewed_by = $request->user()->id;
+        $embedding->reviewed_at = now();
+        $embedding->review_note = $validated['review_note'] ?? null;
+        $embedding->save();
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Revisión de duplicado actualizada.');
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
@@ -201,6 +242,13 @@ class TicketController extends Controller
 
         if (! empty($filters['to'])) {
             $query->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        // Duplicate filter: effective_duplicate = true (sql-equivalent)
+        if (! empty($filters['duplicates'])) {
+            $query->whereHas('embedding', function (Builder $q): void {
+                $q->effectiveDuplicates();
+            });
         }
     }
 }
