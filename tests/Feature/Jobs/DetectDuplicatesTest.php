@@ -70,6 +70,78 @@ class DetectDuplicatesTest extends TestCase
         });
     }
 
+    public function test_job_reuses_embedding_and_clears_duplicate_when_no_candidates(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.8,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Ticket principal');
+        $matched = $this->createTicket('Ticket comparado', $ticket->location_id, $ticket->category_id);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'similarity_score' => 0.9,
+            'matched_ticket_id' => $matched->id,
+            'is_duplicate' => true,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $deduplication = new DeduplicationService($this->makeEmbeddingService([0.0, 1.0]));
+        $embeddings = $this->makeEmbeddingService([0.0, 1.0]);
+
+        $job = new DetectDuplicates($ticket, 'corr-dup-002');
+        $job->handle($deduplication, $embeddings, $this->makeLogger());
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->matched_ticket_id);
+        $this->assertNull($embedding->similarity_score);
+
+        Event::assertNotDispatched(DuplicateDetected::class);
+    }
+
+    public function test_job_logs_warning_when_embedding_generation_fails(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+        ]);
+
+        $ticket = $this->createTicket('Ticket con error');
+
+        $embeddingService = $this->createMock(EmbeddingService::class);
+        $embeddingService->expects($this->once())
+            ->method('generate')
+            ->willThrowException(new \RuntimeException('fail'));
+
+        $logger = $this->createMock(TicketQrLogger::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with(
+                $this->equalTo('ticket.duplicate.embedding_failed'),
+                $this->callback(function (array $context) use ($ticket): bool {
+                    return ($context['ticket_id'] ?? null) === $ticket->id
+                        && ($context['correlation_id'] ?? null) === 'corr-dup-003';
+                })
+            );
+
+        $job = new DetectDuplicates($ticket, 'corr-dup-003');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $embeddingService,
+            $logger
+        );
+
+        $this->assertDatabaseMissing('ticket_embeddings', ['ticket_id' => $ticket->id]);
+    }
+
     private function createTicket(string $title, ?string $locationId = null, ?string $categoryId = null): Ticket
     {
         $user = User::factory()->create();
