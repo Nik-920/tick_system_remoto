@@ -3,209 +3,171 @@
 @section('title', 'Centro Personal Reporter')
 
 @section('content')
-<div class="role-dashboard role-dashboard-reporter">
+    <div class="role-dashboard role-dashboard-reporter space-y-6">
 
-    {{-- ══════════════════════ HERO ══════════════════════ --}}
-    <section class="role-hero role-hero-reporter rd-hero" aria-labelledby="reporter-hero-title">
-        <div class="rd-hero-inner">
-            <div class="rd-hero-copy">
-                <span class="rd-badge rd-badge--cyan" role="status">
-                    <span class="rd-badge-dot rd-badge-dot--cyan" aria-hidden="true"></span>
-                    {{ $hero['badge'] }}
-                </span>
-                <h1 id="reporter-hero-title" class="rd-hero-title">{{ $hero['title'] }}</h1>
-                <p class="rd-hero-sub">{{ $hero['subtitle'] }}</p>
-                <p class="rd-role-label">Perfil operativo: <strong>{{ $roleLabel }}</strong></p>
+        {{-- ===== HERO ===== --}}
+        <section class="role-hero role-hero-reporter panel panel-pad overflow-hidden">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="max-w-3xl">
+                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">{{ $hero['badge'] }}</p>
+                    <h1 class="mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
+                    <p class="mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
+                    <p class="mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
+                </div>
+
+                <div class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right flex flex-col items-end justify-center">
+                    <div class="flex items-center gap-2 text-cyan-700 mb-1">
+                        <x-lucide-qr-code width="18" height="18" stroke-width="2" />
+                        <p class="text-xs uppercase tracking-[0.1em] font-semibold">Reporte rápido</p>
+                    </div>
+                    <p class="text-sm font-medium text-slate-800">Escanea el QR de la ubicación</p>
+                </div>
             </div>
 
-            {{-- Quick ticket tip --}}
-            <div class="rd-hero-tip">
-                <x-lucide-qr-code width="18" height="18" stroke-width="2" aria-hidden="true" />
-                <p>Escanea el QR de la ubicación para reportar una incidencia en segundos.</p>
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+                @foreach ($quickActions as $action)
+                    <a href="{{ $action['href'] }}"
+                       class="{{ $action['variant'] === 'primary' ? 'btn-primary' : 'btn-secondary' }}">
+                        {{ $action['label'] }}
+                    </a>
+                @endforeach
             </div>
-        </div>
+        </section>
 
-        <div class="rd-hero-actions" role="navigation" aria-label="Acciones rápidas">
-            @foreach ($quickActions as $action)
-                <a
-                    href="{{ $action['href'] }}"
-                    class="{{ $action['variant'] === 'primary' ? 'rd-btn rd-btn--cyan' : 'rd-btn rd-btn--ghost-cyan' }}"
-                >
-                    {{ $action['label'] }}
-                </a>
-            @endforeach
-        </div>
-    </section>
-
-    {{-- ══════════════════════ KPI GRID ══════════════════════ --}}
-    <section aria-labelledby="reporter-kpi-heading">
-        <h2 id="reporter-kpi-heading" class="sr-only">Indicadores clave</h2>
-        <dl class="rd-kpi-grid">
-            @foreach ($kpis as $i => $kpi)
-                <article
-                    class="rd-kpi-card rd-kpi-card--cyan role-kpi-card"
-                    style="animation-delay: {{ $i * 40 }}ms"
-                    aria-label="{{ $kpi['label'] }}: {{ $kpi['value'] }}"
-                >
-                    <dt class="rd-kpi-label">{{ $kpi['label'] }}</dt>
-                    <dd class="rd-kpi-value">{{ $kpi['value'] }}</dd>
-                    <p class="rd-kpi-hint">{{ $kpi['hint'] }}</p>
+        {{-- ===== KPIs ===== --}}
+        <section class="role-kpi-grid grid grid-cols-2 xl:grid-cols-4 gap-4">
+            @foreach ($kpis as $kpi)
+                <article class="role-kpi-card">
+                    <p>{{ $kpi['label'] }}</p>
+                    <p>{{ $kpi['value'] }}</p>
+                    <p>{{ $kpi['hint'] }}</p>
                 </article>
             @endforeach
-        </dl>
-    </section>
+        </section>
 
-    {{-- ══════════════════════ ROW: ALERTS + BREAKDOWN ══════════════════════ --}}
-    <div class="rd-row rd-row--equal">
+        {{-- ===== COLA OPERATIVA + PRODUCTIVIDAD ===== --}}
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
 
-        {{-- Attention Items --}}
-        <section class="panel panel-pad rd-section-border--cyan" aria-labelledby="reporter-alerts-title">
-            <header class="rd-section-header rd-section-header--between">
-                <div>
-                    <h2 id="reporter-alerts-title" class="rd-section-title">Mis alertas inmediatas</h2>
-                    <p class="rd-section-sub">Prioriza incidencias abiertas y sigue su asignación.</p>
-                </div>
-                @if(count($attentionItems) > 0)
-                    <span class="rd-queue-count rd-queue-count--cyan" aria-label="{{ count($attentionItems) }} alertas activas">{{ count($attentionItems) }}</span>
-                @endif
-            </header>
+            {{-- Alertas inmediatas --}}
+            <section class="role-section">
+                <header>
+                    <h2>Mis alertas inmediatas</h2>
+                    <p>Prioriza incidencias abiertas y sigue su asignación.</p>
+                </header>
 
-            <ul class="rd-queue-list" role="list" aria-label="Alertas de tickets activos">
-                @forelse ($attentionItems as $i => $ticket)
-                    <li class="rd-queue-item" style="animation-delay: {{ $i * 35 }}ms">
-                        <div class="rd-queue-item-top">
-                            <div class="rd-queue-item-info">
-                                <p class="rd-queue-item-title">{{ $ticket->title }}</p>
-                                <p class="rd-queue-item-meta">
+                <div class="p-4 space-y-2">
+                    @forelse ($attentionItems as $ticket)
+                        <article class="dash-queue-card">
+                            <div>
+                                <p class="dash-queue-title">{{ $ticket->title }}</p>
+                                <p class="dash-queue-meta">
+                                    {{ $ticket->created_at?->diffForHumans() ?? 'N/A' }} 
                                     @if($ticket->location)
-                                        <x-lucide-map-pin width="11" height="11" stroke-width="2.5" aria-hidden="true" />
-                                        {{ $ticket->location->name }}
-                                    @endif
-                                    @if($ticket->category)
-                                        &nbsp;·&nbsp;{{ $ticket->category->name }}
+                                        · {{ $ticket->location->name }}
                                     @endif
                                 </p>
                             </div>
-                            <a href="{{ route('tickets.show', $ticket) }}" class="rd-queue-action rd-queue-action--cyan">Abrir</a>
-                        </div>
-                        <div class="rd-queue-tags">
-                            <span class="rd-state-pill rd-state-pill--{{ $ticket->state }}">{{ $stateLabels[$ticket->state] ?? $ticket->state }}</span>
-                            <span class="rd-priority-pill rd-priority-pill--{{ $ticket->priority }}">{{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</span>
-                            <span class="rd-tag-plain">
-                                Asignado: {{ $ticket->assignee?->name ?? 'Pendiente' }}
-                            </span>
-                        </div>
-                    </li>
-                @empty
-                    <li class="rd-empty-state rd-empty-state--success">
-                        <x-lucide-check-circle width="20" height="20" stroke-width="2" aria-hidden="true" />
-                        No hay alertas activas por ahora.
-                    </li>
-                @endforelse
-            </ul>
-        </section>
-
-        {{-- Distribution --}}
-        <section class="panel panel-pad rd-section-border--cyan" aria-labelledby="reporter-dist-title">
-            <header class="rd-section-header">
-                <h2 id="reporter-dist-title" class="rd-section-title">Distribución de mis reportes</h2>
-                <p class="rd-section-sub">Lectura rápida de volumen por estado y prioridad.</p>
-            </header>
-
-            <div class="rd-breakdown-stack">
-                <div class="rd-breakdown-card" aria-labelledby="reporter-states-heading">
-                    <h3 id="reporter-states-heading" class="rd-breakdown-title">Por estado</h3>
-                    @if (count($stateBreakdown) > 0)
-                        <ul class="rd-breakdown-list" role="list">
-                            @foreach ($stateBreakdown as $state => $total)
-                                <li class="rd-breakdown-row">
-                                    <span class="rd-state-dot rd-state-dot--{{ $state }}" aria-hidden="true"></span>
-                                    <span class="rd-breakdown-label">{{ $stateLabels[$state] ?? $state }}</span>
-                                    <div class="rd-breakdown-bar-wrap" aria-hidden="true">
-                                        <div class="rd-breakdown-bar rd-breakdown-bar--cyan" style="width: {{ min(100, ($total / max(array_values($stateBreakdown))) * 100) }}%"></div>
-                                    </div>
-                                    <strong class="rd-breakdown-count">{{ $total }}</strong>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="rd-empty-inline">Sin datos disponibles.</p>
-                    @endif
-                </div>
-
-                <div class="rd-breakdown-card" aria-labelledby="reporter-priority-heading">
-                    <h3 id="reporter-priority-heading" class="rd-breakdown-title">Por prioridad</h3>
-                    @if (count($priorityBreakdown) > 0)
-                        <ul class="rd-breakdown-list" role="list">
-                            @foreach ($priorityBreakdown as $priority => $total)
-                                <li class="rd-breakdown-row">
-                                    <span class="rd-priority-dot rd-priority-dot--{{ $priority }}" aria-hidden="true"></span>
-                                    <span class="rd-breakdown-label">{{ $priorityLabels[$priority] ?? $priority }}</span>
-                                    <div class="rd-breakdown-bar-wrap" aria-hidden="true">
-                                        <div class="rd-breakdown-bar rd-breakdown-bar--cyan" style="width: {{ min(100, ($total / max(array_values($priorityBreakdown))) * 100) }}%"></div>
-                                    </div>
-                                    <strong class="rd-breakdown-count">{{ $total }}</strong>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="rd-empty-inline">Sin datos disponibles.</p>
-                    @endif
-                </div>
-            </div>
-        </section>
-    </div>
-
-    {{-- ══════════════════════ RECENT TIMELINE TABLE ══════════════════════ --}}
-    <section class="panel rd-section-border--cyan rd-table-section" aria-labelledby="reporter-timeline-title">
-        <header class="rd-table-header">
-            <div>
-                <h2 id="reporter-timeline-title" class="rd-section-title">Actividad reciente vinculada</h2>
-                <p class="rd-section-sub">Tickets donde participas como reportero o responsable.</p>
-            </div>
-            <a href="{{ route('tickets.index') }}" class="rd-table-link">Ver todos</a>
-        </header>
-        <div class="rd-table-wrap" role="region" aria-label="Tabla de actividad reciente">
-            <table>
-                <thead>
-                    <tr>
-                        <th scope="col">Título</th>
-                        <th scope="col">Estado</th>
-                        <th scope="col">Prioridad</th>
-                        <th scope="col">Ubicación</th>
-                        <th scope="col">Actualizado</th>
-                        <th scope="col" class="text-right">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($myRecentTimeline as $ticket)
-                        <tr>
-                            <td class="rd-table-title-cell">{{ $ticket->title }}</td>
-                            <td>
-                                <span class="rd-state-pill rd-state-pill--{{ $ticket->state }}">
-                                    {{ $stateLabels[$ticket->state] ?? $ticket->state }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="rd-priority-pill rd-priority-pill--{{ $ticket->priority }}">
-                                    {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
-                                </span>
-                            </td>
-                            <td class="text-slate-600">{{ $ticket->location?->name ?? 'N/A' }}</td>
-                            <td class="rd-table-time">{{ $ticket->updated_at?->diffForHumans() ?? 'N/A' }}</td>
-                            <td class="text-right">
-                                <a href="{{ route('tickets.show', $ticket) }}" class="rd-table-action rd-table-action--cyan">Ver</a>
-                            </td>
-                        </tr>
+                            <div class="dash-queue-badges">
+                                <span class="dash-state-badge dash-state-badge--{{ $ticket->state }}">{{ $stateLabels[$ticket->state] ?? $ticket->state }}</span>
+                                <span class="dash-priority-badge dash-priority-badge--{{ $ticket->priority }}">{{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}</span>
+                            </div>
+                            <a href="{{ route('tickets.show', $ticket) }}" class="dash-queue-link">Abrir</a>
+                        </article>
                     @empty
-                        <tr>
-                            <td colspan="6" class="rd-table-empty">No hay tickets relacionados para mostrar.</td>
-                        </tr>
+                        <p class="dash-empty">No hay alertas activas por ahora. ¡Todo en orden!</p>
                     @endforelse
-                </tbody>
-            </table>
-        </div>
-    </section>
+                </div>
+            </section>
 
-</div>
+            {{-- Pulso de productividad (Distribución) --}}
+            <section class="role-section">
+                <header>
+                    <h2>Distribución de mis reportes</h2>
+                    <p>Lectura rápida de volumen por estado y prioridad.</p>
+                </header>
+
+                <div class="grid grid-cols-2 gap-3 p-4">
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Por estado</p>
+                        @if (count($stateBreakdown) > 0)
+                            <ul class="space-y-1 text-xs">
+                                @foreach ($stateBreakdown as $state => $total)
+                                    <li class="flex justify-between">
+                                        <span>{{ $stateLabels[$state] ?? $state }}</span>
+                                        <strong>{{ $total }}</strong>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p>Sin datos</p>
+                        @endif
+                    </article>
+
+                    <article class="dash-mini-card">
+                        <p class="dash-mini-label">Por prioridad</p>
+                        @if (count($priorityBreakdown) > 0)
+                            <ul class="space-y-1 text-xs">
+                                @foreach ($priorityBreakdown as $priority => $total)
+                                    <li class="flex justify-between">
+                                        <span>{{ $priorityLabels[$priority] ?? $priority }}</span>
+                                        <strong>{{ $total }}</strong>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p>Sin datos</p>
+                        @endif
+                    </article>
+                </div>
+            </section>
+        </div>
+
+
+        {{-- ===== TABLA DE ACTIVIDAD RECIENTE ===== --}}
+        <section class="role-section">
+            <header>
+                <h2>Actividad reciente vinculada</h2>
+                <p>Tickets donde participas como reportero o responsable.</p>
+            </header>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Ubicación</th>
+                            <th>Prioridad</th>
+                            <th>Estado</th>
+                            <th>Actualizado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($myRecentTimeline as $ticket)
+                            <tr>
+                                <td>{{ $ticket->title }}</td>
+                                <td>{{ $ticket->location?->name ?? 'N/A' }}</td>
+                                <td>
+                                    <span class="dash-priority-badge dash-priority-badge--{{ $ticket->priority }}">
+                                        {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="dash-state-badge dash-state-badge--{{ $ticket->state }}">
+                                        {{ $stateLabels[$ticket->state] ?? $ticket->state }}
+                                    </span>
+                                </td>
+                                <td>{{ $ticket->updated_at?->diffForHumans() ?? 'N/A' }}</td>
+                                <td><a href="{{ route('tickets.show', $ticket) }}">Ver</a></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="dash-empty">No hay tickets relacionados para mostrar.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
 @endsection
