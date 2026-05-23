@@ -507,6 +507,10 @@
     flex-wrap: wrap;
 }
 
+.tickets-btn-back {
+    min-height: 38px;
+}
+
 .tickets-btn-danger {
     display: inline-flex;
     align-items: center;
@@ -524,6 +528,131 @@
 .tickets-btn-danger:hover {
     background: #fee2e2;
     border-color: #fca5a5;
+}
+
+.tickets-dup-alert {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 4px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow-xs);
+}
+
+.tickets-dup-banner {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.tickets-dup-title {
+    font-weight: 800;
+    color: #92400e;
+    font-size: 0.95rem;
+}
+
+.tickets-dup-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+}
+
+.tickets-dup-meta-item {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    font-weight: 600;
+}
+
+.tickets-dup-link {
+    margin-left: 0.2rem;
+}
+
+.tickets-dup-reviewer {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.tickets-review-actions {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    gap: 0.75rem;
+    align-items: start;
+    margin-top: 0.2rem;
+}
+
+.tickets-review-note-wrap {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.tickets-review-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.tickets-review-note {
+    width: 100%;
+    min-height: 44px;
+    resize: vertical;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+
+.tickets-review-note:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 0;
+    border-color: #3b82f6;
+}
+
+.tickets-review-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.tickets-review-btn {
+    white-space: nowrap;
+}
+
+.tickets-review-btn--dismiss {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #b91c1c;
+}
+
+.tickets-review-btn--dismiss:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    color: #991b1b;
+}
+
+.tickets-review-btn--confirm {
+    background: #16a34a;
+    border-color: #16a34a;
+}
+
+.tickets-review-btn--confirm:hover {
+    background: #15803d;
+    border-color: #15803d;
+}
+
+.tickets-dup-dismissed {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 /* SECTIONS EN SHOW */
@@ -815,12 +944,15 @@
     .tickets-show-title { font-size: 1.25rem; }
     .tickets-show-actions { width: 100%; }
     .tickets-show-actions .btn-secondary,
+    .tickets-show-actions .c-btn,
     .tickets-show-actions .tickets-btn-danger { flex: 1; text-align: center; justify-content: center; }
     .tickets-show-content { padding: 1rem; }
     .tickets-show-grid { grid-template-columns: 1fr 1fr; }
     .tickets-media-grid { grid-template-columns: repeat(2, 1fr); }
     .tickets-update-form { padding: 1rem; }
     .tickets-history-list { padding: 0.75rem 1rem; }
+    .tickets-review-actions { grid-template-columns: 1fr; }
+    .tickets-review-buttons { justify-content: flex-start; }
 }
 
 /* â€” Tablet (640px â€“ 1023px) â€” */
