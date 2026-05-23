@@ -63,6 +63,7 @@ class GenerateTicketEmbedding implements ShouldQueue
         TicketEmbedding::updateOrCreate(
             ['ticket_id' => $this->ticket->id],
             [
+                // AI-managed columns only — human review columns are intentionally excluded
                 'embedding_vector' => $vector,
                 'description_hash' => $hash,
                 'similarity_score' => null,
