@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,29 +23,115 @@ class EnsureIdempotency
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! (bool) config('idempotency.enabled', true)) {
+        if (! (bool) config('idempotency.enabled', true) || ! $this->shouldHandle($request)) {
             return $next($request);
         }
 
-        if (! $this->shouldHandle($request)) {
-            return $next($request);
+        return $this->handleIdempotent($request, $next);
+    }
+
+    private function shouldHandle(Request $request): bool
+    {
+        $allowed = config('idempotency.allowed_methods', ['POST', 'PATCH', 'PUT', 'DELETE']);
+
+        return in_array($request->method(), $allowed, true);
+    }
+
+    private function resolveKey(Request $request): ?string
+    {
+        $header = (string) config('idempotency.header', 'Idempotency-Key');
+        $fallback = (string) config('idempotency.header_fallback', 'X-Idempotency-Key');
+        $candidates = [
+            $request->headers->get($header),
+            $request->headers->get($fallback),
+            $request->input('idempotency_key'),
+        ];
+
+        $key = null;
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                $key = $candidate;
+                break;
+            }
         }
 
-        $key = $this->resolveKey($request);
-        if ($key === null || trim($key) === '') {
-            if ((bool) config('idempotency.allow_missing', true)) {
-                return $next($request);
+        return $key;
+    }
+
+    private function acquireRecord(
+        string $key,
+        ?string $userId,
+        ?string $routeName,
+        string $method,
+        string $path,
+        string $requestHash,
+        Request $request,
+    ): IdempotencyKey|Response {
+        $ttlSeconds = (int) config('idempotency.ttl_seconds', 86400);
+        $expiresAt = now()->addSeconds($ttlSeconds);
+
+        return DB::transaction(function () use ($key, $userId, $routeName, $method, $path, $requestHash, $expiresAt, $request) {
+            $record = $this->findValidRecord($key);
+
+            if ($record !== null) {
+                return $this->resolveExistingRecord($record, $requestHash, $request);
             }
 
-            return $this->missingKeyResponse($request);
+            return $this->createRecordWithRetry(
+                $key,
+                $userId,
+                $routeName,
+                $method,
+                $path,
+                $requestHash,
+                $expiresAt,
+                $request,
+            );
+        });
+    }
+
+    private function handleIdempotent(Request $request, Closure $next): Response
+    {
+        $keyResult = $this->resolveKeyResult($request);
+        if ($keyResult['response'] instanceof Response) {
+            return $keyResult['response'];
+        }
+
+        $key = $keyResult['key'];
+        if ($key === null) {
+            return $next($request);
+        }
+
+        return $this->processIdempotentRequest($request, $next, $key);
+    }
+
+    /**
+     * @return array{key: string|null, response: Response|null}
+     */
+    private function resolveKeyResult(Request $request): array
+    {
+        $key = $this->resolveKey($request);
+        $response = null;
+
+        if ($key === null || trim($key) === '') {
+            if (! (bool) config('idempotency.allow_missing', true)) {
+                $response = $this->missingKeyResponse($request);
+            }
+
+            return ['key' => null, 'response' => $response];
         }
 
         $key = trim($key);
         $maxLength = (int) config('idempotency.max_key_length', 128);
         if (strlen($key) > $maxLength) {
-            return $this->invalidKeyResponse($request, 'Idempotency-Key too long.');
+            $response = $this->invalidKeyResponse($request, 'Idempotency-Key too long.');
         }
 
+        return ['key' => $key, 'response' => $response];
+    }
+
+    private function processIdempotentRequest(Request $request, Closure $next, string $key): Response
+    {
         $userId = $request->user()?->getAuthIdentifier();
         $requestHash = $this->buildRequestHash($request, $userId !== null ? (string) $userId : null);
         $routeName = $request->route()?->getName();
@@ -81,112 +168,83 @@ class EnsureIdempotency
         return $response;
     }
 
-    private function shouldHandle(Request $request): bool
+    private function findValidRecord(string $key): ?IdempotencyKey
     {
-        $allowed = config('idempotency.allowed_methods', ['POST', 'PATCH', 'PUT', 'DELETE']);
+        $record = IdempotencyKey::query()->lockForUpdate()->find($key);
+        if ($record !== null && $record->isExpired()) {
+            $record->delete();
 
-        return in_array($request->method(), $allowed, true);
+            return null;
+        }
+
+        return $record;
     }
 
-    private function resolveKey(Request $request): ?string
-    {
-        $header = (string) config('idempotency.header', 'Idempotency-Key');
-        $fallback = (string) config('idempotency.header_fallback', 'X-Idempotency-Key');
-
-        $key = $request->headers->get($header);
-        if (is_string($key) && $key !== '') {
-            return $key;
+    private function resolveExistingRecord(
+        IdempotencyKey $record,
+        string $requestHash,
+        Request $request
+    ): IdempotencyKey|Response {
+        if ($record->request_hash !== $requestHash) {
+            return $this->conflictResponse($request, 'Idempotency-Key reuse with different payload.');
         }
 
-        $key = $request->headers->get($fallback);
-        if (is_string($key) && $key !== '') {
-            return $key;
-        }
-
-        $inputKey = $request->input('idempotency_key');
-        if (is_string($inputKey) && $inputKey !== '') {
-            return $inputKey;
-        }
-
-        return null;
+        return $this->responseForRecordStatus($record, $request);
     }
 
-    private function acquireRecord(
+    private function responseForRecordStatus(IdempotencyKey $record, Request $request): IdempotencyKey|Response
+    {
+        $response = null;
+
+        switch ($record->status) {
+            case IdempotencyKey::STATUS_COMPLETED:
+                $response = $this->replayResponse($record, $request);
+                break;
+            case IdempotencyKey::STATUS_PROCESSING:
+                $response = $this->conflictResponse($request, 'Request already in progress.');
+                break;
+            case IdempotencyKey::STATUS_FAILED:
+                $response = $this->conflictResponse($request, 'Previous request failed. Retry with a new Idempotency-Key.');
+                break;
+            default:
+                $response = $this->conflictResponse($request, 'Idempotency-Key is in an invalid state.');
+        }
+
+        return $response;
+    }
+
+    private function createRecordWithRetry(
         string $key,
         ?string $userId,
         ?string $routeName,
         string $method,
         string $path,
         string $requestHash,
+        Carbon $expiresAt,
         Request $request,
     ): IdempotencyKey|Response {
-        $ttlSeconds = (int) config('idempotency.ttl_seconds', 86400);
-        $expiresAt = now()->addSeconds($ttlSeconds);
-
-        return DB::transaction(function () use ($key, $userId, $routeName, $method, $path, $requestHash, $expiresAt, $request) {
-            $record = IdempotencyKey::query()->lockForUpdate()->find($key);
-            if ($record !== null && $record->isExpired()) {
-                $record->delete();
-                $record = null;
+        try {
+            $result = IdempotencyKey::create([
+                'key' => $key,
+                'user_id' => $userId,
+                'route' => $routeName,
+                'method' => $method,
+                'path' => $path,
+                'request_hash' => $requestHash,
+                'status' => IdempotencyKey::STATUS_PROCESSING,
+                'locked_at' => now(),
+                'expires_at' => $expiresAt,
+            ]);
+        } catch (QueryException $exception) {
+            $existing = IdempotencyKey::query()->lockForUpdate()->find($key);
+            if ($existing === null) {
+                throw $exception;
             }
 
-            if ($record !== null) {
-                if ($record->request_hash !== $requestHash) {
-                    return $this->conflictResponse($request, 'Idempotency-Key reuse with different payload.');
-                }
+            $result = $this->resolveExistingRecord($existing, $requestHash, $request);
+        }
 
-                if ($record->status === IdempotencyKey::STATUS_COMPLETED) {
-                    return $this->replayResponse($record, $request);
-                }
-
-                if ($record->status === IdempotencyKey::STATUS_PROCESSING) {
-                    return $this->conflictResponse($request, 'Request already in progress.');
-                }
-
-                if ($record->status === IdempotencyKey::STATUS_FAILED) {
-                    return $this->conflictResponse($request, 'Previous request failed. Retry with a new Idempotency-Key.');
-                }
-
-                return $this->conflictResponse($request, 'Idempotency-Key is in an invalid state.');
-            }
-
-            try {
-                return IdempotencyKey::create([
-                    'key' => $key,
-                    'user_id' => $userId,
-                    'route' => $routeName,
-                    'method' => $method,
-                    'path' => $path,
-                    'request_hash' => $requestHash,
-                    'status' => IdempotencyKey::STATUS_PROCESSING,
-                    'locked_at' => now(),
-                    'expires_at' => $expiresAt,
-                ]);
-            } catch (QueryException $exception) {
-                $existing = IdempotencyKey::query()->lockForUpdate()->find($key);
-                if ($existing === null) {
-                    throw $exception;
-                }
-
-                if ($existing->request_hash !== $requestHash) {
-                    return $this->conflictResponse($request, 'Idempotency-Key reuse with different payload.');
-                }
-
-                if ($existing->status === IdempotencyKey::STATUS_COMPLETED) {
-                    return $this->replayResponse($existing, $request);
-                }
-
-                if ($existing->status === IdempotencyKey::STATUS_PROCESSING) {
-                    return $this->conflictResponse($request, 'Request already in progress.');
-                }
-
-                if ($existing->status === IdempotencyKey::STATUS_FAILED) {
-                    return $this->conflictResponse($request, 'Previous request failed. Retry with a new Idempotency-Key.');
-                }
-
-                return $this->conflictResponse($request, 'Idempotency-Key is in an invalid state.');
-            }
-        });
+        return $result;
     }
 
     private function replayResponse(IdempotencyKey $record, Request $request): Response
