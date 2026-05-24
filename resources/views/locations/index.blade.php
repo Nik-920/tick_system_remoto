@@ -7,6 +7,7 @@
         $searchValue = (string) ($filters['search'] ?? '');
         $buildingValue = (string) ($filters['building'] ?? '');
         $floorValue = (string) ($filters['floor'] ?? '');
+        $roomCodeValue = (string) ($filters['room_code'] ?? '');
         $perPageValue = (int) ($filters['per_page'] ?? 15);
 
         $isActiveRaw = $filters['is_active'] ?? null;
@@ -18,7 +19,7 @@
         }
 
         $activeFilterCount = 0;
-        foreach ([$searchValue, $buildingValue, $floorValue, $isActiveValue] as $filterValue) {
+        foreach ([$searchValue, $buildingValue, $floorValue, $isActiveValue, $roomCodeValue] as $filterValue) {
             if ($filterValue !== '') {
                 $activeFilterCount++;
             }
@@ -113,6 +114,11 @@
                     </div>
 
                     <div>
+                        <label for="room_code" class="locations-field-label">Aula</label>
+                        <input id="room_code" type="text" name="room_code" value="{{ $roomCodeValue }}" placeholder="Ej: ING-2-204" class="field">
+                    </div>
+
+                    <div>
                         <label for="is_active" class="locations-field-label">Estado</label>
                         <select id="is_active" name="is_active" class="field">
                             <option value="">Todas</option>
@@ -121,8 +127,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label for="per_page" class="locations-field-label">Por pagina</label>
+                    <div style="max-width: 90px;">
+                        <label for="per_page" class="locations-field-label">Pág.</label>
                         <select id="per_page" name="per_page" class="field">
                             @foreach ([10, 15, 25, 50] as $option)
                                 <option value="{{ $option }}" @selected($perPageValue === $option)>{{ $option }}</option>

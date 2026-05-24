@@ -25,6 +25,7 @@ class ListLocationsRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
             'building' => ['nullable', 'string', 'max:255'],
             'floor' => ['nullable', 'string', 'max:50'],
+            'room_code' => ['nullable', 'string', 'max:50'],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ];

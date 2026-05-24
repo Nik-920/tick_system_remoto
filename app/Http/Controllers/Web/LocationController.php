@@ -169,6 +169,10 @@ class LocationController extends Controller
             $query->where('floor', $filters['floor']);
         }
 
+        if (! empty($filters['room_code'])) {
+            $query->where('room_code', 'like', "%{$filters['room_code']}%");
+        }
+
         if (! empty($filters['search'])) {
             $search = trim((string) $filters['search']);
             $query->where(function (Builder $innerQuery) use ($search): void {
