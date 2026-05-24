@@ -82,6 +82,7 @@
                               class="tickets-review-actions">
                             @csrf
                             @method('PATCH')
+                                                        <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                             <div class="tickets-review-note-wrap">
                                 <label class="tickets-review-label" for="review_note">Nota de revisión</label>
                                 <textarea id="review_note" name="review_note" rows="2" maxlength="1000"
@@ -120,6 +121,7 @@
                           class="tickets-review-actions">
                         @csrf
                         @method('PATCH')
+                                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                         <input type="hidden" name="review_note" value="{{ $embedding->review_note ?? '' }}">
                         <button type="submit" name="review_status" value="confirmed" class="c-btn c-btn--ghost c-btn--sm tickets-review-btn">
                             ↩ Reabrir como duplicado
@@ -221,6 +223,7 @@
             <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="tickets-update-form">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
 
                 <div class="tickets-form-group">
                     <label for="to_state" class="tickets-field-label">Nuevo estado *</label>
@@ -313,6 +316,19 @@ function closeDeleteTicketModal() {
         modal.classList.add('hidden');
     }, 300);
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('.tickets-update-form, .tickets-review-actions');
+    forms.forEach(function (form) {
+        form.addEventListener('submit', function () {
+            const buttons = form.querySelectorAll('button[type="submit"]');
+            buttons.forEach(function (button) {
+                button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
+            });
+        }, { once: true });
+    });
+});
 </script>
 
 {{-- Custom Delete Modal Overlay --}}
