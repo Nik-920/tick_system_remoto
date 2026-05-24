@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureCorrelationId;
+use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\SecureHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -33,6 +34,7 @@ $builder = Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->alias([
+            'idempotency' => EnsureIdempotency::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
