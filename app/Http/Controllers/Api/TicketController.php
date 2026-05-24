@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\TicketCreated;
+use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
@@ -26,6 +26,8 @@ use Throwable;
 
 class TicketController extends Controller
 {
+    use DispatchesTicketCreatedAfterResponse;
+
     public function index(ListTicketsRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Ticket::class);
@@ -279,25 +281,5 @@ class TicketController extends Controller
                 $q->effectiveDuplicates();
             });
         }
-    }
-
-    private function dispatchAfterResponse(Ticket $ticket, string $correlationId): void
-    {
-        app()->terminating(function () use ($ticket, $correlationId): void {
-            try {
-                event(new TicketCreated($ticket, $correlationId));
-            } catch (Throwable $exception) {
-                Log::error('afterResponse TicketCreated failed', [
-                    'ticket_id' => $ticket->id,
-                    'correlation_id' => $correlationId,
-                    'error' => $exception->getMessage(),
-                ]);
-            }
-        });
-    }
-
-    private function isDedupEnabled(): bool
-    {
-        return (bool) config('ai.enabled') && (bool) config('ai.dedup.enabled');
     }
 }
