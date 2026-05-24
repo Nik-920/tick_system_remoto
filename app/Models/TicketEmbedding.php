@@ -90,21 +90,18 @@ class TicketEmbedding extends Model
     {
         return Attribute::make(
             set: function (mixed $value) {
+                $result = $value;
+
                 if ($value instanceof Expression) {
-                    return $value;
+                    $result = $value;
+                } elseif ($value === null) {
+                    $result = null;
+                } else {
+                    $driver = $this->getConnection()->getDriverName();
+                    $result = $driver === 'pgsql' ? ($value ? 'true' : 'false') : (bool) $value;
                 }
 
-                if ($value === null) {
-                    return null;
-                }
-
-                $driver = $this->getConnection()->getDriverName();
-
-                if ($driver === 'pgsql') {
-                    return $value ? 'true' : 'false';
-                }
-
-                return (bool) $value;
+                return $result;
             }
         );
     }
@@ -121,15 +118,16 @@ class TicketEmbedding extends Model
      */
     public function getEffectiveDuplicateAttribute(): bool
     {
-        if ($this->review_status === self::REVIEW_DISMISSED) {
-            return false;
+        $status = $this->review_status;
+        $effective = (bool) $this->is_duplicate;
+
+        if ($status === self::REVIEW_DISMISSED) {
+            $effective = false;
+        } elseif ($status === self::REVIEW_CONFIRMED) {
+            $effective = true;
         }
 
-        if ($this->review_status === self::REVIEW_CONFIRMED) {
-            return true;
-        }
-
-        return (bool) $this->is_duplicate;
+        return $effective;
     }
 
     // ── Scopes ──────────────────────────────────────────────────────────────
