@@ -17,7 +17,9 @@ return [
 
     'dedup' => [
         'enabled' => env('FEATURE_SEMANTIC_DEDUP', true),
-        'similarity_threshold' => floatval(env('TICKET_DEDUP_SIMILARITY_THRESHOLD', 0.82)),
+        'similarity_threshold' => floatval(env('TICKET_DEDUP_SIMILARITY_THRESHOLD', 0.90)),
+        'observation_threshold' => floatval(env('TICKET_DEDUP_OBSERVATION_THRESHOLD', 0.82)),
+        'title_overlap_min_tokens' => intval(env('TICKET_DEDUP_TITLE_OVERLAP_MIN_TOKENS', 1)),
         'window_hours' => intval(env('TICKET_DEDUP_WINDOW_HOURS', 24)),
     ],
 

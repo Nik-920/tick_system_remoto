@@ -12,6 +12,7 @@ use App\Services\Ai\EmbeddingService;
 use App\Services\Ai\HuggingFaceService;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class GenerateTicketEmbeddingTest extends TestCase
@@ -62,6 +63,38 @@ class GenerateTicketEmbeddingTest extends TestCase
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertSame([0.1, 0.2], $embedding->embedding_vector);
+    }
+
+    public function test_is_duplicate_persists_as_postgres_boolean(): void
+    {
+        $driver = DB::connection()->getDriverName();
+
+        $ticket = $this->createTicket('Ticket bool');
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+        ]);
+
+        if ($driver === 'pgsql') {
+            $row = DB::selectOne(
+                'select is_duplicate::text as value from ticket_embeddings where ticket_id = ?',
+                [$ticket->id]
+            );
+
+            $this->assertSame('true', $row?->value);
+
+            return;
+        }
+
+        $row = DB::selectOne(
+            'select is_duplicate as value from ticket_embeddings where ticket_id = ?',
+            [$ticket->id]
+        );
+
+        $this->assertSame(1, (int) ($row?->value ?? 0));
     }
 
     private function createTicket(string $title): Ticket

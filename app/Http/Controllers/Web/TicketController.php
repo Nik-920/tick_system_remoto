@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ListTicketsRequest;
+use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
@@ -17,18 +19,30 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use Throwable;
 
 class TicketController extends Controller
 {
+    use DispatchesTicketCreatedAfterResponse;
+
     public function index(ListTicketsRequest $request): View
     {
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
-        $query = Ticket::query()->with(['reporter', 'assignee', 'location', 'category']);
+
+        // Eager-load embedding and matchedTicket to show duplicate badge without N+1
+        $query = Ticket::query()->with([
+            'reporter',
+            'assignee',
+            'location',
+            'category',
+            'embedding.matchedTicket',
+        ]);
+
         $this->applyFilters($query, $filters);
 
         $tickets = $query
@@ -74,14 +88,22 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
+        $correlationId = (string) $request->attributes->get('correlation_id', '');
+        if ($correlationId === '') {
+            $correlationId = (string) Str::uuid();
+            $request->attributes->set('correlation_id', $correlationId);
+        }
+
         $result = $creationService->create(
             $request->user(),
             $request->validated(),
-            $request->file('media_files', [])
+            $request->file('media_files', []),
+            $correlationId,
         );
         $ticket = $result['ticket'];
+        $this->dispatchAfterResponse($ticket, $correlationId);
         $warning = $result['warning'] ?? null;
-        $warningPending = (bool) ($result['warning_pending'] ?? false);
+        $warningPending = $this->isDedupEnabled();
 
         $message = 'Ticket creado correctamente.';
         if (is_array($warning)) {
@@ -107,6 +129,7 @@ class TicketController extends Controller
             'media' => fn ($query) => $query->latest('created_at'),
             'stateHistory' => fn ($query) => $query->latest('created_at'),
             'embedding.matchedTicket',
+            'embedding.reviewer',
         ]);
 
         return view('tickets.show', [
@@ -166,6 +189,36 @@ class TicketController extends Controller
     }
 
     /**
+     * PATCH /tickets/{ticket}/duplicate-review
+     * Allows maintenance/admin/super_admin to confirm or dismiss an AI duplicate.
+     */
+    public function reviewDuplicate(ReviewDuplicateRequest $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('reviewDuplicate', $ticket);
+
+        $embedding = $ticket->embedding;
+
+        if (! $embedding) {
+            return back()->withErrors([
+                'review' => 'Este ticket aún no tiene análisis de duplicados generado por la IA.',
+            ]);
+        }
+
+        $validated = $request->validated();
+
+        // Update only human-review columns — AI columns are intentionally untouched
+        $embedding->review_status = $validated['review_status'];
+        $embedding->reviewed_by = $request->user()->id;
+        $embedding->reviewed_at = now();
+        $embedding->review_note = $validated['review_note'] ?? null;
+        $embedding->save();
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Revisión de duplicado actualizada.');
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      */
     private function applyFilters(Builder $query, array $filters): void
@@ -201,6 +254,14 @@ class TicketController extends Controller
 
         if (! empty($filters['to'])) {
             $query->whereDate('created_at', '<=', $filters['to']);
+        }
+
+        // Duplicate filter: effective_duplicate = true (sql-equivalent)
+        if (! empty($filters['duplicates'])) {
+            $query->whereHas('embedding', function (Builder $q): void {
+                /** @phpstan-ignore-next-line */
+                $q->effectiveDuplicates();
+            });
         }
     }
 }

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Firebase\FcmNotificationService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SendPushNotificationOnTicketStateChangedTest extends TestCase
@@ -78,9 +79,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
     // El título incluye la etiqueta del estado
     // ──────────────────────────────────────────────
 
-    /**
-     * @dataProvider stateLabelsProvider
-     */
+    #[DataProvider('stateLabelsProvider')]
     public function test_title_uses_correct_state_label(string $state, string $expectedEmoji): void
     {
         Log::spy();

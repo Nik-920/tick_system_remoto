@@ -33,6 +33,7 @@
         {{-- ===== FORM ===== --}}
         <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data" class="tickets-create-form">
             @csrf
+            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
 
             {{-- Título --}}
             <div class="tickets-form-group">
@@ -124,4 +125,21 @@
         </form>
 
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.querySelector('.tickets-create-form');
+            if (!form) {
+                return;
+            }
+
+            form.addEventListener('submit', function () {
+                const buttons = form.querySelectorAll('button[type="submit"]');
+                buttons.forEach(function (button) {
+                    button.disabled = true;
+                    button.setAttribute('aria-disabled', 'true');
+                });
+            }, { once: true });
+        });
+    </script>
 @endsection

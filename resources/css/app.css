@@ -5,6 +5,9 @@
 @import './modules/auth.css';
 @import './modules/welcome.css';
 
+/* ── Components ── */
+@import './components/buttons.css';
+
 /* ── Feature Modules ── */
 @import './modules/dashboard-role-shared.css';
 @import './modules/tickets.css';

@@ -3,11 +3,10 @@
 namespace Tests\Feature\Ai;
 
 use Illuminate\Support\Carbon;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
-/**
- * @group ai
- */
+#[Group('ai')]
 class RecurrenceTest extends TestCase
 {
     public function test_recurrence_detection_respects_window(): void

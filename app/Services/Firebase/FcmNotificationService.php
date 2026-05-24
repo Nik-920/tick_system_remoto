@@ -13,8 +13,36 @@ class FcmNotificationService
 {
     private function getMessaging()
     {
-        $credentialsPath = base_path(config('services.firebase.credentials'));
-        $factory = (new Factory)->withServiceAccount($credentialsPath);
+        $credentials = config('services.firebase.credentials');
+
+        // Si la variable de entorno contiene un JSON directamente (como array decodificable)
+        // o está en base64, la decodificamos. De lo contrario usamos la ruta de archivo.
+        $decoded = null;
+
+        // Intentar decodificar como base64 primero
+        $base64Decoded = base64_decode($credentials, true);
+        if ($base64Decoded !== false) {
+            $jsonFromBase64 = json_decode($base64Decoded, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $decoded = $jsonFromBase64;
+            }
+        }
+
+        // Si no era base64, intentar como JSON puro
+        if ($decoded === null) {
+            $jsonDirect = json_decode($credentials, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $decoded = $jsonDirect;
+            }
+        }
+
+        if ($decoded !== null) {
+            // Credenciales como array (sin tocar el disco)
+            $factory = (new Factory)->withServiceAccount($decoded);
+        } else {
+            // Fallback: tratar como ruta de archivo (entorno local)
+            $factory = (new Factory)->withServiceAccount(base_path($credentials));
+        }
 
         return $factory->createMessaging();
     }

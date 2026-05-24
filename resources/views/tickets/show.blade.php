@@ -12,7 +12,7 @@
                 <p class="tickets-show-subtitle">Revisión completa de la incidencia y su historial</p>
             </div>
             <div class="tickets-show-actions">
-                <a href="{{ route('tickets.index') }}" class="btn-secondary">Volver</a>
+                <a href="{{ route('tickets.index') }}" class="btn-secondary tickets-btn-back">Volver</a>
                 @if($ticket && Auth::user()?->can('delete', $ticket))
                     <form id="delete-ticket-form" method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="inline">
                         @csrf
@@ -29,24 +29,106 @@
         @endif
 
         @php
-            $embedding = $ticket?->embedding;
-            $matchedTicket = $embedding?->matchedTicket;
+            $embedding      = $ticket?->embedding;
+            $matchedTicket  = $embedding?->matchedTicket;
+            $reviewer       = $embedding?->reviewer;
+
+            // Use effective_duplicate (respects human review_status override)
             $showDuplicateWarning = $embedding
-                && $embedding->is_duplicate
+                && $embedding->effective_duplicate
                 && $matchedTicket
                 && in_array($matchedTicket->state, ['open', 'in_progress'], true);
+
+            $reviewStatus   = $embedding?->review_status;
+            $canReview      = $ticket && Auth::user()?->can('reviewDuplicate', $ticket);
         @endphp
 
+        {{-- ===== DUPLICATE WARNING BANNER ===== --}}
         @if ($showDuplicateWarning)
-            <div class="alert-warning">
-                <strong>Posible duplicado detectado.</strong>
-                <span>Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
-                <span>(Estado: {{ $matchedTicket?->state ?? 'N/A' }})</span>
-                <span>Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
-                @if ($matchedTicket)
-                    <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary" style="margin-left: 0.5rem;">Ver ticket</a>
-                @endif
+            <div class="tickets-dup-alert">
+                <div class="tickets-dup-banner">
+                    <div class="tickets-dup-title">
+                        @if ($reviewStatus === 'confirmed')
+                            ✅ Duplicado confirmado manualmente.
+                        @else
+                            ⚠️ Posible duplicado detectado por IA.
+                        @endif
+                    </div>
+                    <div class="tickets-dup-meta">
+                        <span class="tickets-dup-meta-item">Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
+                        <span class="tickets-dup-meta-item">Estado: {{ $matchedTicket?->state ?? 'N/A' }}</span>
+                        @can('reviewDuplicate', $ticket)
+                            <span class="tickets-dup-meta-item">Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
+                        @endcan
+                        @if ($matchedTicket)
+                            <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary tickets-dup-link">Ver ticket</a>
+                        @endif
+                    </div>
+
+                    {{-- Manual review info --}}
+                    @if ($reviewer && $reviewStatus)
+                        <div class="tickets-dup-reviewer">
+                            Revisado por <strong>{{ $reviewer->name ?? $reviewer->email }}</strong>
+                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
+                            @if ($embedding->review_note)
+                                Nota: <em>{{ $embedding->review_note }}</em>
+                            @endif
+                        </div>
+                    @endif
+
+                    {{-- Review actions --}}
+                    @can('reviewDuplicate', $ticket)
+                        <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
+                              class="tickets-review-actions">
+                            @csrf
+                            @method('PATCH')
+                                                        <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                            <div class="tickets-review-note-wrap">
+                                <label class="tickets-review-label" for="review_note">Nota de revisión</label>
+                                <textarea id="review_note" name="review_note" rows="2" maxlength="1000"
+                                          placeholder="Escribe una nota breve (opcional)"
+                                          class="tickets-review-note">{{ $embedding?->review_note }}</textarea>
+                            </div>
+                            <div class="tickets-review-buttons">
+                                <button type="submit" name="review_status" value="dismissed" class="btn-secondary tickets-review-btn tickets-review-btn--dismiss">
+                                    🚫 Marcar como no duplicado
+                                </button>
+                                <button type="submit" name="review_status" value="confirmed" class="btn-primary tickets-review-btn tickets-review-btn--confirm">
+                                    ✅ Confirmar duplicado
+                                </button>
+                            </div>
+                        </form>
+                        @error('review')
+                            <p style="color:var(--color-danger); font-size:0.85rem;">{{ $message }}</p>
+                        @enderror
+                    @endcan
+                </div>
             </div>
+        @elseif ($embedding && $embedding->isDismissedDuplicate())
+            {{-- Show dismissed badge for authorized users only --}}
+            @can('reviewDuplicate', $ticket)
+                <div class="alert-success tickets-dup-dismissed">
+                    <span>🚫 Duplicado descartado manualmente.</span>
+                    @if ($reviewer)
+                        <span style="font-size:0.85rem; opacity:0.8;">
+                            Por {{ $reviewer->name ?? $reviewer->email }}
+                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
+                            @if ($embedding->review_note) — <em>{{ $embedding->review_note }}</em> @endif
+                        </span>
+                    @endif
+                    {{-- Allow re-review --}}
+                    <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
+                          class="tickets-review-actions">
+                        @csrf
+                        @method('PATCH')
+                                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                        <input type="hidden" name="review_note" value="{{ $embedding->review_note ?? '' }}">
+                        <button type="submit" name="review_status" value="confirmed" class="c-btn c-btn--ghost c-btn--sm tickets-review-btn">
+                            ↩ Reabrir como duplicado
+                        </button>
+                    </form>
+                </div>
+            @endcan
         @endif
 
         @if (isset($errors) && $errors->any())
@@ -141,6 +223,7 @@
             <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="tickets-update-form">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
 
                 <div class="tickets-form-group">
                     <label for="to_state" class="tickets-field-label">Nuevo estado *</label>
@@ -233,6 +316,19 @@ function closeDeleteTicketModal() {
         modal.classList.add('hidden');
     }, 300);
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const forms = document.querySelectorAll('.tickets-update-form, .tickets-review-actions');
+    forms.forEach(function (form) {
+        form.addEventListener('submit', function () {
+            const buttons = form.querySelectorAll('button[type="submit"]');
+            buttons.forEach(function (button) {
+                button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
+            });
+        }, { once: true });
+    });
+});
 </script>
 
 {{-- Custom Delete Modal Overlay --}}

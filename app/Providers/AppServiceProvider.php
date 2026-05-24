@@ -10,8 +10,11 @@ use App\Policies\CategoryPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
@@ -29,7 +32,33 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Category::class, CategoryPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
 
+        $this->configureRateLimiters();
         $this->guardAgainstSqliteFallbackInProtectedEnvironments();
+    }
+
+    private function configureRateLimiters(): void
+    {
+        RateLimiter::for('creations', function (Request $request): Limit {
+            return Limit::perMinute(20)->by($this->rateLimitKey($request));
+        });
+
+        RateLimiter::for('mutations', function (Request $request): Limit {
+            return Limit::perMinute(30)->by($this->rateLimitKey($request));
+        });
+
+        RateLimiter::for('auth-sensitive', function (Request $request): Limit {
+            return Limit::perMinutes(15, 5)->by($this->rateLimitKey($request));
+        });
+    }
+
+    private function rateLimitKey(Request $request): string
+    {
+        $user = $request->user();
+        if ($user !== null) {
+            return (string) $user->getAuthIdentifier();
+        }
+
+        return (string) $request->ip();
     }
 
     private function guardAgainstSqliteFallbackInProtectedEnvironments(): void

@@ -36,8 +36,15 @@ class TicketResource extends JsonResource
             'resolved_at' => $this->formatDate($this->resolved_at),
             'created_at' => $this->formatDate($this->created_at),
             'updated_at' => $this->formatDate($this->updated_at),
-            'duplicate_warning' => $duplicateData['duplicate_warning'],
+
+            // ── Duplicate / AI fields ──────────────────────────────────────
+            'duplicate_warning' => $duplicateData['duplicate_warning'],      // effective bool
+            'duplicate_ai_detected' => $duplicateData['duplicate_ai_detected'],  // raw IA bool
+            'duplicate_review_status' => $duplicateData['duplicate_review_status'], // null|confirmed|dismissed
+            'duplicate_review_note' => $duplicateData['duplicate_review_note'],  // text|null
             'similar_ticket' => $duplicateData['similar_ticket'],
+
+            // ── Relations ─────────────────────────────────────────────────
             'reporter' => $this->whenLoaded('reporter', fn () => $this->mapUser($this->reporter)),
             'assignee' => $this->whenLoaded('assignee', fn () => $this->mapUser($this->assignee)),
             'location' => $this->whenLoaded('location', fn () => $this->mapLocation($this->location)),
@@ -53,33 +60,53 @@ class TicketResource extends JsonResource
     }
 
     /**
-     * @return array{duplicate_warning: bool, similar_ticket: array<string, mixed>|null}
+     * Build the duplicate-warning payload using the *effective* duplicate flag.
+     *
+     * Rules:
+     *  - review_status = dismissed → duplicate_warning = false even if AI detected it
+     *  - review_status = confirmed → duplicate_warning = true if matchedTicket is active
+     *  - review_status = null      → use is_duplicate from AI
+     *
+     * @return array{duplicate_warning: bool, duplicate_ai_detected: bool, duplicate_review_status: string|null, duplicate_review_note: string|null, similar_ticket: array<string, mixed>|null}
      */
     private function duplicateWarningData(?TicketEmbedding $embedding): array
     {
-        $duplicateWarning = false;
-        $similarTicket = null;
+        $defaults = [
+            'duplicate_warning' => false,
+            'duplicate_ai_detected' => false,
+            'duplicate_review_status' => null,
+            'duplicate_review_note' => null,
+            'similar_ticket' => null,
+        ];
 
-        if ($embedding && $embedding->is_duplicate) {
-            /** @var Ticket|null $matchedTicket */
-            $matchedTicket = $embedding->relationLoaded('matchedTicket') ? $embedding->matchedTicket : null;
-
-            if ($matchedTicket && in_array($matchedTicket->state, ['open', 'in_progress'], true)) {
-                $duplicateWarning = true;
-                $similarTicket = [
-                    'id' => $matchedTicket->id,
-                    'title' => $matchedTicket->title,
-                    'state' => $matchedTicket->state,
-                    'created_at' => $matchedTicket->created_at?->format(DATE_ATOM),
-                    'similarity_score' => $embedding->similarity_score,
-                ];
-            }
+        if (! $embedding) {
+            return $defaults;
         }
 
-        return [
-            'duplicate_warning' => $duplicateWarning,
-            'similar_ticket' => $similarTicket,
-        ];
+        $defaults['duplicate_ai_detected'] = (bool) $embedding->is_duplicate;
+        $defaults['duplicate_review_status'] = $embedding->review_status;
+        $defaults['duplicate_review_note'] = $embedding->review_note;
+
+        // Use effective_duplicate (human override takes precedence over IA)
+        if (! $embedding->effective_duplicate) {
+            return $defaults;
+        }
+
+        /** @var Ticket|null $matchedTicket */
+        $matchedTicket = $embedding->relationLoaded('matchedTicket') ? $embedding->matchedTicket : null;
+
+        if ($matchedTicket && in_array($matchedTicket->state, ['open', 'in_progress'], true)) {
+            $defaults['duplicate_warning'] = true;
+            $defaults['similar_ticket'] = [
+                'id' => $matchedTicket->id,
+                'title' => $matchedTicket->title,
+                'state' => $matchedTicket->state,
+                'created_at' => $matchedTicket->created_at?->format(DATE_ATOM),
+                'similarity_score' => $embedding->similarity_score,
+            ];
+        }
+
+        return $defaults;
     }
 
     private function mapUser(?User $user): ?array

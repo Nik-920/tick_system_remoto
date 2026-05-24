@@ -5,6 +5,7 @@ namespace Tests\Feature\Web;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -447,5 +448,272 @@ class TicketControllerTest extends TestCase
         ];
 
         return Category::create(array_merge($base, $overrides));
+    }
+
+    // ── Test: duplicate badge in index ─────────────────────────────────────
+
+    public function test_index_shows_duplicate_badge_for_effective_duplicate(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $matchedTicket = Ticket::create([
+            'title' => 'Proyector existente',
+            'description' => 'Descripcion del ticket que ya existe y es similar.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Proyector duplicado',
+            'description' => 'Descripcion del ticket que la IA marcará como duplicado.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+            'matched_ticket_id' => $matchedTicket->id,
+            'similarity_score' => 0.97,
+            'review_status' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee('Posible duplicado');
+    }
+
+    public function test_index_does_not_show_badge_when_review_dismissed(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $matchedTicket = Ticket::create([
+            'title' => 'Proyector existente dismissed',
+            'description' => 'Descripcion del ticket que sirve como referencia.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Proyector descartado',
+            'description' => 'Duplicado descartado manualmente por el revisor.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+            'matched_ticket_id' => $matchedTicket->id,
+            'similarity_score' => 0.97,
+            'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSee('Posible duplicado');
+    }
+
+    public function test_index_filter_duplicates_shows_only_effective_duplicates(): void
+    {
+        $user = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $matchedTicket = Ticket::create([
+            'title' => 'Ticket referencia',
+            'description' => 'Descripcion del ticket que sirve como referencia para los duplicados.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $dupAi = Ticket::create([
+            'title' => 'Duplicado IA sin revision web',
+            'description' => 'Este ticket debe aparecer por duplicado IA sin revision.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        TicketEmbedding::create([
+            'ticket_id' => $dupAi->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => 'hash-dup-web',
+            'is_duplicate' => true,
+            'matched_ticket_id' => $matchedTicket->id,
+            'review_status' => null,
+        ]);
+
+        $dismissed = Ticket::create([
+            'title' => 'Duplicado dismissed web',
+            'description' => 'Este ticket NO debe aparecer por revision dismissed.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        TicketEmbedding::create([
+            'ticket_id' => $dismissed->id,
+            'embedding_vector' => [0.3, 0.4],
+            'description_hash' => 'hash-dismissed-web',
+            'is_duplicate' => true,
+            'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+        ]);
+
+        $confirmed = Ticket::create([
+            'title' => 'Duplicado confirmado web',
+            'description' => 'Este ticket debe aparecer por confirmacion manual.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        TicketEmbedding::create([
+            'ticket_id' => $confirmed->id,
+            'embedding_vector' => [0.5, 0.6],
+            'description_hash' => 'hash-confirmed-web',
+            'is_duplicate' => false,
+            'review_status' => TicketEmbedding::REVIEW_CONFIRMED,
+        ]);
+
+        $normal = Ticket::create([
+            'title' => 'Ticket normal web',
+            'description' => 'Este ticket NO debe aparecer en el filtro de duplicados web.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        TicketEmbedding::create([
+            'ticket_id' => $normal->id,
+            'embedding_vector' => [0.7, 0.8],
+            'description_hash' => 'hash-normal-web',
+            'is_duplicate' => false,
+            'review_status' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('tickets.index', ['duplicates' => '1']));
+
+        $response->assertOk();
+        $response->assertSee('Duplicado IA sin revision web');
+        $response->assertSee('Duplicado confirmado web');
+        $response->assertDontSee('Duplicado dismissed web');
+        $response->assertDontSee('Ticket normal web');
+    }
+
+    // ── Test: web reviewDuplicate endpoint ────────────────────────────────
+
+    public function test_maintenance_can_dismiss_duplicate_from_web(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Duplicado a descartar desde web',
+            'description' => 'Descripcion del ticket que el tecnico va a descartar como no duplicado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.duplicate-review.update', $ticket), [
+                'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+                'review_note' => 'No es un duplicado, equipo diferente.',
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $response->assertSessionHas('status', 'Revisión de duplicado actualizada.');
+
+        $this->assertDatabaseHas('ticket_embeddings', [
+            'ticket_id' => $ticket->id,
+            'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+            'reviewed_by' => $maintenance->id,
+            'review_note' => 'No es un duplicado, equipo diferente.',
+        ]);
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertTrue($embedding->is_duplicate);
+        $this->assertNotNull($embedding->reviewed_at);
+    }
+
+    public function test_reporter_cannot_review_duplicate_from_web(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket protegido web review',
+            'description' => 'Reporter no debe poder hacer review desde web.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->patch(route('tickets.duplicate-review.update', $ticket), [
+                'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+            ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseMissing('ticket_embeddings', [
+            'ticket_id' => $ticket->id,
+            'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+        ]);
     }
 }
