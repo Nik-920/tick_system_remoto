@@ -11,9 +11,6 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
-use App\Services\Ai\DeduplicationService;
-use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
 use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -178,13 +175,13 @@ class TicketApiControllerTest extends TestCase
         $this->assertDatabaseCount('tickets', 2);
     }
 
-    public function test_api_store_returns_warning_pending_when_async_enabled(): void
+    public function test_api_store_returns_warning_pending_when_dedup_enabled(): void
     {
         config([
             'ai.enabled' => true,
             'ai.dedup.enabled' => true,
-            'ai.automation.async_processing' => true,
-            'queue.default' => 'database',
+            'ai.automation.async_processing' => false,
+            'queue.default' => 'sync',
         ]);
 
         $user = $this->createUserWithRole('reporter');
@@ -206,39 +203,17 @@ class TicketApiControllerTest extends TestCase
         $response->assertJsonPath('duplicate_warning_pending', true);
     }
 
-    public function test_api_store_survives_deduplication_exception_in_sync_mode(): void
+    public function test_api_store_dispatches_dedup_jobs_after_response(): void
     {
+        Queue::fake();
+
         config([
             'ai.enabled' => true,
             'ai.huggingface.enabled' => true,
             'ai.dedup.enabled' => true,
-            'ai.automation.async_processing' => false,
-            'queue.default' => 'sync',
+            'ai.automation.async_processing' => true,
+            'queue.default' => 'database',
         ]);
-
-        $this->app->bind(EmbeddingService::class, function () {
-            $huggingFace = new class extends HuggingFaceService
-            {
-                public function embedding(string $text, ?string $model = null): array
-                {
-                    return [1.0, 0.0];
-                }
-            };
-
-            return new EmbeddingService($huggingFace);
-        });
-
-        $this->app->bind(DeduplicationService::class, function () {
-            $embeddings = app(EmbeddingService::class);
-
-            return new class($embeddings) extends DeduplicationService
-            {
-                public function findBestMatch(array $sourceEmbedding, array $candidates): ?array
-                {
-                    throw new RuntimeException('dedup failure');
-                }
-            };
-        });
 
         $user = $this->createUserWithRole('reporter');
         Sanctum::actingAs($user);
@@ -274,6 +249,8 @@ class TicketApiControllerTest extends TestCase
         $response = $this->postJson(route('api.tickets.store'), $payload);
 
         $response->assertCreated();
+        Queue::assertPushed(GenerateTicketEmbedding::class);
+        Queue::assertPushed(DetectDuplicates::class);
         $this->assertDatabaseHas('tickets', [
             'title' => 'Mesa rota en sala A-201',
             'reporter_id' => $user->id,
