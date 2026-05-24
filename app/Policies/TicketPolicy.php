@@ -41,6 +41,8 @@ class TicketPolicy
 
     public function delete(User $user, Ticket $ticket): bool
     {
+        unset($ticket);
+
         return $this->hasAnyRole($user, ['admin', 'super_admin']);
     }
 
