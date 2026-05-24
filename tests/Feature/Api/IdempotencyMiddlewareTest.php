@@ -131,6 +131,59 @@ class IdempotencyMiddlewareTest extends TestCase
         $response->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT');
     }
 
+    public function test_idempotency_requires_key_when_missing(): void
+    {
+        config(['idempotency.allow_missing' => false]);
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $payload = [
+            'title' => 'Ticket sin idempotency key',
+            'description' => 'Descripcion valida para probar missing key.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+        ];
+
+        $response = $this->postJson(route('api.tickets.store'), $payload);
+
+        $response->assertStatus(428);
+        $response->assertJsonPath('code', 'IDEMPOTENCY_KEY_REQUIRED');
+    }
+
+    public function test_idempotency_rejects_oversized_key(): void
+    {
+        config([
+            'idempotency.allow_missing' => false,
+            'idempotency.max_key_length' => 8,
+        ]);
+
+        $user = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($user);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $payload = [
+            'title' => 'Ticket con key larga',
+            'description' => 'Descripcion valida para probar key demasiado larga.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+        ];
+
+        $response = $this
+            ->withHeader('Idempotency-Key', str_repeat('a', 12))
+            ->postJson(route('api.tickets.store'), $payload);
+
+        $response->assertStatus(400);
+        $response->assertJsonPath('code', 'IDEMPOTENCY_KEY_INVALID');
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
