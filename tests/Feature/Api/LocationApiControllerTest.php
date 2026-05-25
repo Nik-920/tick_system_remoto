@@ -116,6 +116,160 @@ class LocationApiControllerTest extends TestCase
         });
     }
 
+    public function test_store_returns_conflict_when_similar_location_exists_without_confirmation(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $existing = Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-203',
+            'qr_token' => 'qr-ing-2-203',
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-204',
+            'is_active' => true,
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('confirmation_required', true);
+        $response->assertJsonPath('similar_locations.0.id', $existing->id);
+        $response->assertJsonPath('similar_locations.0.room_code', 'ING-2-203');
+
+        $this->assertDatabaseMissing('locations', [
+            'room_code' => 'ING-2-204',
+        ]);
+    }
+
+    public function test_store_allows_similar_location_when_confirmed(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-203',
+            'qr_token' => 'qr-ing-2-203',
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-204',
+            'is_active' => true,
+            'confirm_similar_location' => true,
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.room_code', 'ING-2-204');
+    }
+
+    public function test_store_allows_same_name_different_building(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Edificio A',
+            'floor' => '1',
+            'room_code' => 'A-101',
+            'qr_token' => 'qr-a-101',
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'name' => 'Laboratorio 3',
+            'building' => 'Edificio B',
+            'floor' => '1',
+            'room_code' => 'B-101',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.room_code', 'B-101');
+    }
+
+    public function test_store_allows_same_name_different_floor(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Edificio A',
+            'floor' => '1',
+            'room_code' => 'A-201',
+            'qr_token' => 'qr-a-201',
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'name' => 'Laboratorio 3',
+            'building' => 'Edificio A',
+            'floor' => '2',
+            'room_code' => 'A-202',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.room_code', 'A-202');
+    }
+
+    public function test_store_detects_case_insensitive_duplicate(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Edificio A',
+            'floor' => '1',
+            'room_code' => 'A-301',
+            'qr_token' => 'qr-a-301',
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'name' => 'LABORATORIO 3',
+            'building' => 'Edificio A',
+            'floor' => '1',
+            'room_code' => 'A-302',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('confirmation_required', true);
+    }
+
     public function test_reporter_cannot_store_location(): void
     {
         $reporter = $this->createUserWithRole('reporter');
@@ -156,6 +310,66 @@ class LocationApiControllerTest extends TestCase
             'id' => $location->id,
             'room_code' => 'F-102',
             'is_active' => 0,
+        ]);
+    }
+
+    public function test_update_ignores_self_when_checking_similar_locations(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = Location::query()->create([
+            'name' => 'Laboratorio 7',
+            'building' => 'Edificio S',
+            'floor' => '1',
+            'room_code' => 'S-101',
+            'qr_token' => 'qr-s-101',
+            'is_active' => true,
+        ]);
+
+        $response = $this->patchJson(route('api.locations.update', $location), [
+            'name' => 'Laboratorio 7',
+            'is_active' => false,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.is_active', false);
+    }
+
+    public function test_update_conflicts_when_renaming_to_similar_existing_location(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $existing = Location::query()->create([
+            'name' => 'Laboratorio 8',
+            'building' => 'Edificio T',
+            'floor' => '1',
+            'room_code' => 'T-101',
+            'qr_token' => 'qr-t-101',
+            'is_active' => true,
+        ]);
+
+        $location = Location::query()->create([
+            'name' => 'Laboratorio 9',
+            'building' => 'Edificio T',
+            'floor' => '1',
+            'room_code' => 'T-102',
+            'qr_token' => 'qr-t-102',
+            'is_active' => true,
+        ]);
+
+        $response = $this->patchJson(route('api.locations.update', $location), [
+            'name' => 'Laboratorio 8',
+        ]);
+
+        $response->assertStatus(409);
+        $response->assertJsonPath('confirmation_required', true);
+        $response->assertJsonPath('similar_locations.0.id', $existing->id);
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+            'name' => 'Laboratorio 9',
         ]);
     }
 
