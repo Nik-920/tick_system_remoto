@@ -19,67 +19,16 @@ class LocationSimilarityService
             return collect();
         }
 
-        $name = $this->normalizeName($payload['name'] ?? null);
-        $building = $this->normalizeBuilding($payload['building'] ?? null);
-        $floor = $this->normalizeFloor($payload['floor'] ?? null);
-
-        if ($name === '' || $building === '') {
+        $normalized = $this->normalizePayload($payload);
+        if (! $this->isSearchable($normalized)) {
             return collect();
         }
 
-        $query = Location::query()->select([
-            'id',
-            'name',
-            'building',
-            'floor',
-            'room_code',
-            'is_active',
-        ]);
-
-        if (config('locations.duplicate_active_only', true)) {
-            $query->where('is_active', true);
-        }
-
-        if ($ignoreLocationId !== null && $ignoreLocationId !== '') {
-            $query->where('id', '!=', $ignoreLocationId);
-        }
-
+        $query = $this->buildSimilarityQuery($ignoreLocationId);
         $threshold = $this->normalizedThreshold();
 
-        $matches = $query->get()->map(function (Location $location) use ($name, $building, $floor, $threshold): ?array {
-            $candidateBuilding = $this->normalizeBuilding($location->building);
-            if ($candidateBuilding !== $building) {
-                return null;
-            }
-
-            $candidateFloor = $this->normalizeFloor($location->floor);
-            if ($candidateFloor !== $floor) {
-                return null;
-            }
-
-            $candidateName = $this->normalizeName($location->name);
-            if ($candidateName === '') {
-                return null;
-            }
-
-            if ($candidateName === $name) {
-                return [
-                    'location' => $location,
-                    'score' => 1.0,
-                ];
-            }
-
-            similar_text($candidateName, $name, $percent);
-            $score = $percent / 100;
-
-            if ($score < $threshold) {
-                return null;
-            }
-
-            return [
-                'location' => $location,
-                'score' => $score,
-            ];
+        $matches = $query->get()->map(function (Location $location) use ($normalized, $threshold): ?array {
+            return $this->evaluateCandidate($location, $normalized, $threshold);
         })->filter();
 
         return $matches
@@ -137,17 +86,102 @@ class LocationSimilarityService
     private function normalizeFloor(?string $value): string
     {
         $normalized = $this->normalizeBasic($value);
+        $result = '';
 
-        if ($normalized === '') {
-            return '';
+        if ($normalized !== '') {
+            $normalized = $this->normalizeRomanNumerals($normalized);
+
+            if (preg_match('/\b(\d+)\b/', $normalized, $matches) === 1) {
+                $result = $matches[1];
+            } else {
+                $result = $this->normalizeFloorWords($normalized);
+            }
         }
 
-        $normalized = $this->normalizeRomanNumerals($normalized);
+        return $result;
+    }
 
-        if (preg_match('/\b(\d+)\b/', $normalized, $matches) === 1) {
-            return $matches[1];
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{name: string, building: string, floor: string}
+     */
+    private function normalizePayload(array $payload): array
+    {
+        return [
+            'name' => $this->normalizeName($payload['name'] ?? null),
+            'building' => $this->normalizeBuilding($payload['building'] ?? null),
+            'floor' => $this->normalizeFloor($payload['floor'] ?? null),
+        ];
+    }
+
+    /** @param  array{name: string, building: string, floor: string}  $normalized */
+    private function isSearchable(array $normalized): bool
+    {
+        return $normalized['name'] !== '' && $normalized['building'] !== '';
+    }
+
+    private function buildSimilarityQuery(?string $ignoreLocationId)
+    {
+        $query = Location::query()->select([
+            'id',
+            'name',
+            'building',
+            'floor',
+            'room_code',
+            'is_active',
+        ]);
+
+        if (config('locations.duplicate_active_only', true)) {
+            $query->where('is_active', true);
         }
 
+        if ($ignoreLocationId !== null && $ignoreLocationId !== '') {
+            $query->where('id', '!=', $ignoreLocationId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param  array{name: string, building: string, floor: string}  $target
+     * @return array{location: Location, score: float}|null
+     */
+    private function evaluateCandidate(Location $location, array $target, float $threshold): ?array
+    {
+        $match = null;
+
+        $candidateBuilding = $this->normalizeBuilding($location->building);
+        $candidateFloor = $this->normalizeFloor($location->floor);
+        $candidateName = $this->normalizeName($location->name);
+
+        $matchesScope = $candidateBuilding === $target['building']
+            && $candidateFloor === $target['floor']
+            && $candidateName !== '';
+
+        if ($matchesScope) {
+            if ($candidateName === $target['name']) {
+                $match = [
+                    'location' => $location,
+                    'score' => 1.0,
+                ];
+            } else {
+                similar_text($candidateName, $target['name'], $percent);
+                $score = $percent / 100;
+
+                if ($score >= $threshold) {
+                    $match = [
+                        'location' => $location,
+                        'score' => $score,
+                    ];
+                }
+            }
+        }
+
+        return $match;
+    }
+
+    private function normalizeFloorWords(string $value): string
+    {
         $wordMap = [
             'primer' => '1',
             'primero' => '1',
@@ -162,13 +196,16 @@ class LocationSimilarityService
             'decimo' => '10',
         ];
 
-        foreach ($wordMap as $word => $value) {
-            if (preg_match('/\b'.preg_quote($word, '/').'\b/', $normalized) === 1) {
-                return $value;
+        $result = $value;
+
+        foreach ($wordMap as $word => $mappedValue) {
+            if (preg_match('/\b'.preg_quote($word, '/').'\b/', $value) === 1) {
+                $result = $mappedValue;
+                break;
             }
         }
 
-        return $normalized;
+        return $result;
     }
 
     private function normalizeText(?string $value): string
