@@ -141,6 +141,124 @@ class AdminModuleAccessTest extends TestCase
         Queue::assertPushed(GenerateLocationQrImage::class);
     }
 
+    public function test_admin_sees_warning_when_similar_location_exists_and_confirmation_missing(): void
+    {
+        Queue::fake();
+
+        $user = $this->createUserWithRole('admin');
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-203',
+            'qr_token' => 'qr-ing-2-203',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('locations.create'))
+            ->post(route('locations.store'), [
+                'name' => 'Laboratorio 3',
+                'building' => 'Ingenieria Laboratorios',
+                'floor' => '1',
+                'room_code' => 'ING-2-204',
+                'is_active' => '1',
+            ]);
+
+        $response->assertRedirect(route('locations.create'));
+        $response->assertSessionHas('confirmation_required', true);
+        $response->assertSessionHas('similar_locations_warning');
+
+        $this->assertDatabaseMissing('locations', [
+            'room_code' => 'ING-2-204',
+        ]);
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_admin_can_create_similar_location_when_confirmed(): void
+    {
+        Queue::fake();
+
+        $user = $this->createUserWithRole('admin');
+
+        Location::query()->create([
+            'name' => 'Laboratorio 3',
+            'building' => 'Ingenieria Laboratorios',
+            'floor' => '1',
+            'room_code' => 'ING-2-203',
+            'qr_token' => 'qr-ing-2-203',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('locations.store'), [
+                'name' => 'Laboratorio 3',
+                'building' => 'Ingenieria Laboratorios',
+                'floor' => '1',
+                'room_code' => 'ING-2-204',
+                'is_active' => '1',
+                'confirm_similar_location' => '1',
+            ]);
+
+        $location = Location::query()->where('room_code', 'ING-2-204')->first();
+
+        $response->assertRedirect(route('locations.edit', $location));
+        $response->assertSessionHas('status', 'Ubicacion creada correctamente. La imagen QR se generara en background.');
+
+        $this->assertDatabaseHas('locations', [
+            'room_code' => 'ING-2-204',
+        ]);
+
+        Queue::assertPushed(GenerateLocationQrImage::class);
+    }
+
+    public function test_admin_sees_warning_when_updating_to_similar_location_without_confirmation(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $existing = Location::query()->create([
+            'name' => 'Laboratorio 8',
+            'building' => 'Edificio T',
+            'floor' => '1',
+            'room_code' => 'T-101',
+            'qr_token' => 'qr-t-101',
+            'is_active' => true,
+        ]);
+
+        $location = Location::query()->create([
+            'name' => 'Laboratorio 9',
+            'building' => 'Edificio T',
+            'floor' => '1',
+            'room_code' => 'T-102',
+            'qr_token' => 'qr-t-102',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('locations.edit', $location))
+            ->patch(route('locations.update', $location), [
+                'name' => $existing->name,
+                'building' => $existing->building,
+                'floor' => $existing->floor,
+                'room_code' => $location->room_code,
+                'is_active' => '1',
+            ]);
+
+        $response->assertRedirect(route('locations.edit', $location));
+        $response->assertSessionHas('confirmation_required', true);
+        $response->assertSessionHas('similar_locations_warning');
+
+        $this->assertDatabaseHas('locations', [
+            'id' => $location->id,
+            'name' => 'Laboratorio 9',
+        ]);
+    }
+
     public function test_admin_can_create_category_from_web_module(): void
     {
         $user = $this->createUserWithRole('admin');

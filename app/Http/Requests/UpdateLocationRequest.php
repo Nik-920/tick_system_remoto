@@ -37,6 +37,7 @@ class UpdateLocationRequest extends FormRequest
                 Rule::unique('locations', 'room_code')->ignore($this->locationId()),
             ],
             'is_active' => ['sometimes', 'boolean'],
+            'confirm_similar_location' => ['nullable', 'boolean'],
             'qr_token' => ['prohibited'],
             'qr_image_url' => ['prohibited'],
             'qr_generation_status' => ['prohibited'],

@@ -8,6 +8,7 @@ use App\Http\Requests\StoreLocationRequest;
 use App\Http\Requests\UpdateLocationRequest;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
+use App\Services\Locations\LocationSimilarityService;
 use App\Services\Qr\QrTokenService;
 use App\Services\Storage\LocationQrStorageService;
 use Illuminate\Database\Eloquent\Builder;
@@ -48,11 +49,25 @@ class LocationController extends Controller
         return view('locations.create');
     }
 
-    public function store(StoreLocationRequest $request, QrTokenService $qrTokenService): RedirectResponse
-    {
+    public function store(
+        StoreLocationRequest $request,
+        QrTokenService $qrTokenService,
+        LocationSimilarityService $similarityService
+    ): RedirectResponse {
         $this->authorize('create', Location::class);
 
         $data = $request->validated();
+
+        $similarLocations = $similarityService->findSimilar($data);
+        if ($similarLocations->isNotEmpty() && ! $request->boolean('confirm_similar_location')) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with([
+                    'similar_locations_warning' => $similarityService->formatSimilarLocations($similarLocations),
+                    'confirmation_required' => true,
+                ]);
+        }
 
         $location = Location::query()->create([
             'name' => (string) $data['name'],
@@ -86,11 +101,33 @@ class LocationController extends Controller
         ]);
     }
 
-    public function update(UpdateLocationRequest $request, Location $location): RedirectResponse
-    {
+    public function update(
+        UpdateLocationRequest $request,
+        Location $location,
+        LocationSimilarityService $similarityService
+    ): RedirectResponse {
         $this->authorize('update', $location);
 
-        $location->fill($request->validated());
+        $data = $request->validated();
+
+        $similarityPayload = [
+            'name' => $data['name'] ?? $location->name,
+            'building' => $data['building'] ?? $location->building,
+            'floor' => array_key_exists('floor', $data) ? $data['floor'] : $location->floor,
+        ];
+
+        $similarLocations = $similarityService->findSimilar($similarityPayload, $location->id);
+        if ($similarLocations->isNotEmpty() && ! $request->boolean('confirm_similar_location')) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with([
+                    'similar_locations_warning' => $similarityService->formatSimilarLocations($similarLocations),
+                    'confirmation_required' => true,
+                ]);
+        }
+
+        $location->fill($data);
         $location->save();
 
         return redirect()

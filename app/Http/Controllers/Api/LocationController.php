@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateLocationRequest;
 use App\Http\Resources\LocationResource;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
+use App\Services\Locations\LocationSimilarityService;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Qr\QrTokenService;
 use App\Services\Storage\LocationQrStorageService;
@@ -50,13 +51,25 @@ class LocationController extends Controller
         return new LocationResource($location);
     }
 
-    public function store(StoreLocationRequest $request, QrTokenService $qrTokenService): JsonResponse
-    {
+    public function store(
+        StoreLocationRequest $request,
+        QrTokenService $qrTokenService,
+        LocationSimilarityService $similarityService
+    ): JsonResponse {
         $this->authorize('create', Location::class);
 
         $correlationId = (string) $request->attributes->get('correlation_id', '');
 
         $data = $request->validated();
+
+        $similarLocations = $similarityService->findSimilar($data);
+        if ($similarLocations->isNotEmpty() && ! $request->boolean('confirm_similar_location')) {
+            return response()->json([
+                'message' => 'Se encontraron ubicaciones similares. Confirma que deseas crear una ubicacion distinta.',
+                'confirmation_required' => true,
+                'similar_locations' => $similarityService->formatSimilarLocations($similarLocations),
+            ], 409);
+        }
 
         $location = Location::query()->create([
             'name' => (string) $data['name'],
@@ -92,11 +105,31 @@ class LocationController extends Controller
         ], 201);
     }
 
-    public function update(UpdateLocationRequest $request, Location $location): JsonResponse
-    {
+    public function update(
+        UpdateLocationRequest $request,
+        Location $location,
+        LocationSimilarityService $similarityService
+    ): JsonResponse {
         $this->authorize('update', $location);
 
-        $location->fill($request->validated());
+        $data = $request->validated();
+
+        $similarityPayload = [
+            'name' => $data['name'] ?? $location->name,
+            'building' => $data['building'] ?? $location->building,
+            'floor' => array_key_exists('floor', $data) ? $data['floor'] : $location->floor,
+        ];
+
+        $similarLocations = $similarityService->findSimilar($similarityPayload, $location->id);
+        if ($similarLocations->isNotEmpty() && ! $request->boolean('confirm_similar_location')) {
+            return response()->json([
+                'message' => 'Se encontraron ubicaciones similares. Confirma que deseas actualizar esta ubicacion.',
+                'confirmation_required' => true,
+                'similar_locations' => $similarityService->formatSimilarLocations($similarLocations),
+            ], 409);
+        }
+
+        $location->fill($data);
         $location->save();
 
         $location->loadCount(['tickets', 'incidentHistory']);

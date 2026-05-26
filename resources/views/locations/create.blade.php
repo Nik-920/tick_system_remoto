@@ -27,6 +27,21 @@
                 </div>
             @endif
 
+            @if (session('similar_locations_warning'))
+                <div class="alert-warning">
+                    <p class="font-semibold mb-2">Ya existe una ubicacion similar:</p>
+                    <ul class="space-y-1">
+                        @foreach (session('similar_locations_warning') as $similar)
+                            <li class="text-sm">
+                                <strong>{{ $similar['name'] }}</strong> / {{ $similar['building'] }} / {{ $similar['floor'] ?? '—' }} / {{ $similar['room_code'] }}
+                                <a href="{{ route('locations.edit', $similar['id']) }}" class="underline">Ver</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <p class="text-sm mt-2">Si realmente es una ubicacion distinta, marca la confirmacion y vuelve a guardar.</p>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('locations.store') }}" class="locs-form-card">
                 @csrf
 
@@ -92,6 +107,24 @@
                         </label>
                         <p class="locs-field-hint">Las ubicaciones activas aparecen disponibles al crear tickets.</p>
                     </div>
+
+                    @if (session('confirmation_required'))
+                        <div class="locs-form-group">
+                            <label class="locs-toggle-wrap">
+                                <input type="hidden" name="confirm_similar_location" value="0">
+                                <input id="confirm_similar_location" name="confirm_similar_location" type="checkbox" value="1"
+                                       @checked(old('confirm_similar_location', '0') === '1')
+                                       class="locs-toggle-input">
+                                <span class="locs-toggle-track">
+                                    <span class="locs-toggle-thumb"></span>
+                                </span>
+                                <span class="locs-toggle-label">Confirmo que esta es una ubicacion diferente a las ubicaciones similares listadas.</span>
+                            </label>
+                            @error('confirm_similar_location')
+                                <p class="locs-field-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endif
 
                     <div class="locs-form-actions">
                         <button type="submit" class="btn-primary">Guardar ubicación</button>

@@ -29,6 +29,7 @@ class StoreLocationRequest extends FormRequest
             'floor' => ['nullable', 'string', 'max:50'],
             'room_code' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('locations', 'room_code')],
             'is_active' => ['nullable', 'boolean'],
+            'confirm_similar_location' => ['nullable', 'boolean'],
             'qr_token' => ['prohibited'],
             'qr_image_url' => ['prohibited'],
             'qr_generation_status' => ['prohibited'],
