@@ -367,7 +367,8 @@ class LocationSimilarityService
         if (preg_match('/\b(\d+)(?:er|ro|do|to|mo)?\b/', $value, $matches) === 1) {
             $result = $matches[1];
         }
-        //  🪪  return.type 
+
+        //  🪪  return.type
         return $result;
     }
 
