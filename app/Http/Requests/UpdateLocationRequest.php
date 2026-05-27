@@ -47,6 +47,15 @@ class UpdateLocationRequest extends FormRequest
         ];
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('is_active')) {
+            $this->merge([
+                'is_active' => $this->boolean('is_active'),
+            ]);
+        }
+    }
+
     private function locationId(): ?string
     {
         $location = $this->route('location');
