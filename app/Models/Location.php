@@ -69,7 +69,7 @@ class Location extends Model
     {
         return Attribute::make(
             get: fn ($value): bool => $this->normalizeBoolean($value),
-            set: fn ($value): bool => $this->normalizeBoolean($value),
+            set: fn ($value): string => $this->normalizeBoolean($value) ? '1' : '0',
         );
     }
 
