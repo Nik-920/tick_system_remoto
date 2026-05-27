@@ -11,6 +11,7 @@ class JsonFormatterTap
 {
     public function __invoke(IlluminateLogger|MonologLogger $logger): void
     {
+        /** @var MonologLogger $monolog */
         $monolog = $logger instanceof IlluminateLogger ? $logger->getLogger() : $logger;
 
         foreach ($monolog->getHandlers() as $handler) {
