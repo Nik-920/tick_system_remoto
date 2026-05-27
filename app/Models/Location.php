@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -58,11 +59,18 @@ class Location extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
             'qr_generated_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    protected function isActive(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value): bool => $this->normalizeBoolean($value),
+            set: fn ($value): bool => $this->normalizeBoolean($value),
+        );
     }
 
     public function scopeActive(Builder $query): Builder
@@ -100,5 +108,40 @@ class Location extends Model
         $operator = $isActive ? 'IS TRUE' : 'IS FALSE';
 
         return $query->whereRaw("{$column} {$operator}");
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1;
+        }
+
+        if (is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        if (is_string($value)) {
+            $normalized = trim(strtolower($value));
+
+            // Handle Postgres-style boolean strings.
+            if ($normalized === 't') {
+                return true;
+            }
+
+            if ($normalized === 'f') {
+                return false;
+            }
+
+            $filtered = filter_var($normalized, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($filtered !== null) {
+                return $filtered;
+            }
+        }
+
+        return (bool) $value;
     }
 }

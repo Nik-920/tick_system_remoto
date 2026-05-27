@@ -2,15 +2,18 @@
 
 namespace App\Logging;
 
+use Illuminate\Log\Logger as IlluminateLogger;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\FormattableHandlerInterface;
-use Monolog\Logger;
+use Monolog\Logger as MonologLogger;
 
 class JsonFormatterTap
 {
-    public function __invoke(Logger $logger): void
+    public function __invoke(IlluminateLogger|MonologLogger $logger): void
     {
-        foreach ($logger->getHandlers() as $handler) {
+        $monolog = $logger instanceof IlluminateLogger ? $logger->getLogger() : $logger;
+
+        foreach ($monolog->getHandlers() as $handler) {
             if (! $handler instanceof FormattableHandlerInterface) {
                 continue;
             }
