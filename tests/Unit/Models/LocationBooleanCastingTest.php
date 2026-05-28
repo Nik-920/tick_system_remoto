@@ -46,6 +46,26 @@ class LocationBooleanCastingTest extends TestCase
         $this->assertIsBool($location->fresh()->is_active);
     }
 
+    public function test_location_is_active_accepts_postgres_t_and_reads_boolean_true(): void
+    {
+        $location = $this->createLocationWithActive('t');
+
+        $fresh = $location->fresh();
+
+        $this->assertTrue($fresh->is_active);
+        $this->assertIsBool($fresh->is_active);
+    }
+
+    public function test_location_is_active_accepts_postgres_f_and_reads_boolean_false(): void
+    {
+        $location = $this->createLocationWithActive('f');
+
+        $fresh = $location->fresh();
+
+        $this->assertFalse($fresh->is_active);
+        $this->assertIsBool($fresh->is_active);
+    }
+
     private function createLocationWithActive(mixed $isActive): Location
     {
         $index = $this->sequence++;

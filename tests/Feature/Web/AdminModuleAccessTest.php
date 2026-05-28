@@ -159,9 +159,9 @@ class AdminModuleAccessTest extends TestCase
 
         $location = Location::query()->where('room_code', 'B-102')->first();
 
-        $response->assertRedirect(route('locations.edit', $location));
         $this->assertNotNull($location);
-        $this->assertFalse((bool) $location?->is_active);
+        $response->assertRedirect(route('locations.edit', $location));
+        $this->assertFalse((bool) $location->is_active);
     }
 
     public function test_admin_sees_warning_when_similar_location_exists_and_confirmation_missing(): void
