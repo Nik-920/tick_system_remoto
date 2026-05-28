@@ -116,6 +116,56 @@ class LocationApiControllerTest extends TestCase
         });
     }
 
+    public function test_store_location_casts_is_active_string_one_to_boolean_true(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $payload = [
+            'name' => 'Ubicacion Activa Bool',
+            'building' => 'Edificio Bool',
+            'floor' => '1',
+            'room_code' => 'BOOL-101',
+            'is_active' => '1',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertCreated();
+
+        $locationId = (string) $response->json('data.id');
+        $location = Location::query()->findOrFail($locationId);
+
+        $this->assertTrue($location->is_active);
+    }
+
+    public function test_store_location_casts_is_active_string_zero_to_boolean_false(): void
+    {
+        Queue::fake();
+
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $payload = [
+            'name' => 'Ubicacion Inactiva Bool',
+            'building' => 'Edificio Bool',
+            'floor' => '2',
+            'room_code' => 'BOOL-102',
+            'is_active' => '0',
+        ];
+
+        $response = $this->postJson(route('api.locations.store'), $payload);
+
+        $response->assertCreated();
+
+        $locationId = (string) $response->json('data.id');
+        $location = Location::query()->findOrFail($locationId);
+
+        $this->assertFalse($location->is_active);
+    }
+
     public function test_store_returns_conflict_when_similar_location_exists_without_confirmation(): void
     {
         Queue::fake();
@@ -311,6 +361,40 @@ class LocationApiControllerTest extends TestCase
             'room_code' => 'F-102',
             'is_active' => 0,
         ]);
+    }
+
+    public function test_update_location_casts_is_active_string_zero_to_boolean_false(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation('BOOL-201', 'qr-bool-201-token', true);
+
+        $response = $this->patchJson(route('api.locations.update', $location), [
+            'is_active' => '0',
+        ]);
+
+        $response->assertOk();
+
+        $location->refresh();
+        $this->assertFalse($location->is_active);
+    }
+
+    public function test_update_location_casts_is_active_string_one_to_boolean_true(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation('BOOL-202', 'qr-bool-202-token', false);
+
+        $response = $this->patchJson(route('api.locations.update', $location), [
+            'is_active' => '1',
+        ]);
+
+        $response->assertOk();
+
+        $location->refresh();
+        $this->assertTrue($location->is_active);
     }
 
     public function test_update_ignores_self_when_checking_similar_locations(): void

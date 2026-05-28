@@ -141,6 +141,29 @@ class AdminModuleAccessTest extends TestCase
         Queue::assertPushed(GenerateLocationQrImage::class);
     }
 
+    public function test_admin_can_create_inactive_location_with_zero_string(): void
+    {
+        Queue::fake();
+
+        $user = $this->createUserWithRole('admin');
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('locations.store'), [
+                'name' => 'Ubicacion Inactiva Web',
+                'building' => 'Edificio B',
+                'floor' => '2',
+                'room_code' => 'B-102',
+                'is_active' => '0',
+            ]);
+
+        $location = Location::query()->where('room_code', 'B-102')->first();
+
+        $response->assertRedirect(route('locations.edit', $location));
+        $this->assertNotNull($location);
+        $this->assertFalse((bool) $location?->is_active);
+    }
+
     public function test_admin_sees_warning_when_similar_location_exists_and_confirmation_missing(): void
     {
         Queue::fake();
@@ -257,6 +280,31 @@ class AdminModuleAccessTest extends TestCase
             'id' => $location->id,
             'name' => 'Laboratorio 9',
         ]);
+    }
+
+    public function test_admin_can_update_location_active_state(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $location = Location::query()->create([
+            'name' => 'Ubicacion Toggle Web',
+            'building' => 'Edificio Z',
+            'floor' => '1',
+            'room_code' => 'Z-101',
+            'qr_token' => 'qr-z-101-token',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->patch(route('locations.update', $location), [
+                'is_active' => '0',
+            ]);
+
+        $response->assertRedirect(route('locations.edit', $location));
+
+        $location->refresh();
+        $this->assertFalse($location->is_active);
     }
 
     public function test_admin_can_create_category_from_web_module(): void

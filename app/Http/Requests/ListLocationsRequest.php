@@ -30,4 +30,13 @@ class ListLocationsRequest extends FormRequest
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('is_active')) {
+            $this->merge([
+                'is_active' => $this->boolean('is_active'),
+            ]);
+        }
+    }
 }
