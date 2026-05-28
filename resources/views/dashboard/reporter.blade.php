@@ -15,13 +15,21 @@
 
                 <div class="flex flex-wrap items-center gap-2">
                     @foreach ($quickActions as $action)
-                        <a
+                        
                             href="{{ $action['href'] }}"
                             class="{{ $action['variant'] === 'primary' ? 'btn-primary bg-cyan-600 hover:bg-cyan-700 text-white' : 'btn-secondary border border-cyan-200 text-cyan-700 hover:bg-cyan-50' }}"
                         >
                             {{ $action['label'] }}
                         </a>
                     @endforeach
+
+                    
+                        href="/manual_reportero.html"
+                        target="_blank"
+                        class="btn-secondary border border-cyan-200 text-cyan-700 hover:bg-cyan-50 flex items-center gap-1"
+                    >
+                        📖 Manual de usuario
+                    </a>
                 </div>
             </div>
         </section>
