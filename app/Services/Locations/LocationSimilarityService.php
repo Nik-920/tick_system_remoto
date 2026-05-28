@@ -200,7 +200,7 @@ class LocationSimilarityService
         ]);
 
         if (config('locations.duplicate_active_only', true)) {
-            $query->where('is_active', true);
+            $query->withActiveState(true);
         }
 
         if ($ignoreLocationId !== null && $ignoreLocationId !== '') {

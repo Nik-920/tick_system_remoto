@@ -38,4 +38,13 @@ class StoreLocationRequest extends FormRequest
             'qr_generated_at' => ['prohibited'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('is_active')) {
+            $this->merge([
+                'is_active' => $this->boolean('is_active'),
+            ]);
+        }
+    }
 }
