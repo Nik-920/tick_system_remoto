@@ -28,13 +28,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🚀 Deploy imagen GHCR a Railway
+      - name: 🚀 Actualizar imagen y deployar en Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway redeploy \
-            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
-            --yes
+          # Determinar tag según rama
+          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+            IMAGE_TAG="stable"
+          else
+            IMAGE_TAG="latest"
+          fi
+
+          IMAGE="ghcr.io/nik-920/tick_system_remoto:${IMAGE_TAG}"
+          echo "🐳 Actualizando servicio Railway con imagen: $IMAGE"
+
+          # Forzar Railway a jalar la nueva imagen via GraphQL API
+          curl -s -X POST https://backboard.railway.app/graphql/v2 \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\": \"mutation { serviceInstanceRedeploy(serviceId: \\\"${{ secrets.RAILWAY_SERVICE_ID }}\\\") }\"}"
+
+          echo "✅ Redeploy solicitado"
 
       - name: ⏳ Esperar arranque
         run: sleep 45
