@@ -71,7 +71,7 @@ jobs:
         continue-on-error: true
 
 # ═══════════════════════════════════════════════
-# JOB 2 — SETUP DATABASE (Prerequisito para tests)
+# JOB 2 — SETUP DATABASE
 # ═══════════════════════════════════════════════
   setup-db:
     name: 🗄️ Setup Database
@@ -232,6 +232,10 @@ jobs:
       contents: read
       packages: write
 
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.push.outputs.digest }}
+
     steps:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
@@ -257,6 +261,7 @@ jobs:
             type=sha,prefix=,format=short
 
       - name: 🐳 Build & Push imagen
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -266,11 +271,18 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=ghcr.io/nik-920/tick_system_remoto:buildcache
           cache-to: type=registry,ref=ghcr.io/nik-920/tick_system_remoto:buildcache,mode=max
+          build-args: |
+            VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+            VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+            VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+            VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+            VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+            VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+            VITE_FIREBASE_VAPID_KEY=${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
       - name: 📋 Resumen del build
         run: |
           echo "## 🐳 Docker Image publicada" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-
-
+          echo "**Digest:** ${{ steps.push.outputs.digest }}" >> $GITHUB_STEP_SUMMARY

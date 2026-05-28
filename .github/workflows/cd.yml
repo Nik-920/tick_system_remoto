@@ -18,18 +18,33 @@ jobs:
       name: staging
       url: ${{ vars.APP_URL }}
     steps:
-      - name: 📥 Checkout código
-        uses: actions/checkout@v4
-
       - name: 🚂 Instalar Railway CLI
         run: npm install -g @railway/cli
 
-      - name: 🚀 Deploy to Railway
+      - name: 🐳 Login a ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🚀 Deploy imagen GHCR a Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway redeploy \
+          # Determinar tag según rama
+          if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+            IMAGE_TAG="stable"
+          else
+            IMAGE_TAG="latest"
+          fi
+
+          IMAGE="ghcr.io/nik-920/tick_system_remoto:${IMAGE_TAG}"
+          echo "🐳 Desplegando imagen: $IMAGE"
+
+          railway deploy \
             --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            --image "$IMAGE" \
             --yes
 
       - name: ⏳ Esperar arranque
@@ -77,6 +92,7 @@ jobs:
         if: always()
         run: |
           echo "## 🚀 CD Deploy Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Hora:** $(date)" >> $GITHUB_STEP_SUMMARY
           echo "**URL:** ${{ vars.APP_URL }}" >> $GITHUB_STEP_SUMMARY
