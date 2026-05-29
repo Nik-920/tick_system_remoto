@@ -1,0 +1,33 @@
+/* ============================================================
+   UTILITIES — Base
+   Tick System Onn
+
+   Clases globales de utilidad que no pertenecen a ningún
+   módulo específico.
+
+   .sr-only   → Antes en welcome.css (L1-11)
+   .table-wrap → Antes en dashboard-role-shared.css (L621-623)
+   ============================================================ */
+
+/* ── Accesibilidad: visualmente oculto, aún accesible ── */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ── Scroll horizontal para tablas ── */
+.table-wrap {
+    overflow-x: auto;
+}
+
+/* ── Overflow hidden utilidad ── */
+.overflow-hidden {
+    overflow: hidden;
+}

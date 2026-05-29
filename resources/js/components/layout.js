@@ -58,13 +58,62 @@ export function init() {
         }
     });
 
-    themeBtn?.addEventListener('click', () => {
-        const html    = document.documentElement;
-        const current = html.getAttribute('data-theme') || 'light';
-        const next    = current === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', next);
-        localStorage.setItem('tick-theme', next);
-    });
+    // ── Theme Management ──────────────────────────────────────────
+    initTheme();
+
+    function getStoredTheme() {
+        try {
+            const ls = localStorage.getItem('tick-theme');
+            if (ls === 'light' || ls === 'dark') return ls;
+        } catch (_) {}
+        // Fallback: cookie
+        const m = document.cookie.match(/(?:^|;\s*)tick-theme=(light|dark)/);
+        return m ? m[1] : null;
+    }
+
+    function setStoredTheme(theme) {
+        try { localStorage.setItem('tick-theme', theme); } catch (_) {}
+        document.cookie = `tick-theme=${theme};path=/;max-age=31536000;SameSite=Lax`;
+    }
+
+    function getPreferredTheme() {
+        return (window.matchMedia?.('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+
+    function updateThemeButton(theme) {
+        const btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        updateThemeButton(theme);
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        setStoredTheme(next);
+    }
+
+    function initTheme() {
+        // Ensure the correct theme is applied (may already be set by the <head> boot script)
+        const stored = getStoredTheme();
+        const theme  = stored ?? getPreferredTheme();
+        applyTheme(theme);
+
+        // Wire up the toggle button
+        themeBtn?.addEventListener('click', toggleTheme);
+
+        // Listen for OS-level preference changes ONLY when the user hasn't manually chosen
+        window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!getStoredTheme()) {
+                applyTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
 
     document.addEventListener('click', (e) => {
         document.querySelectorAll('details.topbar-user-menu[open]').forEach((d) => {
