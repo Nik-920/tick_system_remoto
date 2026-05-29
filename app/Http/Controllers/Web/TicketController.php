@@ -42,12 +42,13 @@ class TicketController extends Controller
         $query = Ticket::query()->with([
             'reporter',
             'assignee',
+            'assignedBy',
             'location',
             'category',
             'embedding.matchedTicket',
         ]);
 
-        $this->applyFilters($query, $filters);
+        $this->applyFilters($query, $filters, $request->user());
 
         $tickets = $query
             ->latest('created_at')
@@ -93,18 +94,20 @@ class TicketController extends Controller
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
+        unset($filters['state'], $filters['assignment']);
 
         $query = Ticket::query()
             ->availableForClaim()
             ->with([
                 'reporter',
                 'assignee',
+                'assignedBy',
                 'location',
                 'category',
                 'embedding.matchedTicket',
             ]);
 
-        $this->applyFilters($query, $filters);
+        $this->applyFilters($query, $filters, $request->user());
 
         $tickets = $query
             ->latest('created_at')
@@ -156,9 +159,18 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
+        $maintenanceUsers = collect();
+        $currentUser = request()->user();
+        if ($currentUser instanceof User && $currentUser->hasAnyRole(['admin', 'super_admin'])) {
+            $maintenanceUsers = User::role('maintenance')
+                ->orderBy('name')
+                ->get();
+        }
+
         $ticket->load([
             'reporter',
             'assignee',
+            'assignedBy',
             'location',
             'category',
             'media' => fn ($query) => $query->latest('created_at'),
@@ -170,6 +182,7 @@ class TicketController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'states' => ['open', 'in_progress', 'resolved', 'rejected'],
+            'maintenanceUsers' => $maintenanceUsers,
         ]);
     }
 
@@ -343,7 +356,7 @@ class TicketController extends Controller
     /**
      * @param  array<string, mixed>  $filters
      */
-    private function applyFilters(Builder $query, array $filters): void
+    private function applyFilters(Builder $query, array $filters, ?User $user = null): void
     {
         if (! empty($filters['state'])) {
             $query->where('state', $filters['state']);
@@ -359,6 +372,17 @@ class TicketController extends Controller
 
         if (! empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
+        }
+
+        if (! empty($filters['assignment']) && $filters['assignment'] !== 'all') {
+            $assignment = (string) $filters['assignment'];
+            if ($assignment === 'unassigned') {
+                $query->whereNull('assigned_to');
+            } elseif ($assignment === 'assigned') {
+                $query->whereNotNull('assigned_to');
+            } elseif ($assignment === 'mine' && $user instanceof User) {
+                $query->where('assigned_to', $user->id);
+            }
         }
 
         if (! empty($filters['search'])) {
