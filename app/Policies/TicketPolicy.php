@@ -55,6 +55,37 @@ class TicketPolicy
         return $this->hasAnyRole($user, ['maintenance', 'admin', 'super_admin']);
     }
 
+    public function claim(User $user, Ticket $ticket): bool
+    {
+        return $this->hasRole($user, 'maintenance')
+            && $ticket->state === Ticket::STATE_OPEN
+            && $ticket->assigned_to === null
+            && ! $ticket->assignment_locked;
+    }
+
+    public function release(User $user, Ticket $ticket): bool
+    {
+        return $this->hasRole($user, 'maintenance')
+            && $ticket->state === Ticket::STATE_OPEN
+            && $ticket->assigned_to === $user->id
+            && ! $ticket->assignment_locked
+            && $ticket->assignment_source === Ticket::ASSIGNMENT_SOURCE_SELF;
+    }
+
+    public function assign(User $user, Ticket $ticket): bool
+    {
+        unset($ticket);
+
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
+    public function unassign(User $user, Ticket $ticket): bool
+    {
+        unset($ticket);
+
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
     /**
      * @param  list<string>  $roles
      */
