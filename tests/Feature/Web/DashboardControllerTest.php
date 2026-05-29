@@ -36,29 +36,28 @@ class DashboardControllerTest extends TestCase
             'title' => 'Ticket propio reporter',
             'description' => 'Descripcion A',
             'reporter_id' => $reporter->id,
-            'assigned_to' => $otherUser->id,
             'location_id' => $ownedLocation->id,
             'category_id' => $ownedCategory->id,
             'state' => 'open',
             'priority' => 'high',
         ]);
+        $owned->forceFill(['assigned_to' => $otherUser->id])->save();
 
         $assigned = Ticket::create([
             'title' => 'Ticket asignado reporter',
             'description' => 'Descripcion B',
             'reporter_id' => $otherUser->id,
-            'assigned_to' => $reporter->id,
             'location_id' => $assignedLocation->id,
             'category_id' => $assignedCategory->id,
             'state' => 'in_progress',
             'priority' => 'medium',
         ]);
+        $assigned->forceFill(['assigned_to' => $reporter->id])->save();
 
         $unrelated = Ticket::create([
             'title' => 'Ticket no relacionado',
             'description' => 'Descripcion C',
             'reporter_id' => $otherUser->id,
-            'assigned_to' => null,
             'location_id' => $unrelatedLocation->id,
             'category_id' => $unrelatedCategory->id,
             'state' => 'open',
@@ -92,18 +91,17 @@ class DashboardControllerTest extends TestCase
             'title' => 'Ticket asignado a maintenance',
             'description' => 'Descripcion maintenance',
             'reporter_id' => $reporter->id,
-            'assigned_to' => $maintenance->id,
             'location_id' => $assignedLocation->id,
             'category_id' => $assignedCategory->id,
             'state' => 'open',
             'priority' => 'critical',
         ]);
+        $assigned->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $notAssigned = Ticket::create([
             'title' => 'Ticket de otro tecnico',
             'description' => 'No debe aparecer',
             'reporter_id' => $reporter->id,
-            'assigned_to' => null,
             'location_id' => $otherLocation->id,
             'category_id' => $otherCategory->id,
             'state' => 'open',
