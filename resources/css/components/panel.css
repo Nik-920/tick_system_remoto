@@ -1,0 +1,29 @@
+/* ============================================================
+   COMPONENT — Panel
+   Tick System Onn
+
+   Superficie genérica de tarjeta/panel. Antes definida
+   en dashboard-role-shared.css. Usada en toda la app.
+
+   Clases:
+     .panel     → Superficie base con borde, radio y sombra
+     .panel-pad → Padding estándar interno
+   ============================================================ */
+
+.panel {
+    background: var(--bg-surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+
+.panel-pad {
+    padding: 1.25rem 1.375rem;
+}
+
+/* Dark mode — los tokens ya se adaptan en themes/dark.css */
+[data-theme="dark"] .panel {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}

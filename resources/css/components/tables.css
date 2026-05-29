@@ -1,0 +1,65 @@
+/* ============================================================
+   COMPONENT — Tables
+   Tick System Onn
+
+   Base styles for table shells and dataset headers.
+   Includes aliases for existing module classes so Blade
+   templates do not change yet.
+   ============================================================ */
+
+/* ── Table shell ── */
+.c-table-shell,
+.tickets-table-shell,
+.locs-table-shell,
+.users-table-shell,
+.cats-table-shell {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+}
+
+/* ── Dataset header ── */
+.c-dataset-head,
+.tickets-dataset-head,
+.locs-dataset-head,
+.users-dataset-head,
+.cats-dataset-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border-default);
+}
+
+/* ── Dataset count ── */
+.c-dataset-count,
+.tickets-dataset-count,
+.locs-dataset-count,
+.users-dataset-count,
+.cats-dataset-count {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ── Dataset chip ── */
+.c-dataset-chip,
+.tickets-dataset-chip,
+.locs-dataset-chip,
+.users-dataset-chip,
+.cats-dataset-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+    white-space: nowrap;
+}

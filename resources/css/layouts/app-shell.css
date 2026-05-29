@@ -1,0 +1,56 @@
+/* ============================================================
+   LAYOUT - App Shell
+   Tick System Onn
+   ============================================================ */
+
+.admin-layout {
+    min-height: 100vh;
+}
+
+.admin-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-width: 0;
+    margin-left: var(--sidebar-w);
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-layout.sidebar-collapsed .admin-content-wrapper {
+    margin-left: 0;
+}
+
+.admin-main {
+    flex: 1;
+    padding: 1.5rem;
+    max-width: 1280px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .admin-content-wrapper {
+        margin-left: 0;
+    }
+
+    .admin-main {
+        padding: 1rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    :root {
+        --sidebar-w: 220px;
+    }
+
+    .admin-main {
+        padding: 1.25rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .admin-main {
+        padding: 1.5rem 2rem;
+    }
+}
