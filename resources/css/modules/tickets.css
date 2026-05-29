@@ -258,6 +258,68 @@
     flex-wrap: wrap;
 }
 
+/* ============================= */
+/* Assignment panel              */
+/* ============================= */
+.ticket-assignment-panel {
+    border-left: 3px solid var(--border-default);
+}
+
+.assignment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    align-items: flex-end;
+}
+
+.assignment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+    margin-left: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.assignment-badge--locked {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.assignment-badge--flexible {
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+
+.assignment-badge--claimed {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.assignment-badge--none {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    color: var(--text-muted);
+}
+
+/* ============================= */
+/* Available list                */
+/* ============================= */
+.available-ticket-list .tickets-hero {
+    border-left: 3px solid #2563eb;
+}
+
 .tickets-btn-back {
     min-height: 38px;
 }

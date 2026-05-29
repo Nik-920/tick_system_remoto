@@ -183,6 +183,146 @@
             </div>
         </section>
 
+        @php
+            $assignee = $ticket?->assignee;
+            $assignedBy = $ticket?->assignedBy;
+            $assignmentSource = $ticket?->assignment_source;
+            $assignmentLocked = (bool) ($ticket?->assignment_locked ?? false);
+            $assignedAt = $ticket?->assigned_at;
+
+            $assigneeLabel = $assignee?->name ?? $assignee?->email ?? 'Sin asignar';
+            $assignedByLabel = $assignedBy?->name ?? $assignedBy?->email ?? '—';
+
+            if ($assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF) {
+                $assignmentTypeLabel = 'Tomado por mantenimiento';
+            } elseif ($assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_ADMIN) {
+                $assignmentTypeLabel = 'Asignación fija por administración';
+            } else {
+                $assignmentTypeLabel = 'Sin asignación';
+            }
+
+            $user = Auth::user();
+            $isMaintenance = $user?->hasRole('maintenance') ?? false;
+            $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
+
+            $canClaim = $isMaintenance
+                && $ticket?->state === \App\Models\Ticket::STATE_OPEN
+                && $ticket?->assigned_to === null;
+            $canRelease = $isMaintenance
+                && $ticket?->state === \App\Models\Ticket::STATE_OPEN
+                && $ticket?->assigned_to === $user?->id
+                && ! $assignmentLocked
+                && $assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF;
+        @endphp
+
+        {{-- ===== ASIGNACIÓN ===== --}}
+        <section class="tickets-show-section ticket-assignment-panel">
+            <header class="tickets-show-section-header">
+                <h2>Asignación</h2>
+            </header>
+
+            <div class="tickets-show-content">
+                <div class="tickets-show-grid">
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Asignado a</p>
+                        <p class="tickets-show-meta-value">{{ $assigneeLabel }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Asignado por</p>
+                        <p class="tickets-show-meta-value">{{ $assignedByLabel }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Fecha de asignación</p>
+                        <p class="tickets-show-meta-value">{{ $assignedAt?->format('d/m/Y H:i') ?? '—' }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Tipo de asignación</p>
+                        <p class="tickets-show-meta-value">{{ $assignmentTypeLabel }}</p>
+                    </div>
+                    <div class="tickets-show-meta">
+                        <p class="tickets-show-meta-label">Estado de bloqueo</p>
+                        <p class="tickets-show-meta-value">
+                            @if ($assignmentLocked)
+                                <span class="assignment-badge assignment-badge--locked">Fija</span>
+                            @elseif ($ticket?->assigned_to)
+                                <span class="assignment-badge assignment-badge--flexible">Flexible</span>
+                            @else
+                                <span class="assignment-badge assignment-badge--none">Sin asignación</span>
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                @if ($isMaintenance)
+                    <div class="assignment-actions">
+                        @if ($canClaim)
+                            <form method="POST" action="{{ route('tickets.claim', $ticket) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                <button type="submit" class="btn-primary">Tomar este ticket</button>
+                            </form>
+                        @endif
+
+                        @if ($canRelease)
+                            <form method="POST" action="{{ route('tickets.release', $ticket) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                <button type="submit" class="btn-secondary">Liberar ticket</button>
+                            </form>
+                        @endif
+
+                        @if ($assignmentLocked && $ticket?->assigned_to === $user?->id)
+                            <p class="tickets-show-meta-value" style="font-size:0.85rem; opacity:0.8;">
+                                Asignación fija por administración. Solo Admin o SuperAdmin puede cambiarla.
+                            </p>
+                        @endif
+                    </div>
+                @endif
+
+                @if ($isAdmin)
+                    <div class="assignment-actions">
+                        <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="assignment-actions">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                            <div class="tickets-form-group" style="min-width:220px;">
+                                <label for="assigned_to" class="tickets-field-label">Asignar a</label>
+                                <select id="assigned_to" name="assigned_to" class="tickets-field" required>
+                                    <option value="">Selecciona maintenance</option>
+                                    @foreach (($maintenanceUsers ?? collect()) as $maintenanceUser)
+                                        <option value="{{ $maintenanceUser->id }}" @selected($ticket?->assigned_to === $maintenanceUser->id)>
+                                            {{ $maintenanceUser->name ?? $maintenanceUser->email ?? $maintenanceUser->id }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('assigned_to')
+                                    <p class="tickets-field-error">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <button type="submit" class="btn-primary">
+                                {{ $ticket?->assigned_to ? 'Reasignar' : 'Asignar' }}
+                            </button>
+                        </form>
+
+                        @if ($ticket?->assigned_to)
+                            <form method="POST" action="{{ route('tickets.unassign', $ticket) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                <button type="submit" class="btn-secondary">Desasignar</button>
+                            </form>
+                        @endif
+                    </div>
+                @endif
+
+                @error('assignment')
+                    <p class="tickets-field-error">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+
         {{-- ===== ADJUNTOS ===== --}}
         @if (optional($ticket?->media)->isNotEmpty())
             <section class="tickets-show-section">

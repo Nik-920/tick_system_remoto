@@ -9,6 +9,7 @@ $stateValue    = (string) ($filters['state']        ?? '');
 $priorityValue = (string) ($filters['priority']     ?? '');
 $locationValue = (string) ($filters['location_id']  ?? '');
 $categoryValue = (string) ($filters['category_id']  ?? '');
+$assignmentValue = (string) ($filters['assignment'] ?? '');
 $perPageValue  = (string) ($filters['per_page']     ?? '');
 $fromValue     = (string) ($filters['from']         ?? '');
 $toValue       = (string) ($filters['to']           ?? '');
@@ -19,6 +20,9 @@ foreach ([$searchValue, $stateValue, $priorityValue, $locationValue, $categoryVa
     if ($filterValue !== '') {
         $activeFilterCount++;
     }
+}
+if ($assignmentValue !== '' && $assignmentValue !== 'all') {
+    $activeFilterCount++;
 }
 if ($duplicatesOn) {
     $activeFilterCount++;
@@ -117,6 +121,16 @@ $priorityLabels = [
                 </div>
 
                 <div>
+                    <label for="assignment" class="tickets-field-label">Asignación</label>
+                    <select id="assignment" name="assignment" class="tickets-field">
+                        <option value="all" @selected($assignmentValue==='' || $assignmentValue==='all')>Todos</option>
+                        <option value="unassigned" @selected($assignmentValue==='unassigned')>Sin asignar</option>
+                        <option value="mine" @selected($assignmentValue==='mine')>Mis tickets</option>
+                        <option value="assigned" @selected($assignmentValue==='assigned')>Asignados</option>
+                    </select>
+                </div>
+
+                <div>
                     <label for="per_page" class="tickets-field-label">Por página</label>
                     <select id="per_page" name="per_page" class="tickets-field">
                         <option value="">15</option>
@@ -174,6 +188,7 @@ $priorityLabels = [
                         <th>Estado</th>
                         <th>Prioridad</th>
                         <th>Ubicación</th>
+                        <th>Asignado a</th>
                         <th>Creado</th>
                         <th>Acción</th>
                     </tr>
@@ -215,6 +230,16 @@ $priorityLabels = [
                             </span>
                         </td>
                         <td class="tickets-td-meta">{{ $ticket->location?->name ?? 'N/A' }}</td>
+                        <td>
+                            <div class="tickets-td-meta">
+                                {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                            </div>
+                            @if ($ticket->assignment_locked)
+                                <span class="assignment-badge assignment-badge--locked">Fija</span>
+                            @elseif ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF)
+                                <span class="assignment-badge assignment-badge--claimed">Tomado</span>
+                            @endif
+                        </td>
                         <td class="tickets-td-meta">{{ $ticket->created_at?->format('d/m/Y') }}</td>
                         <td>
                             <a href="{{ route('tickets.show', $ticket) }}" class="tickets-link-action">Ver</a>
@@ -222,7 +247,7 @@ $priorityLabels = [
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="tickets-empty-cell">
+                        <td colspan="7" class="tickets-empty-cell">
                             <div class="empty-state">
                                 <p class="empty-state__title">No hay tickets para mostrar</p>
                                 <p class="empty-state__note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
