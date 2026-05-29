@@ -1,34 +1,12 @@
 /* ============================================================
-   DASHBOARD â€” TICK SYSTEM ONN  v2
-   Reemplaza SOLO el bloque dashboard en tu app.css
+   DASHBOARD — TICK SYSTEM ONN
+
+   Tokens globales (--radius, --shadow-*, --bg-*, --text-*,
+   --border-*, --transition) → tokens/base.css
+   Dark mode overrides       → themes/dark.css
+   @keyframes                → utilities/animations.css
+   .table-wrap               → utilities/base.css
    ============================================================ */
-
-/* ============================= */
-/* ðŸŽ¯ VARIABLES BASE             */
-/* ============================= */
-:root {
-    --radius: 14px;
-    --radius-sm: 10px;
-    --radius-xs: 8px;
-
-    --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
-    --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.07);
-    --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
-    --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.13);
-
-    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --bg-page: #f1f4f8;
-    --bg-surface: #ffffff;
-    --bg-soft: #f8fafc;
-
-    --text-primary: #0d1829;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
-
-    --border-default: #e2e8f0;
-    --border-light: #f1f5f9;
-}
 
 /* ============================= */
 /* ðŸŒ PAGE BACKGROUND            */
@@ -37,20 +15,7 @@ body.app-page {
     background: var(--bg-page);
 }
 
-/* ============================= */
-/* ðŸ§± PANEL BASE                 */
-/* ============================= */
-.panel {
-    background: var(--bg-surface);
-    border-radius: var(--radius);
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-xs);
-    transition: var(--transition);
-}
-
-.panel-pad {
-    padding: 1.25rem 1.375rem;
-}
+/* .panel, .panel-pad → movidos a components/panel.css */
 
 /* ============================= */
 /* ðŸ§  DASHBOARD BASE             */
@@ -418,61 +383,6 @@ body.app-page {
 }
 
 /* ============================= */
-/* ðŸŽ¯ BADGES                     */
-/* ============================= */
-.badge-state,
-.badge-priority {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 0.22rem 0.65rem;
-    font-size: 0.69rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.badge-open {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.badge-progress {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.badge-resolved {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.badge-closed {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-.badge-critical {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.badge-high {
-    background: #ffedd5;
-    color: #9a3412;
-}
-
-.badge-medium {
-    background: #fefce8;
-    color: #854d0e;
-}
-
-.badge-low {
-    background: #f0fdf4;
-    color: #166534;
-}
-
-/* ============================= */
 /* ðŸ”— LINKS EN TABLA             */
 /* ============================= */
 .role-dashboard td a {
@@ -524,98 +434,7 @@ body.app-page {
     border-color: #22d3ee;
 }
 
-/* ============================= */
-/* ðŸ”˜ BOTONES GLOBALES           */
-/* ============================= */
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: var(--radius-sm);
-    font-weight: 700;
-    font-size: 0.875rem;
-    transition: var(--transition);
-    text-decoration: none;
-    border: 1px solid transparent;
-    cursor: pointer;
-    letter-spacing: -0.01em;
-    background: #1d4ed8;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #1e40af;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-}
-
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: var(--transition);
-    text-decoration: none;
-    cursor: pointer;
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
-}
-
-.btn-secondary:hover {
-    background: #e2e8f0;
-    color: #1e293b;
-    transform: translateY(-1px);
-}
-
-.btn-secondary:active {
-    transform: translateY(0);
-}
-
-.btn-danger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: var(--transition);
-    text-decoration: none;
-    cursor: pointer;
-    background: #fff1f2;
-    color: #e11d48;
-    border: 1px solid #fecdd3;
-}
-
-.btn-danger:hover {
-    background: #ffe4e6;
-    color: #be123c;
-    border-color: #fda4af;
-    transform: translateY(-1px);
-}
-
-.btn-danger:active {
-    transform: translateY(0);
-}
-
-/* ============================= */
-/* ðŸŒŠ TABLE WRAP                 */
-/* ============================= */
-.table-wrap {
-    overflow-x: auto;
-}
+/* .table-wrap → movido a utilities/base.css */
 
 /* ============================= */
 /* ðŸ“± RESPONSIVE MOBILE          */
@@ -991,32 +810,7 @@ td.dash-empty {
     }
 }
 
-/* ============================= */
-/* âœ¨ ANIMACIONES                 */
-/* ============================= */
-@keyframes dashboardFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes dashboardRise {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+/* @keyframes dashboardFadeIn, dashboardRise → movidos a utilities/animations.css */
 
 @layer utilities {
 
@@ -1028,4 +822,76 @@ td.dash-empty {
         margin-left: 0 !important;
         margin-right: 0 !important;
     }
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES — Dashboard
+   ============================================================ */
+[data-theme="dark"] .role-kpi-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .role-kpi-card:hover {
+    border-color: rgba(255,255,255,0.18);
+}
+
+[data-theme="dark"] .role-dashboard tbody tr:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .role-section > header {
+    background: var(--bg-soft);
+    border-color: var(--border-default);
+}
+
+/* Dashboard admin panel sections */
+[data-theme="dark"] .role-dashboard-admin .panel:not(.role-hero):not(.role-kpi-card) {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    border-left-color: #3b82f6;
+}
+
+[data-theme="dark"] .role-dashboard-maintenance .panel:not(.role-hero):not(.role-kpi-card) {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    border-left-color: #d97706;
+}
+
+[data-theme="dark"] .role-dashboard-reporter .panel:not(.role-hero):not(.role-kpi-card) {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    border-left-color: #0891b2;
+}
+
+[data-theme="dark"] .dash-mini-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .badge-open     { background: rgba(219,234,254,0.12); color: #93c5fd; }
+[data-theme="dark"] .badge-progress  { background: rgba(254,243,199,0.12); color: #fbbf24; }
+[data-theme="dark"] .badge-resolved  { background: rgba(220,252,231,0.12); color: #4ade80; }
+[data-theme="dark"] .badge-closed    { background: rgba(241,245,249,0.08); color: #94a3b8; }
+[data-theme="dark"] .badge-critical  { background: rgba(254,226,226,0.12); color: #fca5a5; }
+[data-theme="dark"] .badge-high      { background: rgba(255,237,213,0.12); color: #fdba74; }
+[data-theme="dark"] .badge-medium    { background: rgba(254,252,232,0.10); color: #fde047; }
+[data-theme="dark"] .badge-low       { background: rgba(240,253,244,0.10); color: #86efac; }
+
+[data-theme="dark"] .role-dashboard-admin td a {
+    background: rgba(239,246,255,0.08);
+    border-color: rgba(147,197,253,0.3);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .role-dashboard-maintenance td a {
+    background: rgba(255,251,235,0.08);
+    border-color: rgba(252,211,77,0.3);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .role-dashboard-reporter td a {
+    background: rgba(236,254,255,0.08);
+    border-color: rgba(103,232,249,0.3);
+    color: #67e8f9;
 }

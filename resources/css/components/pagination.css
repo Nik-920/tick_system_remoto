@@ -1,0 +1,27 @@
+/* ============================================================
+   COMPONENT — Pagination
+   Tick System Onn
+
+   Wrapper de paginación para centrar los links de Laravel.
+   Antes cada módulo tenía su propio wrapper con la misma regla:
+     tickets.css   → .tickets-pagination
+     locations.css → .locs-pagination
+     users.css     → .users-pagination
+     categories.css → .cats-pagination
+
+   ESTRATEGIA FASE 2:
+   - Se crea la clase genérica .c-pagination
+   - Se crean aliases de las clases antiguas como agrupación
+   - Las vistas Blade NO se modifican todavía
+   ============================================================ */
+
+/* ── Wrapper de paginación centrado ── */
+.c-pagination,
+.tickets-pagination,
+.locs-pagination,
+.users-pagination,
+.cats-pagination {
+    display: flex;
+    justify-content: center;
+    padding-top: 0.5rem;
+}

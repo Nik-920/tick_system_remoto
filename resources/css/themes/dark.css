@@ -1,0 +1,55 @@
+/* ============================================================
+   THEME — Dark Mode
+   Tick System Onn
+
+   Override de tokens CSS para el tema oscuro.
+   Se activa cuando <html data-theme="dark"> está presente.
+   El script en app.blade.php aplica el atributo antes del
+   primer render para evitar FOUC.
+
+   Antes estos overrides vivían dentro de app-layout.css.
+   Ahora están aquí como única fuente de verdad del tema dark.
+   ============================================================ */
+
+[data-theme="dark"] {
+
+    /* ── Backgrounds ────────────────────────────────────── */
+    --bg-page:    #0f172a;
+    --bg-surface: #1e293b;
+    --bg-soft:    #263245;
+    --bg-input:   #263245;
+    --content-bg: #0f172a;   /* alias retrocompatibilidad */
+
+    /* ── Texto ──────────────────────────────────────────── */
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #64748b;
+    --text-faint:     #475569;
+
+    /* ── Bordes ─────────────────────────────────────────── */
+    --border-default: rgba(255, 255, 255, 0.10);
+    --border-light:   rgba(255, 255, 255, 0.05);
+
+    /* ── Sidebar (dark) ─────────────────────────────────── */
+    --sidebar-bg:            #1a2332;
+    --sidebar-border:        rgba(255, 255, 255, 0.08);
+    --sidebar-text:          rgba(255, 255, 255, 0.60);
+    --sidebar-text-hover:    rgba(255, 255, 255, 0.90);
+    --sidebar-heading-color: rgba(255, 255, 255, 0.30);
+    --sidebar-active-bg:     rgba(59, 130, 246, 0.14);
+    --sidebar-active-text:   #60a5fa;
+    --sidebar-active-border: #60a5fa;
+
+    /* ── Topbar (dark) ──────────────────────────────────── */
+    --topbar-bg:         #1e293b;
+    --topbar-border:     rgba(255, 255, 255, 0.08);
+    --topbar-text:       rgba(255, 255, 255, 0.60);
+    --topbar-icon-color: rgba(255, 255, 255, 0.50);
+    --topbar-icon-hover: rgba(255, 255, 255, 0.90);
+}
+
+/* ── Body base en dark ─────────────────────────────────── */
+[data-theme="dark"] body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+}

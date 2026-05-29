@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    PROFILE â€” CSS COMPLETO
    Pega esto al final de tu app.css
    ============================================================ */
@@ -224,49 +224,14 @@
 /* ðŸ—‚ï¸ FORM FIELDS                */
 /* ============================= */
 .profile-form-grid {
-    display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
 }
 
-.profile-form-group { display: grid; gap: 0.4rem; }
-
 .profile-field-label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
     margin-bottom: 0.1rem;
 }
 
-.profile-field {
-    width: 100%;
-    padding: 0.65rem 0.8rem;
-    border: 1px solid var(--border-default);
-    border-radius: 10px;
-    background: white;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    transition: var(--transition);
-    font-family: inherit;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.profile-field:hover  { border-color: #cbd5e1; }
-.profile-field:focus  { outline: 2px solid #3b82f6; outline-offset: 0; border-color: #3b82f6; }
-
-.profile-field-error {
-    font-size: 0.78rem;
-    color: #dc2626;
-    font-weight: 600;
-}
-
 .profile-form-actions {
-    display: flex;
-    gap: 0.75rem;
     padding-top: 0.5rem;
     border-top: 1px solid var(--border-light);
     margin-top: 0.15rem;
@@ -275,28 +240,8 @@
 /* ============================= */
 /* ðŸ“Œ SIDEBAR                    */
 /* ============================= */
-.profile-sidebar {
-    display: grid;
-    gap: 1rem;
-    position: sticky;
-    top: 1.5rem;
-}
-
-.profile-sidebar-card {
-    background: white;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius);
-    padding: 1.1rem 1.25rem;
-    box-shadow: var(--shadow-xs);
-}
-
 /* Identity card */
 .profile-sidebar-identity {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.6rem;
     padding: 1.75rem 1.25rem;
     background: linear-gradient(160deg, #f8faff 0%, #eff6ff 100%);
     border-color: #dbeafe;
@@ -472,3 +417,41 @@
     .profile-layout { grid-template-columns: 1fr 260px; }
 }
 
+/* ============================================================
+   DARK MODE OVERRIDES — Profile
+   ============================================================ */
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .profile-sidebar-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+
+[data-theme="dark"] .profile-upload-label {
+    background: rgba(248,250,255,0.04);
+    border-color: rgba(191,219,254,0.2);
+}
+
+[data-theme="dark"] .profile-upload-label:hover {
+    background: rgba(239,246,255,0.08);
+    border-color: rgba(59,130,246,0.4);
+}
+
+[data-theme="dark"] .profile-upload-icon {
+    background: rgba(219,234,254,0.12);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .profile-avatar-img {
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .profile-sidebar-identity {
+    background: linear-gradient(160deg, rgba(248,250,255,0.05) 0%, rgba(239,246,255,0.05) 100%);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .profile-sidebar-tips {
+    background: linear-gradient(160deg, rgba(248,250,255,0.05) 0%, rgba(239,246,255,0.05) 100%);
+    border-color: var(--border-default);
+}
