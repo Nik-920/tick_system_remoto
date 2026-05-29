@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -42,7 +43,7 @@ class TicketAssignmentFieldsTest extends TestCase
 
         $this->assertSame($actor->id, $fresh->assigned_by);
         $this->assertNotNull($fresh->assigned_at);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $fresh->assigned_at);
+        $this->assertInstanceOf(Carbon::class, $fresh->assigned_at);
         $this->assertTrue($fresh->assignment_locked);
         $this->assertSame(Ticket::ASSIGNMENT_SOURCE_SELF, $fresh->assignment_source);
 

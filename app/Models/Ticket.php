@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $title
  * @property string|null $description
  * @property string|null $assigned_by
- * @property \Carbon\Carbon|null $assigned_at
+ * @property Carbon|null $assigned_at
  * @property bool $assignment_locked
  * @property string|null $assignment_source
  * @property-read Location|null $location
@@ -33,17 +34,17 @@ class Ticket extends Model
     use HasFactory;
     use HasUuids;
 
-     public const STATE_OPEN = 'open';
+    public const STATE_OPEN = 'open';
 
-     public const STATE_IN_PROGRESS = 'in_progress';
+    public const STATE_IN_PROGRESS = 'in_progress';
 
-     public const STATE_RESOLVED = 'resolved';
+    public const STATE_RESOLVED = 'resolved';
 
-     public const STATE_REJECTED = 'rejected';
+    public const STATE_REJECTED = 'rejected';
 
-     public const ASSIGNMENT_SOURCE_SELF = 'self_claimed';
+    public const ASSIGNMENT_SOURCE_SELF = 'self_claimed';
 
-     public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
+    public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
 
     /** @var list<string> */
     protected $fillable = [

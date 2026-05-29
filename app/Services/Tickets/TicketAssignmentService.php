@@ -2,6 +2,7 @@
 
 namespace App\Services\Tickets;
 
+use App\Events\TicketAssigned;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
@@ -337,11 +338,11 @@ class TicketAssignmentService
         ?User $newAssignee,
         string $correlationId
     ): void {
-        if (! class_exists(\App\Events\TicketAssigned::class)) {
+        if (! class_exists(TicketAssigned::class)) {
             return;
         }
 
-        event(new \App\Events\TicketAssigned(
+        event(new TicketAssigned(
             ticket: $ticket,
             actor: $actor,
             previousAssignee: $previousAssignee,

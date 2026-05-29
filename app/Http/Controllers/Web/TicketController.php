@@ -245,7 +245,7 @@ class TicketController extends Controller
 
         try {
             $assignmentService->claimByMaintenance($ticket, $request->user());
-        } catch (AuthorizationException | InvalidArgumentException $exception) {
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
             return back()
                 ->withInput()
                 ->withErrors(['assignment' => $exception->getMessage()]);
@@ -265,7 +265,7 @@ class TicketController extends Controller
 
         try {
             $assignmentService->releaseByMaintenance($ticket, $request->user());
-        } catch (AuthorizationException | InvalidArgumentException $exception) {
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
             return back()
                 ->withInput()
                 ->withErrors(['assignment' => $exception->getMessage()]);
@@ -292,7 +292,7 @@ class TicketController extends Controller
             } else {
                 $assignmentService->reassignByAdmin($ticket, $request->user(), $target);
             }
-        } catch (AuthorizationException | InvalidArgumentException $exception) {
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
             return back()
                 ->withInput()
                 ->withErrors(['assigned_to' => $exception->getMessage()]);
@@ -312,7 +312,7 @@ class TicketController extends Controller
 
         try {
             $assignmentService->unassignByAdmin($ticket, $request->user());
-        } catch (AuthorizationException | InvalidArgumentException $exception) {
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
             return back()
                 ->withInput()
                 ->withErrors(['assignment' => $exception->getMessage()]);
