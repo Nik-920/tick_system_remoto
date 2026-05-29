@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
@@ -11,9 +12,12 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Storage\TicketMediaStorageService;
+use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,6 +85,37 @@ class TicketController extends Controller
             'categories' => Category::query()->orderBy('name', 'asc')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'selectedLocationId' => $selectedLocationId,
+        ]);
+    }
+
+    public function available(ListTicketsRequest $request): View
+    {
+        $this->authorize('viewAny', Ticket::class);
+
+        $filters = $request->validated();
+
+        $query = Ticket::query()
+            ->availableForClaim()
+            ->with([
+                'reporter',
+                'assignee',
+                'location',
+                'category',
+                'embedding.matchedTicket',
+            ]);
+
+        $this->applyFilters($query, $filters);
+
+        $tickets = $query
+            ->latest('created_at')
+            ->paginate((int) ($filters['per_page'] ?? 15))
+            ->withQueryString();
+
+        return view('tickets.available', [
+            'tickets' => $tickets,
+            'filters' => $filters,
+            'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
+            'categories' => Category::query()->orderBy('name', 'asc')->get(),
         ]);
     }
 
@@ -186,6 +221,93 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('status', 'Estado del ticket actualizado correctamente.');
+    }
+
+    public function claim(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('claim', $ticket);
+
+        try {
+            $assignmentService->claimByMaintenance($ticket, $request->user());
+        } catch (AuthorizationException | InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Ticket tomado correctamente.');
+    }
+
+    public function release(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('release', $ticket);
+
+        try {
+            $assignmentService->releaseByMaintenance($ticket, $request->user());
+        } catch (AuthorizationException | InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Ticket liberado correctamente.');
+    }
+
+    public function assign(
+        AssignTicketRequest $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('assign', $ticket);
+
+        $assignedTo = (string) $request->validated('assigned_to');
+        $target = User::query()->findOrFail($assignedTo);
+
+        try {
+            if ($ticket->assigned_to === null) {
+                $assignmentService->assignByAdmin($ticket, $request->user(), $target);
+            } else {
+                $assignmentService->reassignByAdmin($ticket, $request->user(), $target);
+            }
+        } catch (AuthorizationException | InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assigned_to' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Asignacion actualizada correctamente.');
+    }
+
+    public function unassign(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('unassign', $ticket);
+
+        try {
+            $assignmentService->unassignByAdmin($ticket, $request->user());
+        } catch (AuthorizationException | InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Asignacion eliminada correctamente.');
     }
 
     /**

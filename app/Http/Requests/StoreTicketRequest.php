@@ -42,7 +42,6 @@ class StoreTicketRequest extends FormRequest
             'description' => ['required', 'string', 'min:20', 'max:2000'],
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
-            'assigned_to' => ['nullable', 'uuid', 'exists:users,id'],
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
 
             // OWASP: Límite estricto en la cantidad de archivos para evitar ataques de DoS por saturación
