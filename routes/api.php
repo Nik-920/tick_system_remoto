@@ -39,6 +39,18 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('api.tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('api.tickets.show');
+    Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('api.tickets.claim');
+    Route::patch('/tickets/{ticket}/release', [TicketController::class, 'release'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('api.tickets.release');
+    Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('api.tickets.assign');
+    Route::patch('/tickets/{ticket}/unassign', [TicketController::class, 'unassign'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('api.tickets.unassign');
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
         ->middleware(['idempotency', 'throttle:mutations'])
         ->name('api.tickets.destroy');

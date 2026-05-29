@@ -78,11 +78,26 @@ Route::middleware('auth')->group(function (): void {
         ->name('scan.show');
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/available', [TicketController::class, 'available'])
+        ->middleware('role:maintenance|admin|super_admin')
+        ->name('tickets.available');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('tickets.claim');
+    Route::patch('/tickets/{ticket}/release', [TicketController::class, 'release'])
+        ->middleware(['idempotency', 'throttle:mutations'])
+        ->name('tickets.release');
+    Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign'])
+        ->middleware(['role:admin|super_admin', 'idempotency', 'throttle:mutations'])
+        ->name('tickets.assign');
+    Route::patch('/tickets/{ticket}/unassign', [TicketController::class, 'unassign'])
+        ->middleware(['role:admin|super_admin', 'idempotency', 'throttle:mutations'])
+        ->name('tickets.unassign');
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
         ->middleware(['idempotency', 'throttle:mutations'])
         ->name('tickets.destroy');
