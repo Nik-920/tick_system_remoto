@@ -196,6 +196,139 @@ class TicketAssignmentControllerTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_ticket_show_displays_assignment_panel(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Asignación');
+        $response->assertSeeText('Asignado a');
+        $response->assertSeeText('Asignado por');
+    }
+
+    public function test_maintenance_sees_claim_button_for_open_unassigned_ticket(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Tomar este ticket');
+    }
+
+    public function test_maintenance_sees_release_button_for_self_claimed_unlocked_ticket(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $ticket->forceFill([
+            'assigned_to' => $maintenance->id,
+            'assigned_by' => $maintenance->id,
+            'assigned_at' => now(),
+            'assignment_locked' => false,
+            'assignment_source' => Ticket::ASSIGNMENT_SOURCE_SELF,
+        ])->save();
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Liberar ticket');
+    }
+
+    public function test_maintenance_does_not_see_admin_assignment_select(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Asignar a');
+    }
+
+    public function test_admin_sees_assignment_select(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $maintenance->forceFill(['name' => 'Maintenance Uno'])->save();
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Asignar a');
+        $response->assertSee('Maintenance Uno');
+    }
+
+    public function test_super_admin_sees_assignment_select(): void
+    {
+        $superAdmin = $this->createUserWithRole('super_admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $maintenance->forceFill(['name' => 'Maintenance Dos'])->save();
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($superAdmin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Asignar a');
+        $response->assertSee('Maintenance Dos');
+    }
+
+    public function test_reporter_does_not_see_assignment_actions(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Tomar este ticket');
+        $response->assertDontSeeText('Liberar ticket');
+        $response->assertDontSeeText('Asignar a');
+        $response->assertDontSeeText('Desasignar');
+    }
+
+    public function test_ticket_index_shows_assignee_column(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $this->ensureRolesExist();
+        $assignee = User::factory()->create(['name' => 'Tecnico Uno']);
+        $assignee->assignRole('maintenance');
+        $ticket = $this->createTicket($reporter);
+        $ticket->forceFill(['assigned_to' => $assignee->id])->save();
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Asignado a');
+        $response->assertSeeText('Tecnico Uno');
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();
