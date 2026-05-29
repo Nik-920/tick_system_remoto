@@ -1,0 +1,149 @@
+/* ============================================================
+   COMPONENT — Danger Zone
+   Tick System Onn
+
+   Zona de acciones destructivas / irreversibles.
+   Antes definida 3 veces con prefijos distintos en:
+     locations.css  → .locs-danger-zone / .locs-danger-inner / .locs-danger-title / ...
+     users.css      → .users-danger-zone / .users-danger-inner / .users-danger-title / ...
+     categories.css → .cats-danger-zone / .cats-danger-inner / .cats-danger-title / ...
+
+   ESTRATEGIA FASE 2:
+   - Se crea la clase genérica .danger-zone
+   - Se crean aliases de las clases antiguas apuntando a las mismas reglas
+   - Las vistas Blade NO se modifican todavía
+   - El acento rojo superior (::before) está incluido
+   ============================================================ */
+
+/* ── Contenedor ── */
+.danger-zone,
+.locs-danger-zone,
+.users-danger-zone,
+.cats-danger-zone {
+    background: var(--bg-surface);
+    border: 1px solid #fecaca;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+}
+
+/* ── Acento rojo superior (stripe de 3px) ── */
+.danger-zone::before,
+.locs-danger-zone::before,
+.users-danger-zone::before,
+.cats-danger-zone::before {
+    content: "";
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, #dc2626, #f87171);
+}
+
+/* ── Layout interior ── */
+.danger-zone__inner,
+.locs-danger-inner,
+.users-danger-inner,
+.cats-danger-inner {
+    padding: 1.25rem 1.375rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* ── Título ── */
+.danger-zone__title,
+.locs-danger-title,
+.users-danger-title,
+.cats-danger-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #b91c1c;
+    margin: 0;
+}
+
+/* ── Texto descriptivo ── */
+.danger-zone__text,
+.locs-danger-text,
+.users-danger-text,
+.cats-danger-text {
+    font-size: 0.82rem;
+    color: #7f1d1d;
+    margin-top: 0.3rem;
+    max-width: 48ch;
+}
+
+/* ── Botón de acción destructiva ── */
+.danger-zone__btn,
+.locs-danger-btn,
+.users-danger-btn,
+.cats-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    font-family: inherit;
+    background: #dc2626;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.danger-zone__btn:hover,
+.locs-danger-btn:hover,
+.users-danger-btn:hover,
+.cats-danger-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.28);
+}
+
+/* ── Responsive mobile ── */
+@media (max-width: 639px) {
+    .danger-zone__inner,
+    .locs-danger-inner,
+    .users-danger-inner,
+    .cats-danger-inner {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .danger-zone__btn,
+    .locs-danger-btn,
+    .users-danger-btn,
+    .cats-danger-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES
+   ============================================================ */
+[data-theme="dark"] .danger-zone,
+[data-theme="dark"] .locs-danger-zone,
+[data-theme="dark"] .users-danger-zone,
+[data-theme="dark"] .cats-danger-zone {
+    background: var(--bg-surface);
+    border-color: rgba(254, 202, 202, 0.2);
+}
+
+[data-theme="dark"] .danger-zone__title,
+[data-theme="dark"] .locs-danger-title,
+[data-theme="dark"] .users-danger-title,
+[data-theme="dark"] .cats-danger-title {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .danger-zone__text,
+[data-theme="dark"] .locs-danger-text,
+[data-theme="dark"] .users-danger-text,
+[data-theme="dark"] .cats-danger-text {
+    color: #fecaca;
+}

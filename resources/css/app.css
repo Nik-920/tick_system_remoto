@@ -1,14 +1,45 @@
 @import 'tailwindcss';
 
-/* ── Layout & Shell ── */
-@import './modules/app-layout.css';
+/* ── @theme debe ir justo después de tailwindcss en Tailwind v4 ── */
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ── 1. Tokens globales — única fuente de verdad para variables CSS ── */
+@import './tokens/base.css';
+
+/* ── 2. Tema dark — override de tokens para html[data-theme="dark"] ── */
+@import './themes/dark.css';
+
+/* ── 3. Utilidades globales ── */
+@import './utilities/base.css';
+@import './utilities/animations.css';
+
+/* ── 4. Componentes reutilizables ── */
+@import './components/buttons.css';
+@import './components/panel.css';
+@import './components/alerts.css';
+@import './components/page-hero.css';
+@import './components/kpi-strip.css';
+@import './components/sidebar-panel.css';
+@import './components/forms.css';
+@import './components/filters.css';
+@import './components/tables.css';
+@import './components/badges.css';
+@import './components/empty-states.css';
+@import './components/danger-zone.css';
+@import './components/pagination.css';
+
+/* ── 5. Layout & Shell ── */
+@import './layouts/app-shell.css';
+@import './layouts/sidebar.css';
+@import './layouts/topbar.css';
+@import './modules/notifications.css';
 @import './modules/auth.css';
 @import './modules/welcome.css';
 
-/* ── Components ── */
-@import './components/buttons.css';
-
-/* ── Feature Modules ── */
+/* ── 6. Feature Modules ── */
 @import './modules/dashboard-role-shared.css';
 @import './modules/tickets.css';
 @import './modules/users.css';
@@ -16,14 +47,9 @@
 @import './modules/categories.css';
 @import './modules/locations.css';
 
-/* ── Tailwind Source Scanning ── */
+/* ── Tailwind Source Scanning — siempre al final ── */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
-@source "../**/*.blade.php";
-@source "../**/*.js";
-@source "../**/*.vue";
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-}
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.vue';

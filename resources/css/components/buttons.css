@@ -27,6 +27,90 @@
     outline-offset: 2px;
 }
 
+/* Legacy button classes used across views */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    background: #1d4ed8;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    text-decoration: none;
+    cursor: pointer;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+    transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+}
+
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    text-decoration: none;
+    cursor: pointer;
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fecdd3;
+}
+
+.btn-danger:hover {
+    background: #ffe4e6;
+    color: #be123c;
+    border-color: #fda4af;
+    transform: translateY(-1px);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
 .c-btn--sm {
     padding: 0.4rem 0.75rem;
     font-size: 0.8rem;
@@ -114,4 +198,26 @@
 
 [data-theme="dark"] .c-btn--danger:hover {
     background: rgba(239,68,68,0.22);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-danger {
+    background: rgba(239,68,68,0.14);
+    border-color: rgba(239,68,68,0.3);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+    background: rgba(239,68,68,0.22);
+    color: #fecaca;
 }
