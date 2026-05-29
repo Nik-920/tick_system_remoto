@@ -223,9 +223,9 @@ $priorityLabels = [
                     @empty
                     <tr>
                         <td colspan="6" class="tickets-empty-cell">
-                            <div class="tickets-empty-state">
-                                <p class="tickets-empty-title">No hay tickets para mostrar</p>
-                                <p class="tickets-empty-note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
+                            <div class="empty-state">
+                                <p class="empty-state__title">No hay tickets para mostrar</p>
+                                <p class="empty-state__note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
                                 <a href="{{ route('tickets.create') }}" class="btn-primary">Crear primer ticket</a>
                             </div>
                         </td>
@@ -237,7 +237,7 @@ $priorityLabels = [
     </section>
 
     {{-- Paginación --}}
-    <div class="tickets-pagination">
+    <div class="c-pagination">
         {{ $tickets->links() }}
     </div>
 

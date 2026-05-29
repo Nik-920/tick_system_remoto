@@ -162,9 +162,9 @@ $qrStatusLabels = [
                     @empty
                     <tr>
                         <td colspan="7" class="locs-empty-cell">
-                            <div class="locs-empty-state">
-                                <p class="locs-empty-title">No hay ubicaciones para mostrar</p>
-                                <p class="locs-empty-note">Prueba ajustar o limpiar filtros. Si aún no existen ubicaciones, registra una nueva para habilitar reportes.</p>
+                            <div class="empty-state">
+                                <p class="empty-state__title">No hay ubicaciones para mostrar</p>
+                                <p class="empty-state__note">Prueba ajustar o limpiar filtros. Si aún no existen ubicaciones, registra una nueva para habilitar reportes.</p>
                                 <a href="{{ route('locations.create') }}" class="btn-primary">Crear ubicación</a>
                             </div>
                         </td>
@@ -175,7 +175,7 @@ $qrStatusLabels = [
         </div>
     </section>
 
-    <div class="locs-pagination">
+    <div class="c-pagination">
         {{ $locations->links() }}
     </div>
 </div>

@@ -45,9 +45,15 @@
 
             {{-- Toggle tema claro/oscuro --}}
             <div class="topbar-item" title="Cambiar tema">
-                <button class="topbar-icon-btn" id="themeToggleBtn" aria-label="Cambiar tema">
-                    <x-lucide-sun class="theme-icon-light" width="18" height="18" stroke-width="2" />
-                    <x-lucide-moon class="theme-icon-dark" width="18" height="18" stroke-width="2" />
+                <button
+                    class="topbar-icon-btn"
+                    id="themeToggleBtn"
+                    aria-label="Cambiar tema"
+                    aria-pressed="false"
+                    title="Cambiar tema"
+                >
+                    <x-lucide-sun class="theme-icon-light" width="18" height="18" stroke-width="2" aria-hidden="true" />
+                    <x-lucide-moon class="theme-icon-dark" width="18" height="18" stroke-width="2" aria-hidden="true" />
                 </button>
             </div>
 
