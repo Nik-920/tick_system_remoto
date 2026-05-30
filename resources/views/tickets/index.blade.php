@@ -41,6 +41,9 @@ $priorityLabels = [
     'high'     => 'Alta',
     'critical' => 'Crítica',
 ];
+
+$user = auth()->user();
+$isReporterOnly = $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin']);
 @endphp
 
 <div class="tickets-page">
@@ -50,7 +53,7 @@ $priorityLabels = [
         <div class="tickets-hero-inner">
             <div>
                 <p class="tickets-overline">Operación de incidencias</p>
-                <h1 class="tickets-title">Tickets</h1>
+                <h1 class="tickets-title">{{ $isReporterOnly ? 'Mis tickets' : 'Tickets' }}</h1>
                 <p class="tickets-subtitle">Vista centralizada para monitorear estado, prioridad y ritmo de atención en cada incidencia.</p>
             </div>
             <a href="{{ route('tickets.create') }}" class="btn-primary tickets-btn-create">Nuevo ticket</a>
@@ -120,6 +123,7 @@ $priorityLabels = [
                     </select>
                 </div>
 
+                @unless ($isReporterOnly)
                 <div>
                     <label for="assignment" class="tickets-field-label">Asignación</label>
                     <select id="assignment" name="assignment" class="tickets-field">
@@ -129,6 +133,7 @@ $priorityLabels = [
                         <option value="assigned" @selected($assignmentValue==='assigned')>Asignados</option>
                     </select>
                 </div>
+                @endunless
 
                 <div>
                     <label for="per_page" class="tickets-field-label">Por página</label>
@@ -156,6 +161,7 @@ $priorityLabels = [
                 </div>
             </div>
 
+            @unless ($isReporterOnly)
             {{-- Duplicate quick-filter --}}
             <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                 <span style="font-size:0.85rem; font-weight:600; opacity:0.7;">Vista rápida:</span>
@@ -170,6 +176,7 @@ $priorityLabels = [
                    ⚠️ Posibles duplicados
                 </a>
             </div>
+            @endunless
         </form>
     </section>
 

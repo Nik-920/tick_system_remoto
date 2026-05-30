@@ -354,7 +354,7 @@
         @endif
 
         {{-- ===== ACTUALIZAR ESTADO ===== --}}
-        @if ($ticket)
+        @can('updateState', $ticket)
         <section class="tickets-show-section">
             <header class="tickets-show-section-header">
                 <h2>Actualizar estado</h2>
@@ -395,7 +395,7 @@
                 </div>
             </form>
         </section>
-        @endif
+        @endcan
 
         {{-- ===== HISTORIAL ===== --}}
         <section class="tickets-show-section">
