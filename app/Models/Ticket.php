@@ -155,6 +155,11 @@ class Ticket extends Model
         return $query->where('assigned_to', $userId);
     }
 
+    public function scopeReportedBy(Builder $query, string $userId): Builder
+    {
+        return $query->where('reporter_id', $userId);
+    }
+
     public function scopeOpenOrInProgress(Builder $query): Builder
     {
         return $query->whereIn('state', [self::STATE_OPEN, self::STATE_IN_PROGRESS]);

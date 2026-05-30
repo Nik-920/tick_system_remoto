@@ -36,6 +36,7 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
+        $user = $request->user();
         $filters = $request->validated();
 
         // Eager-load embedding and matchedTicket to expose duplicate data without N+1
@@ -47,7 +48,16 @@ class TicketController extends Controller
             'embedding.matchedTicket',
         ]);
 
-        $this->applyFilters($query, $filters);
+        // Reporter-role scope: restrict to own tickets BEFORE any user-supplied filters
+        // so that query params (search, duplicates, location, etc.) cannot leak foreign tickets.
+        if ($user instanceof User
+            && $user->hasRole('reporter')
+            && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])
+        ) {
+            $query->reportedBy($user->id);
+        }
+
+        $this->applyFilters($query, $filters, $user);
 
         $tickets = $query
             ->latest('created_at')
@@ -366,7 +376,7 @@ class TicketController extends Controller
     /**
      * @param  array<string, mixed>  $filters
      */
-    private function applyFilters(Builder $query, array $filters): void
+    private function applyFilters(Builder $query, array $filters, ?User $user = null): void
     {
         if (! empty($filters['state'])) {
             $query->where('state', $filters['state']);

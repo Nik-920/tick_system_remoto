@@ -37,6 +37,7 @@ class TicketController extends Controller
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
+        $user = $request->user();
 
         // Eager-load embedding and matchedTicket to show duplicate badge without N+1
         $query = Ticket::query()->with([
@@ -48,7 +49,11 @@ class TicketController extends Controller
             'embedding.matchedTicket',
         ]);
 
-        $this->applyFilters($query, $filters, $request->user());
+        if ($user instanceof User && $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
+            $query->reportedBy($user->id);
+        }
+
+        $this->applyFilters($query, $filters, $user);
 
         $tickets = $query
             ->latest('created_at')
