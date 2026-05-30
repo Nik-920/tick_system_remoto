@@ -916,66 +916,66 @@ class TicketControllerTest extends TestCase
     public function test_state_update_creates_state_history_entry(): void
     {
         $maintenance = $this->createUserWithRole('maintenance');
-        $reporter    = $this->createUserWithRole('reporter');
-        $location    = $this->createLocation();
-        $category    = $this->createCategory();
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
 
         $ticket = Ticket::create([
-            'title'       => 'Ticket con historial',
+            'title' => 'Ticket con historial',
             'description' => 'Test de creación de historial al cambiar estado.',
             'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'state'       => 'open',
-            'priority'    => 'medium',
+            'state' => 'open',
+            'priority' => 'medium',
         ]);
 
         $response = $this
             ->actingAs($maintenance)
             ->patch(route('tickets.update-state', $ticket), [
-                'to_state'        => 'in_progress',
-                'comment'         => 'Revisando el ticket',
-                'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+                'to_state' => 'in_progress',
+                'comment' => 'Revisando el ticket',
+                'idempotency_key' => (string) Str::uuid(),
             ]);
 
         $response->assertRedirect(route('tickets.show', $ticket));
 
         $this->assertDatabaseHas('state_history', [
-            'ticket_id'  => $ticket->id,
+            'ticket_id' => $ticket->id,
             'from_state' => 'open',
-            'to_state'   => 'in_progress',
+            'to_state' => 'in_progress',
             'changed_by' => $maintenance->id,
         ]);
 
         $this->assertDatabaseHas('tickets', [
-            'id'    => $ticket->id,
+            'id' => $ticket->id,
             'state' => 'in_progress',
         ]);
     }
 
     public function test_ticket_show_displays_existing_state_history(): void
     {
-        $admin    = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $reporter = $this->createUserWithRole('reporter');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
         $ticket = Ticket::create([
-            'title'       => 'Ticket con historial visible',
+            'title' => 'Ticket con historial visible',
             'description' => 'Verificar que show muestra el historial.',
             'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'state'       => 'in_progress',
-            'priority'    => 'high',
+            'state' => 'in_progress',
+            'priority' => 'high',
         ]);
 
         StateHistory::create([
-            'ticket_id'  => $ticket->id,
+            'ticket_id' => $ticket->id,
             'from_state' => 'open',
-            'to_state'   => 'in_progress',
+            'to_state' => 'in_progress',
             'changed_by' => $admin->id,
-            'comment'    => 'Revisando incidencia',
+            'comment' => 'Revisando incidencia',
         ]);
 
         $response = $this
@@ -991,29 +991,29 @@ class TicketControllerTest extends TestCase
 
     public function test_ticket_show_displays_assignment_history_entries(): void
     {
-        $admin    = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $reporter = $this->createUserWithRole('reporter');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
         $ticket = Ticket::create([
-            'title'       => 'Ticket con historial de asignación',
+            'title' => 'Ticket con historial de asignación',
             'description' => 'Verificar que show muestra eventos de asignación.',
             'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'state'       => 'open',
-            'priority'    => 'medium',
+            'state' => 'open',
+            'priority' => 'medium',
         ]);
 
         $assignmentComment = 'Ticket asignado a Luis Guillermo por admin/super_admin: Admin';
 
         StateHistory::create([
-            'ticket_id'  => $ticket->id,
+            'ticket_id' => $ticket->id,
             'from_state' => 'open',
-            'to_state'   => 'open',
+            'to_state' => 'open',
             'changed_by' => $admin->id,
-            'comment'    => $assignmentComment,
+            'comment' => $assignmentComment,
         ]);
 
         $response = $this
@@ -1028,26 +1028,26 @@ class TicketControllerTest extends TestCase
     public function test_reporter_can_see_state_history_but_not_update_state_form(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $admin    = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
         $ticket = Ticket::create([
-            'title'       => 'Ticket reporter con historial',
+            'title' => 'Ticket reporter con historial',
             'description' => 'Reporter debe ver historial pero no formulario de estado.',
             'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'state'       => 'in_progress',
-            'priority'    => 'low',
+            'state' => 'in_progress',
+            'priority' => 'low',
         ]);
 
         StateHistory::create([
-            'ticket_id'  => $ticket->id,
+            'ticket_id' => $ticket->id,
             'from_state' => 'open',
-            'to_state'   => 'in_progress',
+            'to_state' => 'in_progress',
             'changed_by' => $admin->id,
-            'comment'    => 'Incidencia en revisión',
+            'comment' => 'Incidencia en revisión',
         ]);
 
         $response = $this
