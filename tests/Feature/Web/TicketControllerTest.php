@@ -4,6 +4,7 @@ namespace Tests\Feature\Web;
 
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
@@ -908,5 +909,157 @@ class TicketControllerTest extends TestCase
         $response->assertSeeText('Asignación');
         $response->assertSeeText('Vista rápida:');
         $response->assertSeeText('Posibles duplicados');
+    }
+
+    // ── State History Display Tests ────────────────────────────────────────
+
+    public function test_state_update_creates_state_history_entry(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter    = $this->createUserWithRole('reporter');
+        $location    = $this->createLocation();
+        $category    = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title'       => 'Ticket con historial',
+            'description' => 'Test de creación de historial al cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state'       => 'open',
+            'priority'    => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.update-state', $ticket), [
+                'to_state'        => 'in_progress',
+                'comment'         => 'Revisando el ticket',
+                'idempotency_key' => (string) \Illuminate\Support\Str::uuid(),
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+
+        $this->assertDatabaseHas('state_history', [
+            'ticket_id'  => $ticket->id,
+            'from_state' => 'open',
+            'to_state'   => 'in_progress',
+            'changed_by' => $maintenance->id,
+        ]);
+
+        $this->assertDatabaseHas('tickets', [
+            'id'    => $ticket->id,
+            'state' => 'in_progress',
+        ]);
+    }
+
+    public function test_ticket_show_displays_existing_state_history(): void
+    {
+        $admin    = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title'       => 'Ticket con historial visible',
+            'description' => 'Verificar que show muestra el historial.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state'       => 'in_progress',
+            'priority'    => 'high',
+        ]);
+
+        StateHistory::create([
+            'ticket_id'  => $ticket->id,
+            'from_state' => 'open',
+            'to_state'   => 'in_progress',
+            'changed_by' => $admin->id,
+            'comment'    => 'Revisando incidencia',
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+        $response->assertSeeText('Open');
+        $response->assertSeeText('In progress');
+        $response->assertSeeText('Revisando incidencia');
+    }
+
+    public function test_ticket_show_displays_assignment_history_entries(): void
+    {
+        $admin    = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title'       => 'Ticket con historial de asignación',
+            'description' => 'Verificar que show muestra eventos de asignación.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state'       => 'open',
+            'priority'    => 'medium',
+        ]);
+
+        $assignmentComment = 'Ticket asignado a Luis Guillermo por admin/super_admin: Admin';
+
+        StateHistory::create([
+            'ticket_id'  => $ticket->id,
+            'from_state' => 'open',
+            'to_state'   => 'open',
+            'changed_by' => $admin->id,
+            'comment'    => $assignmentComment,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText($assignmentComment);
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+    }
+
+    public function test_reporter_can_see_state_history_but_not_update_state_form(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $admin    = $this->createUserWithRole('admin');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title'       => 'Ticket reporter con historial',
+            'description' => 'Reporter debe ver historial pero no formulario de estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state'       => 'in_progress',
+            'priority'    => 'low',
+        ]);
+
+        StateHistory::create([
+            'ticket_id'  => $ticket->id,
+            'from_state' => 'open',
+            'to_state'   => 'in_progress',
+            'changed_by' => $admin->id,
+            'comment'    => 'Incidencia en revisión',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        // Reporter SÍ ve el historial
+        $response->assertSeeText('Historial de estados');
+        $response->assertSeeText('Incidencia en revisión');
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+        // Reporter NO ve el formulario de cambio de estado
+        $response->assertDontSeeText('Actualizar estado');
     }
 }
