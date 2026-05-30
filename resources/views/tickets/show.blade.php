@@ -404,15 +404,18 @@
             </header>
 
             <div class="tickets-history-list">
-                @forelse (optional($ticket?->stateHistory) as $entry)
+                @forelse ($ticket->stateHistory as $entry)
                     <article class="tickets-history-item">
                         <div class="tickets-history-transition">
-                            <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry?->from_state ?? 'Inicio')) }}</span>
+                            <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry->from_state ?? 'Inicio')) }}</span>
                             <x-lucide-arrow-right class="tickets-history-arrow" />
-                            <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry?->to_state ?? '')) }}</span>
+                            <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry->to_state ?? '')) }}</span>
                         </div>
-                        <p class="tickets-history-comment">{{ $entry?->comment ?? '(sin comentario)' }}</p>
-                        <p class="tickets-history-date">{{ $entry?->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
+                        @if ($entry->changedBy)
+                            <p class="tickets-history-actor">Cambiado por: <strong>{{ $entry->changedBy->name ?? $entry->changedBy->email }}</strong></p>
+                        @endif
+                        <p class="tickets-history-comment">{{ $entry->comment ?? '(sin comentario)' }}</p>
+                        <p class="tickets-history-date">{{ $entry->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
                     </article>
                 @empty
                     <p class="tickets-history-empty">Aún no hay cambios de estado registrados</p>

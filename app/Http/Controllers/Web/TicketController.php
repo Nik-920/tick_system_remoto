@@ -179,7 +179,7 @@ class TicketController extends Controller
             'location',
             'category',
             'media' => fn ($query) => $query->latest('created_at'),
-            'stateHistory' => fn ($query) => $query->latest('created_at'),
+            'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
         ]);
