@@ -34,31 +34,33 @@ Route::middleware(['auth:sanctum'])->group(function (): void {
         ->middleware(['idempotency', 'throttle:mutations'])
         ->name('api.categories.destroy');
 
+    $ticketMutationMiddleware = ['idempotency', 'throttle:mutations'];
+
     Route::get('/tickets', [TicketController::class, 'index'])->name('api.tickets.index');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('api.tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('api.tickets.show');
     Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.claim');
     Route::patch('/tickets/{ticket}/release', [TicketController::class, 'release'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.release');
     Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.assign');
     Route::patch('/tickets/{ticket}/unassign', [TicketController::class, 'unassign'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.unassign');
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.destroy');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.update-state');
     Route::patch('/tickets/{ticket}/duplicate-review', [TicketController::class, 'reviewDuplicate'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('api.tickets.duplicate-review.update');
 
     Route::get('/users', [UserController::class, 'index'])->name('api.users.index');
