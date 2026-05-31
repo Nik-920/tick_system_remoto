@@ -58,6 +58,99 @@ class TicketApiControllerTest extends TestCase
         ]);
     }
 
+    public function test_reporter_only_sees_own_tickets_in_api_index(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ownTicket = Ticket::create([
+            'title' => 'Ticket propio API',
+            'description' => 'Ticket del reporter autenticado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $otherTicket = Ticket::create([
+            'title' => 'Ticket ajeno API',
+            'description' => 'Ticket de otro reporter.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index'));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ownTicket->id, $ids);
+        $this->assertNotContains($otherTicket->id, $ids);
+    }
+
+    public function test_reporter_cannot_see_other_reporter_ticket_via_api_show(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket ajeno API show',
+            'description' => 'El reporter no debe acceder a este ticket.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.show', $ticket));
+
+        $response->assertForbidden();
+    }
+
+    public function test_reporter_api_index_search_only_own_tickets(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $secretTitle = 'TICKET_AJENO_SECRETO_123';
+
+        $otherTicket = Ticket::create([
+            'title' => $secretTitle,
+            'description' => 'Ticket ajeno con titulo secreto.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['search' => $secretTitle]));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertNotContains($otherTicket->id, $ids);
+    }
+
     public function test_api_store_creates_ticket_and_returns_201(): void
     {
         $user = $this->createUserWithRole('reporter');

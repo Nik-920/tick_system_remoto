@@ -37,7 +37,6 @@ class TicketCreationService
                 'title' => (string) $payload['title'],
                 'description' => (string) $payload['description'],
                 'reporter_id' => $reporter->id,
-                'assigned_to' => $payload['assigned_to'] ?? null,
                 'location_id' => (string) $payload['location_id'],
                 'category_id' => (string) $payload['category_id'],
                 'state' => 'open',

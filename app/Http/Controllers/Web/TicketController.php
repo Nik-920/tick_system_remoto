@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
@@ -11,9 +12,12 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Storage\TicketMediaStorageService;
+use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,17 +37,23 @@ class TicketController extends Controller
         $this->authorize('viewAny', Ticket::class);
 
         $filters = $request->validated();
+        $user = $request->user();
 
         // Eager-load embedding and matchedTicket to show duplicate badge without N+1
         $query = Ticket::query()->with([
             'reporter',
             'assignee',
+            'assignedBy',
             'location',
             'category',
             'embedding.matchedTicket',
         ]);
 
-        $this->applyFilters($query, $filters);
+        if ($user instanceof User && $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
+            $query->reportedBy($user->id);
+        }
+
+        $this->applyFilters($query, $filters, $user);
 
         $tickets = $query
             ->latest('created_at')
@@ -84,6 +94,39 @@ class TicketController extends Controller
         ]);
     }
 
+    public function available(ListTicketsRequest $request): View
+    {
+        $this->authorize('viewAny', Ticket::class);
+
+        $filters = $request->validated();
+        unset($filters['state'], $filters['assignment']);
+
+        $query = Ticket::query()
+            ->availableForClaim()
+            ->with([
+                'reporter',
+                'assignee',
+                'assignedBy',
+                'location',
+                'category',
+                'embedding.matchedTicket',
+            ]);
+
+        $this->applyFilters($query, $filters, $request->user());
+
+        $tickets = $query
+            ->latest('created_at')
+            ->paginate((int) ($filters['per_page'] ?? 15))
+            ->withQueryString();
+
+        return view('tickets.available', [
+            'tickets' => $tickets,
+            'filters' => $filters,
+            'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
+            'categories' => Category::query()->orderBy('name', 'asc')->get(),
+        ]);
+    }
+
     public function store(StoreTicketRequest $request, TicketCreationService $creationService): RedirectResponse
     {
         $this->authorize('create', Ticket::class);
@@ -121,13 +164,22 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
+        $maintenanceUsers = collect();
+        $currentUser = request()->user();
+        if ($currentUser instanceof User && $currentUser->hasAnyRole(['admin', 'super_admin'])) {
+            $maintenanceUsers = User::role('maintenance')
+                ->orderBy('name')
+                ->get();
+        }
+
         $ticket->load([
             'reporter',
             'assignee',
+            'assignedBy',
             'location',
             'category',
             'media' => fn ($query) => $query->latest('created_at'),
-            'stateHistory' => fn ($query) => $query->latest('created_at'),
+            'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
         ]);
@@ -135,6 +187,7 @@ class TicketController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'states' => ['open', 'in_progress', 'resolved', 'rejected'],
+            'maintenanceUsers' => $maintenanceUsers,
         ]);
     }
 
@@ -188,6 +241,93 @@ class TicketController extends Controller
             ->with('status', 'Estado del ticket actualizado correctamente.');
     }
 
+    public function claim(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('claim', $ticket);
+
+        try {
+            $assignmentService->claimByMaintenance($ticket, $request->user());
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Ticket tomado correctamente.');
+    }
+
+    public function release(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('release', $ticket);
+
+        try {
+            $assignmentService->releaseByMaintenance($ticket, $request->user());
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Ticket liberado correctamente.');
+    }
+
+    public function assign(
+        AssignTicketRequest $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('assign', $ticket);
+
+        $assignedTo = (string) $request->validated('assigned_to');
+        $target = User::query()->findOrFail($assignedTo);
+
+        try {
+            if ($ticket->assigned_to === null) {
+                $assignmentService->assignByAdmin($ticket, $request->user(), $target);
+            } else {
+                $assignmentService->reassignByAdmin($ticket, $request->user(), $target);
+            }
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assigned_to' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Asignacion actualizada correctamente.');
+    }
+
+    public function unassign(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): RedirectResponse {
+        $this->authorize('unassign', $ticket);
+
+        try {
+            $assignmentService->unassignByAdmin($ticket, $request->user());
+        } catch (AuthorizationException|InvalidArgumentException $exception) {
+            return back()
+                ->withInput()
+                ->withErrors(['assignment' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Asignacion eliminada correctamente.');
+    }
+
     /**
      * PATCH /tickets/{ticket}/duplicate-review
      * Allows maintenance/admin/super_admin to confirm or dismiss an AI duplicate.
@@ -221,7 +361,7 @@ class TicketController extends Controller
     /**
      * @param  array<string, mixed>  $filters
      */
-    private function applyFilters(Builder $query, array $filters): void
+    private function applyFilters(Builder $query, array $filters, ?User $user = null): void
     {
         if (! empty($filters['state'])) {
             $query->where('state', $filters['state']);
@@ -237,6 +377,17 @@ class TicketController extends Controller
 
         if (! empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
+        }
+
+        if (! empty($filters['assignment']) && $filters['assignment'] !== 'all') {
+            $assignment = (string) $filters['assignment'];
+            if ($assignment === 'unassigned') {
+                $query->whereNull('assigned_to');
+            } elseif ($assignment === 'assigned') {
+                $query->whereNotNull('assigned_to');
+            } elseif ($assignment === 'mine' && $user instanceof User) {
+                $query->where('assigned_to', $user->id);
+            }
         }
 
         if (! empty($filters['search'])) {

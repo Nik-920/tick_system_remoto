@@ -77,20 +77,38 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:20,1')
         ->name('scan.show');
 
+    $ticketMutationMiddleware = ['idempotency', 'throttle:mutations'];
+    $ticketAdminMutationMiddleware = ['role:admin|super_admin', ...$ticketMutationMiddleware];
+
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/available', [TicketController::class, 'available'])
+        ->middleware('role:maintenance|admin|super_admin')
+        ->name('tickets.available');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])
+        ->middleware($ticketMutationMiddleware)
+        ->name('tickets.claim');
+    Route::patch('/tickets/{ticket}/release', [TicketController::class, 'release'])
+        ->middleware($ticketMutationMiddleware)
+        ->name('tickets.release');
+    Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign'])
+        ->middleware($ticketAdminMutationMiddleware)
+        ->name('tickets.assign');
+    Route::patch('/tickets/{ticket}/unassign', [TicketController::class, 'unassign'])
+        ->middleware($ticketAdminMutationMiddleware)
+        ->name('tickets.unassign');
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('tickets.destroy');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('tickets.update-state');
     Route::patch('/tickets/{ticket}/duplicate-review', [TicketController::class, 'reviewDuplicate'])
-        ->middleware(['idempotency', 'throttle:mutations'])
+        ->middleware($ticketMutationMiddleware)
         ->name('tickets.duplicate-review.update');
 
     Route::middleware('role:admin|super_admin')->group(function (): void {

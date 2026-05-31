@@ -4,6 +4,7 @@ namespace Tests\Feature\Web;
 
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
@@ -54,6 +55,166 @@ class TicketControllerTest extends TestCase
         $response->assertOk();
         $response->assertViewIs('tickets.index');
         $response->assertSee('Proyector sin imagen');
+    }
+
+    public function test_reporter_only_sees_own_tickets_in_index(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ownTitle = 'Ticket propio reporter';
+        $otherTitle = 'Ticket ajeno reporter';
+
+        Ticket::create([
+            'title' => $ownTitle,
+            'description' => 'Descripcion del ticket propio.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        Ticket::create([
+            'title' => $otherTitle,
+            'description' => 'Descripcion del ticket ajeno.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee($ownTitle);
+        $response->assertDontSee($otherTitle);
+    }
+
+    public function test_reporter_cannot_see_other_reporter_ticket_via_show(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket ajeno para show',
+            'description' => 'El reporter no debe ver este ticket.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertForbidden();
+    }
+
+    public function test_reporter_cannot_see_update_state_form_in_show(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket propio sin form update state',
+            'description' => 'El reporter no debe ver el formulario de estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Actualizar estado');
+        $response->assertDontSeeText('Nuevo estado');
+    }
+
+    public function test_reporter_cannot_bypass_index_filter_with_search(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $secretTitle = 'TICKET_AJENO_SECRETO_123';
+
+        Ticket::create([
+            'title' => $secretTitle,
+            'description' => 'Ticket ajeno con titulo secreto.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['search' => $secretTitle]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($secretTitle);
+    }
+
+    public function test_reporter_cannot_bypass_index_filter_with_duplicates(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $matchedTicket = Ticket::create([
+            'title' => 'Ticket referencia ajeno',
+            'description' => 'Ticket de referencia para el duplicado ajeno.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $duplicateTitle = 'Duplicado ajeno';
+        $duplicateTicket = Ticket::create([
+            'title' => $duplicateTitle,
+            'description' => 'Este duplicado no debe ser visible para el reporter.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $duplicateTicket->id,
+            'embedding_vector' => [0.1, 0.2],
+            'description_hash' => hash('sha256', $duplicateTicket->embeddingText()),
+            'is_duplicate' => true,
+            'matched_ticket_id' => $matchedTicket->id,
+            'review_status' => null,
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['duplicates' => '1']));
+
+        $response->assertOk();
+        $response->assertDontSee($duplicateTitle);
     }
 
     public function test_authenticated_user_can_create_ticket_from_web_form(): void
@@ -715,5 +876,190 @@ class TicketControllerTest extends TestCase
             'ticket_id' => $ticket->id,
             'review_status' => TicketEmbedding::REVIEW_DISMISSED,
         ]);
+    }
+
+    // ── Phase 2 UX Tests ──────────────────────────────────────────────────
+
+    public function test_reporter_index_view_hides_assignment_and_duplicates_filters(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Mis tickets');
+        $response->assertDontSeeText('<h1 class="tickets-title">Tickets</h1>', false);
+        $response->assertDontSeeText('Asignación');
+        $response->assertDontSeeText('Vista rápida:');
+        $response->assertDontSeeText('Posibles duplicados');
+    }
+
+    public function test_admin_index_view_shows_assignment_and_duplicates_filters(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Tickets');
+        $response->assertSeeText('Asignación');
+        $response->assertSeeText('Vista rápida:');
+        $response->assertSeeText('Posibles duplicados');
+    }
+
+    // ── State History Display Tests ────────────────────────────────────────
+
+    public function test_state_update_creates_state_history_entry(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket con historial',
+            'description' => 'Test de creación de historial al cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.update-state', $ticket), [
+                'to_state' => 'in_progress',
+                'comment' => 'Revisando el ticket',
+                'idempotency_key' => (string) Str::uuid(),
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+
+        $this->assertDatabaseHas('state_history', [
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $maintenance->id,
+        ]);
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'state' => 'in_progress',
+        ]);
+    }
+
+    public function test_ticket_show_displays_existing_state_history(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket con historial visible',
+            'description' => 'Verificar que show muestra el historial.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'high',
+        ]);
+
+        StateHistory::create([
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $admin->id,
+            'comment' => 'Revisando incidencia',
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+        $response->assertSeeText('Open');
+        $response->assertSeeText('In progress');
+        $response->assertSeeText('Revisando incidencia');
+    }
+
+    public function test_ticket_show_displays_assignment_history_entries(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket con historial de asignación',
+            'description' => 'Verificar que show muestra eventos de asignación.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $assignmentComment = 'Ticket asignado a Luis Guillermo por admin/super_admin: Admin';
+
+        StateHistory::create([
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'open',
+            'changed_by' => $admin->id,
+            'comment' => $assignmentComment,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText($assignmentComment);
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+    }
+
+    public function test_reporter_can_see_state_history_but_not_update_state_form(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $admin = $this->createUserWithRole('admin');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket reporter con historial',
+            'description' => 'Reporter debe ver historial pero no formulario de estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'low',
+        ]);
+
+        StateHistory::create([
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $admin->id,
+            'comment' => 'Incidencia en revisión',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        // Reporter SÍ ve el historial
+        $response->assertSeeText('Historial de estados');
+        $response->assertSeeText('Incidencia en revisión');
+        $response->assertDontSeeText('Aún no hay cambios de estado registrados');
+        // Reporter NO ve el formulario de cambio de estado
+        $response->assertDontSeeText('Actualizar estado');
     }
 }

@@ -14,6 +14,21 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700,800|dm-mono:400,500" rel="stylesheet" />
 
+    {{-- Theme: apply before first paint to avoid FOUC --}}
+    <script>
+        (function () {
+            function getThemeCookie() {
+                var m = document.cookie.match(/(?:^|;\s*)tick-theme=(light|dark)/);
+                return m ? m[1] : null;
+            }
+            var t;
+            try { t = localStorage.getItem('tick-theme'); } catch (e) {}
+            if (!t) t = getThemeCookie();
+            if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else

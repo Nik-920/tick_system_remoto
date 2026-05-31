@@ -1,14 +1,5 @@
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-}
+/* .sr-only → movido a utilities/base.css */
+
 
 .welcome-body {
     margin: 0;
@@ -770,4 +761,219 @@
     .welcome-benefit-card:hover {
         transform: none;
     }
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES - Welcome
+   ============================================================ */
+[data-theme="dark"] .welcome-body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-nav {
+    background: rgba(15, 23, 42, 0.82);
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-brand-primary {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .welcome-brand-suffix {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .welcome-nav-btn--ghost {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-nav-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-nav-btn--primary {
+    background: #2563eb;
+}
+
+[data-theme="dark"] .welcome-nav-btn--primary:hover {
+    background: #1d4ed8;
+}
+
+[data-theme="dark"] .welcome-section-overline {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .welcome-section-title {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-section-desc {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-hero {
+    background: linear-gradient(160deg, #0f172a 0%, #111827 55%, #0b1120 100%);
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-hero-title {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-hero-title--accent {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .welcome-hero-desc {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-status-badge {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #86efac;
+}
+
+[data-theme="dark"] .welcome-status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .welcome-cta--ghost {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-cta--ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-cta--outline {
+    color: #93c5fd;
+    border-color: rgba(147, 197, 253, 0.4);
+}
+
+[data-theme="dark"] .welcome-cta--outline:hover {
+    background: rgba(147, 197, 253, 0.12);
+}
+
+[data-theme="dark"] .welcome-kpi-strip {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-kpi-sep {
+    background: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-kpi-label {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .welcome-kpi-value {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .welcome-flow {
+    background: var(--bg-page);
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-flow-step {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-flow-step:hover {
+    border-color: rgba(147, 197, 253, 0.35);
+    box-shadow: 0 6px 26px -12px rgba(59, 130, 246, 0.35);
+}
+
+[data-theme="dark"] .welcome-flow-step-num {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .welcome-flow-step-icon {
+    background: rgba(147, 197, 253, 0.12);
+    color: #93c5fd;
+    border-color: rgba(147, 197, 253, 0.3);
+}
+
+[data-theme="dark"] .welcome-flow-step-title {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-flow-step-desc {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-benefits {
+    background: var(--bg-page);
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-benefit-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-benefit-card--blue {
+    background: linear-gradient(145deg, rgba(30, 64, 175, 0.35), rgba(59, 130, 246, 0.15));
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .welcome-benefit-card--amber {
+    background: linear-gradient(145deg, rgba(120, 53, 15, 0.35), rgba(245, 158, 11, 0.18));
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .welcome-benefit-card--emerald {
+    background: linear-gradient(145deg, rgba(6, 78, 59, 0.35), rgba(16, 185, 129, 0.18));
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .welcome-benefit-icon {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(148, 163, 184, 0.25);
+}
+
+[data-theme="dark"] .welcome-benefit-title {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .welcome-benefit-desc {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-benefit-list li {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-features {
+    background: var(--bg-page);
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-feature-item {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .welcome-feature-icon {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .welcome-feature-sep {
+    color: var(--border-default);
+}
+
+[data-theme="dark"] .welcome-cta-section {
+    background: var(--bg-page);
+}
+
+[data-theme="dark"] .welcome-footer-copy {
+    color: var(--text-muted);
 }

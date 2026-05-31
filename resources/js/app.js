@@ -83,6 +83,7 @@ globalThis.showToastNotification = showToastNotification;
 // Carga condicional de scripts por página
 const pageLoaders = [
     { selector: '.users-page',    loader: () => import('./pages/users') },
+    { selector: '.tickets-create-page', loader: () => import('./pages/tickets-create') },
     { selector: '.tickets-page',  loader: () => import('./pages/tickets') },
     { selector: '.locations-page',loader: () => import('./pages/locations') },
     { selector: '.welcome-hero',  loader: () => import('./pages/welcome') },

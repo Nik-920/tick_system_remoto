@@ -168,6 +168,11 @@ class DashboardController extends Controller
         $sevenDaysAgo = now()->subDays(7);
         $thirtyDaysAgo = now()->subDays(30);
 
+        $availableTicketsCount = Ticket::query()
+            ->where('state', 'open')
+            ->whereNull('assigned_to')
+            ->count();
+
         $assignedOpenCount = Ticket::query()
             ->where('assigned_to', $user->id)
             ->where('state', 'open')
@@ -245,9 +250,14 @@ class DashboardController extends Controller
             ],
             'quickActions' => [
                 [
+                    'label' => 'Ver tickets disponibles',
+                    'href' => route('tickets.available'),
+                    'variant' => 'primary',
+                ],
+                [
                     'label' => 'Ir a cola de tickets',
                     'href' => route('tickets.index'),
-                    'variant' => 'primary',
+                    'variant' => 'secondary',
                 ],
                 [
                     'label' => 'Registrar incidencia',
@@ -256,6 +266,11 @@ class DashboardController extends Controller
                 ],
             ],
             'kpis' => [
+                [
+                    'label' => 'Tickets disponibles',
+                    'value' => $availableTicketsCount,
+                    'hint' => 'Incidencias abiertas listas para tomar.',
+                ],
                 [
                     'label' => 'Asignados abiertos',
                     'value' => $assignedOpenCount,
@@ -388,6 +403,11 @@ class DashboardController extends Controller
                     'label' => 'Gestionar ubicaciones',
                     'href' => route('locations.index'),
                     'variant' => 'primary',
+                ],
+                [
+                    'label' => 'Asignar tickets pendientes',
+                    'href' => route('tickets.available'),
+                    'variant' => 'secondary',
                 ],
                 [
                     'label' => 'Gestionar categorias',

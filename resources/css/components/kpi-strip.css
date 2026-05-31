@@ -1,0 +1,98 @@
+/* ============================================================
+   COMPONENT - KPI Strip
+   Tick System Onn
+   ============================================================ */
+
+.kpi-strip,
+.tickets-kpi-grid,
+.locs-kpi-grid,
+.users-kpi-grid,
+.cats-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    position: relative;
+    z-index: 1;
+}
+
+.kpi-card,
+.tickets-kpi-card,
+.locs-kpi-card,
+.users-kpi-card,
+.cats-kpi-card {
+    background: rgba(255,255,255,0.11);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    transition: var(--transition);
+}
+
+.kpi-card:hover,
+.tickets-kpi-card:hover,
+.locs-kpi-card:hover,
+.users-kpi-card:hover,
+.cats-kpi-card:hover {
+    background: rgba(255,255,255,0.17);
+}
+
+.kpi-label,
+.tickets-kpi-label,
+.locs-kpi-label,
+.users-kpi-label,
+.cats-kpi-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.62);
+    margin-bottom: 0.3rem;
+}
+
+.kpi-value,
+.tickets-kpi-value,
+.locs-kpi-value,
+.users-kpi-value,
+.cats-kpi-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+}
+
+.kpi-note,
+.tickets-kpi-note,
+.locs-kpi-note,
+.users-kpi-note,
+.cats-kpi-note {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 0.25rem;
+}
+
+@media (max-width: 639px) {
+    .kpi-strip,
+    .tickets-kpi-grid,
+    .locs-kpi-grid,
+    .users-kpi-grid,
+    .cats-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .kpi-value,
+    .tickets-kpi-value,
+    .locs-kpi-value,
+    .users-kpi-value,
+    .cats-kpi-value {
+        font-size: 1.25rem;
+    }
+
+    .kpi-note,
+    .tickets-kpi-note,
+    .locs-kpi-note,
+    .users-kpi-note,
+    .cats-kpi-note {
+        display: none;
+    }
+}

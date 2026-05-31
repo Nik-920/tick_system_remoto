@@ -3,6 +3,27 @@
  * Loaded on every authenticated page via app.js
  */
 
+const logStorageError = (error) => {
+    console.debug('Storage access failed', error);
+};
+
+const safeStorageRead = (reader, fallback = null) => {
+    try {
+        return reader();
+    } catch (error) {
+        logStorageError(error);
+        return fallback;
+    }
+};
+
+const safeStorageWrite = (writer) => {
+    try {
+        writer();
+    } catch (error) {
+        logStorageError(error);
+    }
+};
+
 export function init() {
     const layout    = document.getElementById('adminLayout');
     const sidebar   = document.getElementById('adminSidebar');
@@ -25,7 +46,8 @@ export function init() {
     closeBtn?.addEventListener('click', closeMobileSidebar);
     overlay?.addEventListener('click', closeMobileSidebar);
 
-    if (!isMobile() && localStorage.getItem('tick-sidebar') === 'collapsed') {
+    const storedSidebar = safeStorageRead(() => localStorage.getItem('tick-sidebar'), null);
+    if (!isMobile() && storedSidebar === 'collapsed') {
         layout.classList.add('sidebar-collapsed');
     }
 
@@ -42,29 +64,79 @@ export function init() {
     }
 
     function saveSidebarState() {
-        localStorage.setItem(
-            'tick-sidebar',
-            layout.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded'
-        );
+        safeStorageWrite(() => {
+            localStorage.setItem(
+                'tick-sidebar',
+                layout.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded'
+            );
+        });
     }
 
     function isMobile() {
-        return window.innerWidth < 768;
+        return (globalThis.innerWidth ?? 0) < 768;
     }
 
-    window.addEventListener('resize', () => {
+    globalThis.addEventListener('resize', () => {
         if (!isMobile() && sidebar.classList.contains('sidebar-open')) {
             closeMobileSidebar();
         }
     });
 
-    themeBtn?.addEventListener('click', () => {
-        const html    = document.documentElement;
-        const current = html.getAttribute('data-theme') || 'light';
-        const next    = current === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', next);
-        localStorage.setItem('tick-theme', next);
-    });
+    // ── Theme Management ──────────────────────────────────────────
+    initTheme();
+
+    function getStoredTheme() {
+        const ls = safeStorageRead(() => localStorage.getItem('tick-theme'), null);
+        if (ls === 'light' || ls === 'dark') return ls;
+        // Fallback: cookie
+        const match = /(?:^|;\s*)tick-theme=(light|dark)/.exec(document.cookie);
+        return match ? match[1] : null;
+    }
+
+    function setStoredTheme(theme) {
+        safeStorageWrite(() => localStorage.setItem('tick-theme', theme));
+        document.cookie = `tick-theme=${theme};path=/;max-age=31536000;SameSite=Lax`;
+    }
+
+    function getPreferredTheme() {
+        const prefersDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+        return prefersDark ? 'dark' : 'light';
+    }
+
+    function updateThemeButton(theme) {
+        const btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        updateThemeButton(theme);
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.dataset.theme || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        setStoredTheme(next);
+    }
+
+    function initTheme() {
+        // Ensure the correct theme is applied (may already be set by the <head> boot script)
+        const stored = getStoredTheme();
+        const theme  = stored ?? getPreferredTheme();
+        applyTheme(theme);
+
+        // Wire up the toggle button
+        themeBtn?.addEventListener('click', toggleTheme);
+
+        // Listen for OS-level preference changes ONLY when the user hasn't manually chosen
+        globalThis.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', (e) => {
+            if (!getStoredTheme()) {
+                applyTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
 
     document.addEventListener('click', (e) => {
         document.querySelectorAll('details.topbar-user-menu[open]').forEach((d) => {
@@ -75,10 +147,30 @@ export function init() {
         const notifDropdown = document.getElementById('notifDropdown');
         if (notifWrapper && notifDropdown && !notifWrapper.contains(e.target)) {
             notifDropdown.style.display = 'none';
+            notifDropdown.setAttribute('aria-hidden', 'true');
+            const notifBtn = document.getElementById('notifBtn');
+            notifBtn?.setAttribute('aria-expanded', 'false');
         }
     });
 
     initNotifications();
+}
+
+function normalizeIcon(icon) {
+    const text = (icon ?? '🔔').toString().trim();
+    if (!text) return '🔔';
+    return Array.from(text)[0] ?? '🔔';
+}
+
+function stripLeadingIcon(title, iconGlyph) {
+    const raw = (title ?? '').toString();
+    const trimmed = raw.trimStart();
+    if (!trimmed) return raw;
+    const firstGlyph = Array.from(trimmed)[0];
+    if (firstGlyph && firstGlyph === iconGlyph) {
+        return trimmed.slice(firstGlyph.length).trimStart();
+    }
+    return raw;
 }
 
 function initNotifications() {
@@ -120,30 +212,50 @@ function initNotifications() {
         } else {
             notifBadge.style.display = 'none';
         }
+        setMarkAllState(count);
+    }
+
+    function setMarkAllState(count) {
+        if (!notifMarkAll) return;
+        const disabled = count === 0;
+        notifMarkAll.disabled = disabled;
+        notifMarkAll.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     }
 
     function renderNotifications() {
         if (notifications.length === 0) {
-            notifList.innerHTML = '<div class="notif-empty">Sin notificaciones</div>';
+            notifList.innerHTML = `
+                <div class="notif-empty" role="status">
+                    <span class="notif-empty-icon" aria-hidden="true">🔔</span>
+                    <p class="notif-empty-title">No tienes notificaciones</p>
+                    <p class="notif-empty-subtitle">Las actualizaciones de tus tickets aparecerán aquí.</p>
+                </div>
+            `;
             return;
         }
 
-        notifList.innerHTML = notifications.map(n => `
-        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${n.id}">
+        notifList.innerHTML = notifications.map(n => {
+        const iconGlyph = normalizeIcon(n.icon);
+        const safeTitle = stripLeadingIcon(n.title, iconGlyph);
+        return `
+        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${n.id}" role="listitem">
             <a class="notif-item-link" href="${n.url || '#'}">
-                <span class="notif-item-icon">${n.icon || '🔔'}</span>
+                <span class="notif-item-icon-wrap" aria-hidden="true">
+                    <span class="notif-item-icon">${iconGlyph}</span>
+                </span>
                 <div class="notif-item-content">
-                    <p class="notif-item-title">${n.title}</p>
+                    <p class="notif-item-title">${safeTitle}</p>
                     <p class="notif-item-body">${n.body}</p>
                     <span class="notif-item-time">${n.time || ''}</span>
                 </div>
             </a>
             ${n.read_at ? '<span class="notif-item-read-label">Leído</span>' : `
-            <button class="notif-item-read-btn" data-id="${n.id}" title="Marcar como leída">
+            <button class="notif-item-read-btn" type="button" data-id="${n.id}" title="Marcar como leída" aria-label="Marcar notificación como leída">
                 ✓
             </button>`}
         </div>
-    `).join('');
+    `;
+        }).join('');
 
         // Click en botón marcar leído
         notifList.querySelectorAll('.notif-item-read-btn').forEach(btn => {
@@ -192,12 +304,15 @@ function initNotifications() {
         e.stopPropagation();
         const isVisible = notifDropdown.style.display === 'block';
         notifDropdown.style.display = isVisible ? 'none' : 'block';
+        notifDropdown.setAttribute('aria-hidden', isVisible ? 'true' : 'false');
+        notifBtn.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
         if (!isVisible) {
             await fetchAndRender();
         }
     });
 
     notifMarkAll?.addEventListener('click', async () => {
+        if (notifMarkAll.disabled) return;
         await markAllAsRead();
     });
 

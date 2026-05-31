@@ -75,12 +75,12 @@ class TicketResourceTest extends TestCase
             'title' => 'Full ticket',
             'description' => 'Full description',
             'reporter_id' => $reporter->id,
-            'assigned_to' => $assignee->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
             'state' => 'open',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $assignee->id])->save();
 
         StateHistory::create([
             'ticket_id' => $ticket->id,

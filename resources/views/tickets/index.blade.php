@@ -9,6 +9,7 @@ $stateValue    = (string) ($filters['state']        ?? '');
 $priorityValue = (string) ($filters['priority']     ?? '');
 $locationValue = (string) ($filters['location_id']  ?? '');
 $categoryValue = (string) ($filters['category_id']  ?? '');
+$assignmentValue = (string) ($filters['assignment'] ?? '');
 $perPageValue  = (string) ($filters['per_page']     ?? '');
 $fromValue     = (string) ($filters['from']         ?? '');
 $toValue       = (string) ($filters['to']           ?? '');
@@ -19,6 +20,9 @@ foreach ([$searchValue, $stateValue, $priorityValue, $locationValue, $categoryVa
     if ($filterValue !== '') {
         $activeFilterCount++;
     }
+}
+if ($assignmentValue !== '' && $assignmentValue !== 'all') {
+    $activeFilterCount++;
 }
 if ($duplicatesOn) {
     $activeFilterCount++;
@@ -37,6 +41,9 @@ $priorityLabels = [
     'high'     => 'Alta',
     'critical' => 'Crítica',
 ];
+
+$user = auth()->user();
+$isReporterOnly = $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin']);
 @endphp
 
 <div class="tickets-page">
@@ -46,7 +53,7 @@ $priorityLabels = [
         <div class="tickets-hero-inner">
             <div>
                 <p class="tickets-overline">Operación de incidencias</p>
-                <h1 class="tickets-title">Tickets</h1>
+                <h1 class="tickets-title">{{ $isReporterOnly ? 'Mis tickets' : 'Tickets' }}</h1>
                 <p class="tickets-subtitle">Vista centralizada para monitorear estado, prioridad y ritmo de atención en cada incidencia.</p>
             </div>
             <a href="{{ route('tickets.create') }}" class="btn-primary tickets-btn-create">Nuevo ticket</a>
@@ -116,6 +123,18 @@ $priorityLabels = [
                     </select>
                 </div>
 
+                @unless ($isReporterOnly)
+                <div>
+                    <label for="assignment" class="tickets-field-label">Asignación</label>
+                    <select id="assignment" name="assignment" class="tickets-field">
+                        <option value="all" @selected($assignmentValue==='' || $assignmentValue==='all')>Todos</option>
+                        <option value="unassigned" @selected($assignmentValue==='unassigned')>Sin asignar</option>
+                        <option value="mine" @selected($assignmentValue==='mine')>Mis tickets</option>
+                        <option value="assigned" @selected($assignmentValue==='assigned')>Asignados</option>
+                    </select>
+                </div>
+                @endunless
+
                 <div>
                     <label for="per_page" class="tickets-field-label">Por página</label>
                     <select id="per_page" name="per_page" class="tickets-field">
@@ -142,6 +161,7 @@ $priorityLabels = [
                 </div>
             </div>
 
+            @unless ($isReporterOnly)
             {{-- Duplicate quick-filter --}}
             <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                 <span style="font-size:0.85rem; font-weight:600; opacity:0.7;">Vista rápida:</span>
@@ -156,6 +176,7 @@ $priorityLabels = [
                    ⚠️ Posibles duplicados
                 </a>
             </div>
+            @endunless
         </form>
     </section>
 
@@ -174,6 +195,7 @@ $priorityLabels = [
                         <th>Estado</th>
                         <th>Prioridad</th>
                         <th>Ubicación</th>
+                        <th>Asignado a</th>
                         <th>Creado</th>
                         <th>Acción</th>
                     </tr>
@@ -215,6 +237,16 @@ $priorityLabels = [
                             </span>
                         </td>
                         <td class="tickets-td-meta">{{ $ticket->location?->name ?? 'N/A' }}</td>
+                        <td>
+                            <div class="tickets-td-meta">
+                                {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                            </div>
+                            @if ($ticket->assignment_locked)
+                                <span class="assignment-badge assignment-badge--locked">Fija</span>
+                            @elseif ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF)
+                                <span class="assignment-badge assignment-badge--claimed">Tomado</span>
+                            @endif
+                        </td>
                         <td class="tickets-td-meta">{{ $ticket->created_at?->format('d/m/Y') }}</td>
                         <td>
                             <a href="{{ route('tickets.show', $ticket) }}" class="tickets-link-action">Ver</a>
@@ -222,10 +254,10 @@ $priorityLabels = [
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="tickets-empty-cell">
-                            <div class="tickets-empty-state">
-                                <p class="tickets-empty-title">No hay tickets para mostrar</p>
-                                <p class="tickets-empty-note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
+                        <td colspan="7" class="tickets-empty-cell">
+                            <div class="empty-state">
+                                <p class="empty-state__title">No hay tickets para mostrar</p>
+                                <p class="empty-state__note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
                                 <a href="{{ route('tickets.create') }}" class="btn-primary">Crear primer ticket</a>
                             </div>
                         </td>
@@ -237,7 +269,7 @@ $priorityLabels = [
     </section>
 
     {{-- Paginación --}}
-    <div class="tickets-pagination">
+    <div class="c-pagination">
         {{ $tickets->links() }}
     </div>
 
