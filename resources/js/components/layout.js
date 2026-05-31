@@ -3,6 +3,27 @@
  * Loaded on every authenticated page via app.js
  */
 
+const logStorageError = (error) => {
+    console.debug('Storage access failed', error);
+};
+
+const safeStorageRead = (reader, fallback = null) => {
+    try {
+        return reader();
+    } catch (error) {
+        logStorageError(error);
+        return fallback;
+    }
+};
+
+const safeStorageWrite = (writer) => {
+    try {
+        writer();
+    } catch (error) {
+        logStorageError(error);
+    }
+};
+
 export function init() {
     const layout    = document.getElementById('adminLayout');
     const sidebar   = document.getElementById('adminSidebar');
@@ -25,7 +46,8 @@ export function init() {
     closeBtn?.addEventListener('click', closeMobileSidebar);
     overlay?.addEventListener('click', closeMobileSidebar);
 
-    if (!isMobile() && localStorage.getItem('tick-sidebar') === 'collapsed') {
+    const storedSidebar = safeStorageRead(() => localStorage.getItem('tick-sidebar'), null);
+    if (!isMobile() && storedSidebar === 'collapsed') {
         layout.classList.add('sidebar-collapsed');
     }
 
@@ -42,17 +64,19 @@ export function init() {
     }
 
     function saveSidebarState() {
-        localStorage.setItem(
-            'tick-sidebar',
-            layout.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded'
-        );
+        safeStorageWrite(() => {
+            localStorage.setItem(
+                'tick-sidebar',
+                layout.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded'
+            );
+        });
     }
 
     function isMobile() {
-        return window.innerWidth < 768;
+        return (globalThis.innerWidth ?? 0) < 768;
     }
 
-    window.addEventListener('resize', () => {
+    globalThis.addEventListener('resize', () => {
         if (!isMobile() && sidebar.classList.contains('sidebar-open')) {
             closeMobileSidebar();
         }
@@ -62,22 +86,21 @@ export function init() {
     initTheme();
 
     function getStoredTheme() {
-        try {
-            const ls = localStorage.getItem('tick-theme');
-            if (ls === 'light' || ls === 'dark') return ls;
-        } catch (_) {}
+        const ls = safeStorageRead(() => localStorage.getItem('tick-theme'), null);
+        if (ls === 'light' || ls === 'dark') return ls;
         // Fallback: cookie
-        const m = document.cookie.match(/(?:^|;\s*)tick-theme=(light|dark)/);
-        return m ? m[1] : null;
+        const match = /(?:^|;\s*)tick-theme=(light|dark)/.exec(document.cookie);
+        return match ? match[1] : null;
     }
 
     function setStoredTheme(theme) {
-        try { localStorage.setItem('tick-theme', theme); } catch (_) {}
+        safeStorageWrite(() => localStorage.setItem('tick-theme', theme));
         document.cookie = `tick-theme=${theme};path=/;max-age=31536000;SameSite=Lax`;
     }
 
     function getPreferredTheme() {
-        return (window.matchMedia?.('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        const prefersDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+        return prefersDark ? 'dark' : 'light';
     }
 
     function updateThemeButton(theme) {
@@ -87,12 +110,12 @@ export function init() {
     }
 
     function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.dataset.theme = theme;
         updateThemeButton(theme);
     }
 
     function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        const current = document.documentElement.dataset.theme || 'light';
         const next = current === 'dark' ? 'light' : 'dark';
         applyTheme(next);
         setStoredTheme(next);
@@ -108,7 +131,7 @@ export function init() {
         themeBtn?.addEventListener('click', toggleTheme);
 
         // Listen for OS-level preference changes ONLY when the user hasn't manually chosen
-        window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        globalThis.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', (e) => {
             if (!getStoredTheme()) {
                 applyTheme(e.matches ? 'dark' : 'light');
             }
@@ -131,6 +154,23 @@ export function init() {
     });
 
     initNotifications();
+}
+
+function normalizeIcon(icon) {
+    const text = (icon ?? '🔔').toString().trim();
+    if (!text) return '🔔';
+    return Array.from(text)[0] ?? '🔔';
+}
+
+function stripLeadingIcon(title, iconGlyph) {
+    const raw = (title ?? '').toString();
+    const trimmed = raw.trimStart();
+    if (!trimmed) return raw;
+    const firstGlyph = Array.from(trimmed)[0];
+    if (firstGlyph && firstGlyph === iconGlyph) {
+        return trimmed.slice(firstGlyph.length).trimStart();
+    }
+    return raw;
 }
 
 function initNotifications() {
@@ -180,23 +220,6 @@ function initNotifications() {
         const disabled = count === 0;
         notifMarkAll.disabled = disabled;
         notifMarkAll.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-    }
-
-    function normalizeIcon(icon) {
-        const text = (icon ?? '🔔').toString().trim();
-        if (!text) return '🔔';
-        return Array.from(text)[0] ?? '🔔';
-    }
-
-    function stripLeadingIcon(title, iconGlyph) {
-        const raw = (title ?? '').toString();
-        const trimmed = raw.trimStart();
-        if (!trimmed) return raw;
-        const firstGlyph = Array.from(trimmed)[0];
-        if (firstGlyph && firstGlyph === iconGlyph) {
-            return trimmed.slice(firstGlyph.length).trimStart();
-        }
-        return raw;
     }
 
     function renderNotifications() {

@@ -1,3 +1,9 @@
+function getSelectedOption(select) {
+    const option = select?.selectedOptions?.[0];
+    if (!option?.value) return '';
+    return option.textContent?.trim() ?? '';
+}
+
 export function init() {
     const form = document.querySelector('.tickets-create-form');
     if (!form) {
@@ -14,13 +20,6 @@ export function init() {
     const summaryPriority = document.querySelector('[data-summary="priority"]');
     const summaryAttachments = document.querySelector('[data-summary="attachments"]');
     const uploadList = document.getElementById('ticketsUploadList');
-
-    function getSelectedOption(select) {
-        if (!select) return '';
-        const option = select.selectedOptions?.[0];
-        if (!option || !option.value) return '';
-        return option.textContent.trim();
-    }
 
     function renderFileList(files) {
         if (!uploadList) return;
@@ -70,7 +69,9 @@ export function init() {
 
         if (summaryAttachments) {
             const total = fileInput?.files?.length ?? 0;
-            summaryAttachments.textContent = total ? `${total} archivo${total === 1 ? '' : 's'}` : 'Sin adjuntos';
+            const suffix = total === 1 ? '' : 's';
+            const label = total ? `${total} archivo${suffix}` : 'Sin adjuntos';
+            summaryAttachments.textContent = label;
         }
     }
 
