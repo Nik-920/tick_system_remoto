@@ -194,35 +194,29 @@ class Ticket extends Model
 
     private function normalizeBoolean(mixed $value): bool
     {
+        $normalized = null;
+
         if (is_bool($value)) {
-            return $value;
-        }
+            $normalized = $value;
+        } elseif (is_int($value)) {
+            $normalized = $value === 1;
+        } elseif (is_float($value)) {
+            $normalized = (int) $value === 1;
+        } elseif (is_string($value)) {
+            $trimmed = trim(strtolower($value));
 
-        if (is_int($value)) {
-            return $value === 1;
-        }
-
-        if (is_float($value)) {
-            return (int) $value === 1;
-        }
-
-        if (is_string($value)) {
-            $normalized = trim(strtolower($value));
-
-            if ($normalized === 't') {
-                return true;
-            }
-
-            if ($normalized === 'f') {
-                return false;
-            }
-
-            $filtered = filter_var($normalized, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            if ($filtered !== null) {
-                return $filtered;
+            if ($trimmed === 't') {
+                $normalized = true;
+            } elseif ($trimmed === 'f') {
+                $normalized = false;
+            } else {
+                $filtered = filter_var($trimmed, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($filtered !== null) {
+                    $normalized = $filtered;
+                }
             }
         }
 
-        return (bool) $value;
+        return $normalized ?? (bool) $value;
     }
 }
