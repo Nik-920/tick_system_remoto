@@ -22,10 +22,7 @@ class TicketAssignmentService
         $correlationId = $this->resolveCorrelationId('');
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor): Ticket {
-            $lockedTicket = Ticket::query()
-                ->whereKey($ticket->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $lockedTicket = $this->lockedTicket($ticket);
 
             $this->assertActorIsMaintenance($actor);
             $this->assertClaimable($lockedTicket);
@@ -49,19 +46,7 @@ class TicketAssignmentService
             return $lockedTicket;
         });
 
-        $this->dispatchAssignmentEvent('claimed', $updatedTicket, $actor, null, $actor, $correlationId);
-
-        $this->logger->info('ticket.assignment.claimed', [
-            'ticket_id' => $updatedTicket->id,
-            'location_id' => $updatedTicket->location_id,
-            'category_id' => $updatedTicket->category_id,
-            'actor_id' => $actor->id,
-            'assigned_to' => $actor->id,
-            'correlation_id' => $correlationId,
-            'state' => $updatedTicket->state,
-        ]);
-
-        return $this->refreshTicket($updatedTicket);
+        return $this->finalizeAssignment('claimed', $updatedTicket, $actor, null, $actor, $correlationId);
     }
 
     public function releaseByMaintenance(Ticket $ticket, User $actor): Ticket
@@ -71,10 +56,7 @@ class TicketAssignmentService
         $previousAssignee = null;
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
-            $lockedTicket = Ticket::query()
-                ->whereKey($ticket->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $lockedTicket = $this->lockedTicket($ticket);
 
             $this->assertReleasableByMaintenance($lockedTicket, $actor);
 
@@ -99,18 +81,7 @@ class TicketAssignmentService
             return $lockedTicket;
         });
 
-        $this->dispatchAssignmentEvent('released', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
-
-        $this->logger->info('ticket.assignment.released', [
-            'ticket_id' => $updatedTicket->id,
-            'location_id' => $updatedTicket->location_id,
-            'category_id' => $updatedTicket->category_id,
-            'actor_id' => $actor->id,
-            'correlation_id' => $correlationId,
-            'state' => $updatedTicket->state,
-        ]);
-
-        return $this->refreshTicket($updatedTicket);
+        return $this->finalizeAssignment('released', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
     }
 
     public function assignByAdmin(Ticket $ticket, User $actor, User $target): Ticket
@@ -130,10 +101,7 @@ class TicketAssignmentService
         $previousAssignee = null;
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
-            $lockedTicket = Ticket::query()
-                ->whereKey($ticket->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $lockedTicket = $this->lockedTicket($ticket);
 
             $this->assertActorCanManageAssignment($actor);
             $this->assertAssignable($lockedTicket);
@@ -163,18 +131,7 @@ class TicketAssignmentService
             return $lockedTicket;
         });
 
-        $this->dispatchAssignmentEvent('unassigned', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
-
-        $this->logger->info('ticket.assignment.unassigned', [
-            'ticket_id' => $updatedTicket->id,
-            'location_id' => $updatedTicket->location_id,
-            'category_id' => $updatedTicket->category_id,
-            'actor_id' => $actor->id,
-            'correlation_id' => $correlationId,
-            'state' => $updatedTicket->state,
-        ]);
-
-        return $this->refreshTicket($updatedTicket);
+        return $this->finalizeAssignment('unassigned', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
     }
 
     private function applyAdminAssignment(Ticket $ticket, User $actor, User $target, string $action): Ticket
@@ -184,10 +141,7 @@ class TicketAssignmentService
         $previousAssignee = null;
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, $target, $action, &$previousAssignee): Ticket {
-            $lockedTicket = Ticket::query()
-                ->whereKey($ticket->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $lockedTicket = $this->lockedTicket($ticket);
 
             $this->assertActorCanManageAssignment($actor);
             $this->assertAssignable($lockedTicket);
@@ -214,19 +168,15 @@ class TicketAssignmentService
             return $lockedTicket;
         });
 
-        $this->dispatchAssignmentEvent($action, $updatedTicket, $actor, $previousAssignee, $target, $correlationId);
+        return $this->finalizeAssignment($action, $updatedTicket, $actor, $previousAssignee, $target, $correlationId);
+    }
 
-        $this->logger->info('ticket.assignment.'.$action, [
-            'ticket_id' => $updatedTicket->id,
-            'location_id' => $updatedTicket->location_id,
-            'category_id' => $updatedTicket->category_id,
-            'actor_id' => $actor->id,
-            'assigned_to' => $target->id,
-            'correlation_id' => $correlationId,
-            'state' => $updatedTicket->state,
-        ]);
-
-        return $this->refreshTicket($updatedTicket);
+    private function lockedTicket(Ticket $ticket): Ticket
+    {
+        return Ticket::query()
+            ->whereKey($ticket->id)
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     private function updateAssignmentFields(
@@ -365,6 +315,43 @@ class TicketAssignmentService
             action: $action,
             correlationId: $correlationId,
         ));
+    }
+
+    private function finalizeAssignment(
+        string $action,
+        Ticket $ticket,
+        User $actor,
+        ?User $previousAssignee,
+        ?User $newAssignee,
+        string $correlationId
+    ): Ticket {
+        $this->dispatchAssignmentEvent($action, $ticket, $actor, $previousAssignee, $newAssignee, $correlationId);
+        $this->logAssignment($action, $ticket, $actor, $newAssignee?->id, $correlationId);
+
+        return $this->refreshTicket($ticket);
+    }
+
+    private function logAssignment(
+        string $action,
+        Ticket $ticket,
+        User $actor,
+        ?string $assignedToId,
+        string $correlationId
+    ): void {
+        $payload = [
+            'ticket_id' => $ticket->id,
+            'location_id' => $ticket->location_id,
+            'category_id' => $ticket->category_id,
+            'actor_id' => $actor->id,
+            'correlation_id' => $correlationId,
+            'state' => $ticket->state,
+        ];
+
+        if ($assignedToId !== null) {
+            $payload['assigned_to'] = $assignedToId;
+        }
+
+        $this->logger->info('ticket.assignment.'.$action, $payload);
     }
 
     private function refreshTicket(Ticket $ticket): Ticket
