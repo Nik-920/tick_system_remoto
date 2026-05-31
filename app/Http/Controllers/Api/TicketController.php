@@ -57,7 +57,7 @@ class TicketController extends Controller
             $query->reportedBy($user->id);
         }
 
-        $this->applyFilters($query, $filters, $user);
+        $this->applyFilters($query, $filters);
 
         $tickets = $query
             ->latest('created_at')
@@ -218,18 +218,12 @@ class TicketController extends Controller
         try {
             $updatedTicket = $assignmentService->claimByMaintenance($ticket, $request->user());
         } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 422);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
         } catch (AuthorizationException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 403);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
         }
 
-        $updatedTicket->load(['reporter', 'assignee', 'location', 'category']);
+        $this->loadAssignmentRelations($updatedTicket);
 
         return response()->json([
             'message' => 'Ticket tomado correctamente.',
@@ -247,18 +241,12 @@ class TicketController extends Controller
         try {
             $updatedTicket = $assignmentService->releaseByMaintenance($ticket, $request->user());
         } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 422);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
         } catch (AuthorizationException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 403);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
         }
 
-        $updatedTicket->load(['reporter', 'assignee', 'location', 'category']);
+        $this->loadAssignmentRelations($updatedTicket);
 
         return response()->json([
             'message' => 'Ticket liberado correctamente.',
@@ -283,18 +271,12 @@ class TicketController extends Controller
                 $updatedTicket = $assignmentService->reassignByAdmin($ticket, $request->user(), $target);
             }
         } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assigned_to' => [$exception->getMessage()]],
-            ], 422);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assigned_to', 422);
         } catch (AuthorizationException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 403);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
         }
 
-        $updatedTicket->load(['reporter', 'assignee', 'location', 'category']);
+        $this->loadAssignmentRelations($updatedTicket);
 
         return response()->json([
             'message' => 'Asignacion actualizada correctamente.',
@@ -312,18 +294,12 @@ class TicketController extends Controller
         try {
             $updatedTicket = $assignmentService->unassignByAdmin($ticket, $request->user());
         } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 422);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
         } catch (AuthorizationException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-                'errors' => ['assignment' => [$exception->getMessage()]],
-            ], 403);
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
         }
 
-        $updatedTicket->load(['reporter', 'assignee', 'location', 'category']);
+        $this->loadAssignmentRelations($updatedTicket);
 
         return response()->json([
             'message' => 'Asignacion eliminada correctamente.',
@@ -376,7 +352,7 @@ class TicketController extends Controller
     /**
      * @param  array<string, mixed>  $filters
      */
-    private function applyFilters(Builder $query, array $filters, ?User $user = null): void
+    private function applyFilters(Builder $query, array $filters): void
     {
         if (! empty($filters['state'])) {
             $query->where('state', $filters['state']);
@@ -418,5 +394,18 @@ class TicketController extends Controller
                 $q->effectiveDuplicates();
             });
         }
+    }
+
+    private function loadAssignmentRelations(Ticket $ticket): Ticket
+    {
+        return $ticket->load(['reporter', 'assignee', 'location', 'category']);
+    }
+
+    private function assignmentErrorResponse(string $message, string $field, int $status): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'errors' => [$field => [$message]],
+        ], $status);
     }
 }
