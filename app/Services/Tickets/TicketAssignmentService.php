@@ -30,12 +30,13 @@ class TicketAssignmentService
             $this->assertActorIsMaintenance($actor);
             $this->assertClaimable($lockedTicket);
 
-            $lockedTicket->assigned_to = $actor->id;
-            $lockedTicket->assigned_by = $actor->id;
-            $lockedTicket->assigned_at = now();
-            $lockedTicket->assignment_locked = false;
-            $lockedTicket->assignment_source = Ticket::ASSIGNMENT_SOURCE_SELF;
-            $lockedTicket->save();
+            $this->updateAssignmentFields(
+                $lockedTicket,
+                $actor,
+                $actor,
+                false,
+                Ticket::ASSIGNMENT_SOURCE_SELF
+            );
 
             $this->recordAssignmentHistory(
                 $lockedTicket,
@@ -60,8 +61,7 @@ class TicketAssignmentService
             'state' => $updatedTicket->state,
         ]);
 
-        return $updatedTicket->fresh(['reporter', 'assignee', 'assignedBy', 'location', 'category', 'stateHistory'])
-            ?? $updatedTicket;
+        return $this->refreshTicket($updatedTicket);
     }
 
     public function releaseByMaintenance(Ticket $ticket, User $actor): Ticket
@@ -80,12 +80,13 @@ class TicketAssignmentService
 
             $previousAssignee = $lockedTicket->assignee;
 
-            $lockedTicket->assigned_to = null;
-            $lockedTicket->assigned_by = $actor->id;
-            $lockedTicket->assigned_at = now();
-            $lockedTicket->assignment_locked = false;
-            $lockedTicket->assignment_source = null;
-            $lockedTicket->save();
+            $this->updateAssignmentFields(
+                $lockedTicket,
+                null,
+                $actor,
+                false,
+                null
+            );
 
             $this->recordAssignmentHistory(
                 $lockedTicket,
@@ -109,8 +110,7 @@ class TicketAssignmentService
             'state' => $updatedTicket->state,
         ]);
 
-        return $updatedTicket->fresh(['reporter', 'assignee', 'assignedBy', 'location', 'category', 'stateHistory'])
-            ?? $updatedTicket;
+        return $this->refreshTicket($updatedTicket);
     }
 
     public function assignByAdmin(Ticket $ticket, User $actor, User $target): Ticket
@@ -144,12 +144,13 @@ class TicketAssignmentService
 
             $previousAssignee = $lockedTicket->assignee;
 
-            $lockedTicket->assigned_to = null;
-            $lockedTicket->assigned_by = $actor->id;
-            $lockedTicket->assigned_at = now();
-            $lockedTicket->assignment_locked = false;
-            $lockedTicket->assignment_source = null;
-            $lockedTicket->save();
+            $this->updateAssignmentFields(
+                $lockedTicket,
+                null,
+                $actor,
+                false,
+                null
+            );
 
             $this->recordAssignmentHistory(
                 $lockedTicket,
@@ -173,8 +174,7 @@ class TicketAssignmentService
             'state' => $updatedTicket->state,
         ]);
 
-        return $updatedTicket->fresh(['reporter', 'assignee', 'assignedBy', 'location', 'category', 'stateHistory'])
-            ?? $updatedTicket;
+        return $this->refreshTicket($updatedTicket);
     }
 
     private function applyAdminAssignment(Ticket $ticket, User $actor, User $target, string $action): Ticket
@@ -195,12 +195,13 @@ class TicketAssignmentService
 
             $previousAssignee = $lockedTicket->assignee;
 
-            $lockedTicket->assigned_to = $target->id;
-            $lockedTicket->assigned_by = $actor->id;
-            $lockedTicket->assigned_at = now();
-            $lockedTicket->assignment_locked = true;
-            $lockedTicket->assignment_source = Ticket::ASSIGNMENT_SOURCE_ADMIN;
-            $lockedTicket->save();
+            $this->updateAssignmentFields(
+                $lockedTicket,
+                $target,
+                $actor,
+                true,
+                Ticket::ASSIGNMENT_SOURCE_ADMIN
+            );
 
             $this->recordAssignmentHistory(
                 $lockedTicket,
@@ -225,8 +226,22 @@ class TicketAssignmentService
             'state' => $updatedTicket->state,
         ]);
 
-        return $updatedTicket->fresh(['reporter', 'assignee', 'assignedBy', 'location', 'category', 'stateHistory'])
-            ?? $updatedTicket;
+        return $this->refreshTicket($updatedTicket);
+    }
+
+    private function updateAssignmentFields(
+        Ticket $ticket,
+        ?User $assignee,
+        User $actor,
+        bool $locked,
+        ?string $source
+    ): void {
+        $ticket->assigned_to = $assignee?->id;
+        $ticket->assigned_by = $actor->id;
+        $ticket->assigned_at = now();
+        $ticket->assignment_locked = $locked;
+        $ticket->assignment_source = $source;
+        $ticket->save();
     }
 
     private function assertClaimable(Ticket $ticket): void
@@ -352,48 +367,54 @@ class TicketAssignmentService
         ));
     }
 
+    private function refreshTicket(Ticket $ticket): Ticket
+    {
+        return $ticket->fresh(['reporter', 'assignee', 'assignedBy', 'location', 'category', 'stateHistory'])
+            ?? $ticket;
+    }
+
     private function resolveUserLabel(?User $user): string
     {
-        if ($user === null) {
-            return 'Sin asignar';
+        $label = 'Sin asignar';
+
+        if ($user !== null) {
+            $name = trim((string) $user->name.' '.(string) $user->last_name);
+            if ($name !== '') {
+                $label = $name;
+            } elseif ((string) $user->email !== '') {
+                $label = (string) $user->email;
+            } else {
+                $label = (string) $user->id;
+            }
         }
 
-        $name = trim((string) $user->name.' '.(string) $user->last_name);
-        if ($name !== '') {
-            return $name;
-        }
-
-        if ((string) $user->email !== '') {
-            return (string) $user->email;
-        }
-
-        return (string) $user->id;
+        return $label;
     }
 
     private function resolveCorrelationId(string $correlationId): string
     {
-        $trimmed = trim($correlationId);
-        if ($trimmed !== '') {
-            return $trimmed;
-        }
+        $resolved = trim($correlationId);
 
-        if (app()->bound('request')) {
+        if ($resolved === '' && app()->bound('request')) {
             $request = request();
             if ($request instanceof Request) {
                 $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
                 if ($fromAttribute !== '') {
-                    return $fromAttribute;
-                }
-
-                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                if ($fromHeader !== '') {
-                    $request->attributes->set('correlation_id', $fromHeader);
-
-                    return $fromHeader;
+                    $resolved = $fromAttribute;
+                } else {
+                    $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
+                    if ($fromHeader !== '') {
+                        $request->attributes->set('correlation_id', $fromHeader);
+                        $resolved = $fromHeader;
+                    }
                 }
             }
         }
 
-        return (string) Str::uuid();
+        if ($resolved === '') {
+            $resolved = (string) Str::uuid();
+        }
+
+        return $resolved;
     }
 }
