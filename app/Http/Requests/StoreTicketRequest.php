@@ -2,31 +2,52 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Ticket;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreTicketRequest extends FormRequest
 {
+    private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
+
+    private const MAX_MEDIA_FILES = 5;
+
+    private const MAX_MEDIA_SIZE_KB = 10240;
+
+    private const MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'mp4'];
+
+    private const MEDIA_MIME_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'video/mp4',
+    ];
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        // OWASP: Autenticación estricta (usando el objeto de la petición para tipado fuerte)
-        return $this->user() !== null;
+        return $this->user()?->can('create', Ticket::class) ?? false;
     }
 
     /**
-     * Pre-procesar y sanitizar los datos antes de la validación.
-     * OWASP: Sanitización de inputs para evitar XSS persistente.
+     * Normalize text inputs to plain text before validation.
      */
     protected function prepareForValidation(): void
     {
+        $title = $this->input('title');
+        $description = $this->input('description');
+
         $this->merge([
-            // Limpia etiquetas HTML y convierte caracteres especiales para evitar inyecciones XSS
-            'title' => $this->title ? htmlspecialchars(strip_tags($this->title), ENT_QUOTES, 'UTF-8') : null,
-            'description' => $this->description ? htmlspecialchars(strip_tags($this->description), ENT_QUOTES, 'UTF-8') : null,
+            'title' => $this->sanitizePlainText(is_string($title) ? $title : null),
+            'description' => $this->sanitizePlainText(is_string($description) ? $description : null),
         ]);
     }
 
@@ -42,17 +63,38 @@ class StoreTicketRequest extends FormRequest
             'description' => ['required', 'string', 'min:20', 'max:2000'],
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
-            'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
-
-            // OWASP: Límite estricto en la cantidad de archivos para evitar ataques de DoS por saturación
-            'media_files' => ['sometimes', 'array', 'max:5'],
-            // OWASP: Validación estricta de archivos (Extensión + MIME Type explícito + Límite de tamaño)
+            'priority' => ['nullable', Rule::in(self::PRIORITIES)],
+            'media_files' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_FILES],
             'media_files.*' => [
                 'file',
-                'max:10240',
-                'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,mp4',
-                'mimetypes:image/jpeg,image/png,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,video/mp4',
+                'max:'.self::MAX_MEDIA_SIZE_KB,
+                'mimes:'.implode(',', self::MEDIA_EXTENSIONS),
+                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
             ],
         ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'title' => 'titulo',
+            'description' => 'descripcion',
+            'location_id' => 'ubicacion',
+            'category_id' => 'categoria',
+            'priority' => 'prioridad',
+            'media_files' => 'adjuntos',
+            'media_files.*' => 'archivo adjunto',
+        ];
+    }
+
+    private function sanitizePlainText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $clean = trim(strip_tags($value));
+
+        return $clean === '' ? null : $clean;
     }
 }
