@@ -43,7 +43,7 @@ class TicketPolicy
     {
         unset($ticket);
 
-        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+        return $this->canDeleteTicket($user);
     }
 
     /**
@@ -76,13 +76,28 @@ class TicketPolicy
     {
         unset($ticket);
 
-        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+        return $this->canAssignTicket($user);
     }
 
     public function unassign(User $user, Ticket $ticket): bool
     {
         unset($ticket);
 
+        return $this->canUnassignTicket($user);
+    }
+
+    private function canDeleteTicket(User $user): bool
+    {
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
+    private function canAssignTicket(User $user): bool
+    {
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
+    private function canUnassignTicket(User $user): bool
+    {
         return $this->hasAnyRole($user, ['admin', 'super_admin']);
     }
 
