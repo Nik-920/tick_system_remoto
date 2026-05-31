@@ -124,6 +124,9 @@ export function init() {
         const notifDropdown = document.getElementById('notifDropdown');
         if (notifWrapper && notifDropdown && !notifWrapper.contains(e.target)) {
             notifDropdown.style.display = 'none';
+            notifDropdown.setAttribute('aria-hidden', 'true');
+            const notifBtn = document.getElementById('notifBtn');
+            notifBtn?.setAttribute('aria-expanded', 'false');
         }
     });
 
@@ -169,30 +172,67 @@ function initNotifications() {
         } else {
             notifBadge.style.display = 'none';
         }
+        setMarkAllState(count);
+    }
+
+    function setMarkAllState(count) {
+        if (!notifMarkAll) return;
+        const disabled = count === 0;
+        notifMarkAll.disabled = disabled;
+        notifMarkAll.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+
+    function normalizeIcon(icon) {
+        const text = (icon ?? '🔔').toString().trim();
+        if (!text) return '🔔';
+        return Array.from(text)[0] ?? '🔔';
+    }
+
+    function stripLeadingIcon(title, iconGlyph) {
+        const raw = (title ?? '').toString();
+        const trimmed = raw.trimStart();
+        if (!trimmed) return raw;
+        const firstGlyph = Array.from(trimmed)[0];
+        if (firstGlyph && firstGlyph === iconGlyph) {
+            return trimmed.slice(firstGlyph.length).trimStart();
+        }
+        return raw;
     }
 
     function renderNotifications() {
         if (notifications.length === 0) {
-            notifList.innerHTML = '<div class="notif-empty">Sin notificaciones</div>';
+            notifList.innerHTML = `
+                <div class="notif-empty" role="status">
+                    <span class="notif-empty-icon" aria-hidden="true">🔔</span>
+                    <p class="notif-empty-title">No tienes notificaciones</p>
+                    <p class="notif-empty-subtitle">Las actualizaciones de tus tickets aparecerán aquí.</p>
+                </div>
+            `;
             return;
         }
 
-        notifList.innerHTML = notifications.map(n => `
-        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${n.id}">
+        notifList.innerHTML = notifications.map(n => {
+        const iconGlyph = normalizeIcon(n.icon);
+        const safeTitle = stripLeadingIcon(n.title, iconGlyph);
+        return `
+        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${n.id}" role="listitem">
             <a class="notif-item-link" href="${n.url || '#'}">
-                <span class="notif-item-icon">${n.icon || '🔔'}</span>
+                <span class="notif-item-icon-wrap" aria-hidden="true">
+                    <span class="notif-item-icon">${iconGlyph}</span>
+                </span>
                 <div class="notif-item-content">
-                    <p class="notif-item-title">${n.title}</p>
+                    <p class="notif-item-title">${safeTitle}</p>
                     <p class="notif-item-body">${n.body}</p>
                     <span class="notif-item-time">${n.time || ''}</span>
                 </div>
             </a>
             ${n.read_at ? '<span class="notif-item-read-label">Leído</span>' : `
-            <button class="notif-item-read-btn" data-id="${n.id}" title="Marcar como leída">
+            <button class="notif-item-read-btn" type="button" data-id="${n.id}" title="Marcar como leída" aria-label="Marcar notificación como leída">
                 ✓
             </button>`}
         </div>
-    `).join('');
+    `;
+        }).join('');
 
         // Click en botón marcar leído
         notifList.querySelectorAll('.notif-item-read-btn').forEach(btn => {
@@ -241,12 +281,15 @@ function initNotifications() {
         e.stopPropagation();
         const isVisible = notifDropdown.style.display === 'block';
         notifDropdown.style.display = isVisible ? 'none' : 'block';
+        notifDropdown.setAttribute('aria-hidden', isVisible ? 'true' : 'false');
+        notifBtn.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
         if (!isVisible) {
             await fetchAndRender();
         }
     });
 
     notifMarkAll?.addEventListener('click', async () => {
+        if (notifMarkAll.disabled) return;
         await markAllAsRead();
     });
 
