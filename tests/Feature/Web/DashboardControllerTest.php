@@ -121,6 +121,19 @@ class DashboardControllerTest extends TestCase
         $response->assertDontSeeText($notAssigned->title);
     }
 
+    public function test_maintenance_dashboard_has_link_to_my_assigned_tickets(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Mis tickets asignados');
+        $response->assertSee('assignment=mine');
+    }
+
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void
     {
         $admin = $this->createUserWithRole('admin');

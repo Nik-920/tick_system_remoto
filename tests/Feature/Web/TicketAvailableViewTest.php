@@ -83,6 +83,35 @@ class TicketAvailableViewTest extends TestCase
         $response->assertDontSeeText($resolved->title);
     }
 
+    public function test_available_page_does_not_list_locked_tickets(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+
+        $locked = $this->createTicket($reporter, 'open');
+        $locked->forceFill(['assignment_locked' => true])->save();
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.available'));
+
+        $response->assertOk();
+        $response->assertDontSeeText($locked->title);
+    }
+
+    public function test_available_page_shows_empty_state_message(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.available'));
+
+        $response->assertOk();
+        $response->assertSeeText('No hay tickets disponibles en este momento');
+        $response->assertSeeText('Cuando un reporte abierto quede sin responsable, aparecerá aquí.');
+    }
+
     public function test_reporter_cannot_access_available_tickets_page(): void
     {
         $reporter = $this->createUserWithRole('reporter');

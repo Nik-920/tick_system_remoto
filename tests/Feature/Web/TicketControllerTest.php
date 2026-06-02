@@ -1107,6 +1107,76 @@ class TicketControllerTest extends TestCase
         $response->assertSeeText('Posibles duplicados');
     }
 
+    public function test_maintenance_index_has_operational_quick_filters(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Mis tickets');
+        $response->assertSeeText('Disponibles para tomar');
+        $response->assertSeeText('Todos los visibles');
+    }
+
+    public function test_maintenance_show_available_ticket_prompts_claim_before_state_change(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket disponible para UX maintenance',
+            'description' => 'Debe pedir claim antes de cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Ticket disponible para tomar');
+        $response->assertSeeText('Tomar este ticket');
+        $response->assertDontSeeText('Actualizar estado');
+    }
+
+    public function test_maintenance_show_assigned_ticket_displays_only_allowed_state_transitions(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket asignado para transiciones UX',
+            'description' => 'Solo debe permitir transiciones válidas.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Actualizar estado');
+        $response->assertSeeText('En progreso');
+        $response->assertDontSeeText('Resuelto');
+        $response->assertDontSeeText('Rechazado');
+    }
+
     // ── State History Display Tests ────────────────────────────────────────
 
     public function test_state_update_creates_state_history_entry(): void
