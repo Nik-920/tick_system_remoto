@@ -44,6 +44,7 @@ $priorityLabels = [
 
 $user = auth()->user();
 $isReporterOnly = $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin']);
+$isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin', 'super_admin']);
 @endphp
 
 <div class="tickets-page">
@@ -53,11 +54,46 @@ $isReporterOnly = $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenanc
         <div class="tickets-hero-inner">
             <div>
                 <p class="tickets-overline">Operación de incidencias</p>
-                <h1 class="tickets-title">{{ $isReporterOnly ? 'Mis tickets' : 'Tickets' }}</h1>
-                <p class="tickets-subtitle">Vista centralizada para monitorear estado, prioridad y ritmo de atención en cada incidencia.</p>
+                @if ($isMaintenance)
+                    @if ($assignmentValue === 'mine')
+                        <h1 class="tickets-title">Mis tickets asignados</h1>
+                        <p class="tickets-subtitle">Tickets que tienes actualmente a tu cargo para atención.</p>
+                    @else
+                        <h1 class="tickets-title">Mis tickets y cola disponible</h1>
+                        <p class="tickets-subtitle">Gestiona tus tickets asignados y toma incidencias disponibles para iniciar atención.</p>
+                    @endif
+                @else
+                    <h1 class="tickets-title">{{ $isReporterOnly ? 'Mis tickets' : 'Tickets' }}</h1>
+                    <p class="tickets-subtitle">Vista centralizada para monitorear estado, prioridad y ritmo de atención en cada incidencia.</p>
+                @endif
             </div>
             <a href="{{ route('tickets.create') }}" class="btn-primary tickets-btn-create">Nuevo ticket</a>
         </div>
+
+        {{-- ===== QUICK FILTERS MAINTENANCE ===== --}}
+        @if ($isMaintenance)
+        <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:0.85rem; font-weight:600; opacity:0.7;">Vista rápida:</span>
+            <a id="maint-filter-mine"
+               href="{{ route('tickets.index', ['assignment' => 'mine']) }}"
+               class="{{ $assignmentValue === 'mine' ? 'btn-primary' : 'btn-secondary' }}"
+               style="font-size:0.82rem; padding:0.25rem 0.75rem;">
+               📌 Mis tickets
+            </a>
+            <a id="maint-filter-available"
+               href="{{ route('tickets.available') }}"
+               class="btn-secondary"
+               style="font-size:0.82rem; padding:0.25rem 0.75rem;">
+               📥 Disponibles para tomar
+            </a>
+            <a id="maint-filter-all"
+               href="{{ route('tickets.index') }}"
+               class="{{ ($assignmentValue === '' || $assignmentValue === 'all') ? 'btn-primary' : 'btn-secondary' }}"
+               style="font-size:0.82rem; padding:0.25rem 0.75rem;">
+               Todos los visibles
+            </a>
+        </div>
+        @endif
 
     </section>
 
@@ -239,7 +275,17 @@ $isReporterOnly = $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenanc
                         <td class="tickets-td-meta">{{ $ticket->location?->name ?? 'N/A' }}</td>
                         <td>
                             <div class="tickets-td-meta">
-                                {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                                @if ($isMaintenance)
+                                    @if ($ticket->assigned_to === $user->id)
+                                        <span class="assignment-badge assignment-badge--claimed">Asignado a mí</span>
+                                    @elseif ($ticket->assigned_to === null)
+                                        <span class="assignment-badge assignment-badge--none">Disponible</span>
+                                    @else
+                                        {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                                    @endif
+                                @else
+                                    {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                                @endif
                             </div>
                             @if ($ticket->assignment_locked)
                                 <span class="assignment-badge assignment-badge--locked">Fija</span>

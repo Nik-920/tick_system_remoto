@@ -148,6 +148,21 @@
                 <h2>Información del ticket</h2>
             </header>
 
+            @php
+                $stateLabels = [
+                    'open'        => 'Abierto',
+                    'in_progress' => 'En progreso',
+                    'resolved'    => 'Resuelto',
+                    'rejected'    => 'Rechazado',
+                ];
+                $priorityLabels = [
+                    'low'      => 'Baja',
+                    'medium'   => 'Media',
+                    'high'     => 'Alta',
+                    'critical' => 'Crítica',
+                ];
+            @endphp
+
             <div class="tickets-show-content">
                 <div class="tickets-show-description">
                     <h3 class="tickets-show-description-title">Descripción</h3>
@@ -157,11 +172,19 @@
                 <div class="tickets-show-grid">
                     <div class="tickets-show-meta">
                         <p class="tickets-show-meta-label">Estado</p>
-                        <p class="tickets-show-meta-value">{{ $ticket?->state ?? 'N/A' }}</p>
+                        <p class="tickets-show-meta-value">
+                            <span class="ticket-badge ticket-badge--{{ $ticket?->state }}">
+                                {{ $stateLabels[$ticket?->state] ?? $ticket?->state ?? 'N/A' }}
+                            </span>
+                        </p>
                     </div>
                     <div class="tickets-show-meta">
                         <p class="tickets-show-meta-label">Prioridad</p>
-                        <p class="tickets-show-meta-value">{{ ucfirst($ticket?->priority ?? 'N/A') }}</p>
+                        <p class="tickets-show-meta-value">
+                            <span class="ticket-badge ticket-badge--{{ $ticket?->priority }}">
+                                {{ $priorityLabels[$ticket?->priority] ?? ucfirst($ticket?->priority ?? 'N/A') }}
+                            </span>
+                        </p>
                     </div>
                     <div class="tickets-show-meta">
                         <p class="tickets-show-meta-label">Ubicación</p>
@@ -183,6 +206,29 @@
             </div>
         </section>
 
+        {{-- ===== PANEL OPERATIVO MAINTENANCE ===== --}}
+        @if (isset($isMaintenance) && $isMaintenance)
+            @if (isset($isAvailableForClaim) && $isAvailableForClaim)
+                <div class="alert-info" style="border-left:4px solid var(--color-warning,#f59e0b); background:rgba(245,158,11,.08); padding:1rem 1.25rem; border-radius:0.5rem; margin-bottom:0.5rem;">
+                    <p style="font-weight:700; margin:0 0 .25rem;">📋 Ticket disponible para tomar</p>
+                    <p style="margin:0; font-size:.9rem; opacity:.85;">Para iniciar atención debes tomar el ticket primero. Una vez tomado, podrás actualizar su estado.</p>
+                    @can('claim', $ticket)
+                        <form method="POST" action="{{ route('tickets.claim', $ticket) }}" style="margin-top:0.75rem;">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                            <button type="submit" class="btn-primary">Tomar este ticket</button>
+                        </form>
+                    @endcan
+                </div>
+            @elseif ($ticket?->assigned_to === auth()->id())
+                <div class="alert-success" style="padding:.75rem 1.25rem; border-radius:0.5rem; margin-bottom:0.5rem;">
+                    <p style="font-weight:700; margin:0 0 .25rem;">✅ Este ticket está asignado a ti</p>
+                    <p style="margin:0; font-size:.9rem; opacity:.85;">Puedes actualizar su estado según el avance de atención.</p>
+                </div>
+            @endif
+        @endif
+
         @php
             $assignee = $ticket?->assignee;
             $assignedBy = $ticket?->assignedBy;
@@ -202,13 +248,11 @@
             }
 
             $user = Auth::user();
-            $isMaintenance = $user?->hasRole('maintenance') ?? false;
-            $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
+                $maintenanceOnly = $user?->hasRole('maintenance')
+                    && ! $user?->hasAnyRole(['admin', 'super_admin']);
+                $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
 
-            $canClaim = $isMaintenance
-                && $ticket?->state === \App\Models\Ticket::STATE_OPEN
-                && $ticket?->assigned_to === null;
-            $canRelease = $isMaintenance
+                $canRelease = $maintenanceOnly
                 && $ticket?->state === \App\Models\Ticket::STATE_OPEN
                 && $ticket?->assigned_to === $user?->id
                 && ! $assignmentLocked
@@ -253,17 +297,8 @@
                     </div>
                 </div>
 
-                @if ($isMaintenance)
+                @if ($maintenanceOnly)
                     <div class="assignment-actions">
-                        @if ($canClaim)
-                            <form method="POST" action="{{ route('tickets.claim', $ticket) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                <button type="submit" class="btn-primary">Tomar este ticket</button>
-                            </form>
-                        @endif
-
                         @if ($canRelease)
                             <form method="POST" action="{{ route('tickets.release', $ticket) }}">
                                 @csrf
@@ -354,7 +389,9 @@
         @endif
 
         {{-- ===== ACTUALIZAR ESTADO ===== --}}
+        @php $availableTransitions = $availableTransitions ?? []; @endphp
         @can('updateState', $ticket)
+        @if (count($availableTransitions) > 0)
         <section class="tickets-show-section">
             <header class="tickets-show-section-header">
                 <h2>Actualizar estado</h2>
@@ -369,10 +406,18 @@
                     <label for="to_state" class="tickets-field-label">Nuevo estado *</label>
                     <select id="to_state" name="to_state" class="tickets-field" required>
                         <option value="">Selecciona estado</option>
-                        @foreach ($states ?? [] as $state)
-                            @if ($state !== $ticket?->state)
-                                <option value="{{ $state }}" @selected(old('to_state') === $state)>{{ ucfirst(str_replace('_', ' ', $state)) }}</option>
-                            @endif
+                        @php
+                            $stateLabelsForm = [
+                                'open'        => 'Abierto',
+                                'in_progress' => 'En progreso',
+                                'resolved'    => 'Resuelto',
+                                'rejected'    => 'Rechazado',
+                            ];
+                        @endphp
+                        @foreach ($availableTransitions as $state)
+                            <option value="{{ $state }}" @selected(old('to_state') === $state)>
+                                {{ $stateLabelsForm[$state] ?? ucfirst(str_replace('_', ' ', $state)) }}
+                            </option>
                         @endforeach
                     </select>
                     @error('to_state')
@@ -395,6 +440,7 @@
                 </div>
             </form>
         </section>
+        @endif
         @endcan
 
         {{-- ===== HISTORIAL ===== --}}
