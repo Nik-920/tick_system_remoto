@@ -28,6 +28,8 @@ env:
   DB_DATABASE: testing
   DB_USERNAME: postgres
   DB_PASSWORD: postgres
+  DB_SSLMODE: disable
+  PGSSLMODE: disable
 
 jobs:
   lint:
