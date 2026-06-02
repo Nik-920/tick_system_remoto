@@ -43,8 +43,14 @@ jobs:
       - name: Copy environment file
         run: cp .env.example .env
 
+      - name: Copy testing environment file
+        run: cp .env.example .env.testing
+
       - name: Generate app key
         run: php artisan key:generate
+
+      - name: Generate testing app key
+        run: php artisan key:generate --env=testing
 
       - name: Execute tests
         run: vendor/bin/phpunit
