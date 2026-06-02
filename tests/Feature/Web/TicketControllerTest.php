@@ -326,6 +326,7 @@ class TicketControllerTest extends TestCase
             'state' => 'open',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $response = $this
             ->actingAs($maintenance)
@@ -561,6 +562,201 @@ class TicketControllerTest extends TestCase
         $this->assertStringContainsString('location_id='.$location->id, $nextPageUrl);
         $this->assertStringContainsString('category_id='.$category->id, $nextPageUrl);
         $this->assertStringContainsString('per_page=10', $nextPageUrl);
+    }
+
+    // ── Phase 1: maintenance ownership tests ────────────────────────────────
+
+    public function test_maintenance_only_sees_assigned_and_available_tickets_in_index(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket assigned to maintenance A — must be visible
+        $ticketOwnA = Ticket::create([
+            'title' => 'Ticket propio maintenance A',
+            'description' => 'Asignado al tecnico A, debe verse.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        $ticketOwnA->forceFill(['assigned_to' => $maintenanceA->id])->save();
+
+        // Open + unassigned ticket — must be visible (claim queue)
+        $ticketAvailable = Ticket::create([
+            'title' => 'Ticket disponible abierto',
+            'description' => 'Open y sin asignar, visible para cualquier tecnico.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        // Ticket assigned to maintenance B — must NOT be visible to A
+        $ticketOwnB = Ticket::create([
+            'title' => 'Ticket asignado a maintenance B',
+            'description' => 'No debe verse por maintenance A.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $ticketOwnB->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        // Resolved ticket not assigned to A — must NOT be visible
+        $ticketResolved = Ticket::create([
+            'title' => 'Ticket resuelto ajeno',
+            'description' => 'Resuelto y no asignado al tecnico A.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'resolved',
+            'priority' => 'low',
+        ]);
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee($ticketOwnA->title);
+        $response->assertSee($ticketAvailable->title);
+        $response->assertDontSee($ticketOwnB->title);
+        $response->assertDontSee($ticketResolved->title);
+    }
+
+    public function test_maintenance_cannot_view_ticket_assigned_to_other_maintenance(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket de otro tecnico',
+            'description' => 'Asignado a maintenance B, tecnico A no debe ver.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $ticket->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.show', $ticket));
+
+        $response->assertForbidden();
+    }
+
+    public function test_maintenance_cannot_update_state_of_unassigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket is open but not assigned to this maintenance user
+        $ticket = Ticket::create([
+            'title' => 'Ticket sin asignar',
+            'description' => 'Open pero sin asignar al tecnico que intenta cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.update-state', $ticket), [
+                'to_state' => 'in_progress',
+                'comment' => 'Intento no autorizado.',
+            ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'state' => 'open',
+        ]);
+    }
+
+    public function test_maintenance_can_update_state_of_assigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket asignado al tecnico',
+            'description' => 'Ticket asignado al tecnico que va a cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.update-state', $ticket), [
+                'to_state' => 'in_progress',
+                'comment' => 'Iniciando revision del equipo.',
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'state' => 'in_progress',
+        ]);
+        $this->assertDatabaseHas('state_history', [
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $maintenance->id,
+        ]);
+    }
+
+    public function test_maintenance_index_search_filter_respects_ownership_scope(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $secretTitle = 'TICKET_AJENO_SECRETO_MAINT_456';
+
+        // Ticket assigned to maintenance B with a searchable title
+        $ticketB = Ticket::create([
+            'title' => $secretTitle,
+            'description' => 'Ticket secreto del otro tecnico.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'critical',
+        ]);
+        $ticketB->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.index', ['search' => $secretTitle]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($secretTitle);
     }
 
     private function createUserWithRole(string $role): User
@@ -929,6 +1125,7 @@ class TicketControllerTest extends TestCase
             'state' => 'open',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $response = $this
             ->actingAs($maintenance)

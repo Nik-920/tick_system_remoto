@@ -394,6 +394,7 @@ class TicketApiControllerTest extends TestCase
             'state' => 'open',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
             'to_state' => 'in_progress',
@@ -594,6 +595,7 @@ class TicketApiControllerTest extends TestCase
             'state' => 'in_progress',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $correlationId = 'corr-ticket-resolve-001';
 
@@ -610,6 +612,133 @@ class TicketApiControllerTest extends TestCase
             return $job->ticket->id === $ticket->id
                 && $job->correlationId === $correlationId;
         });
+    }
+
+    // ── Phase 1: maintenance API ownership tests ────────────────────────
+
+    public function test_maintenance_api_index_only_sees_assigned_and_available_tickets(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($maintenanceA);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket assigned to A — must appear
+        $ownTicket = Ticket::create([
+            'title' => 'Ticket propio API maintenance A',
+            'description' => 'Asignado al tecnico A para API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        $ownTicket->forceFill(['assigned_to' => $maintenanceA->id])->save();
+
+        // Open + unassigned — must appear (claim queue)
+        $availableTicket = Ticket::create([
+            'title' => 'Ticket disponible API',
+            'description' => 'Open y sin asignar, visible para tecnico en API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        // Ticket assigned to B — must NOT appear
+        $otherTicket = Ticket::create([
+            'title' => 'Ticket de otro tecnico API',
+            'description' => 'Asignado a B, no debe verse por A en API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $otherTicket->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this->getJson(route('api.tickets.index'));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ownTicket->id, $ids, 'Ticket asignado a A debe aparecer');
+        $this->assertContains($availableTicket->id, $ids, 'Ticket disponible debe aparecer');
+        $this->assertNotContains($otherTicket->id, $ids, 'Ticket de B no debe aparecer para A');
+    }
+
+    public function test_maintenance_api_cannot_update_state_of_unassigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Open ticket not assigned to this maintenance
+        $ticket = Ticket::create([
+            'title' => 'Ticket sin asignar API',
+            'description' => 'Open pero no asignado, no debe poder cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
+            'to_state' => 'in_progress',
+            'comment' => 'Intento no autorizado via API.',
+        ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'state' => 'open',
+        ]);
+    }
+
+    public function test_maintenance_api_can_update_state_of_assigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket asignado al tecnico API',
+            'description' => 'Asignado al tecnico que realiza la peticion API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
+            'to_state' => 'in_progress',
+            'comment' => 'Iniciando atencion via API.',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.state', 'in_progress');
+
+        $this->assertDatabaseHas('state_history', [
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $maintenance->id,
+        ]);
     }
 
     private function createUserWithRole(string $role): User
