@@ -43,7 +43,7 @@ class TicketStateService
         }
 
         $this->assertTransitionIsAllowed($fromState, $toState);
-        $this->assertRoleCanTransition($actor, $fromState, $toState);
+        $this->assertRoleCanTransition($actor, $ticket, $fromState, $toState);
         $this->assertCommentIsValid($fromState, $toState, $comment);
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, $toState, $comment, $fromState): Ticket {
@@ -121,10 +121,20 @@ class TicketStateService
         }
     }
 
-    private function assertRoleCanTransition(User $actor, string $fromState, string $toState): void
+    private function assertRoleCanTransition(User $actor, Ticket $ticket, string $fromState, string $toState): void
     {
         if (! method_exists($actor, 'hasAnyRole') || ! method_exists($actor, 'hasRole')) {
             throw new InvalidArgumentException('No se puede validar roles para la transicion solicitada.');
+        }
+
+        // Defensa en profundidad: maintenance solo puede transicionar tickets asignados a él.
+        // La policy ya bloquea en la capa HTTP; este guard protege llamadas directas al servicio.
+        if ($actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin'])) {
+            if ($ticket->assigned_to !== $actor->id) {
+                throw new InvalidArgumentException(
+                    'El técnico solo puede cambiar estado de tickets asignados a él.'
+                );
+            }
         }
 
         if ($fromState === 'open' && $toState === 'in_progress' && ! $actor->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
