@@ -14,11 +14,18 @@ class TicketPolicy
 
     public function view(User $user, Ticket $ticket): bool
     {
-        if ($this->hasAnyRole($user, ['maintenance', 'admin', 'super_admin'])) {
+        if ($this->hasAnyRole($user, ['admin', 'super_admin'])) {
             return true;
         }
 
-        return $ticket->reporter_id === $user->id || $ticket->assigned_to === $user->id;
+        if ($this->hasRole($user, 'maintenance')) {
+            // maintenance can only see tickets assigned to them
+            // or tickets that are open and available to claim.
+            return $ticket->assigned_to === $user->id
+                || ($ticket->state === Ticket::STATE_OPEN && $ticket->assigned_to === null);
+        }
+
+        return $ticket->reporter_id === $user->id;
     }
 
     public function create(User $user): bool
@@ -28,15 +35,28 @@ class TicketPolicy
 
     public function updateState(User $user, Ticket $ticket): bool
     {
+        // Resolved tickets: only super_admin can reopen them.
         if ($ticket->state === 'resolved') {
             return $this->hasRole($user, 'super_admin');
         }
 
+        // Rejected tickets: only admin/super_admin can reopen them.
         if ($ticket->state === 'rejected') {
             return $this->hasAnyRole($user, ['admin', 'super_admin']);
         }
 
-        return $this->hasAnyRole($user, ['maintenance', 'admin', 'super_admin']);
+        // Admin/super_admin can transition any open or in_progress ticket.
+        if ($this->hasAnyRole($user, ['admin', 'super_admin'])) {
+            return true;
+        }
+
+        // maintenance can only change state of tickets assigned to them.
+        // A ticket must be claimed first via claim() before state can change.
+        if ($this->hasRole($user, 'maintenance')) {
+            return $ticket->assigned_to === $user->id;
+        }
+
+        return false;
     }
 
     public function delete(User $user, Ticket $ticket): bool
