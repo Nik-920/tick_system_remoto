@@ -3,6 +3,7 @@
 namespace App\Services\Firebase;
 
 use App\Events\DuplicateDetected;
+use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketResolved;
 use App\Events\TicketStateChanged;
@@ -10,6 +11,7 @@ use App\Listeners\DetectDuplicatesOnEmbeddingReady;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
 use App\Listeners\NotifyDuplicateDetected;
 use App\Listeners\ReportFailedQueueJob;
+use App\Listeners\SendNotificationOnTicketAssigned;
 use App\Listeners\SendPushNotificationOnTicketCreated;
 use App\Listeners\SendPushNotificationOnTicketStateChanged;
 use App\Listeners\UpdateRecurrenceOnTicketResolved;
@@ -32,6 +34,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(DuplicateDetected::class, NotifyDuplicateDetected::class);
         Event::listen(TicketResolved::class, UpdateRecurrenceOnTicketResolved::class);
         Event::listen(TicketStateChanged::class, SendPushNotificationOnTicketStateChanged::class);
+        Event::listen(TicketAssigned::class, SendNotificationOnTicketAssigned::class);
         Event::listen(JobFailed::class, ReportFailedQueueJob::class);
     }
 }
