@@ -109,6 +109,123 @@ class TicketAssignmentControllerTest extends TestCase
         ]);
     }
 
+    public function test_admin_assign_creates_notification_for_maintenance(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($admin)
+            ->patch(route('tickets.assign', $ticket), [
+                'assigned_to' => $maintenance->id,
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_assigned',
+            'title' => 'Nuevo ticket asignado',
+            'body' => 'Se te asignó el ticket: '.$ticket->title,
+        ]);
+    }
+
+    public function test_super_admin_assign_creates_notification_for_maintenance(): void
+    {
+        $superAdmin = $this->createUserWithRole('super_admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($superAdmin)
+            ->patch(route('tickets.assign', $ticket), [
+                'assigned_to' => $maintenance->id,
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_assigned',
+            'title' => 'Nuevo ticket asignado',
+            'body' => 'Se te asignó el ticket: '.$ticket->title,
+        ]);
+    }
+
+    public function test_admin_reassign_notifies_new_maintenance(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $ticket->forceFill([
+            'assigned_to' => $maintenanceA->id,
+            'assigned_by' => $admin->id,
+            'assigned_at' => now(),
+            'assignment_locked' => true,
+            'assignment_source' => Ticket::ASSIGNMENT_SOURCE_ADMIN,
+        ])->save();
+
+        $response = $this
+            ->actingAs($admin)
+            ->patch(route('tickets.assign', $ticket), [
+                'assigned_to' => $maintenanceB->id,
+            ]);
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenanceB->id,
+            'type' => 'ticket_reassigned',
+            'title' => 'Ticket reasignado',
+            'body' => 'Se te reasignó el ticket: '.$ticket->title,
+        ]);
+    }
+
+    public function test_admin_unassign_notifies_previous_maintenance(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $ticket->forceFill([
+            'assigned_to' => $maintenance->id,
+            'assigned_by' => $admin->id,
+            'assigned_at' => now(),
+            'assignment_locked' => true,
+            'assignment_source' => Ticket::ASSIGNMENT_SOURCE_ADMIN,
+        ])->save();
+
+        $response = $this
+            ->actingAs($admin)
+            ->patch(route('tickets.unassign', $ticket));
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_unassigned',
+            'title' => 'Ticket desasignado',
+            'body' => 'Ya no tienes asignado el ticket: '.$ticket->title,
+        ]);
+    }
+
+    public function test_claim_does_not_create_assignment_notification(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->patch(route('tickets.claim', $ticket));
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
     public function test_admin_can_unassign_ticket(): void
     {
         $admin = $this->createUserWithRole('admin');

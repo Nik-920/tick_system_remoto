@@ -64,6 +64,55 @@ class TicketAssignmentApiTest extends TestCase
         $response->assertJsonPath('data.assignee.id', $maintenance->id);
     }
 
+    public function test_admin_assign_via_api_creates_notification_for_maintenance(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($admin);
+
+        $ticket = $this->createTicket($reporter);
+
+        $response = $this->patchJson(route('api.tickets.assign', $ticket), [
+            'assigned_to' => $maintenance->id,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_assigned',
+            'title' => 'Nuevo ticket asignado',
+            'body' => 'Se te asignó el ticket: '.$ticket->title,
+        ]);
+    }
+
+    public function test_admin_unassign_via_api_notifies_previous_maintenance(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($admin);
+
+        $ticket = $this->createTicket($reporter);
+        $ticket->forceFill([
+            'assigned_to' => $maintenance->id,
+            'assigned_by' => $admin->id,
+            'assigned_at' => now(),
+            'assignment_locked' => true,
+            'assignment_source' => Ticket::ASSIGNMENT_SOURCE_ADMIN,
+        ])->save();
+
+        $response = $this->patchJson(route('api.tickets.unassign', $ticket));
+
+        $response->assertOk();
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_unassigned',
+            'title' => 'Ticket desasignado',
+            'body' => 'Ya no tienes asignado el ticket: '.$ticket->title,
+        ]);
+    }
+
     public function test_assign_with_non_maintenance_returns_422(): void
     {
         $admin = $this->createUserWithRole('admin');
