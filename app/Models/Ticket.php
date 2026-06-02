@@ -150,6 +150,33 @@ class Ticket extends Model
             ->whereNull('assigned_to');
     }
 
+    /**
+     * Tickets that a maintenance user can see:
+     * - tickets assigned to them, OR
+     * - tickets that are open and unassigned (available to claim).
+     */
+    public function scopeVisibleToMaintenance(Builder $query, string $userId): Builder
+    {
+        return $query->where(function (Builder $q) use ($userId): void {
+            $q->where('assigned_to', $userId)
+              ->orWhere(function (Builder $inner): void {
+                  $inner->where('state', self::STATE_OPEN)
+                        ->whereNull('assigned_to');
+              });
+        });
+    }
+
+    /**
+     * Tickets that are open and unassigned — the maintenance "claim queue".
+     * Alias of availableForClaim, kept explicit for readability in queries.
+     */
+    public function scopeAvailableForMaintenance(Builder $query): Builder
+    {
+        return $query
+            ->where('state', self::STATE_OPEN)
+            ->whereNull('assigned_to');
+    }
+
     public function scopeAssignedToUser(Builder $query, string $userId): Builder
     {
         return $query->where('assigned_to', $userId);
