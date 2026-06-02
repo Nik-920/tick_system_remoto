@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -161,11 +162,11 @@ class Ticket extends Model
     {
         return $query->where(function (Builder $q) use ($userId): void {
             $q->where('assigned_to', $userId)
-              ->orWhere(function (Builder $inner): void {
-                  $inner->where('state', self::STATE_OPEN)
+                ->orWhere(function (Builder $inner): void {
+                    $inner->where('state', self::STATE_OPEN)
                         ->whereNull('assigned_to');
-                  self::applyAssignmentUnlocked($inner);
-              });
+                    self::applyAssignmentUnlocked($inner);
+                });
         });
     }
 
@@ -184,7 +185,8 @@ class Ticket extends Model
 
     private static function applyAssignmentUnlocked(Builder $query): Builder
     {
-        $driver = $query->getConnection()->getDriverName();
+        $connection = $query->getConnection();
+        $driver = $connection instanceof Connection ? $connection->getDriverName() : '';
 
         if ($driver === 'pgsql') {
             return $query->whereRaw('assignment_locked is false');

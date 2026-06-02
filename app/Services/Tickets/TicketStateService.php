@@ -173,10 +173,10 @@ class TicketStateService
         $fromState = (string) $ticket->state;
 
         $allowedTransitions = [
-            'open'        => ['in_progress'],
+            'open' => ['in_progress'],
             'in_progress' => ['resolved', 'rejected'],
-            'rejected'    => ['open'],
-            'resolved'    => ['open'],
+            'rejected' => ['open'],
+            'resolved' => ['open'],
         ];
 
         $candidates = $allowedTransitions[$fromState] ?? [];
@@ -185,7 +185,7 @@ class TicketStateService
             return [];
         }
 
-        $isMaintenance  = $actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin']);
+        $isMaintenance = $actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin']);
         $isAdminOrAbove = $actor->hasAnyRole(['admin', 'super_admin']);
 
         if ($isMaintenance) {

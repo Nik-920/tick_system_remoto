@@ -132,8 +132,8 @@ class TicketController extends Controller
             ->withQueryString();
 
         return view('tickets.available', [
-            'tickets'   => $tickets,
-            'filters'   => $filters,
+            'tickets' => $tickets,
+            'filters' => $filters,
             'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
             'categories' => Category::query()->orderBy('name', 'asc')->get(),
         ]);
@@ -190,8 +190,8 @@ class TicketController extends Controller
             'assignedBy',
             'location',
             'category',
-            'media'         => fn ($query) => $query->latest('created_at'),
-            'stateHistory'  => fn ($query) => $query->with('changedBy')->oldest('created_at'),
+            'media' => fn ($query) => $query->latest('created_at'),
+            'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
         ]);
@@ -210,11 +210,11 @@ class TicketController extends Controller
             && ! $ticket->assignment_locked;
 
         return view('tickets.show', [
-            'ticket'               => $ticket,
+            'ticket' => $ticket,
             'availableTransitions' => $availableTransitions,
-            'maintenanceUsers'     => $maintenanceUsers,
-            'isMaintenance'        => $isMaintenance,
-            'isAvailableForClaim'  => $isAvailableForClaim,
+            'maintenanceUsers' => $maintenanceUsers,
+            'isMaintenance' => $isMaintenance,
+            'isAvailableForClaim' => $isAvailableForClaim,
         ]);
     }
 
