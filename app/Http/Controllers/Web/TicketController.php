@@ -53,6 +53,17 @@ class TicketController extends Controller
             $query->reportedBy($user->id);
         }
 
+        // maintenance-only scope: restrict index to tickets assigned to them
+        // or tickets that are open and unassigned (claim queue).
+        // Applied BEFORE user-supplied filters so that search/location/etc.
+        // cannot leak tickets outside this boundary.
+        if ($user instanceof User
+            && $user->hasRole('maintenance')
+            && ! $user->hasAnyRole(['admin', 'super_admin'])
+        ) {
+            $query->visibleToMaintenance($user->id);
+        }
+
         $this->applyFilters($query, $filters, $user);
 
         $tickets = $query
