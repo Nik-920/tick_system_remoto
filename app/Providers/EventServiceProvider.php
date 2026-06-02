@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Events\DuplicateDetected;
+use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketResolved;
 use App\Events\TicketStateChanged;
@@ -10,6 +11,7 @@ use App\Listeners\DetectDuplicatesOnEmbeddingReady;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
 use App\Listeners\NotifyDuplicateDetected;
 use App\Listeners\ReportFailedQueueJob;
+use App\Listeners\SendNotificationOnTicketAssigned;
 use App\Listeners\SendPushNotificationOnTicketCreated;
 use App\Listeners\SendPushNotificationOnTicketStateChanged;
 use App\Listeners\UpdateRecurrenceOnTicketResolved;
@@ -32,6 +34,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         TicketStateChanged::class => [
             SendPushNotificationOnTicketStateChanged::class,
+        ],
+        TicketAssigned::class => [
+            SendNotificationOnTicketAssigned::class,
         ],
         JobFailed::class => [
             ReportFailedQueueJob::class,
