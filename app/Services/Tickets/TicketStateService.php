@@ -158,6 +158,59 @@ class TicketStateService
         }
     }
 
+    /**
+     * Returns the list of states that $actor is allowed to transition $ticket to.
+     * Pure read — no side effects, no exceptions thrown.
+     *
+     * @return list<string>
+     */
+    public function availableTransitionsFor(Ticket $ticket, User $actor): array
+    {
+        if (! method_exists($actor, 'hasRole') || ! method_exists($actor, 'hasAnyRole')) {
+            return [];
+        }
+
+        $fromState = (string) $ticket->state;
+
+        $allowedTransitions = [
+            'open'        => ['in_progress'],
+            'in_progress' => ['resolved', 'rejected'],
+            'rejected'    => ['open'],
+            'resolved'    => ['open'],
+        ];
+
+        $candidates = $allowedTransitions[$fromState] ?? [];
+
+        if (empty($candidates)) {
+            return [];
+        }
+
+        $isMaintenance  = $actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin']);
+        $isAdminOrAbove = $actor->hasAnyRole(['admin', 'super_admin']);
+
+        if ($isMaintenance) {
+            // Ownership guard: maintenance can only act on their own tickets.
+            if ($ticket->assigned_to !== $actor->id) {
+                return [];
+            }
+
+            // Maintenance can only: open→in_progress and in_progress→resolved.
+            return array_values(array_filter($candidates, fn (string $s) => in_array($s, ['in_progress', 'resolved'], true)));
+        }
+
+        if ($isAdminOrAbove) {
+            // super_admin can reopen resolved tickets; regular admin cannot.
+            if ($fromState === 'resolved') {
+                return $actor->hasRole('super_admin') ? ['open'] : [];
+            }
+
+            return $candidates;
+        }
+
+        // Reporters and unknown roles: no transitions.
+        return [];
+    }
+
     private function resolveCorrelationId(string $correlationId): string
     {
         $trimmed = trim($correlationId);

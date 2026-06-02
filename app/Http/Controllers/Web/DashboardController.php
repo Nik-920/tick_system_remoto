@@ -244,24 +244,24 @@ class DashboardController extends Controller
 
         return [
             'hero' => [
-                'badge' => 'Panel maintenance',
-                'title' => 'Consola de mantenimiento',
+                'badge'    => 'Panel maintenance',
+                'title'    => 'Consola de mantenimiento',
                 'subtitle' => 'Gestiona tu cola operativa con enfoque en urgencias, tiempos de respuesta y cierres de calidad.',
             ],
             'quickActions' => [
                 [
-                    'label' => 'Ver tickets disponibles',
-                    'href' => route('tickets.available'),
+                    'label'   => 'Mis tickets asignados',
+                    'href'    => route('tickets.index', ['assignment' => 'mine']),
                     'variant' => 'primary',
                 ],
                 [
-                    'label' => 'Ir a cola de tickets',
-                    'href' => route('tickets.index'),
+                    'label'   => 'Tickets disponibles',
+                    'href'    => route('tickets.available'),
                     'variant' => 'secondary',
                 ],
                 [
-                    'label' => 'Registrar incidencia',
-                    'href' => route('tickets.create'),
+                    'label'   => 'Registrar incidencia',
+                    'href'    => route('tickets.create'),
                     'variant' => 'secondary',
                 ],
             ],

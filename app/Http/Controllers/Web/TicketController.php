@@ -126,13 +126,14 @@ class TicketController extends Controller
         $this->applyFilters($query, $filters, $request->user());
 
         $tickets = $query
-            ->latest('created_at')
+            ->orderByRaw("CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END")
+            ->oldest('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15))
             ->withQueryString();
 
         return view('tickets.available', [
-            'tickets' => $tickets,
-            'filters' => $filters,
+            'tickets'   => $tickets,
+            'filters'   => $filters,
             'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
             'categories' => Category::query()->orderBy('name', 'asc')->get(),
         ]);
@@ -171,12 +172,12 @@ class TicketController extends Controller
             ->with('status', $message);
     }
 
-    public function show(Ticket $ticket): View
+    public function show(Ticket $ticket, TicketStateService $ticketStateService): View
     {
         $this->authorize('view', $ticket);
 
-        $maintenanceUsers = collect();
         $currentUser = request()->user();
+        $maintenanceUsers = collect();
         if ($currentUser instanceof User && $currentUser->hasAnyRole(['admin', 'super_admin'])) {
             $maintenanceUsers = User::role('maintenance')
                 ->orderBy('name')
@@ -189,16 +190,31 @@ class TicketController extends Controller
             'assignedBy',
             'location',
             'category',
-            'media' => fn ($query) => $query->latest('created_at'),
-            'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
+            'media'         => fn ($query) => $query->latest('created_at'),
+            'stateHistory'  => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
         ]);
 
+        $availableTransitions = $currentUser instanceof User
+            ? $ticketStateService->availableTransitionsFor($ticket, $currentUser)
+            : [];
+
+        $isMaintenance = $currentUser instanceof User
+            && $currentUser->hasRole('maintenance')
+            && ! $currentUser->hasAnyRole(['admin', 'super_admin']);
+
+        $isAvailableForClaim = $isMaintenance
+            && $ticket->state === Ticket::STATE_OPEN
+            && $ticket->assigned_to === null
+            && ! $ticket->assignment_locked;
+
         return view('tickets.show', [
-            'ticket' => $ticket,
-            'states' => ['open', 'in_progress', 'resolved', 'rejected'],
-            'maintenanceUsers' => $maintenanceUsers,
+            'ticket'               => $ticket,
+            'availableTransitions' => $availableTransitions,
+            'maintenanceUsers'     => $maintenanceUsers,
+            'isMaintenance'        => $isMaintenance,
+            'isAvailableForClaim'  => $isAvailableForClaim,
         ]);
     }
 

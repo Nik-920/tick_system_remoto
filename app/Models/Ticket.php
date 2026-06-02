@@ -145,9 +145,11 @@ class Ticket extends Model
 
     public function scopeAvailableForClaim(Builder $query): Builder
     {
-        return $query
-            ->where('state', self::STATE_OPEN)
-            ->whereNull('assigned_to');
+        return self::applyAssignmentUnlocked(
+            $query
+                ->where('state', self::STATE_OPEN)
+                ->whereNull('assigned_to')
+        );
     }
 
     /**
@@ -162,6 +164,7 @@ class Ticket extends Model
               ->orWhere(function (Builder $inner): void {
                   $inner->where('state', self::STATE_OPEN)
                         ->whereNull('assigned_to');
+                  self::applyAssignmentUnlocked($inner);
               });
         });
     }
@@ -172,9 +175,22 @@ class Ticket extends Model
      */
     public function scopeAvailableForMaintenance(Builder $query): Builder
     {
-        return $query
-            ->where('state', self::STATE_OPEN)
-            ->whereNull('assigned_to');
+        return self::applyAssignmentUnlocked(
+            $query
+                ->where('state', self::STATE_OPEN)
+                ->whereNull('assigned_to')
+        );
+    }
+
+    private static function applyAssignmentUnlocked(Builder $query): Builder
+    {
+        $driver = $query->getConnection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            return $query->whereRaw('assignment_locked is false');
+        }
+
+        return $query->where('assignment_locked', false);
     }
 
     public function scopeAssignedToUser(Builder $query, string $userId): Builder
