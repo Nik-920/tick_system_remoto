@@ -40,6 +40,11 @@ class Location extends Model
      */
     public $incrementing = false;
 
+    public function setIsActiveAttribute(mixed $value): void
+    {
+        $this->attributes['is_active'] = (bool) $value;
+    }
+
     /**
      * @return array<string, string>
      */
