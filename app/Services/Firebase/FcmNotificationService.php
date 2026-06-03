@@ -11,7 +11,7 @@ use Throwable;
 
 class FcmNotificationService
 {
-    private function getMessaging()
+    protected function getMessaging()
     {
         $credentials = config('services.firebase.credentials');
 
