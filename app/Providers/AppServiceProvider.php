@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Ai\EmbeddingProvider;
+use App\Contracts\Notifications\PushNotificationProvider;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
@@ -10,6 +12,8 @@ use App\Policies\CategoryPolicy;
 use App\Policies\LocationPolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\UserPolicy;
+use App\Services\Ai\HuggingFaceEmbeddingAdapter;
+use App\Services\Firebase\FirebasePushNotificationAdapter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Illuminate\Http\Request;
@@ -23,6 +27,16 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         EventServiceProvider::disableEventDiscovery();
+
+        $this->app->bind(
+            PushNotificationProvider::class,
+            FirebasePushNotificationAdapter::class
+        );
+
+        $this->app->bind(
+            EmbeddingProvider::class,
+            HuggingFaceEmbeddingAdapter::class
+        );
     }
 
     public function boot(): void
