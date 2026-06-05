@@ -67,9 +67,8 @@ class TicketStateService
             return $ticket;
         });
 
-        $event = TicketResolved::forTicket($updatedTicket, $correlationId);
-        if ($event !== null) {
-            event($event);
+        if ($toState === 'resolved') {
+            event(new TicketResolved($updatedTicket, $correlationId));
         }
 
         event(new TicketStateChanged(
