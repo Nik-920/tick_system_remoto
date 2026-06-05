@@ -116,6 +116,15 @@ class CategoryController extends Controller
     {
         $this->authorize('delete', $category);
 
+        $ticketsCount = $category->tickets()->count();
+        $incidentHistoryCount = $category->incidentHistory()->count();
+
+        if ($ticketsCount > 0 || $incidentHistoryCount > 0) {
+            return redirect()
+                ->route('categories.edit', $category)
+                ->with('error', 'No se puede eliminar la categoria porque tiene tickets o historial de incidencias asociados.');
+        }
+
         $categoryId = $category->id;
         $iconUrl = is_string($category->icon) ? $category->icon : null;
 

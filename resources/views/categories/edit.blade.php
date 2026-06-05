@@ -22,6 +22,10 @@
                 <div class="alert-success">{{ session('status') }}</div>
             @endif
 
+            @if (session('error'))
+                <div class="alert-error">{{ session('error') }}</div>
+            @endif
+
             @if ($errors->any())
                 <div class="alert-error">
                     <p class="font-semibold mb-2">Corrige los siguientes errores:</p>
@@ -109,18 +113,35 @@
 
             {{-- Danger Zone --}}
             @can('delete', $category)
+                @php
+                    $hasRelations = ((int) $category->tickets_count) > 0 || ((int) $category->incident_history_count) > 0;
+                @endphp
                 <div class="cats-danger-zone">
                     <div class="cats-danger-inner">
                         <div>
                             <h2 class="cats-danger-title">Zona peligrosa</h2>
-                            <p class="cats-danger-text">Esta acción eliminará la categoría y todos sus registros asociados de forma permanente.</p>
+                            @if ($hasRelations)
+                                <p class="cats-danger-text">No se puede eliminar esta categoría porque tiene
+                                    <strong>{{ $category->tickets_count }} ticket(s)</strong> y
+                                    <strong>{{ $category->incident_history_count }} incidencia(s)</strong> asociadas.
+                                    Reasigna o cierra esos registros antes de eliminarla.</p>
+                            @else
+                                <p class="cats-danger-text">Esta categoría no tiene registros asociados y puede eliminarse de forma permanente. Esta acción no se puede deshacer.</p>
+                            @endif
                         </div>
-                        <form method="POST" action="{{ route('categories.destroy', $category) }}"
-                              onsubmit="return confirm('¿Seguro que deseas eliminar esta categoría? Esta acción no se puede deshacer.');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="cats-danger-btn">Eliminar categoría</button>
-                        </form>
+                        @if ($hasRelations)
+                            <button type="button" class="cats-danger-btn" disabled aria-disabled="true"
+                                    title="Elimina o reasigna los tickets e incidencias asociadas para poder borrar la categoría.">
+                                Eliminar categoría
+                            </button>
+                        @else
+                            <form method="POST" action="{{ route('categories.destroy', $category) }}"
+                                  onsubmit="return confirm('¿Seguro que deseas eliminar la categoría «{{ $category->name }}»? Esta acción no se puede deshacer.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="cats-danger-btn">Eliminar categoría</button>
+                            </form>
+                        @endif
                     </div>
                 </div>
             @endcan
@@ -194,7 +215,7 @@
             @can('delete', $category)
                 <div class="cats-sidebar-card cats-sidebar-danger-hint">
                     <p class="cats-sidebar-section-title cats-sidebar-section-title--red">Zona peligrosa</p>
-                    <p class="cats-sidebar-guide-item-text" style="margin-top:.4rem;">Eliminar esta categoría afectará <strong>{{ $category->tickets_count }} ticket(s)</strong> y <strong>{{ $category->incident_history_count }} incidencia(s)</strong> asociadas.</p>
+                    <p class="cats-sidebar-guide-item-text" style="margin-top:.4rem;">Esta categoría tiene <strong>{{ $category->tickets_count }} ticket(s)</strong> y <strong>{{ $category->incident_history_count }} incidencia(s)</strong>. No podrá eliminarse mientras existan registros asociados.</p>
                 </div>
             @endcan
 
