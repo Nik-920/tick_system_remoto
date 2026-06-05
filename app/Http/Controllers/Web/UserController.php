@@ -9,26 +9,25 @@ use App\Http\Requests\UpdateUserAvatarRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\UpdateUserRoleRequest;
 use App\Models\User;
+use App\Queries\Users\UserListQuery;
 use App\Services\Auth\SupabaseRoleSyncService;
 use App\Services\Storage\UserAvatarStorageService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Users\UserRoleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly UserRoleService $userRoles) {}
+
     public function index(ListUsersRequest $request): View
     {
         $this->authorize('viewAny', User::class);
 
         $filters = $request->validated();
-        $query = User::query()->with('roles');
 
-        $this->applyFilters($query, $filters);
-
-        $users = $query
+        $users = UserListQuery::build($filters)
             ->latest('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15))
             ->withQueryString();
@@ -67,7 +66,7 @@ class UserController extends Controller
         ]);
 
         $role = (string) $data['role'];
-        $this->assignSingleRole($user, $role);
+        $this->userRoles->assignSingleRole($user, $role);
 
         if ($request->hasFile('avatar_file')) {
             $avatarUrl = $avatarStorageService->replaceAvatar($user, $request->file('avatar_file'));
@@ -78,7 +77,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('users.edit', $user)
-            ->with('status', $this->buildStatusMessage('Usuario creado correctamente.', $syncResult));
+            ->with('status', $this->userRoles->statusMessage('Usuario creado correctamente.', $syncResult));
     }
 
     public function edit(User $user): View
@@ -131,31 +130,31 @@ class UserController extends Controller
         $role = (string) $request->validated('role');
 
         $actor = $request->user();
-        if ($actor instanceof User && $this->isSelfDemotion($actor, $user, $role)) {
+        if ($actor instanceof User && $this->userRoles->isSelfDemotion($actor, $user, $role)) {
             return back()->withErrors([
                 'role' => 'No puedes quitarte a ti mismo el rol super_admin.',
             ]);
         }
 
-        if ($this->isLastSuperAdminDemotion($user, $role)) {
+        if ($this->userRoles->wouldRemoveLastSuperAdminByDemotion($user, $role)) {
             return back()->withErrors([
                 'role' => 'No se puede remover el ultimo super_admin del sistema.',
             ]);
         }
 
-        $this->assignSingleRole($user, $role);
+        $this->userRoles->assignSingleRole($user, $role);
         $syncResult = $roleSyncService->syncUserRole($user, $role);
 
         return redirect()
             ->route('users.edit', $user)
-            ->with('status', $this->buildStatusMessage('Rol de usuario actualizado correctamente.', $syncResult));
+            ->with('status', $this->userRoles->statusMessage('Rol de usuario actualizado correctamente.', $syncResult));
     }
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
         $this->authorize('delete', $user);
 
-        if ($this->isLastSuperAdmin($user)) {
+        if ($this->userRoles->wouldRemoveLastSuperAdminByDeletion($user)) {
             return back()->withErrors([
                 'delete' => 'No se puede eliminar el ultimo super_admin del sistema.',
             ]);
@@ -169,28 +168,6 @@ class UserController extends Controller
     }
 
     /**
-     * @param  array<string, mixed>  $filters
-     */
-    private function applyFilters(Builder $query, array $filters): void
-    {
-        if (! empty($filters['search'])) {
-            $search = trim((string) $filters['search']);
-            $query->where(function (Builder $innerQuery) use ($search): void {
-                $innerQuery
-                    ->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if (! empty($filters['role'])) {
-            $role = trim((string) $filters['role']);
-            $query->whereHas('roles', function (Builder $innerQuery) use ($role): void {
-                $innerQuery->where('name', $role);
-            });
-        }
-    }
-
-    /**
      * @return list<string>
      */
     private function availableRoles(): array
@@ -198,67 +175,10 @@ class UserController extends Controller
         return ['reporter', 'maintenance', 'admin', 'super_admin'];
     }
 
-    private function assignSingleRole(User $user, string $role): void
-    {
-        Role::findOrCreate($role, 'web');
-        $user->syncRoles([$role]);
-        $user->load('roles');
-    }
-
     private function resolvePrimaryRole(User $user): string
     {
         $role = $user->getRoleNames()->first();
 
         return is_string($role) && $role !== '' ? $role : 'reporter';
-    }
-
-    /**
-     * @param  array{status:string,message:string,role:string}  $syncResult
-     */
-    private function buildStatusMessage(string $baseMessage, array $syncResult): string
-    {
-        if ($syncResult['status'] === 'synced') {
-            return $baseMessage;
-        }
-
-        return $baseMessage.' '.$syncResult['message'];
-    }
-
-    private function isSelfDemotion(User $actor, User $managedUser, string $newRole): bool
-    {
-        if ($actor->id !== $managedUser->id) {
-            return false;
-        }
-
-        return $newRole !== 'super_admin';
-    }
-
-    private function isLastSuperAdminDemotion(User $managedUser, string $newRole): bool
-    {
-        if (! $managedUser->hasRole('super_admin')) {
-            return false;
-        }
-
-        if ($newRole === 'super_admin') {
-            return false;
-        }
-
-        return $this->countSuperAdmins() <= 1;
-    }
-
-    private function isLastSuperAdmin(User $managedUser): bool
-    {
-        if (! $managedUser->hasRole('super_admin')) {
-            return false;
-        }
-
-        return $this->countSuperAdmins() <= 1;
-    }
-
-    private function countSuperAdmins(): int
-    {
-        $role = Role::findOrCreate('super_admin', 'web');
-
-        return $role->users()->count();
     }
 }
