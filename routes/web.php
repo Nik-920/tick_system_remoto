@@ -22,7 +22,12 @@ Route::get('/', function () {
 });
 
 Route::get('/health', HealthController::class)->name('health.show');
-Route::get('/metrics', MetricsController::class)
+
+// Métricas operativas: exponen conteos de usuarios/roles y datos agregados.
+// Requieren sesión autenticada con rol admin/super_admin (no es endpoint público).
+// Si se necesita scraping por Prometheus, usar un middleware de token/IP-allowlist.
+Route::middleware(['auth', 'role:admin|super_admin'])
+    ->get('/metrics', MetricsController::class)
     ->name('metrics');
 
 Route::middleware('guest')->group(function (): void {

@@ -91,15 +91,23 @@ class MetricsController extends Controller
         );
 
         // 8. Tiempo promedio de resolución en horas
+        // Calculado en PHP (Carbon) para ser portable entre PostgreSQL y SQLite.
+        // EXTRACT(EPOCH ...) es exclusivo de PostgreSQL y rompe sobre SQLite (tests).
         $avgResolutionTime = $registry->registerGauge(
             'tick_system', 'avg_resolution_time_hours',
             'Average ticket resolution time in hours'
         );
-        $avg = DB::table('tickets')
+        $resolvedTickets = Ticket::query()
             ->whereNotNull('resolved_at')
-            ->selectRaw('AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600) as avg_hours')
-            ->value('avg_hours');
-        $avgResolutionTime->set((float) ($avg ?? 0));
+            ->get(['created_at', 'resolved_at']);
+        $avgHours = (float) ($resolvedTickets->avg(function (Ticket $ticket): float {
+            if ($ticket->resolved_at === null || $ticket->created_at === null) {
+                return 0.0;
+            }
+
+            return (float) $ticket->created_at->diffInHours($ticket->resolved_at);
+        }) ?? 0.0);
+        $avgResolutionTime->set($avgHours);
 
         // 9. Tickets por prioridad
         $ticketsByPriority = $registry->registerGauge(
