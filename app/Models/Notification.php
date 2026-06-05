@@ -12,6 +12,8 @@ use Illuminate\Support\Carbon;
 /**
  * @property string $id
  * @property string $user_id
+ * @property string|null $ticket_id
+ * @property string|null $dedup_key
  * @property string $type
  * @property string|null $title
  * @property string|null $body
@@ -30,6 +32,8 @@ class Notification extends Model
     protected $fillable = [
         'id',
         'user_id',
+        'ticket_id',
+        'dedup_key',
         'type',
         'title',
         'body',
