@@ -303,10 +303,6 @@ class TicketAssignmentService
         ?User $newAssignee,
         string $correlationId
     ): void {
-        if (! class_exists(TicketAssigned::class)) {
-            return;
-        }
-
         event(new TicketAssigned(
             ticket: $ticket,
             actor: $actor,
