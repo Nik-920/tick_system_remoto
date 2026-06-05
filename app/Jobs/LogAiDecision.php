@@ -37,14 +37,21 @@ class LogAiDecision implements ShouldQueue
             return;
         }
 
-        TicketAiLog::create([
-            'ticket_id' => $this->ticket->id,
-            'operation_type' => $this->operationType,
-            'correlation_id' => $this->correlationId,
-            'input_data' => $this->inputData,
-            'output_data' => $this->outputData,
-            'confidence_score' => $this->confidenceScore,
-            'action_taken' => $this->actionTaken,
-        ]);
+        // Idempotencia (Fase 5.1): un reintento del job (failed + retry) no debe
+        // crear un segundo registro de auditoría para la misma decisión. La
+        // identidad de la operación es (ticket_id, operation_type, correlation_id).
+        TicketAiLog::firstOrCreate(
+            [
+                'ticket_id' => $this->ticket->id,
+                'operation_type' => $this->operationType,
+                'correlation_id' => $this->correlationId,
+            ],
+            [
+                'input_data' => $this->inputData,
+                'output_data' => $this->outputData,
+                'confidence_score' => $this->confidenceScore,
+                'action_taken' => $this->actionTaken,
+            ]
+        );
     }
 }
