@@ -22,7 +22,9 @@ class SendFcmPushOnTicketCreated implements ShouldQueue
     use InteractsWithQueue;
 
     public string $queue = 'notifications';
+
     public int $tries = 1;
+
     public bool $afterCommit = true;
 
     public function __construct(

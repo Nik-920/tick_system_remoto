@@ -138,9 +138,9 @@ class FirebaseEventServiceProviderTest extends TestCase
         $this->assertSame(
             4,
             $count,
-            'TicketCreated debe tener exactamente 4 listeners (Fase 4): ' .
-            'GenerateEmbeddingOnTicketCreated, DispatchDuplicateDetectionOnTicketCreated, ' .
-            'CreateInAppNotificationOnTicketCreated, SendFcmPushOnTicketCreated. ' .
+            'TicketCreated debe tener exactamente 4 listeners (Fase 4): '.
+            'GenerateEmbeddingOnTicketCreated, DispatchDuplicateDetectionOnTicketCreated, '.
+            'CreateInAppNotificationOnTicketCreated, SendFcmPushOnTicketCreated. '.
             'Si hay 8, un segundo provider fue registrado y duplicó todos.'
         );
     }
@@ -152,7 +152,7 @@ class FirebaseEventServiceProviderTest extends TestCase
         $this->assertSame(
             2,
             $count,
-            'TicketStateChanged debe tener exactamente 2 listeners (Fase 4): ' .
+            'TicketStateChanged debe tener exactamente 2 listeners (Fase 4): '.
             'CreateInAppNotificationOnTicketStateChanged, SendFcmPushOnTicketStateChanged'
         );
     }
@@ -175,7 +175,7 @@ class FirebaseEventServiceProviderTest extends TestCase
         $this->assertSame(
             2,
             $count,
-            'TicketAssigned debe tener exactamente 2 listeners (Fase 4): ' .
+            'TicketAssigned debe tener exactamente 2 listeners (Fase 4): '.
             'CreateInAppNotificationOnTicketAssigned, SendFcmPushOnTicketAssigned'
         );
     }

@@ -37,27 +37,27 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'in_progress');
 
         $this->service()->transition(
-            ticket:        $ticket,
-            actor:         $admin,
-            toState:       'resolved',
-            comment:       'Reparacion completada.',
+            ticket: $ticket,
+            actor: $admin,
+            toState: 'resolved',
+            comment: 'Reparacion completada.',
             correlationId: 'corr-resolve-001',
         );
 
         Event::assertDispatched(TicketStateChanged::class, function (TicketStateChanged $event) use ($ticket, $admin): bool {
-            return $event->ticket->id  === $ticket->id
-                && $event->actor->id   === $admin->id
-                && $event->fromState   === 'in_progress'
-                && $event->toState     === 'resolved'
+            return $event->ticket->id === $ticket->id
+                && $event->actor->id === $admin->id
+                && $event->fromState === 'in_progress'
+                && $event->toState === 'resolved'
                 && $event->correlationId === 'corr-resolve-001';
         });
 
         Event::assertDispatched(TicketResolved::class, function (TicketResolved $event) use ($ticket): bool {
-            return $event->ticket->id  === $ticket->id
+            return $event->ticket->id === $ticket->id
                 && $event->correlationId === 'corr-resolve-001';
         });
     }
@@ -70,7 +70,7 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'in_progress');
 
         $this->service()->transition($ticket, $admin, 'resolved', 'OK resuelto.', 'corr-resolve-002');
@@ -88,19 +88,19 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'open');
 
         $this->service()->transition(
-            ticket:        $ticket,
-            actor:         $admin,
-            toState:       'in_progress',
+            ticket: $ticket,
+            actor: $admin,
+            toState: 'in_progress',
             correlationId: 'corr-inprogress-001',
         );
 
         Event::assertDispatched(TicketStateChanged::class, function (TicketStateChanged $event) use ($ticket): bool {
             return $event->fromState === 'open'
-                && $event->toState   === 'in_progress'
+                && $event->toState === 'in_progress'
                 && $event->ticket->id === $ticket->id;
         });
 
@@ -116,20 +116,20 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'in_progress');
 
         $this->service()->transition(
-            ticket:        $ticket,
-            actor:         $admin,
-            toState:       'rejected',
-            comment:       'No se puede reproducir.',
+            ticket: $ticket,
+            actor: $admin,
+            toState: 'rejected',
+            comment: 'No se puede reproducir.',
             correlationId: 'corr-rejected-001',
         );
 
         Event::assertDispatched(TicketStateChanged::class, function (TicketStateChanged $event) use ($ticket): bool {
-            return $event->fromState  === 'in_progress'
-                && $event->toState    === 'rejected'
+            return $event->fromState === 'in_progress'
+                && $event->toState === 'rejected'
                 && $event->ticket->id === $ticket->id;
         });
 
@@ -144,7 +144,7 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'open');
 
         $this->service()->transition($ticket, $admin, 'in_progress');
@@ -162,7 +162,7 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin  = $this->createUserWithRole('admin');
+        $admin = $this->createUserWithRole('admin');
         $ticket = $this->createTicket(state: 'open');
 
         // Mismo estado → el servicio retorna tempranamente sin disparar nada
@@ -179,18 +179,16 @@ class TicketStateServiceEventDispatchTest extends TestCase
     {
         Event::fake([TicketStateChanged::class, TicketResolved::class]);
 
-        $admin         = $this->createUserWithRole('admin');
-        $ticket        = $this->createTicket(state: 'in_progress');
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->createTicket(state: 'in_progress');
         $correlationId = 'corr-propagate-both-001';
 
         $this->service()->transition($ticket, $admin, 'resolved', 'Listo.', $correlationId);
 
-        Event::assertDispatched(TicketStateChanged::class, fn (TicketStateChanged $e): bool =>
-            $e->correlationId === $correlationId
+        Event::assertDispatched(TicketStateChanged::class, fn (TicketStateChanged $e): bool => $e->correlationId === $correlationId
         );
 
-        Event::assertDispatched(TicketResolved::class, fn (TicketResolved $e): bool =>
-            $e->correlationId === $correlationId
+        Event::assertDispatched(TicketResolved::class, fn (TicketResolved $e): bool => $e->correlationId === $correlationId
         );
     }
 
@@ -210,13 +208,13 @@ class TicketStateServiceEventDispatchTest extends TestCase
         $category = $this->createCategory();
 
         return Ticket::create([
-            'title'       => 'Ticket estado ' . Str::random(6),
+            'title' => 'Ticket estado '.Str::random(6),
             'description' => 'Descripcion de ticket para test de eventos.',
             'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'state'       => $state,
-            'priority'    => 'medium',
+            'state' => $state,
+            'priority' => 'medium',
         ]);
     }
 
@@ -240,11 +238,11 @@ class TicketStateServiceEventDispatchTest extends TestCase
     private function createLocation(): Location
     {
         return Location::create([
-            'name'      => 'Sala Estado ' . Str::upper(Str::random(4)),
-            'building'  => 'Edificio Test',
-            'floor'     => '1',
-            'room_code' => 'EST-' . Str::upper(Str::random(6)),
-            'qr_token'  => 'qr-est-' . Str::lower(Str::random(10)),
+            'name' => 'Sala Estado '.Str::upper(Str::random(4)),
+            'building' => 'Edificio Test',
+            'floor' => '1',
+            'room_code' => 'EST-'.Str::upper(Str::random(6)),
+            'qr_token' => 'qr-est-'.Str::lower(Str::random(10)),
             'is_active' => true,
         ]);
     }
@@ -252,8 +250,8 @@ class TicketStateServiceEventDispatchTest extends TestCase
     private function createCategory(): Category
     {
         return Category::create([
-            'name'        => 'Categoria Estado ' . Str::lower(Str::random(6)),
-            'icon'        => 'bolt',
+            'name' => 'Categoria Estado '.Str::lower(Str::random(6)),
+            'icon' => 'bolt',
             'description' => 'Categoria de prueba',
         ]);
     }

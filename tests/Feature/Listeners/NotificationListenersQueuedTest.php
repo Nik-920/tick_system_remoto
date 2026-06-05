@@ -40,8 +40,8 @@ class NotificationListenersQueuedTest extends TestCase
         Queue::fake();
 
         $reporter = $this->fakeUser('reporter-q1');
-        $actor    = $this->fakeUser('actor-q1');
-        $ticket   = $this->fakeTicket('ticket-q1', $reporter);
+        $actor = $this->fakeUser('actor-q1');
+        $ticket = $this->fakeTicket('ticket-q1', $reporter);
 
         event(new TicketStateChanged($ticket, $actor, 'open', 'resolved', 'corr-q1'));
 
@@ -54,8 +54,8 @@ class NotificationListenersQueuedTest extends TestCase
         Queue::fake();
 
         $reporter = $this->fakeUser('reporter-q2');
-        $actor    = $this->fakeUser('actor-q2');
-        $ticket   = $this->fakeTicket('ticket-q2', $reporter);
+        $actor = $this->fakeUser('actor-q2');
+        $ticket = $this->fakeTicket('ticket-q2', $reporter);
 
         event(new TicketStateChanged($ticket, $actor, 'open', 'in_progress', 'corr-q2'));
 
@@ -72,9 +72,9 @@ class NotificationListenersQueuedTest extends TestCase
     {
         Queue::fake();
 
-        $actor    = $this->fakeUser('actor-q3');
+        $actor = $this->fakeUser('actor-q3');
         $assignee = $this->fakeUser('assignee-q3');
-        $ticket   = $this->fakeTicket('ticket-q3');
+        $ticket = $this->fakeTicket('ticket-q3');
 
         event(new TicketAssigned($ticket, $actor, null, $assignee, 'assigned', 'corr-q3'));
 
@@ -114,9 +114,9 @@ class NotificationListenersQueuedTest extends TestCase
         Queue::fake();
 
         $reporter = $this->fakeUser('reporter-q5');
-        $actor    = $this->fakeUser('actor-q5');
+        $actor = $this->fakeUser('actor-q5');
         $assignee = $this->fakeUser('assignee-q5');
-        $ticket   = $this->fakeTicket('ticket-q5', $reporter);
+        $ticket = $this->fakeTicket('ticket-q5', $reporter);
 
         event(new TicketStateChanged($ticket, $actor, 'open', 'resolved', 'corr-q5a'));
         event(new TicketAssigned($ticket, $actor, null, $assignee, 'assigned', 'corr-q5b'));
@@ -151,7 +151,7 @@ class NotificationListenersQueuedTest extends TestCase
 
     private function fakeUser(string $id): User
     {
-        $user     = new User;
+        $user = new User;
         $user->id = $id;
 
         return $user;
@@ -159,8 +159,8 @@ class NotificationListenersQueuedTest extends TestCase
 
     private function fakeTicket(string $id, ?User $reporter = null): Ticket
     {
-        $ticket        = new Ticket;
-        $ticket->id    = $id;
+        $ticket = new Ticket;
+        $ticket->id = $id;
         $ticket->title = 'Ticket de prueba queue';
         $ticket->setRelation('reporter', $reporter);
         $ticket->setRelation('location', null);

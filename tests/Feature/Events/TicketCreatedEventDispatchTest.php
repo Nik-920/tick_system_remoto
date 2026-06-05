@@ -42,11 +42,11 @@ class TicketCreatedEventDispatchTest extends TestCase
         $category = $this->createCategory();
 
         $response = $this->actingAs($reporter)->post(route('tickets.store'), [
-            'title'       => 'Luz parpadeante en pasillo',
+            'title' => 'Luz parpadeante en pasillo',
             'description' => 'La luz del pasillo principal parpadea desde ayer.',
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'priority'    => 'medium',
+            'priority' => 'medium',
         ]);
 
         $response->assertRedirect();
@@ -71,11 +71,11 @@ class TicketCreatedEventDispatchTest extends TestCase
         $category = $this->createCategory();
 
         $this->actingAs($reporter)->post(route('tickets.store'), [
-            'title'       => 'Grieta en pared del aula',
+            'title' => 'Grieta en pared del aula',
             'description' => 'Grieta visible en la pared norte del aula 301.',
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'priority'    => 'low',
+            'priority' => 'low',
         ]);
 
         Event::assertDispatchedTimes(TicketCreated::class, 1);
@@ -89,19 +89,19 @@ class TicketCreatedEventDispatchTest extends TestCase
     {
         Event::fake([TicketCreated::class]);
 
-        $reporter    = $this->createUserWithRole('reporter');
-        $location    = $this->createLocation();
-        $category    = $this->createCategory();
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
         $correlationId = 'corr-web-store-001';
 
         $this->actingAs($reporter)
             ->withHeader('X-Correlation-Id', $correlationId)
             ->post(route('tickets.store'), [
-                'title'       => 'Ventilador averiado',
+                'title' => 'Ventilador averiado',
                 'description' => 'El ventilador del servidor hace ruido.',
                 'location_id' => $location->id,
                 'category_id' => $category->id,
-                'priority'    => 'high',
+                'priority' => 'high',
             ]);
 
         Event::assertDispatched(TicketCreated::class, function (TicketCreated $event) use ($correlationId): bool {
@@ -122,11 +122,11 @@ class TicketCreatedEventDispatchTest extends TestCase
         $category = $this->createCategory();
 
         $this->actingAs($reporter)->post(route('tickets.store'), [
-            'title'       => 'Inundacion en sotano',
+            'title' => 'Inundacion en sotano',
             'description' => 'Hay agua acumulada en el sotano del edificio B.',
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'priority'    => 'critical',
+            'priority' => 'critical',
         ]);
 
         Event::assertDispatched(TicketCreated::class, function (TicketCreated $event) use ($reporter, $location, $category): bool {
@@ -135,8 +135,8 @@ class TicketCreatedEventDispatchTest extends TestCase
             return $ticket->reporter_id === $reporter->id
                 && $ticket->location_id === $location->id
                 && $ticket->category_id === $category->id
-                && $ticket->state       === 'open'
-                && $ticket->priority    === 'critical';
+                && $ticket->state === 'open'
+                && $ticket->priority === 'critical';
         });
     }
 
@@ -155,11 +155,11 @@ class TicketCreatedEventDispatchTest extends TestCase
         $category = $this->createCategory();
 
         $response = $this->postJson(route('api.tickets.store'), [
-            'title'       => 'Proyector sin señal en aula magna',
+            'title' => 'Proyector sin señal en aula magna',
             'description' => 'El proyector del aula magna no detecta la señal HDMI.',
             'location_id' => $location->id,
             'category_id' => $category->id,
-            'priority'    => 'medium',
+            'priority' => 'medium',
         ]);
 
         $response->assertCreated();
@@ -179,20 +179,20 @@ class TicketCreatedEventDispatchTest extends TestCase
     {
         Event::fake([TicketCreated::class]);
 
-        $reporter      = $this->createUserWithRole('reporter');
+        $reporter = $this->createUserWithRole('reporter');
         Sanctum::actingAs($reporter);
 
-        $location      = $this->createLocation();
-        $category      = $this->createCategory();
+        $location = $this->createLocation();
+        $category = $this->createCategory();
         $correlationId = 'corr-api-store-001';
 
         $this->withHeader('X-Correlation-Id', $correlationId)
             ->postJson(route('api.tickets.store'), [
-                'title'       => 'Cable de red roto',
+                'title' => 'Cable de red roto',
                 'description' => 'El cable de red del laboratorio 4 está cortado.',
                 'location_id' => $location->id,
                 'category_id' => $category->id,
-                'priority'    => 'medium',
+                'priority' => 'medium',
             ]);
 
         Event::assertDispatched(TicketCreated::class, function (TicketCreated $event) use ($correlationId): bool {
@@ -240,11 +240,11 @@ class TicketCreatedEventDispatchTest extends TestCase
     private function createLocation(): Location
     {
         return Location::create([
-            'name'      => 'Aula Observer ' . Str::upper(Str::random(4)),
-            'building'  => 'Edificio Test',
-            'floor'     => '1',
-            'room_code' => 'OBS-' . Str::upper(Str::random(6)),
-            'qr_token'  => 'qr-obs-' . Str::lower(Str::random(10)),
+            'name' => 'Aula Observer '.Str::upper(Str::random(4)),
+            'building' => 'Edificio Test',
+            'floor' => '1',
+            'room_code' => 'OBS-'.Str::upper(Str::random(6)),
+            'qr_token' => 'qr-obs-'.Str::lower(Str::random(10)),
             'is_active' => true,
         ]);
     }
@@ -252,8 +252,8 @@ class TicketCreatedEventDispatchTest extends TestCase
     private function createCategory(): Category
     {
         return Category::create([
-            'name'        => 'Categoria Observer ' . Str::lower(Str::random(6)),
-            'icon'        => 'bolt',
+            'name' => 'Categoria Observer '.Str::lower(Str::random(6)),
+            'icon' => 'bolt',
             'description' => 'Categoria de prueba para Observer',
         ]);
     }

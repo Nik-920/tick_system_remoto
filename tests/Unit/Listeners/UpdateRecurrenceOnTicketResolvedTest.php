@@ -20,12 +20,12 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket(state: 'resolved', resolvedAt: now());
-        $event  = new TicketResolved($ticket, 'corr-rec-001');
+        $event = new TicketResolved($ticket, 'corr-rec-001');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -43,12 +43,12 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => false,
         ]);
 
         $ticket = $this->makeTicket(state: 'resolved', resolvedAt: now());
-        $event  = new TicketResolved($ticket, 'corr-rec-sync-001');
+        $event = new TicketResolved($ticket, 'corr-rec-sync-001');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -68,7 +68,7 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
         config(['ai.recurrence.enabled' => false]);
 
         $ticket = $this->makeTicket(state: 'resolved', resolvedAt: now());
-        $event  = new TicketResolved($ticket, 'corr-rec-002');
+        $event = new TicketResolved($ticket, 'corr-rec-002');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -84,12 +84,12 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket(state: 'in_progress', resolvedAt: null);
-        $event  = new TicketResolved($ticket, 'corr-rec-003');
+        $event = new TicketResolved($ticket, 'corr-rec-003');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -105,13 +105,13 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         // resolved_at presente pero state != 'resolved' — el guard (&&) lo deja pasar
         $ticket = $this->makeTicket(state: 'open', resolvedAt: now());
-        $event  = new TicketResolved($ticket, 'corr-rec-004');
+        $event = new TicketResolved($ticket, 'corr-rec-004');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -127,12 +127,12 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket(state: 'resolved', resolvedAt: null);
-        $event  = new TicketResolved($ticket, 'corr-rec-005');
+        $event = new TicketResolved($ticket, 'corr-rec-005');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -147,12 +147,12 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.recurrence.enabled'         => true,
+            'ai.recurrence.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket(state: 'resolved', resolvedAt: now());
-        $event  = new TicketResolved($ticket, 'corr-rec-propagate-001');
+        $event = new TicketResolved($ticket, 'corr-rec-propagate-001');
 
         (new UpdateRecurrenceOnTicketResolved)->handle($event);
 
@@ -167,9 +167,9 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
 
     private function makeTicket(string $state, ?\DateTimeInterface $resolvedAt): Ticket
     {
-        $ticket              = new Ticket;
-        $ticket->id          = 'ticket-rec-' . uniqid();
-        $ticket->state       = $state;
+        $ticket = new Ticket;
+        $ticket->id = 'ticket-rec-'.uniqid();
+        $ticket->state = $state;
         $ticket->resolved_at = $resolvedAt;
 
         return $ticket;

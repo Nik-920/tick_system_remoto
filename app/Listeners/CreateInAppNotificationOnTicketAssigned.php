@@ -21,7 +21,9 @@ class CreateInAppNotificationOnTicketAssigned implements ShouldQueue
     use InteractsWithQueue;
 
     public string $queue = 'default';
+
     public int $tries = 3;
+
     public bool $afterCommit = true;
 
     public function __construct(

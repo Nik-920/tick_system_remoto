@@ -91,7 +91,7 @@ class LogDuplicateDetectionAuditTest extends TestCase
         Bus::shouldReceive('dispatch')->andThrow(new \RuntimeException('Queue unavailable'));
 
         $ticket = new Ticket([
-            'id'          => 'ticket-err',
+            'id' => 'ticket-err',
             'location_id' => 'loc-1',
             'category_id' => 'cat-1',
         ]);

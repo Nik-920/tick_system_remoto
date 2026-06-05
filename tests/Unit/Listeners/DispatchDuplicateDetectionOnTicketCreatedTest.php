@@ -20,13 +20,13 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.dedup.enabled'              => true,
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket();
-        $event  = new TicketCreated($ticket, 'corr-dedup-001');
+        $event = new TicketCreated($ticket, 'corr-dedup-001');
 
         (new DispatchDuplicateDetectionOnTicketCreated($this->makeDeduplicationService()))->handle($event);
 
@@ -44,13 +44,13 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.dedup.enabled'              => true,
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
             'ai.automation.async_processing' => false,
         ]);
 
         $ticket = $this->makeTicket();
-        $event  = new TicketCreated($ticket, 'corr-dedup-sync-001');
+        $event = new TicketCreated($ticket, 'corr-dedup-sync-001');
 
         (new DispatchDuplicateDetectionOnTicketCreated($this->makeDeduplicationService()))->handle($event);
 
@@ -68,8 +68,8 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.dedup.enabled'              => false,
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => false,
             'ai.automation.async_processing' => true,
         ]);
 
@@ -88,8 +88,8 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => false,
-            'ai.dedup.enabled'              => true,
+            'ai.enabled' => false,
+            'ai.dedup.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
@@ -108,13 +108,13 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.dedup.enabled'              => true,
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket();
-        $event  = new TicketCreated($ticket, 'corr-dedup-propagate-001');
+        $event = new TicketCreated($ticket, 'corr-dedup-propagate-001');
 
         (new DispatchDuplicateDetectionOnTicketCreated($this->makeDeduplicationService()))->handle($event);
 
@@ -134,8 +134,8 @@ class DispatchDuplicateDetectionOnTicketCreatedTest extends TestCase
 
     private function makeTicket(): Ticket
     {
-        $ticket              = new Ticket;
-        $ticket->id          = 'ticket-dedup-' . uniqid();
+        $ticket = new Ticket;
+        $ticket->id = 'ticket-dedup-'.uniqid();
         $ticket->description = 'Descripcion para deteccion de duplicados';
 
         return $ticket;

@@ -19,13 +19,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket('Proyector roto en sala 201');
-        $event  = new TicketCreated($ticket, 'corr-emb-001');
+        $event = new TicketCreated($ticket, 'corr-emb-001');
 
         (new GenerateEmbeddingOnTicketCreated)->handle($event);
 
@@ -43,13 +43,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => false,
         ]);
 
         $ticket = $this->makeTicket('Falla en red del laboratorio');
-        $event  = new TicketCreated($ticket, 'corr-emb-sync-001');
+        $event = new TicketCreated($ticket, 'corr-emb-sync-001');
 
         (new GenerateEmbeddingOnTicketCreated)->handle($event);
 
@@ -67,8 +67,8 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => false,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => false,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
@@ -87,8 +87,8 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => false,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => false,
             'ai.automation.async_processing' => true,
         ]);
 
@@ -107,13 +107,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket('');
-        $event  = new TicketCreated($ticket, 'corr-emb-004');
+        $event = new TicketCreated($ticket, 'corr-emb-004');
 
         (new GenerateEmbeddingOnTicketCreated)->handle($event);
 
@@ -128,13 +128,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket('   ');
-        $event  = new TicketCreated($ticket, 'corr-emb-005');
+        $event = new TicketCreated($ticket, 'corr-emb-005');
 
         (new GenerateEmbeddingOnTicketCreated)->handle($event);
 
@@ -149,13 +149,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
-        $ticket              = new Ticket;
-        $ticket->id          = 'ticket-emb-null';
+        $ticket = new Ticket;
+        $ticket->id = 'ticket-emb-null';
         $ticket->description = null;
 
         $event = new TicketCreated($ticket, 'corr-emb-006');
@@ -173,13 +173,13 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
     {
         Bus::fake();
         config([
-            'ai.enabled'                    => true,
-            'ai.huggingface.enabled'        => true,
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
             'ai.automation.async_processing' => true,
         ]);
 
         $ticket = $this->makeTicket('Descripcion con correlacion vacia');
-        $event  = new TicketCreated($ticket); // correlationId por defecto = ''
+        $event = new TicketCreated($ticket); // correlationId por defecto = ''
 
         (new GenerateEmbeddingOnTicketCreated)->handle($event);
 
@@ -194,8 +194,8 @@ class GenerateEmbeddingOnTicketCreatedTest extends TestCase
 
     private function makeTicket(string $description): Ticket
     {
-        $ticket              = new Ticket;
-        $ticket->id          = 'ticket-emb-' . uniqid();
+        $ticket = new Ticket;
+        $ticket->id = 'ticket-emb-'.uniqid();
         $ticket->description = $description;
 
         return $ticket;
