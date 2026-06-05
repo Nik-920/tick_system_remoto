@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\DashboardDateRangeRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Dashboard\MaintenanceDashboardQuery;
+use App\Support\Dashboard\DateRange;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(DashboardDateRangeRequest $request): View
     {
         $this->authorize('viewAny', Ticket::class);
 
@@ -23,12 +25,15 @@ class DashboardController extends Controller
         }
 
         $roleProfile = $this->resolveRoleProfile($user);
+
+        if ($roleProfile === 'maintenance') {
+            return $this->renderMaintenanceDashboard($user, $request->toDateRange());
+        }
+
         $dashboardView = $this->resolveDashboardView($roleProfile);
-        $dashboardData = match ($roleProfile) {
-            'admin' => $this->buildAdminDashboardData($user),
-            'maintenance' => $this->buildMaintenanceDashboardData($user),
-            default => $this->buildReporterDashboardData($user),
-        };
+        $dashboardData = $roleProfile === 'admin'
+            ? $this->buildAdminDashboardData($user)
+            : $this->buildReporterDashboardData($user);
 
         return view($dashboardView, [
             'roleProfile' => $roleProfile,
@@ -39,11 +44,21 @@ class DashboardController extends Controller
         ]);
     }
 
+    private function renderMaintenanceDashboard(User $user, DateRange $range): View
+    {
+        return view('dashboard.maintenance', [
+            'roleProfile' => 'maintenance',
+            'roleLabel' => $this->resolveRoleLabel('maintenance'),
+            'stateLabels' => $this->stateLabels(),
+            'priorityLabels' => $this->priorityLabels(),
+            'vm' => MaintenanceDashboardQuery::for($user, $range),
+        ]);
+    }
+
     private function resolveDashboardView(string $roleProfile): string
     {
         return match ($roleProfile) {
             'admin' => 'dashboard.admin',
-            'maintenance' => 'dashboard.maintenance',
             default => 'dashboard.reporter',
         };
     }
@@ -153,148 +168,6 @@ class DashboardController extends Controller
             'myRecentTimeline' => $myRecentTimeline,
             'stateBreakdown' => $stateBreakdown,
             'priorityBreakdown' => $priorityBreakdown,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildMaintenanceDashboardData(User $user): array
-    {
-        $sevenDaysAgo = now()->subDays(7);
-        $thirtyDaysAgo = now()->subDays(30);
-
-        $availableTicketsCount = Ticket::query()
-            ->where('state', 'open')
-            ->whereNull('assigned_to')
-            ->count();
-
-        $assignedOpenCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'open')
-            ->count();
-
-        $assignedInProgressCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'in_progress')
-            ->count();
-
-        $assignedCriticalCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->where('priority', 'critical')
-            ->count();
-
-        $resolvedLast7Days = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->where('resolved_at', '>=', $sevenDaysAgo)
-            ->count();
-
-        $resolvedTicketsLast30Days = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->whereNotNull('resolved_at')
-            ->where('resolved_at', '>=', $thirtyDaysAgo)
-            ->get(['created_at', 'resolved_at']);
-
-        $avgResolutionHoursLast30Days = (int) round($resolvedTicketsLast30Days->avg(function (Ticket $ticket): int {
-            if ($ticket->resolved_at === null) {
-                return 0;
-            }
-
-            return (int) $ticket->created_at->diffInHours($ticket->resolved_at);
-        }) ?? 0);
-
-        $workloadQueue = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->with(['reporter', 'assignee', 'location', 'category'])
-            ->orderByRaw($this->priorityOrderExpression())
-            ->oldest('created_at')
-            ->limit(10)
-            ->get();
-
-        $recentResolved = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->with(['reporter', 'location', 'category'])
-            ->latest('resolved_at')
-            ->limit(6)
-            ->get();
-
-        $stateBreakdown = $this->countByColumn(
-            Ticket::query()->where('assigned_to', $user->id),
-            'state'
-        );
-
-        $priorityBreakdown = $this->countByColumn(
-            Ticket::query()
-                ->where('assigned_to', $user->id)
-                ->whereIn('state', ['open', 'in_progress']),
-            'priority'
-        );
-
-        return [
-            'hero' => [
-                'badge' => 'Panel maintenance',
-                'title' => 'Consola de mantenimiento',
-                'subtitle' => 'Gestiona tu cola operativa con enfoque en urgencias, tiempos de respuesta y cierres de calidad.',
-            ],
-            'quickActions' => [
-                [
-                    'label' => 'Mis tickets asignados',
-                    'href' => route('tickets.index', ['assignment' => 'mine']),
-                    'variant' => 'primary',
-                ],
-                [
-                    'label' => 'Tickets disponibles',
-                    'href' => route('tickets.available'),
-                    'variant' => 'secondary',
-                ],
-                [
-                    'label' => 'Registrar incidencia',
-                    'href' => route('tickets.create'),
-                    'variant' => 'secondary',
-                ],
-            ],
-            'kpis' => [
-                [
-                    'label' => 'Tickets disponibles',
-                    'value' => $availableTicketsCount,
-                    'hint' => 'Incidencias abiertas listas para tomar.',
-                ],
-                [
-                    'label' => 'Asignados abiertos',
-                    'value' => $assignedOpenCount,
-                    'hint' => 'Pendientes por iniciar.',
-                ],
-                [
-                    'label' => 'En progreso',
-                    'value' => $assignedInProgressCount,
-                    'hint' => 'Trabajo tecnico actualmente activo.',
-                ],
-                [
-                    'label' => 'Criticos activos',
-                    'value' => $assignedCriticalCount,
-                    'hint' => 'Casos de alta prioridad en tu cola.',
-                ],
-                [
-                    'label' => 'Resueltos 7 dias',
-                    'value' => $resolvedLast7Days,
-                    'hint' => 'Cierres concretados en la ultima semana.',
-                ],
-                [
-                    'label' => 'Promedio resolucion 30 dias',
-                    'value' => $avgResolutionHoursLast30Days.' h',
-                    'hint' => 'Tiempo medio de resolucion para tickets cerrados.',
-                ],
-            ],
-            'workloadQueue' => $workloadQueue,
-            'recentResolved' => $recentResolved,
-            'stateBreakdown' => $stateBreakdown,
-            'priorityBreakdown' => $priorityBreakdown,
-            'avgResolutionHoursLast30Days' => $avgResolutionHoursLast30Days,
         ];
     }
 

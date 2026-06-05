@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\TicketController;
+use App\Http\Controllers\Web\TicketMaintenanceV2Controller;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -100,6 +101,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tickets/available', [TicketController::class, 'available'])
         ->middleware('role:maintenance|admin|super_admin')
         ->name('tickets.available');
+
+    // TEMPORARY — static V2 design prototype for the maintenance "Tickets" tab.
+    // Visual mock-up only (no business logic). Must be declared before the
+    // /tickets/{ticket} wildcard so it is not captured by tickets.show.
+    // Remove together with TicketMaintenanceV2Controller once V2 is approved.
+    Route::get('/tickets/maintenance-v2', TicketMaintenanceV2Controller::class)
+        ->middleware('role:maintenance|admin|super_admin')
+        ->name('tickets.maintenance-v2');
+
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
