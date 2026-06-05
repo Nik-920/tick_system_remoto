@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\MaintenanceDashboardReportController;
 use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
@@ -66,6 +67,16 @@ Route::middleware('auth')->group(function (): void {
         ->name('notifications.readAll');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+    // Self-service maintenance report (HTML preview + PDF) for the date range.
+    // Scoped to the maintenance role: admin/super_admin have their own analytics
+    // and must not export another technician's report from here.
+    Route::middleware('role:maintenance')->group(function (): void {
+        Route::get('/dashboard/maintenance/report', [MaintenanceDashboardReportController::class, 'preview'])
+            ->name('dashboard.maintenance.report');
+        Route::get('/dashboard/maintenance/report.pdf', [MaintenanceDashboardReportController::class, 'pdf'])
+            ->name('dashboard.maintenance.report.pdf');
+    });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])

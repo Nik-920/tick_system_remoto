@@ -78,9 +78,10 @@ class DashboardControllerTest extends TestCase
         $response->assertDontSeeText($unrelated->title);
     }
 
-    public function test_maintenance_dashboard_shows_only_assigned_tickets(): void
+    public function test_maintenance_dashboard_shows_assigned_tickets_and_hides_other_technicians(): void
     {
         $maintenance = $this->createUserWithRole('maintenance');
+        $otherMaintenance = $this->createUserWithRole('maintenance');
         $reporter = $this->createUserWithRole('reporter');
         $assignedLocation = $this->createLocation('Aula 310', 'C-310');
         $assignedCategory = $this->createCategory('Mantenimiento', 'settings');
@@ -98,15 +99,17 @@ class DashboardControllerTest extends TestCase
         ]);
         $assigned->forceFill(['assigned_to' => $maintenance->id])->save();
 
-        $notAssigned = Ticket::create([
+        // Assigned to a DIFFERENT technician: must never appear (no-leak).
+        $foreign = Ticket::create([
             'title' => 'Ticket de otro tecnico',
             'description' => 'No debe aparecer',
             'reporter_id' => $reporter->id,
             'location_id' => $otherLocation->id,
             'category_id' => $otherCategory->id,
-            'state' => 'open',
+            'state' => 'in_progress',
             'priority' => 'medium',
         ]);
+        $foreign->forceFill(['assigned_to' => $otherMaintenance->id])->save();
 
         $response = $this
             ->actingAs($maintenance)
@@ -118,7 +121,7 @@ class DashboardControllerTest extends TestCase
         $response->assertSeeText('Cola operativa priorizada');
         $response->assertDontSeeText('Centro de control operativo');
         $response->assertSeeText($assigned->title);
-        $response->assertDontSeeText($notAssigned->title);
+        $response->assertDontSeeText($foreign->title);
     }
 
     public function test_maintenance_dashboard_has_link_to_my_assigned_tickets(): void
@@ -132,6 +135,142 @@ class DashboardControllerTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Mis tickets asignados');
         $response->assertSee('assignment=mine');
+    }
+
+    public function test_maintenance_dashboard_loads_successfully(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertViewIs('dashboard.maintenance');
+        $response->assertSeeText('Consola de mantenimiento');
+    }
+
+    public function test_maintenance_dashboard_does_not_leak_tickets_assigned_to_another_maintenance(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $otherMaintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $mineLocation = $this->createLocation('Lab Propio', 'C-401');
+        $otherLocation = $this->createLocation('Lab Ajeno', 'C-402');
+        $category = $this->createCategory('Hardware', 'cpu');
+
+        $mine = Ticket::create([
+            'title' => 'Ticket asignado a mi',
+            'description' => 'Visible para el tecnico actual',
+            'reporter_id' => $reporter->id,
+            'location_id' => $mineLocation->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'high',
+        ]);
+        $mine->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $foreign = Ticket::create([
+            'title' => 'Ticket de otro tecnico confidencial',
+            'description' => 'No debe filtrarse',
+            'reporter_id' => $reporter->id,
+            'location_id' => $otherLocation->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'critical',
+        ]);
+        $foreign->forceFill(['assigned_to' => $otherMaintenance->id])->save();
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertSeeText($mine->title);
+        $response->assertDontSeeText($foreign->title);
+    }
+
+    public function test_maintenance_dashboard_reflects_available_open_unassigned_count(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $category = $this->createCategory('Redes', 'network');
+
+        // The partial unique index forbids two open tickets on the same
+        // (location_id, category_id), so each available ticket needs its own location.
+        foreach (['C-501', 'C-502', 'C-503'] as $index => $roomCode) {
+            $location = $this->createLocation('Lab Disponible '.$index, $roomCode);
+
+            Ticket::create([
+                'title' => 'Disponible '.$roomCode,
+                'description' => 'Abierto y sin asignar',
+                'reporter_id' => $reporter->id,
+                'location_id' => $location->id,
+                'category_id' => $category->id,
+                'state' => 'open',
+                'priority' => 'medium',
+            ]);
+        }
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Tickets disponibles');
+        // With no personal tickets, "3" is the only non-zero KPI value rendered.
+        $response->assertSeeText('3');
+    }
+
+    public function test_maintenance_dashboard_defaults_to_last_30_days(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Ultimos 30 dias');
+        $response->assertSeeText('Mostrando actividad del');
+    }
+
+    public function test_maintenance_dashboard_accepts_custom_range(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index', ['preset' => 'custom', 'from' => '2026-06-01', 'to' => '2026-06-10']));
+
+        $response->assertOk();
+        $response->assertSee('2026-06-01');
+        $response->assertSee('2026-06-10');
+    }
+
+    public function test_maintenance_dashboard_rejects_inverted_range(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this
+            ->actingAs($maintenance)
+            ->get(route('dashboard.index', ['from' => '2026-06-10', 'to' => '2026-06-01']));
+
+        $response->assertSessionHasErrors('to');
+    }
+
+    public function test_reporter_does_not_receive_maintenance_dashboard_sections(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('dashboard.index'));
+
+        $response->assertOk();
+        $response->assertViewIs('dashboard.reporter');
+        $response->assertDontSeeText('Consola de mantenimiento');
+        $response->assertDontSeeText('Cola operativa priorizada');
     }
 
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void
