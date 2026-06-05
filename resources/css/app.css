@@ -41,6 +41,7 @@
 
 /* ── 6. Feature Modules ── */
 @import './modules/dashboard-role-shared.css';
+@import './modules/dashboard-maintenance.css';
 @import './modules/tickets.css';
 @import './modules/users.css';
 @import './modules/profile.css';
