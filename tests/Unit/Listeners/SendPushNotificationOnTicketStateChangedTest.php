@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Listeners;
 
+use App\Contracts\Notifications\PushNotificationProvider;
 use App\Events\TicketStateChanged;
 use App\Listeners\SendPushNotificationOnTicketStateChanged;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Services\Firebase\FcmNotificationService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,7 +26,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $actor = $this->makeUser('actor-99');
         $ticket = $this->makeTicket($reporter);
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->expects($this->once())
             ->method('sendToUser')
             ->with(
@@ -64,7 +64,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $user = $this->makeUser('same-user');
         $ticket = $this->makeTicket($user);
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->expects($this->never())->method('sendToUser');
 
         $notif = $this->createMock(NotificationService::class);
@@ -96,7 +96,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
                 $capturedTitle = $title;
             });
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->method('sendToUser');
 
         $event = new TicketStateChanged($ticket, $actor, 'open', $state);
@@ -130,7 +130,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $actor = $this->makeUser('actor-99');
         $ticket = $this->makeTicket(null);   // sin reporter
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->expects($this->never())->method('sendToUser');
 
         $notif = $this->createMock(NotificationService::class);
@@ -155,7 +155,7 @@ class SendPushNotificationOnTicketStateChangedTest extends TestCase
         $actor = $this->makeUser('actor-3');
         $ticket = $this->makeTicket($reporter);
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->method('sendToUser')
             ->willThrowException(new \RuntimeException('FCM error'));
 
