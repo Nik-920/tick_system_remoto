@@ -2,8 +2,8 @@
 
 namespace App\Listeners;
 
+use App\Contracts\Notifications\PushNotificationProvider;
 use App\Events\TicketCreated;
-use App\Services\Firebase\FcmNotificationService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -11,7 +11,7 @@ use Throwable;
 class SendPushNotificationOnTicketCreated
 {
     public function __construct(
-        private FcmNotificationService $fcm,
+        private PushNotificationProvider $fcm,
         private NotificationService $notificationService
     ) {}
 
