@@ -1,7 +1,7 @@
 <?php
 
 use App\Providers\AppServiceProvider;
-use App\Services\Firebase\EventServiceProvider;
+use App\Providers\EventServiceProvider;
 
 return [
     AppServiceProvider::class,

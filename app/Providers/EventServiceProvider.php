@@ -7,13 +7,16 @@ use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketResolved;
 use App\Events\TicketStateChanged;
-use App\Listeners\DetectDuplicatesOnEmbeddingReady;
+use App\Listeners\CreateInAppNotificationOnTicketAssigned;
+use App\Listeners\CreateInAppNotificationOnTicketCreated;
+use App\Listeners\CreateInAppNotificationOnTicketStateChanged;
+use App\Listeners\DispatchDuplicateDetectionOnTicketCreated;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
-use App\Listeners\NotifyDuplicateDetected;
+use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
-use App\Listeners\SendNotificationOnTicketAssigned;
-use App\Listeners\SendPushNotificationOnTicketCreated;
-use App\Listeners\SendPushNotificationOnTicketStateChanged;
+use App\Listeners\SendFcmPushOnTicketAssigned;
+use App\Listeners\SendFcmPushOnTicketCreated;
+use App\Listeners\SendFcmPushOnTicketStateChanged;
 use App\Listeners\UpdateRecurrenceOnTicketResolved;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Queue\Events\JobFailed;
@@ -23,20 +26,23 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         TicketCreated::class => [
             GenerateEmbeddingOnTicketCreated::class,
-            DetectDuplicatesOnEmbeddingReady::class,
-            SendPushNotificationOnTicketCreated::class,
+            DispatchDuplicateDetectionOnTicketCreated::class,
+            CreateInAppNotificationOnTicketCreated::class,
+            SendFcmPushOnTicketCreated::class,
         ],
         DuplicateDetected::class => [
-            NotifyDuplicateDetected::class,
+            LogDuplicateDetectionAudit::class,
         ],
         TicketResolved::class => [
             UpdateRecurrenceOnTicketResolved::class,
         ],
         TicketStateChanged::class => [
-            SendPushNotificationOnTicketStateChanged::class,
+            CreateInAppNotificationOnTicketStateChanged::class,
+            SendFcmPushOnTicketStateChanged::class,
         ],
         TicketAssigned::class => [
-            SendNotificationOnTicketAssigned::class,
+            CreateInAppNotificationOnTicketAssigned::class,
+            SendFcmPushOnTicketAssigned::class,
         ],
         JobFailed::class => [
             ReportFailedQueueJob::class,
