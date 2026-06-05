@@ -13,6 +13,7 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\TicketIndexQuery;
 use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
@@ -39,32 +40,7 @@ class TicketController extends Controller
         $filters = $request->validated();
         $user = $request->user();
 
-        // Eager-load embedding and matchedTicket to show duplicate badge without N+1
-        $query = Ticket::query()->with([
-            'reporter',
-            'assignee',
-            'assignedBy',
-            'location',
-            'category',
-            'embedding.matchedTicket',
-        ]);
-
-        if ($user instanceof User && $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
-            $query->reportedBy($user->id);
-        }
-
-        // maintenance-only scope: restrict index to tickets assigned to them
-        // or tickets that are open and unassigned (claim queue).
-        // Applied BEFORE user-supplied filters so that search/location/etc.
-        // cannot leak tickets outside this boundary.
-        if ($user instanceof User
-            && $user->hasRole('maintenance')
-            && ! $user->hasAnyRole(['admin', 'super_admin'])
-        ) {
-            $query->visibleToMaintenance($user->id);
-        }
-
-        $this->applyFilters($query, $filters, $user);
+        $query = TicketIndexQuery::build($user, $filters);
 
         $tickets = $query
             ->latest('created_at')
@@ -385,9 +361,7 @@ class TicketController extends Controller
             ->with('status', 'Revisión de duplicado actualizada.');
     }
 
-    /**
-     * @param  array<string, mixed>  $filters
-     */
+    /** @param array<string, mixed> $filters */
     private function applyFilters(Builder $query, array $filters, ?User $user = null): void
     {
         if (! empty($filters['state'])) {
@@ -434,7 +408,6 @@ class TicketController extends Controller
             $query->whereDate('created_at', '<=', $filters['to']);
         }
 
-        // Duplicate filter: effective_duplicate = true (sql-equivalent)
         if (! empty($filters['duplicates'])) {
             $query->whereHas('embedding', function (Builder $q): void {
                 /** @phpstan-ignore-next-line */
