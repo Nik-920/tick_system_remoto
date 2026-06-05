@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Services\Ai\HuggingFaceService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -107,7 +108,7 @@ class HuggingFaceServiceTest extends TestCase
         $this->assertSame([], $result['labels']);
         $this->assertSame([], $result['scores']);
         $this->assertNull($result['sequence']);
-        
+
         Http::assertNothingSent();
     }
 
@@ -186,10 +187,10 @@ class HuggingFaceServiceTest extends TestCase
         ]);
 
         Http::fake(function () {
-            throw new \Illuminate\Http\Client\ConnectionException('Connection timed out');
+            throw new ConnectionException('Connection timed out');
         });
 
-        $this->expectException(\Illuminate\Http\Client\ConnectionException::class);
+        $this->expectException(ConnectionException::class);
         $this->expectExceptionMessage('Connection timed out');
 
         $service = new HuggingFaceService;

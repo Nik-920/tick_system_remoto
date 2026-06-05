@@ -17,7 +17,7 @@ class UserPolicyTest extends TestCase
         $superAdmin = $this->createUserWithRole('super_admin');
         $otherUser = $this->createUserWithRole('reporter');
 
-        $policy = new UserPolicy();
+        $policy = new UserPolicy;
 
         $this->assertTrue($policy->viewAny($superAdmin));
         $this->assertTrue($policy->view($superAdmin, $otherUser));
@@ -33,7 +33,7 @@ class UserPolicyTest extends TestCase
         $admin = $this->createUserWithRole('admin');
         $managedUser = $this->createUserWithRole('reporter');
 
-        $policy = new UserPolicy();
+        $policy = new UserPolicy;
 
         $this->assertFalse($policy->viewAny($admin));
         $this->assertFalse($policy->view($admin, $managedUser));
