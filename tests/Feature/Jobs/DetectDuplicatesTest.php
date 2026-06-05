@@ -11,10 +11,10 @@ use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Tests\Fakes\FakeEmbeddingProvider;
 use Tests\TestCase;
 
 class DetectDuplicatesTest extends TestCase
@@ -124,6 +124,7 @@ class DetectDuplicatesTest extends TestCase
         $ticket = $this->createTicket('Ticket con error');
 
         $embeddingService = $this->createMock(EmbeddingService::class);
+        $embeddingService->method('isAvailable')->willReturn(true);
         $embeddingService->expects($this->once())
             ->method('generate')
             ->willThrowException(new \RuntimeException('fail'));
@@ -284,17 +285,7 @@ class DetectDuplicatesTest extends TestCase
 
     private function makeEmbeddingService(array $vector): EmbeddingService
     {
-        $huggingFace = new class($vector) extends HuggingFaceService
-        {
-            public function __construct(private array $vector) {}
-
-            public function embedding(string $text, ?string $model = null): array
-            {
-                return $this->vector;
-            }
-        };
-
-        return new EmbeddingService($huggingFace);
+        return new EmbeddingService(new FakeEmbeddingProvider($vector));
     }
 
     private function makeLogger(): TicketQrLogger

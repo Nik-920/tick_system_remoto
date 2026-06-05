@@ -9,10 +9,10 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Fakes\FakeEmbeddingProvider;
 use Tests\TestCase;
 
 class GenerateTicketEmbeddingTest extends TestCase
@@ -21,17 +21,10 @@ class GenerateTicketEmbeddingTest extends TestCase
 
     public function test_job_creates_embedding_when_enabled(): void
     {
-        config([
-            'ai.enabled' => true,
-            'ai.huggingface.enabled' => true,
-        ]);
-
         $ticket = $this->createTicket('Ticket embedding test');
 
         $job = new GenerateTicketEmbedding($ticket, 'corr-emb-001');
-
-        $embeddings = $this->makeEmbeddingService([0.1, 0.2, 0.3]);
-        $job->handle($embeddings, $this->makeLogger());
+        $job->handle($this->makeEmbeddingService([0.1, 0.2, 0.3]), $this->makeLogger());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertNotNull($embedding);
@@ -39,13 +32,21 @@ class GenerateTicketEmbeddingTest extends TestCase
         $this->assertSame(hash('sha256', $ticket->embeddingText()), $embedding->description_hash);
     }
 
+    public function test_job_skips_when_ai_is_unavailable(): void
+    {
+        $ticket = $this->createTicket('Ticket disabled');
+
+        $job = new GenerateTicketEmbedding($ticket, 'corr-emb-disabled');
+        $job->handle(
+            new EmbeddingService(FakeEmbeddingProvider::unavailable()),
+            $this->makeLogger()
+        );
+
+        $this->assertDatabaseMissing('ticket_embeddings', ['ticket_id' => $ticket->id]);
+    }
+
     public function test_job_skips_when_embedding_is_up_to_date(): void
     {
-        config([
-            'ai.enabled' => true,
-            'ai.huggingface.enabled' => true,
-        ]);
-
         $ticket = $this->createTicket('Ticket embedding cached');
 
         $hash = hash('sha256', $ticket->embeddingText());
@@ -57,9 +58,7 @@ class GenerateTicketEmbeddingTest extends TestCase
         ]);
 
         $job = new GenerateTicketEmbedding($ticket, 'corr-emb-002');
-
-        $embeddings = $this->makeEmbeddingService([9.9, 9.9]);
-        $job->handle($embeddings, $this->makeLogger());
+        $job->handle($this->makeEmbeddingService([9.9, 9.9]), $this->makeLogger());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertSame([0.1, 0.2], $embedding->embedding_vector);
@@ -127,31 +126,17 @@ class GenerateTicketEmbeddingTest extends TestCase
 
     private function makeEmbeddingService(array $vector): EmbeddingService
     {
-        $huggingFace = new class($vector) extends HuggingFaceService
-        {
-            public function __construct(private array $vector) {}
-
-            public function embedding(string $text, ?string $model = null): array
-            {
-                return $this->vector;
-            }
-        };
-
-        return new EmbeddingService($huggingFace);
+        return new EmbeddingService(new FakeEmbeddingProvider($vector));
     }
 
     private function makeLogger(): TicketQrLogger
     {
         return new class extends TicketQrLogger
         {
-            /**
-             * @param  array<string, mixed>  $context
-             */
+            /** @param  array<string, mixed>  $context */
             public function info(string $eventName, array $context = []): void {}
 
-            /**
-             * @param  array<string, mixed>  $context
-             */
+            /** @param  array<string, mixed>  $context */
             public function warning(string $eventName, array $context = []): void {}
         };
     }

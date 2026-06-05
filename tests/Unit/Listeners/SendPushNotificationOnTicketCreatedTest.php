@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Listeners;
 
+use App\Contracts\Notifications\PushNotificationProvider;
 use App\Events\TicketCreated;
 use App\Listeners\SendPushNotificationOnTicketCreated;
 use App\Models\Ticket;
-use App\Services\Firebase\FcmNotificationService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -20,7 +20,7 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
     {
         Log::spy();
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->expects($this->once())
             ->method('sendToRoles')
             ->with(
@@ -64,7 +64,7 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
                 $capturedBody = $body;
             });
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->method('sendToRoles');
 
         $ticket = $this->makeTicket(
@@ -97,7 +97,7 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
                 $capturedBody = $body;
             });
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->method('sendToRoles');
 
         $ticket = $this->makeTicket(title: 'Sin relaciones', locationName: null, categoryName: null);
@@ -117,7 +117,7 @@ class SendPushNotificationOnTicketCreatedTest extends TestCase
     {
         Log::spy();
 
-        $fcm = $this->createMock(FcmNotificationService::class);
+        $fcm = $this->createMock(PushNotificationProvider::class);
         $fcm->method('sendToRoles')
             ->willThrowException(new \RuntimeException('FCM exploded'));
 
