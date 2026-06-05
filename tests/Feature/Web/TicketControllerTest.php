@@ -1292,6 +1292,247 @@ class TicketControllerTest extends TestCase
         $response->assertDontSeeText('Aún no hay cambios de estado registrados');
     }
 
+    // ── Fase 0 Group A: reporter scope no se salta con filtros adicionales ──
+
+    public function test_reporter_location_filter_does_not_leak_other_tickets(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $locationA = $this->createLocation(['name' => 'Aula Filtro A', 'room_code' => 'F-'.Str::upper(Str::random(5))]);
+        $category = $this->createCategory();
+
+        Ticket::create([
+            'title' => 'Ticket propio en Aula A',
+            'description' => 'Ticket del reporter autenticado en la ubicacion filtrada.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $locationA->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ajenoTitle = 'TICKET_AJENO_LOCATION_SCOPE_CHECK';
+        Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket ajeno en la misma ubicacion filtrada.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $locationA->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['location_id' => $locationA->id]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    public function test_reporter_category_filter_does_not_leak_other_tickets(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $categoryA = $this->createCategory(['name' => 'CategoriaFiltroA']);
+
+        Ticket::create([
+            'title' => 'Ticket propio en categoria A',
+            'description' => 'Ticket del reporter en la categoria filtrada.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryA->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ajenoTitle = 'TICKET_AJENO_CATEGORY_SCOPE_CHECK';
+        Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket ajeno en la misma categoria filtrada.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryA->id,
+            'state' => 'open',
+            'priority' => 'critical',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['category_id' => $categoryA->id]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    public function test_reporter_date_range_filter_does_not_leak_other_tickets(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ownTicket = Ticket::create([
+            'title' => 'Ticket propio dentro del rango',
+            'description' => 'Ticket del reporter dentro del rango de fechas.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'low',
+        ]);
+        $ownTicket->forceFill(['created_at' => now()])->save();
+
+        $ajenoTitle = 'TICKET_AJENO_DATE_SCOPE_CHECK';
+        $ajenoTicket = Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket ajeno dentro del mismo rango de fechas.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $ajenoTicket->forceFill(['created_at' => now()])->save();
+
+        $today = now()->toDateString();
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['from' => $today, 'to' => $today]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    public function test_reporter_assignment_all_does_not_return_foreign_tickets(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $otherReporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        Ticket::create([
+            'title' => 'Ticket propio reporter',
+            'description' => 'Ticket del reporter autenticado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ajenoTitle = 'TICKET_AJENO_ASSIGNMENT_ALL_CHECK';
+        Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket ajeno que no debe verse aunque assignment=all.',
+            'reporter_id' => $otherReporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this
+            ->actingAs($reporter)
+            ->get(route('tickets.index', ['assignment' => 'all']));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    // ── Fase 0 Group B: maintenance scope no se salta con filtros adicionales ──
+
+    public function test_maintenance_location_filter_respects_visible_scope(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $locationA = $this->createLocation(['name' => 'Aula Maint A', 'room_code' => 'M-'.Str::upper(Str::random(5))]);
+        $category = $this->createCategory();
+
+        // Ticket en locationA asignado a maintenanceB — visible en locationA pero NO para maintenanceA
+        $ajenoTitle = 'TICKET_MAINT_LOCATION_SCOPE_CHECK';
+        $ajenoTicket = Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket del otro tecnico en la misma ubicacion.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $locationA->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'high',
+        ]);
+        $ajenoTicket->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.index', ['location_id' => $locationA->id]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    public function test_maintenance_category_filter_respects_visible_scope(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $categoryA = $this->createCategory(['name' => 'CatMaintenanceA']);
+
+        // Ticket en categoryA asignado a maintenanceB — visible en categoryA pero NO para maintenanceA
+        $ajenoTitle = 'TICKET_MAINT_CATEGORY_SCOPE_CHECK';
+        $ajenoTicket = Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket del otro tecnico en la misma categoria.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryA->id,
+            'state' => 'in_progress',
+            'priority' => 'critical',
+        ]);
+        $ajenoTicket->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.index', ['category_id' => $categoryA->id]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
+    public function test_maintenance_date_range_filter_respects_visible_scope(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket asignado a maintenanceB creado hoy — en el rango pero NO visible a maintenanceA
+        $ajenoTitle = 'TICKET_MAINT_DATE_SCOPE_CHECK';
+        $ajenoTicket = Ticket::create([
+            'title' => $ajenoTitle,
+            'description' => 'Ticket del otro tecnico dentro del rango de fechas.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $ajenoTicket->forceFill(['assigned_to' => $maintenanceB->id, 'created_at' => now()])->save();
+
+        $today = now()->toDateString();
+
+        $response = $this
+            ->actingAs($maintenanceA)
+            ->get(route('tickets.index', ['from' => $today, 'to' => $today]));
+
+        $response->assertOk();
+        $response->assertDontSeeText($ajenoTitle);
+    }
+
     public function test_reporter_can_see_state_history_but_not_update_state_form(): void
     {
         $reporter = $this->createUserWithRole('reporter');
