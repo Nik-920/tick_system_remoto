@@ -170,6 +170,7 @@ class UpdateRecurrenceOnTicketResolvedTest extends TestCase
         $ticket = new Ticket;
         $ticket->id = 'ticket-rec-'.uniqid();
         $ticket->state = $state;
+        /** @phpstan-ignore assign.propertyType */
         $ticket->resolved_at = $resolvedAt;
 
         return $ticket;
