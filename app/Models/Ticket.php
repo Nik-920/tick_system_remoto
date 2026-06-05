@@ -170,19 +170,6 @@ class Ticket extends Model
         });
     }
 
-    /**
-     * Tickets that are open and unassigned — the maintenance "claim queue".
-     * Alias of availableForClaim, kept explicit for readability in queries.
-     */
-    public function scopeAvailableForMaintenance(Builder $query): Builder
-    {
-        return self::applyAssignmentUnlocked(
-            $query
-                ->where('state', self::STATE_OPEN)
-                ->whereNull('assigned_to')
-        );
-    }
-
     private static function applyAssignmentUnlocked(Builder $query): Builder
     {
         $connection = $query->getConnection();
