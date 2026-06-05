@@ -47,7 +47,15 @@ class Ticket extends Model
 
     public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
 
-    /** @var list<string> */
+    /**
+     * Nota: 'id' se mantiene mass-assignable a propósito. Varios tests
+     * construyen instancias en memoria con id determinista
+     * (new Ticket(['id' => ...])) para eventos/listeners de IA sin tocar la BD.
+     * No hay ruta HTTP que asigne 'id' por mass-assignment (los controllers
+     * construyen arrays explícitos), por lo que no es un vector de escalada.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
         'id',
         'title',
