@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Services\Ai;
 
+use App\Contracts\Ai\EmbeddingProvider;
 use App\Services\Ai\DeduplicationService;
 use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
 use Tests\TestCase;
 
 class DeduplicationServiceTest extends TestCase
@@ -67,16 +67,21 @@ class DeduplicationServiceTest extends TestCase
 
     private function makeEmbeddingService(array $vector): EmbeddingService
     {
-        $huggingFace = new class($vector) extends HuggingFaceService
+        $provider = new class($vector) implements EmbeddingProvider
         {
             public function __construct(private array $vector) {}
 
-            public function embedding(string $text, ?string $model = null): array
+            public function generate(string $text): array
             {
                 return $this->vector;
             }
+
+            public function isAvailable(): bool
+            {
+                return true;
+            }
         };
 
-        return new EmbeddingService($huggingFace);
+        return new EmbeddingService($provider);
     }
 }
