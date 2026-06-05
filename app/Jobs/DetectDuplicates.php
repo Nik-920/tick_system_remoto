@@ -52,6 +52,10 @@ class DetectDuplicates implements ShouldQueue
             }
 
             if (! is_array($vector)) {
+                if (! $embeddings->isAvailable()) {
+                    return;
+                }
+
                 try {
                     $vector = $embeddings->generate($text);
                 } catch (Throwable $exception) {
