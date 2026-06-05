@@ -6,15 +6,16 @@ use App\Events\TicketAssigned;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class TicketAssignmentService
 {
+    use ResolvesCorrelationId;
+
     public function __construct(private TicketQrLogger $logger) {}
 
     public function claimByMaintenance(Ticket $ticket, User $actor): Ticket
@@ -372,32 +373,5 @@ class TicketAssignmentService
         }
 
         return $label;
-    }
-
-    private function resolveCorrelationId(string $correlationId): string
-    {
-        $resolved = trim($correlationId);
-
-        if ($resolved === '' && app()->bound('request')) {
-            $request = request();
-            if ($request instanceof Request) {
-                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-                if ($fromAttribute !== '') {
-                    $resolved = $fromAttribute;
-                } else {
-                    $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                    if ($fromHeader !== '') {
-                        $request->attributes->set('correlation_id', $fromHeader);
-                        $resolved = $fromHeader;
-                    }
-                }
-            }
-        }
-
-        if ($resolved === '') {
-            $resolved = (string) Str::uuid();
-        }
-
-        return $resolved;
     }
 }

@@ -5,15 +5,16 @@ namespace App\Services\Tickets;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class TicketCreationService
 {
+    use ResolvesCorrelationId;
+
     public function __construct(
         private TicketQrLogger $logger,
         private TicketMediaStorageService $ticketMediaStorage,
@@ -73,32 +74,5 @@ class TicketCreationService
             'warning' => null,
             'warning_pending' => false,
         ];
-    }
-
-    private function resolveCorrelationId(string $correlationId): string
-    {
-        $trimmed = trim($correlationId);
-        if ($trimmed !== '') {
-            return $trimmed;
-        }
-
-        if (app()->bound('request')) {
-            $request = request();
-            if ($request instanceof Request) {
-                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-                if ($fromAttribute !== '') {
-                    return $fromAttribute;
-                }
-
-                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                if ($fromHeader !== '') {
-                    $request->attributes->set('correlation_id', $fromHeader);
-
-                    return $fromHeader;
-                }
-            }
-        }
-
-        return (string) Str::uuid();
     }
 }
