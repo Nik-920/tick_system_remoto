@@ -16,7 +16,7 @@ class NotificationServiceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $service = new NotificationService();
+        $service = new NotificationService;
         $service->notifyUser($user, 'ticket', 'Ticket updated', 'Body', '/tickets/1', 'bell');
 
         $this->assertDatabaseHas('notifications', [
@@ -42,7 +42,7 @@ class NotificationServiceTest extends TestCase
         $reporter = User::factory()->create();
         $reporter->assignRole('reporter');
 
-        $service = new NotificationService();
+        $service = new NotificationService;
         $service->notifyAdmins('system', 'System alert', 'Body');
 
         $this->assertDatabaseHas('notifications', [

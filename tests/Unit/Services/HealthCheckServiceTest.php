@@ -98,18 +98,18 @@ class HealthCheckServiceTest extends TestCase
         config(['database.default' => 'sqlite']); // in-memory DB is available
         config(['queue.connections.database.connection' => 'sqlite']);
         config(['queue.connections.database.table' => 'jobs']);
-        
+
         // We need to make sure the 'jobs' table exists in sqlite memory or we mock DB
         // Actually, since we use sqlite in memory, let's just mock DB to avoid migrating
         DB::shouldReceive('connection')
             ->with('sqlite')
             ->andReturnSelf();
-            
+
         // First connection call is for checkDatabase()
         DB::shouldReceive('select')
             ->with('SELECT 1')
             ->andReturn([true]);
-            
+
         // Second connection call is for checkDatabaseQueueConnection()
         DB::shouldReceive('table')
             ->with('jobs')
