@@ -1,0 +1,1136 @@
+/* ============================================================
+   MODULE — Tickets · Maintenance V2 (static design prototype)
+   Tick System Onn
+
+   Scoped under .tkv2-page. Reproduces the V2 reference mock-up
+   (img/Manitence/Pestaña de Tickets.png) for the maintenance role.
+   Reuses global tokens so light/dark themes adapt automatically.
+
+   TEMPORARY: remove with the V2 controller/route/view once the
+   design is folded into the real tickets index.
+   ============================================================ */
+
+.tkv2-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    color: var(--text-primary);
+}
+
+/* ── Per-tone palette ─────────────────────────────────────────
+   Each tone exposes a soft surface, a readable foreground and a
+   solid hue (for rails, dots, progress fills). Foregrounds all
+   clear ≥4.5:1 on their soft surface. */
+.tkv2-tone-primary   { --tk-soft: #eff6ff; --tk-fg: #1d4ed8; --tk-solid: #2563eb; }
+.tkv2-tone-progress  { --tk-soft: #fef3c7; --tk-fg: #92400e; --tk-solid: #f59e0b; }
+.tkv2-tone-high      { --tk-soft: #fee2e2; --tk-fg: #b42318; --tk-solid: #ef4444; }
+.tkv2-tone-medium    { --tk-soft: #fef3c7; --tk-fg: #92400e; --tk-solid: #f59e0b; }
+.tkv2-tone-low       { --tk-soft: #dcfce7; --tk-fg: #15803d; --tk-solid: #22c55e; }
+.tkv2-tone-available { --tk-soft: #dcfce7; --tk-fg: #15803d; --tk-solid: #16a34a; }
+.tkv2-tone-info      { --tk-soft: #e0f2fe; --tk-fg: #0369a1; --tk-solid: #0891b2; }
+.tkv2-tone-warning   { --tk-soft: #fff7ed; --tk-fg: #9a3412; --tk-solid: #f97316; }
+.tkv2-tone-neutral   { --tk-soft: #f1f5f9; --tk-fg: #334155; --tk-solid: #64748b; }
+
+/* ============================================================
+   1. PAGE HEADER
+   ============================================================ */
+.tkv2-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.tkv2-header__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    text-wrap: balance;
+}
+
+.tkv2-header__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 62ch;
+    text-wrap: pretty;
+}
+
+.tkv2-header__actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   2. QUICK-VIEW TABS (segmented control)
+   ============================================================ */
+.tkv2-tabs {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.3rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tkv2-tabs::-webkit-scrollbar { display: none; }
+
+.tkv2-tab {
+    appearance: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+
+.tkv2-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-soft);
+}
+
+.tkv2-tab[aria-selected="true"] {
+    color: #ffffff;
+    background: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.tkv2-tab:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   3. SEARCH + FILTERS TOOLBAR
+   ============================================================ */
+.tkv2-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.tkv2-search {
+    position: relative;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.tkv2-search__icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    pointer-events: none;
+}
+
+.tkv2-search__input {
+    width: 100%;
+    height: 42px;
+    padding: 0 0.9rem 0 2.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: var(--transition);
+}
+
+.tkv2-search__input::placeholder { color: var(--text-faint); }
+
+.tkv2-search__input:focus {
+    outline: none;
+    border-color: var(--color-primary-muted);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    background: var(--bg-surface);
+}
+
+.tkv2-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 42px;
+    padding: 0 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.tkv2-filters-toggle:hover {
+    background: var(--bg-soft);
+    color: var(--text-primary);
+    border-color: #cbd5e1;
+}
+
+.tkv2-filters-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.tkv2-filters-toggle__chevron { transition: transform 0.2s ease; }
+.tkv2-filters-toggle[aria-expanded="true"] .tkv2-filters-toggle__chevron { transform: rotate(180deg); }
+
+/* Advanced filters drawer */
+.tkv2-advanced {
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-xs);
+    padding: 1.1rem;
+}
+
+.tkv2-advanced[hidden] { display: none; }
+
+.tkv2-advanced__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.9rem;
+}
+
+.tkv2-field-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.tkv2-field {
+    width: 100%;
+    height: 40px;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-default);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.tkv2-field:focus {
+    outline: none;
+    border-color: var(--color-primary-muted);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* ============================================================
+   4. QUICK CHIPS
+   ============================================================ */
+.tkv2-chips {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tkv2-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tkv2-chip:hover {
+    border-color: #cbd5e1;
+    background: var(--bg-soft);
+    color: var(--text-primary);
+}
+
+.tkv2-chip:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.tkv2-chip__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: var(--tk-soft, var(--bg-soft));
+    color: var(--tk-fg, var(--text-muted));
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.tkv2-chip[aria-pressed="true"] {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.tkv2-chip[aria-pressed="true"] .tkv2-chip__count {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.tkv2-chips__clear {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: none;
+    padding: 0.4rem 0.5rem;
+    color: var(--color-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius-xs);
+    transition: var(--transition);
+}
+
+.tkv2-chips__clear:hover { background: var(--color-primary-light); }
+.tkv2-chips__clear:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ============================================================
+   5. SUMMARY STAT CARDS
+   ============================================================ */
+.tkv2-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.9rem;
+}
+
+.tkv2-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+
+.tkv2-stat:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.tkv2-stat__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--tk-soft);
+    color: var(--tk-fg);
+    flex-shrink: 0;
+}
+
+.tkv2-stat__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+
+.tkv2-stat__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+/* ============================================================
+   6. CONTENT LAYOUT (list + insights)
+   ============================================================ */
+.tkv2-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.tkv2-main { min-width: 0; }
+
+.tkv2-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.tkv2-section-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+
+.tkv2-section-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.tkv2-queue {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ============================================================
+   7. TICKET OPERATIONAL ROW
+   ============================================================ */
+.tkv2-ticket {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.95rem;
+    padding: 1rem 1.1rem 1rem 1.35rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.tkv2-ticket:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #d4dce8;
+    transform: translateY(-1px);
+}
+
+/* Priority rail — a deliberate rounded status indicator (NOT a
+   decorative side-stripe border). Always paired with the text
+   priority badge, so meaning never relies on colour alone. */
+.tkv2-ticket__rail {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.9rem;
+    bottom: 0.9rem;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--tk-solid);
+}
+
+.tkv2-ticket__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    background: var(--tk-soft);
+    color: var(--tk-fg);
+    flex-shrink: 0;
+}
+
+.tkv2-ticket__body { min-width: 0; }
+
+.tkv2-ticket__top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tkv2-ticket__title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.tkv2-ticket__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.tkv2-ticket__meta-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--text-faint);
+}
+
+.tkv2-ticket__desc {
+    margin: 0.45rem 0 0;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 70ch;
+    text-wrap: pretty;
+}
+
+.tkv2-ticket__tags {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+}
+
+/* Right-hand side: assignment + date + actions */
+.tkv2-ticket__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.tkv2-ticket__date {
+    font-size: 0.74rem;
+    color: var(--text-faint);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.tkv2-ticket__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ── Priority badge (V2 scoped: high reads coral/red per spec) ── */
+.tkv2-prio {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--tk-soft);
+    color: var(--tk-fg);
+    white-space: nowrap;
+}
+
+.tkv2-prio__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--tk-solid);
+}
+
+/* ── Assignment badge ── */
+.tkv2-assign {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.tkv2-assign--mine {
+    background: #eef2ff;
+    color: #4338ca;
+    border-color: #c7d2fe;
+}
+
+.tkv2-assign--available {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.tkv2-assign__note {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+
+/* ── Duplicate tag ── */
+.tkv2-dup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--color-warning-light);
+    color: #9a3412;
+    border: 1px solid #fed7aa;
+    white-space: nowrap;
+}
+
+/* ── Row action buttons ── */
+.tkv2-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 34px;
+    padding: 0 0.85rem;
+    border-radius: var(--radius-xs);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.tkv2-btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.tkv2-btn--primary {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+.tkv2-btn--primary:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+
+.tkv2-btn--ghost {
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+}
+.tkv2-btn--ghost:hover { background: #e2e8f0; color: var(--text-primary); }
+
+.tkv2-btn--success {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+.tkv2-btn--success:hover { background: #d1fae5; border-color: #6ee7b7; }
+
+/* ── Kebab menu ── */
+.tkv2-kebab { position: relative; }
+
+.tkv2-kebab__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-xs);
+    border: 1px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tkv2-kebab__btn:hover { background: var(--bg-soft); color: var(--text-primary); }
+.tkv2-kebab__btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.tkv2-kebab__menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    min-width: 180px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    padding: 0.35rem;
+    z-index: 20;
+}
+
+.tkv2-kebab__menu[hidden] { display: none; }
+
+.tkv2-kebab__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    background: none;
+    border-radius: var(--radius-xs);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.tkv2-kebab__item:hover { background: var(--bg-soft); color: var(--text-primary); }
+
+/* ============================================================
+   8. INSIGHTS PANEL
+   ============================================================ */
+.tkv2-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: calc(var(--topbar-h) + 1rem);
+}
+
+.tkv2-insights__head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-muted);
+}
+
+.tkv2-insights__title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+
+.tkv2-insight {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    padding: 1.1rem;
+}
+
+.tkv2-insight__title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.tkv2-insight__title svg { color: var(--text-muted); }
+
+/* ── A. Priority donut ── */
+.tkv2-donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.tkv2-donut {
+    --high: #ef4444;
+    --medium: #f59e0b;
+    --low: #22c55e;
+    --alta-end: 0%;
+    --media-end: 0%;
+    position: relative;
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: conic-gradient(
+        var(--high) 0 var(--alta-end),
+        var(--medium) var(--alta-end) var(--media-end),
+        var(--low) var(--media-end) 100%
+    );
+}
+
+/* No tickets yet: render a neutral ring instead of an empty wedge. */
+.tkv2-donut--empty {
+    background: var(--bg-soft);
+}
+
+.tkv2-donut::after {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+.tkv2-donut__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.tkv2-donut__total {
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.tkv2-donut__caption {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+}
+
+.tkv2-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.tkv2-legend__row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+}
+
+.tkv2-legend__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--tk-solid);
+    flex-shrink: 0;
+}
+
+.tkv2-legend__label { color: var(--text-secondary); font-weight: 600; }
+.tkv2-legend__value { margin-left: auto; color: var(--text-muted); font-weight: 700; }
+
+.tkv2-insight__total {
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}
+
+.tkv2-insight__total strong { color: var(--text-primary); font-weight: 800; }
+
+/* ── B. Labs activity bars ── */
+.tkv2-bars { display: flex; flex-direction: column; gap: 0.7rem; }
+
+.tkv2-bar__head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+}
+
+.tkv2-bar__label { color: var(--text-secondary); font-weight: 600; }
+.tkv2-bar__value { color: var(--text-muted); font-weight: 700; }
+
+.tkv2-bar__track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--bg-soft);
+    overflow: hidden;
+}
+
+.tkv2-bar__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--color-primary), #60a5fa);
+}
+
+/* ── C. State grid ── */
+.tkv2-states {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+
+.tkv2-state {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+    border: 1px solid var(--border-light);
+}
+
+.tkv2-state__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.tkv2-state__dot--open { background: #2563eb; }
+.tkv2-state__dot--progress { background: #f59e0b; }
+.tkv2-state__dot--resolved { background: #22c55e; }
+.tkv2-state__dot--rejected { background: #94a3b8; }
+
+.tkv2-state__value { font-size: 1rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.tkv2-state__label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+
+/* ── D. Duplicates ── */
+.tkv2-dupcard {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.tkv2-dupcard__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-light);
+    color: #b45309;
+    flex-shrink: 0;
+}
+
+.tkv2-dupcard__count { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.tkv2-dupcard__note { font-size: 0.76rem; color: var(--text-muted); font-weight: 600; }
+
+.tkv2-dupcard__action { margin-top: 0.9rem; width: 100%; justify-content: center; }
+
+/* ── E. Average time ── */
+.tkv2-avg {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.tkv2-avg__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.tkv2-avg__value { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
+
+.tkv2-avg__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #92400e;
+}
+
+.tkv2-avg__status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #f59e0b;
+}
+
+/* ============================================================
+   9. TOOLBAR FORM · EMPTY STATE · QUEUE FOOTER
+   ============================================================ */
+.tkv2-toolbar-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tkv2-toolbar-submit { flex-shrink: 0; }
+
+.tkv2-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.4rem;
+    padding: 2.5rem 1.5rem;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+}
+
+.tkv2-empty svg { color: var(--text-faint); margin-bottom: 0.3rem; }
+.tkv2-empty__title { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+.tkv2-empty__note { margin: 0 0 0.6rem; font-size: 0.83rem; color: var(--text-muted); max-width: 42ch; }
+
+.tkv2-insight__empty {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.tkv2-queue-foot {
+    margin-top: 0.9rem;
+    text-align: center;
+}
+
+.tkv2-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-primary);
+    font-size: 0.83rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-xs);
+    transition: var(--transition);
+}
+
+.tkv2-link:hover { background: var(--color-primary-light); }
+.tkv2-link:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ============================================================
+   10. RESPONSIVE
+   ============================================================ */
+@media (max-width: 1023px) {
+    .tkv2-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .tkv2-insights {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .tkv2-header__title { font-size: 1.3rem; }
+
+    .tkv2-header__actions { width: 100%; }
+    .tkv2-header__actions .tkv2-btn,
+    .tkv2-header__actions .btn-primary { flex: 1; justify-content: center; }
+
+    .tkv2-tabs { width: 100%; }
+
+    .tkv2-ticket {
+        grid-template-columns: auto 1fr;
+    }
+
+    .tkv2-ticket__side {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--border-light);
+        padding-top: 0.6rem;
+    }
+
+    .tkv2-ticket__actions { flex: 1; justify-content: flex-end; }
+
+    .tkv2-states { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   11. DARK MODE — surfaces inherit tokens; tune fixed-hue chips
+   ============================================================ */
+[data-theme="dark"] .tkv2-tab[aria-selected="true"] { color: #ffffff; }
+
+[data-theme="dark"] .tkv2-tone-primary   { --tk-soft: rgba(37, 99, 235, 0.16);  --tk-fg: #93c5fd; }
+[data-theme="dark"] .tkv2-tone-progress,
+[data-theme="dark"] .tkv2-tone-medium    { --tk-soft: rgba(245, 158, 11, 0.16); --tk-fg: #fbbf24; }
+[data-theme="dark"] .tkv2-tone-high       { --tk-soft: rgba(239, 68, 68, 0.16);  --tk-fg: #fca5a5; }
+[data-theme="dark"] .tkv2-tone-low,
+[data-theme="dark"] .tkv2-tone-available  { --tk-soft: rgba(34, 197, 94, 0.16);  --tk-fg: #86efac; }
+[data-theme="dark"] .tkv2-tone-info       { --tk-soft: rgba(8, 145, 178, 0.16);  --tk-fg: #67e8f9; }
+[data-theme="dark"] .tkv2-tone-warning    { --tk-soft: rgba(249, 115, 22, 0.16); --tk-fg: #fdba74; }
+[data-theme="dark"] .tkv2-tone-neutral    { --tk-soft: rgba(148, 163, 184, 0.16); --tk-fg: #cbd5e1; }
+
+[data-theme="dark"] .tkv2-assign--mine {
+    background: rgba(99, 102, 241, 0.16);
+    color: #c7d2fe;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .tkv2-assign--available {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .tkv2-dup {
+    background: rgba(249, 115, 22, 0.14);
+    color: #fdba74;
+    border-color: rgba(249, 115, 22, 0.3);
+}
+
+[data-theme="dark"] .tkv2-btn--ghost:hover { background: rgba(255, 255, 255, 0.1); }
+
+[data-theme="dark"] .tkv2-btn--success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .tkv2-dupcard__icon {
+    background: rgba(249, 115, 22, 0.14);
+    color: #fdba74;
+}
+
+[data-theme="dark"] .tkv2-avg__icon {
+    background: rgba(37, 99, 235, 0.16);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .tkv2-avg__status { color: #fbbf24; }
+
+[data-theme="dark"] .tkv2-search__input:focus,
+[data-theme="dark"] .tkv2-field:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* ============================================================
+   12. REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .tkv2-stat,
+    .tkv2-ticket,
+    .tkv2-btn--primary:hover,
+    .tkv2-stat:hover,
+    .tkv2-ticket:hover {
+        transition: none;
+        transform: none;
+    }
+}

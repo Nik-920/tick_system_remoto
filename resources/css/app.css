@@ -43,6 +43,8 @@
 @import './modules/dashboard-role-shared.css';
 @import './modules/dashboard-maintenance.css';
 @import './modules/tickets.css';
+/* TEMPORARY — static V2 design prototype for the maintenance Tickets tab. */
+@import './modules/tickets-maintenance-v2.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';
