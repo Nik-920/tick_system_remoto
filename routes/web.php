@@ -16,6 +16,7 @@ use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketController;
+use App\Http\Controllers\Web\TicketHistoryController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -106,6 +107,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tickets/assignments', TicketAssignmentsController::class)
         ->middleware('role:maintenance')
         ->name('tickets.assignments');
+    // "Historial" — maintenance-only history board (static visual phase, no live data yet).
+    // Registered before /tickets/{ticket} so the literal segment is not captured as a model.
+    Route::get('/tickets/history', TicketHistoryController::class)
+        ->middleware('role:maintenance')
+        ->name('tickets.history');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
