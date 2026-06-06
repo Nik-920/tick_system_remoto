@@ -116,15 +116,15 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertViewIs('dashboard.maintenance');
-        $response->assertSeeText('Consola de mantenimiento');
-        $response->assertSeeText('Cola operativa priorizada');
+        // Promoted: the maintenance role now renders the V2 dashboard.
+        $response->assertViewIs('dashboard.maintenance-v2');
+        $response->assertSeeText('Resumen general de la operación de mantenimiento.');
         $response->assertDontSeeText('Centro de control operativo');
         $response->assertSeeText($assigned->title);
         $response->assertDontSeeText($foreign->title);
     }
 
-    public function test_maintenance_dashboard_has_link_to_my_assigned_tickets(): void
+    public function test_maintenance_dashboard_links_to_my_assignments_board(): void
     {
         $maintenance = $this->createUserWithRole('maintenance');
 
@@ -133,8 +133,8 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSeeText('Mis tickets asignados');
-        $response->assertSee('assignment=mine');
+        $response->assertSeeText('Mis asignaciones');
+        $response->assertSee(route('tickets.assignments'));
     }
 
     public function test_maintenance_dashboard_loads_successfully(): void
@@ -146,8 +146,8 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertViewIs('dashboard.maintenance');
-        $response->assertSeeText('Consola de mantenimiento');
+        $response->assertViewIs('dashboard.maintenance-v2');
+        $response->assertSeeText('Dashboard');
     }
 
     public function test_maintenance_dashboard_does_not_leak_tickets_assigned_to_another_maintenance(): void
@@ -217,8 +217,8 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSeeText('Tickets disponibles');
-        // With no personal tickets, "3" is the only non-zero KPI value rendered.
+        $response->assertSeeText('Disponibles para tomar');
+        // With no personal tickets, "3" is the only non-zero figure rendered.
         $response->assertSeeText('3');
     }
 
@@ -231,8 +231,8 @@ class DashboardControllerTest extends TestCase
             ->get(route('dashboard.index'));
 
         $response->assertOk();
-        $response->assertSeeText('Ultimos 30 dias');
-        $response->assertSeeText('Mostrando actividad del');
+        $this->assertSame('last_30_days', $response->viewData('rangePreset'));
+        $response->assertSeeText('Últimos 30 días');
     }
 
     public function test_maintenance_dashboard_accepts_custom_range(): void
@@ -269,8 +269,9 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('dashboard.reporter');
-        $response->assertDontSeeText('Consola de mantenimiento');
-        $response->assertDontSeeText('Cola operativa priorizada');
+        // The reporter must not receive the maintenance (V2) sections.
+        $response->assertDontSeeText('Mis asignaciones');
+        $response->assertDontSeeText('Tasa de resolución');
     }
 
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void

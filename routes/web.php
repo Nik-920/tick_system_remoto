@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
 use App\Http\Controllers\Web\MaintenanceDashboardReportController;
+use App\Http\Controllers\Web\MaintenanceDashboardV2Controller;
 use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
@@ -78,6 +79,11 @@ Route::middleware('auth')->group(function (): void {
             ->name('dashboard.maintenance.report');
         Route::get('/dashboard/maintenance/report.pdf', [MaintenanceDashboardReportController::class, 'pdf'])
             ->name('dashboard.maintenance.report.pdf');
+
+        // Dashboard Maintenance V2 — parallel redesign (static visual phase).
+        // Does NOT replace /dashboard; the PDF button reuses the report.pdf route above.
+        Route::get('/dashboard/maintenance-v2', MaintenanceDashboardV2Controller::class)
+            ->name('dashboard.maintenance-v2');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

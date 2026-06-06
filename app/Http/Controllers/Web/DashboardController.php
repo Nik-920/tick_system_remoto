@@ -8,13 +8,16 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Queries\Dashboard\MaintenanceDashboardQuery;
-use App\Support\Dashboard\DateRange;
+use App\Support\Dashboard\MaintenanceDashboardV2Presenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly MaintenanceDashboardV2Presenter $maintenancePresenter,
+    ) {}
+
     public function index(DashboardDateRangeRequest $request): View
     {
         $this->authorize('viewAny', Ticket::class);
@@ -27,7 +30,9 @@ class DashboardController extends Controller
         $roleProfile = $this->resolveRoleProfile($user);
 
         if ($roleProfile === 'maintenance') {
-            return $this->renderMaintenanceDashboard($user, $request->toDateRange());
+            // Promoted: the maintenance role now gets the redesigned V2 dashboard,
+            // built from the same shared presenter as /dashboard/maintenance-v2.
+            return view('dashboard.maintenance-v2', $this->maintenancePresenter->payload($user, $request));
         }
 
         $dashboardView = $this->resolveDashboardView($roleProfile);
@@ -41,17 +46,6 @@ class DashboardController extends Controller
             'stateLabels' => $this->stateLabels(),
             'priorityLabels' => $this->priorityLabels(),
             ...$dashboardData,
-        ]);
-    }
-
-    private function renderMaintenanceDashboard(User $user, DateRange $range): View
-    {
-        return view('dashboard.maintenance', [
-            'roleProfile' => 'maintenance',
-            'roleLabel' => $this->resolveRoleLabel('maintenance'),
-            'stateLabels' => $this->stateLabels(),
-            'priorityLabels' => $this->priorityLabels(),
-            'vm' => MaintenanceDashboardQuery::for($user, $range),
         ]);
     }
 
