@@ -51,6 +51,15 @@
                     </a>
                 </li>
                 @endcan
+                @role('maintenance')
+                <li>
+                    <a href="{{ route('tickets.assignments') }}"
+                       class="sidebar-link {{ request()->routeIs('tickets.assignments') ? 'active' : '' }}">
+                        <x-lucide-list-checks class="sidebar-icon" width="18" height="18" stroke-width="2" />
+                        <span class="sidebar-label">Mis asignaciones</span>
+                    </a>
+                </li>
+                @endrole
                 @can('create', \App\Models\Ticket::class)
                 <li>
                     <a href="{{ route('tickets.create') }}"
