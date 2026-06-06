@@ -47,6 +47,8 @@
 @import './modules/tickets-maintenance-v2.css';
 /* "Mis asignaciones" — maintenance assignments board (static visual phase). */
 @import './modules/tickets-assignments.css';
+/* "Historial" — maintenance history board (static visual phase). */
+@import './modules/tickets-history.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';

@@ -59,6 +59,13 @@
                         <span class="sidebar-label">Mis asignaciones</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('tickets.history') }}"
+                       class="sidebar-link {{ request()->routeIs('tickets.history') ? 'active' : '' }}">
+                        <x-lucide-history class="sidebar-icon" width="18" height="18" stroke-width="2" />
+                        <span class="sidebar-label">Historial</span>
+                    </a>
+                </li>
                 @endrole
                 @can('create', \App\Models\Ticket::class)
                 <li>
