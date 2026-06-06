@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
+use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
@@ -100,6 +101,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tickets/available', [TicketController::class, 'available'])
         ->middleware('role:maintenance|admin|super_admin')
         ->name('tickets.available');
+    // "Mis asignaciones" — maintenance-only board (static visual phase, no live data yet).
+    // Registered before /tickets/{ticket} so the literal segment is not captured as a model.
+    Route::get('/tickets/assignments', TicketAssignmentsController::class)
+        ->middleware('role:maintenance')
+        ->name('tickets.assignments');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
