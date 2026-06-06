@@ -13,6 +13,7 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\MaintenanceBoardQuery;
 use App\Queries\Tickets\TicketIndexQuery;
 use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketAssignmentService;
@@ -37,8 +38,19 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
-        $filters = $request->validated();
         $user = $request->user();
+
+        // Maintenance technicians get the operational, prioritised board;
+        // reporters and admins keep the classic table below.
+        if (
+            $user instanceof User
+            && $user->hasRole('maintenance')
+            && ! $user->hasAnyRole(['admin', 'super_admin'])
+        ) {
+            return $this->maintenanceBoard($request, $user);
+        }
+
+        $filters = $request->validated();
 
         $query = TicketIndexQuery::build($user, $filters);
 
@@ -359,6 +371,32 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('status', 'Revisión de duplicado actualizada.');
+    }
+
+    /**
+     * Operational, prioritised board for maintenance technicians (the V2 view).
+     * Read-only: claim/manage are delegated to the existing ticket routes.
+     */
+    private function maintenanceBoard(ListTicketsRequest $request, User $user): View
+    {
+        $board = MaintenanceBoardQuery::for(
+            $user,
+            $request->validated(),
+            $this->resolveBoardView($request),
+        );
+
+        return view('tickets.maintenance-v2', [
+            'board' => $board,
+            'locations' => Location::query()->active()->orderBy('name')->get(),
+            'categories' => Category::query()->orderBy('name')->get(),
+        ]);
+    }
+
+    private function resolveBoardView(ListTicketsRequest $request): string
+    {
+        $view = (string) $request->query('view', 'all');
+
+        return in_array($view, MaintenanceBoardQuery::VIEWS, true) ? $view : 'all';
     }
 
     /** @param array<string, mixed> $filters */
