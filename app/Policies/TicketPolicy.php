@@ -33,6 +33,47 @@ class TicketPolicy
         return $user->id !== '';
     }
 
+    /**
+     * A reporter may EDIT their own request, but ONLY while it is still open and
+     * untouched by maintenance. The moment it is assigned, locked, or moves to
+     * in_progress/resolved/rejected it belongs to the operational flow and must
+     * stay immutable for the reporter (to protect audit, state_history and
+     * assignments).
+     *
+     * No HTTP route invokes 'update' on a Ticket today and there is no edit
+     * feature for admin/super_admin yet, so this ability is scoped to the
+     * reporter rule. A future phase can widen it without breaking any caller.
+     */
+    public function update(User $user, Ticket $ticket): bool
+    {
+        return $this->reporterCanModifyOwnRequest($user, $ticket);
+    }
+
+    /**
+     * A reporter may CANCEL (voluntarily withdraw) their own request under the
+     * SAME window as edit. Cancellation is NOT rejection: "rejected" means
+     * maintenance/admin reviewed it and decided it does not proceed; "cancelled"
+     * means the reporter retired their own request before anyone started
+     * attending it. The domain has no `cancelled` state yet, so this ability
+     * only gates the UI affordance for now (no mutation, no hard delete).
+     */
+    public function cancelAsReporter(User $user, Ticket $ticket): bool
+    {
+        return $this->reporterCanModifyOwnRequest($user, $ticket);
+    }
+
+    /**
+     * Shared window for reporter edit/cancel: own + open + unassigned + unlocked.
+     */
+    private function reporterCanModifyOwnRequest(User $user, Ticket $ticket): bool
+    {
+        return $this->hasRole($user, 'reporter')
+            && $ticket->reporter_id === $user->id
+            && $ticket->state === Ticket::STATE_OPEN
+            && $ticket->assigned_to === null
+            && ! $ticket->assignment_locked;
+    }
+
     public function updateState(User $user, Ticket $ticket): bool
     {
         // Resolved tickets: only super_admin can reopen them.
