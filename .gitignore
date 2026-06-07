@@ -37,3 +37,4 @@ coverage/
 # Impeccable AI Skills
 /.github/skills/
 /skill/
+*.png

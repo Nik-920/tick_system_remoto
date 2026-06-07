@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read User|null $assignee
  * @property-read User|null $assignedBy
  * @property-read TicketEmbedding|null $embedding
+ * @property-read Collection<int, StateHistory> $stateHistory
+ * @property-read Collection<int, TicketMedia> $media
  */
 class Ticket extends Model
 {
