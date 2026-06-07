@@ -691,3 +691,11 @@
     .mdv2-kpi,
     .mdv2-kpi:hover { transition: none; transform: none; }
 }
+
+/* ── Mobile: 16px prevents iOS auto-zoom on focus (date range + selects) ── */
+@media (max-width: 640px) {
+    .mdv2-select,
+    .mdv2-date {
+        font-size: 16px;
+    }
+}

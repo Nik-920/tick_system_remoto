@@ -1134,3 +1134,11 @@
         transform: none;
     }
 }
+
+/* ── Mobile: 16px prevents iOS auto-zoom on focus (board search + filters) ── */
+@media (max-width: 640px) {
+    .tkv2-search__input,
+    .tkv2-field {
+        font-size: 16px;
+    }
+}
