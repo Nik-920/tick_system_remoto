@@ -51,6 +51,16 @@
 @import './modules/tickets-assignments.css';
 /* "Historial" — maintenance history board (static visual phase). */
 @import './modules/tickets-history.css';
+/* "Mis tickets" — reporter board (static visual phase). */
+@import './modules/reporter-tickets.css';
+/* "Ver seguimiento" — reporter per-ticket tracking screen (static visual phase). */
+@import './modules/reporter-ticket-show.css';
+/* "Historial" — reporter closed-tickets history (static visual phase). */
+@import './modules/reporter-history.css';
+/* Reporter home dashboard — redesigned personal panel (static visual phase). */
+@import './modules/reporter-dashboard.css';
+/* "Guía del reporter" — static help page (static visual phase). */
+@import './modules/reporter-guide.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';
