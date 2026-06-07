@@ -15,6 +15,9 @@ use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
+use App\Http\Controllers\Web\ReporterDashboardController;
+use App\Http\Controllers\Web\ReporterGuideController;
+use App\Http\Controllers\Web\ReporterTicketController;
 use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\TicketHistoryController;
@@ -103,6 +106,34 @@ Route::middleware('auth')->group(function (): void {
 
     $ticketMutationMiddleware = ['idempotency', 'throttle:mutations'];
     $ticketAdminMutationMiddleware = ['role:admin|super_admin', ...$ticketMutationMiddleware];
+
+    // Reporter home dashboard — redesigned personal panel (static visual phase).
+    // Parallel to /dashboard (which keeps rendering the live dashboard.reporter
+    // view); this is the surface the sidebar "Dashboard" links to for reporters.
+    Route::get('/reporter/dashboard', ReporterDashboardController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.dashboard');
+
+    // "Guía del reporter" — static help page (destination of the "Ver guía"
+    // links across the reporter surfaces).
+    Route::get('/reporter/guide', ReporterGuideController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.guide');
+
+    // "Mis tickets" — reporter-only board + per-ticket tracking (static visual
+    // phase, no live data yet). Parallel to the classic /tickets list, which
+    // stays intact for live data; this is the redesigned reporter surface the
+    // sidebar links to for reporters.
+    Route::middleware('role:reporter')
+        ->prefix('reporter/tickets')
+        ->name('reporter.tickets.')
+        ->group(function (): void {
+            Route::get('/', [ReporterTicketController::class, 'index'])->name('index');
+            // "Historial" — literal segment registered before /{ticket} so it is
+            // not captured as a ticket id.
+            Route::get('/history', [ReporterTicketController::class, 'history'])->name('history');
+            Route::get('/{ticket}', [ReporterTicketController::class, 'show'])->name('show');
+        });
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/available', [TicketController::class, 'available'])
