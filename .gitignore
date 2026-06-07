@@ -38,3 +38,18 @@ coverage/
 /.github/skills/
 /skill/
 *.png
+
+# Graphify local artifacts
+graphify-out/
+.graphify/
+.graphify-cache/
+.graphifyignore
+
+
+# Assistant project-scoped skills/rules, solo si se generan por error
+.claude/
+.agents/
+.codex/
+.cursor/
+.kilo/
+.gemini/
