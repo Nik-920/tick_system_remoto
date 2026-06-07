@@ -517,6 +517,18 @@
 
 .rep-kebab__item:hover { background: var(--bg-soft); color: var(--text-primary); }
 
+.rep-kebab__item--danger { color: var(--high-text, #b91c1c); }
+.rep-kebab__item--danger:hover { background: var(--high-soft, #fef2f2); color: var(--high-text, #b91c1c); }
+
+/* Honest "coming soon" affordance: visible but inert (no edit/cancel route yet). */
+.rep-kebab__item--soon,
+.rep-kebab__item:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.rep-kebab__item--soon:hover,
+.rep-kebab__item:disabled:hover { background: none; }
+
 /* ============================================================
    7. LIST FOOTER + PAGINATION
    ============================================================ */

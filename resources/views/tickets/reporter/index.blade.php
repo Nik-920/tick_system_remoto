@@ -205,21 +205,37 @@
                                     {{ $t['action_label'] }}
                                 </a>
 
-                                <div class="rep-kebab" data-rep-kebab>
-                                    <button type="button" class="rep-kebab__btn"
-                                            aria-label="Más acciones para {{ $t['title'] }}"
-                                            aria-haspopup="true" aria-expanded="false" data-rep-kebab-btn>
-                                        <x-lucide-more-vertical width="18" height="18" stroke-width="2" />
-                                    </button>
-                                    <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
-                                        <a href="{{ route('reporter.tickets.show', $t['id']) }}" class="rep-kebab__item">
-                                            <x-lucide-eye width="15" height="15" stroke-width="2" /> {{ $t['action_label'] }}
-                                        </a>
-                                        <a href="{{ route('reporter.tickets.show', $t['id']) }}#rep-timeline" class="rep-kebab__item">
-                                            <x-lucide-clock width="15" height="15" stroke-width="2" /> Ver cronología
-                                        </a>
+                                {{-- Kebab only renders while the reporter may still
+                                     act on the ticket (own + open + unassigned +
+                                     unlocked). Once maintenance takes it, it
+                                     disappears. Edit/Cancel are honest placeholders
+                                     for now: no edit screen, no cancel mutation, NO
+                                     destructive delete. --}}
+                                @if ($t['show_actions_menu'])
+                                    <div class="rep-kebab" data-rep-kebab>
+                                        <button type="button" class="rep-kebab__btn"
+                                                aria-label="Más acciones para {{ $t['title'] }}"
+                                                aria-haspopup="true" aria-expanded="false" data-rep-kebab-btn>
+                                            <x-lucide-more-vertical width="18" height="18" stroke-width="2" />
+                                        </button>
+                                        <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
+                                            @if ($t['can_edit'])
+                                                <button type="button" class="rep-kebab__item rep-kebab__item--soon"
+                                                        disabled aria-disabled="true"
+                                                        title="Editar ticket estará disponible en la siguiente fase">
+                                                    <x-lucide-edit width="15" height="15" stroke-width="2" /> Editar
+                                                </button>
+                                            @endif
+                                            @if ($t['can_cancel'])
+                                                <button type="button" class="rep-kebab__item rep-kebab__item--soon rep-kebab__item--danger"
+                                                        disabled aria-disabled="true"
+                                                        title="Cancelar solicitud estará disponible en la siguiente fase">
+                                                    <x-lucide-x width="15" height="15" stroke-width="2" /> Cancelar solicitud
+                                                </button>
+                                            @endif
+                                        </div>
                                     </div>
-                                </div>
+                                @endif
                             </div>
                         </div>
                     </article>
