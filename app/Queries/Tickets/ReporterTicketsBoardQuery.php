@@ -399,6 +399,13 @@ final class ReporterTicketsBoardQuery
         $state = (string) $ticket->state;
         $active = in_array($state, [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS], true);
 
+        // Reporter row actions. The rule lives in TicketPolicy (single source of
+        // truth); the view only reads these flags, never re-derives them. Both
+        // resolve to: own + open + unassigned + unlocked. Edit/cancel are gated
+        // here so the kebab is hidden the moment maintenance touches the ticket.
+        $canEdit = $this->user->can('update', $ticket);
+        $canCancel = $this->user->can('cancelAsReporter', $ticket);
+
         return [
             'id' => (string) $ticket->id,
             'ref' => $this->reference((string) $ticket->id),
@@ -415,6 +422,9 @@ final class ReporterTicketsBoardQuery
             'updated' => $ticket->updated_at?->diffForHumans() ?? '—',
             'action' => $active ? 'follow' : 'detail',
             'action_label' => $active ? 'Ver seguimiento' : 'Ver detalle',
+            'can_edit' => $canEdit,
+            'can_cancel' => $canCancel,
+            'show_actions_menu' => $canEdit || $canCancel,
         ];
     }
 

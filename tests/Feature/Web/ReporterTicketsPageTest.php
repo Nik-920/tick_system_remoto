@@ -267,6 +267,146 @@ class ReporterTicketsPageTest extends TestCase
         $response->assertDontSeeText('Resolver ticket');
     }
 
+    // ── Row actions kebab: Editar / Cancelar solicitud gating ────
+
+    public function test_kebab_shows_edit_and_cancel_for_own_open_unassigned_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto editable');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+
+        $row = $response->viewData('board')->tickets[0];
+        $this->assertTrue($row['can_edit']);
+        $this->assertTrue($row['can_cancel']);
+        $this->assertTrue($row['show_actions_menu']);
+
+        $response->assertSee('Más acciones para');
+        $response->assertSeeText('Editar');
+        $response->assertSeeText('Cancelar solicitud');
+    }
+
+    public function test_edit_and_cancel_are_honest_disabled_placeholders(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto placeholder');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        // Placeholders: inert buttons, not links, no mutation route yet.
+        $response->assertSee('aria-disabled="true"', false);
+        $response->assertSee('Editar ticket estará disponible en la siguiente fase', false);
+        $response->assertSee('Cancelar solicitud estará disponible en la siguiente fase', false);
+    }
+
+    public function test_no_kebab_for_own_in_progress_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'in_progress', 'En progreso mío');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $row = $response->viewData('board')->tickets[0];
+        $this->assertFalse($row['can_edit']);
+        $this->assertFalse($row['can_cancel']);
+        $this->assertFalse($row['show_actions_menu']);
+        $response->assertDontSeeText('Cancelar solicitud');
+        $response->assertDontSee('Más acciones para', false);
+    }
+
+    public function test_no_kebab_for_own_resolved_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'resolved', 'Resuelto mío');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $this->assertFalse($response->viewData('board')->tickets[0]['show_actions_menu']);
+        $response->assertDontSeeText('Cancelar solicitud');
+    }
+
+    public function test_no_kebab_for_own_rejected_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'rejected', 'Rechazado mío');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $this->assertFalse($response->viewData('board')->tickets[0]['show_actions_menu']);
+        $response->assertDontSeeText('Cancelar solicitud');
+    }
+
+    public function test_no_kebab_for_own_open_ticket_assigned_to_maintenance(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $tech = $this->userWithRole('maintenance');
+        $this->ticketFor($me, 'open', 'Abierto pero tomado', ['assigned_to' => $tech->id]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $row = $response->viewData('board')->tickets[0];
+        $this->assertFalse($row['can_edit']);
+        $this->assertFalse($row['can_cancel']);
+        $this->assertFalse($row['show_actions_menu']);
+        $response->assertDontSeeText('Cancelar solicitud');
+    }
+
+    public function test_no_kebab_for_own_open_locked_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto bloqueado', ['assignment_locked' => true]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $this->assertFalse($response->viewData('board')->tickets[0]['show_actions_menu']);
+        $response->assertDontSeeText('Cancelar solicitud');
+    }
+
+    public function test_kebab_no_longer_renders_ver_cronologia(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto sin cronología');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Ver cronología');
+    }
+
+    public function test_ver_seguimiento_stays_as_main_cta_and_is_not_repeated_in_kebab(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto único CTA');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Ver seguimiento');
+        // Exactly once: the main blue CTA only. The kebab no longer repeats it.
+        $this->assertSame(1, substr_count($response->getContent(), 'Ver seguimiento'));
+    }
+
+    public function test_board_never_renders_eliminar_or_destructive_delete(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Abierto sin eliminar');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Eliminar');
+        // No method-spoofed DELETE form anywhere on the reporter board.
+        $response->assertDontSee('value="DELETE"', false);
+    }
+
     public function test_classic_tickets_route_remains_intact(): void
     {
         $reporter = $this->userWithRole('reporter');
@@ -292,7 +432,7 @@ class ReporterTicketsPageTest extends TestCase
     }
 
     /**
-     * @param  array<string, mixed>  $attrs  location_id, category_id, priority, created_at
+     * @param  array<string, mixed>  $attrs  location_id, category_id, priority, created_at, assigned_to, assignment_locked
      */
     private function ticketFor(User $reporter, string $state, string $title, array $attrs = []): Ticket
     {
@@ -304,8 +444,14 @@ class ReporterTicketsPageTest extends TestCase
             'category_id' => $attrs['category_id'] ?? $this->category()->id,
             'state' => $state,
             'priority' => $attrs['priority'] ?? 'medium',
-            'assignment_locked' => false,
+            'assignment_locked' => $attrs['assignment_locked'] ?? false,
         ]);
+
+        // assigned_to is not mass-assignable (no HTTP vector); set it directly
+        // when a test needs a ticket already taken by maintenance.
+        if (! empty($attrs['assigned_to'])) {
+            $ticket->forceFill(['assigned_to' => $attrs['assigned_to']])->save();
+        }
 
         if (! empty($attrs['created_at'])) {
             $ticket->forceFill(['created_at' => $attrs['created_at']])->save();
