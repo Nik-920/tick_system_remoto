@@ -20,11 +20,10 @@ use Tests\TestCase;
  * "Historial de mis tickets" is the reporter-only history board — LIVE DATA.
  *
  * History = the reporter's OWN closed-out tickets (reporter_id = them, state in
- * resolved/rejected). There is no "cancelled" domain state, so the chips are
- * only Todos / Resueltos / Rechazados. These tests pin down the ownership/no-leak
- * scope across every entry point, the real chips/filters/pagination, the honest
- * average + monthly metrics, the empty states, and that NO maintenance action is
- * exposed.
+ * resolved/rejected/cancelled). The chips are Todos / Resueltos / Rechazados /
+ * Cancelados. These tests pin down the ownership/no-leak scope across every entry
+ * point, the real chips/filters/pagination, the honest average + monthly metrics,
+ * the empty states, and that NO maintenance action is exposed.
  */
 class ReporterHistoryPageTest extends TestCase
 {
@@ -86,23 +85,56 @@ class ReporterHistoryPageTest extends TestCase
         $response->assertDontSeeText('Resuelto de otro reporter');
     }
 
-    public function test_chips_show_real_counts_and_no_cancelled_chip(): void
+    public function test_chips_show_real_counts_including_cancelled(): void
     {
         $me = $this->userWithRole('reporter');
         $this->ticketFor($me, 'resolved', 'R1');
         $this->ticketFor($me, 'resolved', 'R2');
         $this->ticketFor($me, 'rejected', 'X1');
+        $this->ticketFor($me, 'cancelled', 'C1');
 
         $response = $this->actingAs($me)->get(route('reporter.tickets.history'));
         $chips = collect($response->viewData('board')->chips)->keyBy('key');
 
         $response->assertOk();
-        $this->assertSame(3, $chips['all']['count']);
+        $this->assertSame(4, $chips['all']['count']);
         $this->assertSame(2, $chips['resolved']['count']);
         $this->assertSame(1, $chips['rejected']['count']);
-        // No invented "cancelled" state.
-        $this->assertNull($chips->get('cancelled'));
-        $response->assertDontSeeText('Cancelados');
+        // Cancelled is a real closed-out state with its own chip now.
+        $this->assertSame(1, $chips['cancelled']['count']);
+        $response->assertSeeText('Cancelados');
+    }
+
+    public function test_cancelled_ticket_appears_in_history_and_filters(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'cancelled', 'Cancelado mío en historial');
+        $this->ticketFor($me, 'resolved', 'Resuelto mío');
+
+        // Cancelled appears in the full history…
+        $all = $this->actingAs($me)->get(route('reporter.tickets.history'));
+        $all->assertOk();
+        $all->assertSeeText('Cancelado mío en historial');
+
+        // …and the Cancelados chip narrows to it only.
+        $filtered = $this->actingAs($me)->get(route('reporter.tickets.history', ['status' => 'cancelled']));
+        $filtered->assertOk();
+        $filtered->assertSeeText('Cancelado mío en historial');
+        $filtered->assertDontSeeText('Resuelto mío');
+    }
+
+    public function test_cancelled_history_does_not_leak_other_reporter(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'cancelled', 'Cancelado propio');
+        $this->ticketFor($other, 'cancelled', 'Cancelado ajeno');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.history', ['status' => 'cancelled']));
+
+        $response->assertOk();
+        $response->assertSeeText('Cancelado propio');
+        $response->assertDontSeeText('Cancelado ajeno');
     }
 
     public function test_result_chip_filters_the_list(): void
@@ -312,6 +344,10 @@ class ReporterHistoryPageTest extends TestCase
 
         if ($state === 'rejected') {
             $this->transition($ticket, 'in_progress', 'rejected', $reporter, $attrs['rejected_at'] ?? Carbon::now());
+        }
+
+        if ($state === 'cancelled') {
+            $this->transition($ticket, 'open', 'cancelled', $reporter, $attrs['cancelled_at'] ?? Carbon::now());
         }
 
         return $ticket;

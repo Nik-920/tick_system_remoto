@@ -53,7 +53,7 @@ class TicketPolicyReporterTest extends TestCase
     {
         $reporter = $this->createUserWithRole('reporter');
 
-        foreach (['in_progress', 'resolved', 'rejected'] as $state) {
+        foreach (['in_progress', 'resolved', 'rejected', 'cancelled'] as $state) {
             $ticket = $this->createTicket($state, reporter: $reporter);
 
             $this->assertFalse(
@@ -62,7 +62,7 @@ class TicketPolicyReporterTest extends TestCase
             );
             $this->assertFalse(
                 $this->policy->cancelAsReporter($reporter, $ticket),
-                "cancel must be denied on '{$state}'."
+                "cancel must be denied on '{$state}' (no re-cancel)."
             );
         }
     }

@@ -272,7 +272,7 @@ class ReporterTicketsPageTest extends TestCase
     public function test_kebab_shows_edit_and_cancel_for_own_open_unassigned_ticket(): void
     {
         $me = $this->userWithRole('reporter');
-        $this->ticketFor($me, 'open', 'Abierto editable');
+        $ticket = $this->ticketFor($me, 'open', 'Abierto editable');
 
         $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
 
@@ -286,20 +286,57 @@ class ReporterTicketsPageTest extends TestCase
         $response->assertSee('Más acciones para');
         $response->assertSeeText('Editar');
         $response->assertSeeText('Cancelar solicitud');
+        // "Editar" is REAL now: it links to the reporter edit route.
+        $response->assertSee(route('reporter.tickets.edit', $ticket->id), false);
     }
 
-    public function test_edit_and_cancel_are_honest_disabled_placeholders(): void
+    public function test_cancel_is_a_real_patch_form_for_cancellable_ticket(): void
     {
         $me = $this->userWithRole('reporter');
-        $this->ticketFor($me, 'open', 'Abierto placeholder');
+        $ticket = $this->ticketFor($me, 'open', 'Abierto cancelable');
 
         $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
 
         $response->assertOk();
-        // Placeholders: inert buttons, not links, no mutation route yet.
-        $response->assertSee('aria-disabled="true"', false);
-        $response->assertSee('Editar ticket estará disponible en la siguiente fase', false);
-        $response->assertSee('Cancelar solicitud estará disponible en la siguiente fase', false);
+        // Cancelar is REAL now: a PATCH form to the cancel route, no placeholder.
+        $response->assertSee(route('reporter.tickets.cancel', $ticket->id), false);
+        $response->assertSee('value="PATCH"', false);
+        $response->assertSeeText('Cancelar solicitud');
+        $response->assertDontSee('Cancelar solicitud estará disponible en la siguiente fase', false);
+        // Still no destructive delete anywhere.
+        $response->assertDontSee('value="DELETE"', false);
+        $response->assertDontSeeText('Eliminar');
+    }
+
+    public function test_cancelled_ticket_has_no_kebab_and_uses_ver_detalle(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'cancelled', 'Cancelado mío');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $row = $response->viewData('board')->tickets[0];
+        $this->assertSame('cancelled', $row['status']);
+        $this->assertSame('Cancelado', $row['status_label']);
+        $this->assertFalse($row['show_actions_menu']);
+        $this->assertSame('Ver detalle', $row['action_label']);
+        $response->assertDontSee('Más acciones para', false);
+    }
+
+    public function test_cancelados_chip_counts_only_my_cancelled_tickets(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'cancelled', 'C1');
+        $this->ticketFor($me, 'open', 'O1');
+        $this->ticketFor($this->userWithRole('reporter'), 'cancelled', 'Ajeno cancelado');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+        $chips = collect($response->viewData('board')->chips)->keyBy('key');
+
+        $response->assertOk();
+        $response->assertSeeText('Cancelados');
+        $this->assertSame(1, $chips['cancelled']['count']);
     }
 
     public function test_no_kebab_for_own_in_progress_ticket(): void

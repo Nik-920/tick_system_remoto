@@ -237,6 +237,36 @@ class ReporterTicketTrackingPageTest extends TestCase
             ->assertViewIs('tickets.reporter.index');
     }
 
+    public function test_cancelled_ticket_tracking_renders_cancelado_and_timeline_event(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'cancelled', 'Solicitud retirada', [
+            'created_at' => Carbon::parse('2026-06-01 09:00:00'),
+        ]);
+        $this->transition($ticket, 'open', 'cancelled', $me, 'Solicitud cancelada por el reporter.', Carbon::parse('2026-06-01 10:00:00'));
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $tracking = $response->viewData('tracking');
+
+        // Header status is "Cancelado".
+        $this->assertSame('Cancelado', $tracking->ticket['status_label']);
+        $response->assertSeeText('Cancelado');
+
+        // Terminal stepper: Reportado (done) → Cancelado, no in_progress/resolved milestones.
+        $stepKeys = collect($tracking->steps)->pluck('key')->all();
+        $this->assertSame(['created', 'cancelled'], $stepKeys);
+
+        // Timeline includes the cancel event.
+        $titles = collect($tracking->timeline)->pluck('title')->all();
+        $this->assertContains('Solicitud cancelada', $titles);
+        $response->assertSeeText('Solicitud cancelada');
+
+        // Still read-only: no maintenance action.
+        $response->assertDontSeeText('Resolver ticket');
+    }
+
     // ── Fixtures ─────────────────────────────────────────────────
 
     private function userWithRole(string $role, ?string $name = null): User

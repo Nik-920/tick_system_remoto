@@ -60,6 +60,7 @@ class ReporterDashboardController extends Controller
             'in_progress' => ['label' => 'En progreso', 'icon' => 'wrench', 'tone' => 'primary'],
             'resolved' => ['label' => 'Resueltos', 'icon' => 'circle-check', 'tone' => 'success'],
             'rejected' => ['label' => 'Rechazados', 'icon' => 'x-circle', 'tone' => 'high'],
+            'cancelled' => ['label' => 'Cancelados', 'icon' => 'ban', 'tone' => 'neutral'],
             'duplicate' => ['label' => 'Posible duplicado', 'icon' => 'copy', 'tone' => 'info'],
         ];
 

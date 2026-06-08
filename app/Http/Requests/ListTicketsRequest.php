@@ -24,7 +24,7 @@ class ListTicketsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'state' => ['nullable', Rule::in(['open', 'in_progress', 'resolved', 'rejected'])],
+            'state' => ['nullable', Rule::in(['open', 'in_progress', 'resolved', 'rejected', 'cancelled'])],
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
             'location_id' => ['nullable', 'uuid', 'exists:locations,id'],
             'category_id' => ['nullable', 'uuid', 'exists:categories,id'],

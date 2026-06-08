@@ -127,11 +127,25 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware('role:reporter')
         ->prefix('reporter/tickets')
         ->name('reporter.tickets.')
-        ->group(function (): void {
+        ->group(function () use ($ticketMutationMiddleware): void {
             Route::get('/', [ReporterTicketController::class, 'index'])->name('index');
             // "Historial" — literal segment registered before /{ticket} so it is
             // not captured as a ticket id.
             Route::get('/history', [ReporterTicketController::class, 'history'])->name('history');
+            // Edit ONE own request. The controller resolves it inside the
+            // reporter_id boundary (404 otherwise) and re-checks editability via
+            // TicketPolicy@update (own + open + unassigned + unlocked). The
+            // literal /edit segment is registered before /{ticket} for clarity.
+            Route::get('/{ticket}/edit', [ReporterTicketController::class, 'edit'])->name('edit');
+            Route::patch('/{ticket}', [ReporterTicketController::class, 'update'])
+                ->middleware($ticketMutationMiddleware)
+                ->name('update');
+            // "Cancelar solicitud" — voluntary withdrawal (open → cancelled). Same
+            // ownership boundary + cancellation window (own + open + unassigned +
+            // unlocked) as edit. NOT a rejection and NOT a delete.
+            Route::patch('/{ticket}/cancel', [ReporterTicketController::class, 'cancel'])
+                ->middleware($ticketMutationMiddleware)
+                ->name('cancel');
             Route::get('/{ticket}', [ReporterTicketController::class, 'show'])->name('show');
         });
 
