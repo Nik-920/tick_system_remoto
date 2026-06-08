@@ -1188,3 +1188,48 @@
     .rep-edit__dropzone,
     .rep-edit__btn { transition: none; }
 }
+
+/* ── Field hint (secondary helper text under label) ── */
+.rep-edit__field-hint {
+    margin: 0 0 0.3rem;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    line-height: 1.4;
+}
+
+/* ── Sidebar live summary empty state ── */
+.rep-edit__summary-val--empty {
+    font-style: italic;
+    color: var(--text-faint);
+    font-weight: 600;
+}
+
+/* ── Non-image file preview icon ── */
+.rep-edit__preview-file-icon {
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+/* ── Extra-narrow phones: priority grid → 1 column ── */
+@media (max-width: 480px) {
+    .rep-edit__priority-grid { grid-template-columns: 1fr 1fr; }
+    .rep-edit__priority-card { padding: 0.75rem 0.5rem; }
+    .rep-edit__priority-icon { width: 30px; height: 30px; }
+}
+
+/* ── Allow custom-color override on inline-styled icons inside tips ── */
+.rep-edit__tips-list svg[style] { color: inherit; }
+
+/* ── Dark mode additions ── */
+[data-theme="dark"] .rep-edit__preview-file-icon {
+    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(148, 163, 184, 0.2);
+}
