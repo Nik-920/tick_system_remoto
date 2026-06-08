@@ -8,7 +8,7 @@
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <title>@yield('title', 'Autenticación') — Tick System Onn</title>
+    <title>@yield('title', 'Autenticación') — INCIDEX</title>
     <meta name="description" content="Sistema de Reporte de Incidencias — Acceso operativo seguro">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -56,7 +56,7 @@
                 <span class="auth-left-brand-icon">
                     <x-lucide-shield width="24" height="24" stroke="white" stroke-width="2.5" />
                 </span>
-                <span class="auth-left-brand-name">Tick System <span class="auth-left-brand-ops">Onn</span></span>
+                <span class="auth-left-brand-name">INCIDEX</span>
             </a>
 
             {{-- Main copy --}}
@@ -116,7 +116,7 @@
         <div class="auth-mobile-header">
             <a href="{{ url('/') }}" class="auth-mobile-brand">
                 <x-lucide-shield width="22" height="22" stroke="#1e40af" stroke-width="2.5" aria-hidden="true" />
-                <span>Tick System <strong>Onn</strong></span>
+                <span><strong>INCIDEX</strong></span>
             </a>
         </div>
 

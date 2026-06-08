@@ -8,7 +8,7 @@
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <title>Tick System Onn — Sistema de Gestión</title>
+    <title>INCIDEX — Sistema de Gestión</title>
     <meta name="description" content="Plataforma centralizada para reportar, asignar y resolver incidencias operativas en tiempo real.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -24,13 +24,12 @@
     <header class="welcome-nav" role="banner">
         <div class="welcome-nav-inner">
             <!-- Logo / Brand -->
-            <a href="{{ url('/') }}" class="welcome-brand" aria-label="Inicio — Tick System Onn">
+            <a href="{{ url('/') }}" class="welcome-brand" aria-label="Inicio — INCIDEX">
                 <span class="welcome-brand-icon" aria-hidden="true">
                     <x-lucide-shield width="24" height="24" stroke="white" stroke-width="2.5" />
                 </span>
                 <span class="welcome-brand-name">
-                    <span class="welcome-brand-primary">Tick System</span>
-                    <span class="welcome-brand-suffix">&nbsp;Onn</span>
+                    <span class="welcome-brand-primary">INCIDEX</span>
                 </span>
             </a>
 
@@ -322,9 +321,9 @@
             <div class="welcome-footer-inner">
                 <p class="welcome-footer-brand">
                     <x-lucide-shield width="18" height="18" stroke="#3b82f6" stroke-width="2.5" aria-hidden="true" />
-                    Tick System Onn
+                    INCIDEX
                 </p>
-                <p class="welcome-footer-copy">Tick System Onn &copy; {{ date('Y') }}</p>
+                <p class="welcome-footer-copy">INCIDEX &copy; {{ date('Y') }}</p>
             </div>
         </div>
     </footer>

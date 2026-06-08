@@ -10,7 +10,7 @@
             <div class="sidebar-brand-icon">
                 <x-lucide-shield width="20" height="20" stroke="white" stroke-width="2.5" />
             </div>
-            <span class="sidebar-brand-text">Tick System <span>Onn</span></span>
+            <span class="sidebar-brand-text">INCIDEX</span>
         </a>
         {{-- Close button (visible only on mobile) --}}
         <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Cerrar menú">

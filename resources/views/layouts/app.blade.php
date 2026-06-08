@@ -9,7 +9,7 @@
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <title>@yield('title', 'Tick System Onn')</title>
+    <title>@yield('title', 'INCIDEX')</title>
 
     {{-- Firebase user meta --}}
     @auth
