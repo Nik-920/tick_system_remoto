@@ -19,11 +19,22 @@ use Illuminate\Validation\Rule;
  * Ownership + editability (own + open + unassigned + unlocked) are enforced by
  * the controller against the resolved ticket through TicketPolicy@update; this
  * request only shapes/sanitizes the input.
+ *
+ * Image uploads (new_images[]) are validated here but stored by the controller.
+ * Allowed: jpeg, jpg, png, gif, webp — max 10 MB each, up to 10 files per request.
+ * The reporter cannot delete existing evidence from this endpoint; that would
+ * require a dedicated destroy route per media item.
  */
 class UpdateReporterTicketRequest extends FormRequest
 {
     /** @var list<string> */
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
+
+    /** Max size in kilobytes (10 MB). */
+    private const MAX_FILE_KB = 10240;
+
+    /** Max number of new images per request. */
+    private const MAX_FILES = 10;
 
     public function authorize(): bool
     {
@@ -52,11 +63,18 @@ class UpdateReporterTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:20', 'max:2000'],
-            'location_id' => ['required', 'uuid', 'exists:locations,id'],
-            'category_id' => ['required', 'uuid', 'exists:categories,id'],
-            'priority' => ['required', Rule::in(self::PRIORITIES)],
+            'title'            => ['required', 'string', 'min:5', 'max:255'],
+            'description'      => ['required', 'string', 'min:20', 'max:2000'],
+            'location_id'      => ['required', 'uuid', 'exists:locations,id'],
+            'category_id'      => ['required', 'uuid', 'exists:categories,id'],
+            'priority'         => ['required', Rule::in(self::PRIORITIES)],
+            // Optional evidence uploads — additive only (no existing media is deleted).
+            'new_images'       => ['nullable', 'array', 'max:'.self::MAX_FILES],
+            'new_images.*'     => [
+                'file',
+                'mimes:jpeg,jpg,png,gif,webp',
+                'max:'.self::MAX_FILE_KB,
+            ],
         ];
     }
 
@@ -66,11 +84,25 @@ class UpdateReporterTicketRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'title' => 'titulo',
-            'description' => 'descripcion',
-            'location_id' => 'ubicacion',
-            'category_id' => 'categoria',
-            'priority' => 'prioridad',
+            'title'        => 'titulo',
+            'description'  => 'descripcion',
+            'location_id'  => 'ubicacion',
+            'category_id'  => 'categoria',
+            'priority'     => 'prioridad',
+            'new_images'   => 'imágenes',
+            'new_images.*' => 'imagen',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'new_images.*.mimes' => 'Cada imagen debe ser JPG, PNG, GIF o WebP.',
+            'new_images.*.max'   => 'Cada imagen no puede superar los 10 MB.',
+            'new_images.max'     => 'Puedes subir un máximo de '.self::MAX_FILES.' imágenes por vez.',
         ];
     }
 

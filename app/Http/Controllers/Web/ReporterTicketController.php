@@ -10,6 +10,7 @@ use App\Http\Requests\Reporter\UpdateReporterTicketRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketMedia;
 use App\Models\User;
 use App\Queries\Tickets\ReporterTicketHistoryQuery;
 use App\Queries\Tickets\ReporterTicketsBoardQuery;
@@ -17,6 +18,9 @@ use App\Queries\Tickets\ReporterTicketTrackingQuery;
 use App\Services\Tickets\TicketCancellationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -28,6 +32,9 @@ use Illuminate\View\View;
  *               ticket inside the reporter_id boundary, 404 otherwise).
  *  - history(): "Historial" — ReporterTicketHistoryQuery (own closed-out
  *               tickets: resolved/rejected, plus donut/average/monthly).
+ *  - edit():    "Editar ticket" — form to update safe fields + add evidence.
+ *  - update():  Persists safe fields and any new uploaded images atomically.
+ *  - cancel():  "Cancelar solicitud" — open → cancelled via TicketCancellationService.
  *
  * Every screen applies the reporter_id ownership scope FIRST so no parameter can
  * leak another reporter's tickets. NO maintenance action (Tomar, Iniciar,
@@ -58,13 +65,13 @@ class ReporterTicketController extends Controller
     private function filters(Request $request): array
     {
         return [
-            'search' => trim((string) $request->query('search', '')),
-            'priority' => (string) $request->query('priority', ''),
+            'search'      => trim((string) $request->query('search', '')),
+            'priority'    => (string) $request->query('priority', ''),
             'location_id' => (string) $request->query('location_id', ''),
             'category_id' => (string) $request->query('category_id', ''),
-            'from' => (string) $request->query('from', ''),
-            'to' => (string) $request->query('to', ''),
-            'page' => max(1, (int) $request->query('page', 1)),
+            'from'        => (string) $request->query('from', ''),
+            'to'          => (string) $request->query('to', ''),
+            'page'        => max(1, (int) $request->query('page', 1)),
         ];
     }
 
@@ -107,8 +114,8 @@ class ReporterTicketController extends Controller
         $this->authorize('update', $model);
 
         return view('tickets.reporter.edit', [
-            'ticket' => $model->load(['location', 'category']),
-            'locations' => Location::query()->active()->orderBy('name')->get(),
+            'ticket'     => $model->load(['location', 'category', 'media']),
+            'locations'  => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
@@ -116,9 +123,13 @@ class ReporterTicketController extends Controller
 
     /**
      * Persist the reporter's edit. Same resolution + authorization gate as edit().
-     * Only the validated, safe fields (title, description, location_id,
-     * category_id, priority) are written — state and assignment columns can never
-     * be reached because they are not part of the request rules.
+     *
+     * Safe text fields (title, description, location_id, category_id, priority)
+     * are updated. Any newly uploaded images (new_images[]) are stored to
+     * 'public' disk under 'ticket-evidence/{ticket_id}/' and a TicketMedia record
+     * is created for each. Existing evidence is NEVER deleted — this endpoint is
+     * additive only. Both the model update and the media inserts happen inside a
+     * single DB transaction so a partial failure rolls back cleanly.
      */
     public function update(UpdateReporterTicketRequest $request, string $ticket): RedirectResponse
     {
@@ -126,7 +137,47 @@ class ReporterTicketController extends Controller
 
         $this->authorize('update', $model);
 
-        $model->update($request->validated());
+        /** @var User $user */
+        $user = $request->user();
+
+        $validated = $request->validated();
+
+        // Separate the file uploads from the scalar fields before passing to update().
+        /** @var array<int, UploadedFile>|null $newImages */
+        $newImages = $validated['new_images'] ?? null;
+        unset($validated['new_images']);
+
+        DB::transaction(function () use ($model, $validated, $newImages, $user): void {
+            // 1. Update safe scalar fields.
+            $model->update($validated);
+
+            // 2. Store new images (additive — existing media is never touched).
+            if (! empty($newImages)) {
+                foreach ($newImages as $file) {
+                    if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                        continue;
+                    }
+
+                    // Store to 'public' disk; path: ticket-evidence/{ticket_id}/{uuid}.{ext}
+                    $path = $file->storeAs(
+                        'ticket-evidence/'.$model->id,
+                        Str::uuid().'.'.$file->extension(),
+                        'public',
+                    );
+
+                    if ($path === false || $path === null) {
+                        continue;
+                    }
+
+                    TicketMedia::create([
+                        'ticket_id'   => $model->id,
+                        'file_url'    => Storage::disk('public')->url((string) $path),
+                        'file_type'   => $file->getMimeType() ?? 'application/octet-stream',
+                        'uploaded_by' => $user->id,
+                    ]);
+                }
+            }
+        });
 
         return redirect()
             ->route('reporter.tickets.show', $model->id)
