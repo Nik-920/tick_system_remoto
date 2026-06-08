@@ -26,11 +26,12 @@ use Illuminate\Support\Collection;
  * range and page are all narrowed INSIDE that boundary, so no request parameter
  * can widen what a reporter may read.
  *
- * Domain note: the lifecycle has NO "cancelled" state — only open, in_progress,
- * resolved, rejected. History therefore = resolved + rejected; there is no
- * "Cancelados" chip. There is no rejected_at column, so the portable "closed at"
- * used for the date filter / ordering is COALESCE(resolved_at, updated_at); the
- * precise rejection moment per row comes from state_history (to_state=rejected).
+ * Domain note: a ticket is "closed out" when resolved, rejected, OR cancelled
+ * (the reporter's own voluntary withdrawal — distinct from rejected). History
+ * therefore = resolved + rejected + cancelled, with a "Cancelados" chip. There
+ * is no rejected_at/cancelled_at column, so the portable "closed at" used for the
+ * date filter / ordering is COALESCE(resolved_at, updated_at); the precise
+ * rejection/cancellation moment per row comes from state_history.
  *
  * Portability: counts use COUNT()/GROUP BY and durations/months are computed in
  * PHP, so the same code runs on SQLite (tests) and PostgreSQL.
@@ -38,13 +39,13 @@ use Illuminate\Support\Collection;
 final class ReporterTicketHistoryQuery
 {
     /** @var list<string> */
-    public const RESULTS = ['all', 'resolved', 'rejected'];
+    public const RESULTS = ['all', 'resolved', 'rejected', 'cancelled'];
 
     /** @var list<string> */
     public const SORTS = ['recent', 'oldest', 'priority'];
 
     /** @var list<string> Final states that make up the reporter's history. */
-    private const HISTORY_STATES = [Ticket::STATE_RESOLVED, Ticket::STATE_REJECTED];
+    private const HISTORY_STATES = [Ticket::STATE_RESOLVED, Ticket::STATE_REJECTED, Ticket::STATE_CANCELLED];
 
     private const PRIORITY_ORDER = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END";
 
@@ -68,8 +69,8 @@ final class ReporterTicketHistoryQuery
         'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap', 'servicios' => 'droplet',
     ];
 
-    /** @var array<string, CarbonInterface> ticket_id → rejection moment (latest), filled by rows(). */
-    private array $rejectionTimes = [];
+    /** @var array<string, CarbonInterface> ticket_id → close moment (latest rejected/cancelled transition), filled by rows(). */
+    private array $closeTimes = [];
 
     /**
      * @param  array<string, mixed>  $filters  search, priority, location_id, category_id, from, to, page
@@ -93,6 +94,7 @@ final class ReporterTicketHistoryQuery
     {
         $resolved = (clone $this->mineHistoryBase())->where('state', Ticket::STATE_RESOLVED)->count();
         $rejected = (clone $this->mineHistoryBase())->where('state', Ticket::STATE_REJECTED)->count();
+        $cancelled = (clone $this->mineHistoryBase())->where('state', Ticket::STATE_CANCELLED)->count();
 
         $listTotal = $this->scopedForList()->count();
         $page = $this->currentPage($listTotal);
@@ -103,12 +105,12 @@ final class ReporterTicketHistoryQuery
             activeResult: $this->result,
             sort: $this->sort,
             filters: $this->filters,
-            chips: $this->chips($resolved, $rejected),
+            chips: $this->chips($resolved, $rejected, $cancelled),
             locations: Location::query()->active()->orderBy('name')->get(),
             categories: Category::query()->orderBy('name')->get(),
             tickets: $rows->map(fn (Ticket $t): array => $this->shapeRow($t))->all(),
             pagination: $this->pagination($page, $rows->count(), $listTotal),
-            summary: $this->summary($resolved, $rejected),
+            summary: $this->summary($resolved, $rejected, $cancelled),
         );
     }
 
@@ -135,7 +137,7 @@ final class ReporterTicketHistoryQuery
     {
         $query = $this->mineHistoryBase();
 
-        if (in_array($this->result, [Ticket::STATE_RESOLVED, Ticket::STATE_REJECTED], true)) {
+        if (in_array($this->result, [Ticket::STATE_RESOLVED, Ticket::STATE_REJECTED, Ticket::STATE_CANCELLED], true)) {
             $query->where('state', $this->result);
         }
 
@@ -205,20 +207,26 @@ final class ReporterTicketHistoryQuery
             ->forPage($page, self::PER_PAGE)
             ->get();
 
-        $this->rejectionTimes = $this->rejectionTimesFor(
+        // Precise close moment per row from state_history: rejected and cancelled
+        // both lack a dedicated timestamp column, so we read their transition time.
+        $this->closeTimes = $this->latestTransitionTimes(
+            Ticket::STATE_REJECTED,
             $rows->where('state', Ticket::STATE_REJECTED)->pluck('id')->all()
+        ) + $this->latestTransitionTimes(
+            Ticket::STATE_CANCELLED,
+            $rows->where('state', Ticket::STATE_CANCELLED)->pluck('id')->all()
         );
 
         return $rows;
     }
 
     /**
-     * One grouped query: latest rejection timestamp per ticket (no N+1).
+     * One grouped query: latest timestamp of a given transition per ticket (no N+1).
      *
      * @param  list<string>  $ids
      * @return array<string, CarbonInterface>
      */
-    private function rejectionTimesFor(array $ids): array
+    private function latestTransitionTimes(string $toState, array $ids): array
     {
         if ($ids === []) {
             return [];
@@ -226,12 +234,12 @@ final class ReporterTicketHistoryQuery
 
         return StateHistory::query()
             ->whereIn('ticket_id', $ids)
-            ->where('to_state', Ticket::STATE_REJECTED)
-            ->selectRaw('ticket_id, MAX(created_at) as rejected_at')
+            ->where('to_state', $toState)
+            ->selectRaw('ticket_id, MAX(created_at) as closed_at')
             ->groupBy('ticket_id')
             ->get()
             ->mapWithKeys(fn (StateHistory $h): array => [
-                (string) $h->ticket_id => Carbon::parse((string) $h->getAttribute('rejected_at')),
+                (string) $h->ticket_id => Carbon::parse((string) $h->getAttribute('closed_at')),
             ])
             ->all();
     }
@@ -241,12 +249,13 @@ final class ReporterTicketHistoryQuery
     /**
      * @return list<array{key: string, label: string, count: int, tone: string, active: bool}>
      */
-    private function chips(int $resolved, int $rejected): array
+    private function chips(int $resolved, int $rejected, int $cancelled): array
     {
         $chips = [
-            ['key' => 'all', 'label' => 'Todos', 'count' => $resolved + $rejected, 'tone' => 'neutral'],
+            ['key' => 'all', 'label' => 'Todos', 'count' => $resolved + $rejected + $cancelled, 'tone' => 'neutral'],
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $resolved, 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $rejected, 'tone' => 'high'],
+            ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $cancelled, 'tone' => 'neutral'],
         ];
 
         return array_map(function (array $chip): array {
@@ -266,13 +275,13 @@ final class ReporterTicketHistoryQuery
      *     monthly: array{peak: int, has_data: bool, items: list<array{label: string, count: int}>}
      * }
      */
-    private function summary(int $resolved, int $rejected): array
+    private function summary(int $resolved, int $rejected, int $cancelled): array
     {
         $avg = $this->averageResolution();
 
         return [
-            'total' => $resolved + $rejected,
-            'donut' => $this->donut($resolved, $rejected),
+            'total' => $resolved + $rejected + $cancelled,
+            'donut' => $this->donut($resolved, $rejected, $cancelled),
             'avg_value' => $avg['label'],
             'avg_note' => $avg['has_data'] ? 'Sobre tus tickets resueltos' : 'Aún no tienes tickets resueltos',
             'avg_has_data' => $avg['has_data'],
@@ -281,17 +290,19 @@ final class ReporterTicketHistoryQuery
     }
 
     /**
-     * Donut by final result: resolved vs rejected, with cumulative percents the
-     * view turns into a conic-gradient + a text legend (never colour-only).
+     * Donut by final result: resolved vs rejected vs cancelled, with cumulative
+     * percents the view turns into a conic-gradient + a text legend (never
+     * colour-only).
      *
      * @return list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>
      */
-    private function donut(int $resolved, int $rejected): array
+    private function donut(int $resolved, int $rejected, int $cancelled): array
     {
-        $total = $resolved + $rejected;
+        $total = $resolved + $rejected + $cancelled;
         $bands = [
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $resolved, 'color' => '#16a34a', 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $rejected, 'color' => '#ef4444', 'tone' => 'high'],
+            ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $cancelled, 'color' => '#64748b', 'tone' => 'neutral'],
         ];
 
         $cursor = 0.0;
@@ -385,9 +396,11 @@ final class ReporterTicketHistoryQuery
     private function shapeRow(Ticket $ticket): array
     {
         $state = (string) $ticket->state;
+        // Resolved uses resolved_at; rejected/cancelled use their state_history
+        // transition moment (fallback updated_at).
         $closedAt = $state === Ticket::STATE_RESOLVED
             ? $ticket->resolved_at
-            : ($this->rejectionTimes[(string) $ticket->id] ?? $ticket->updated_at);
+            : ($this->closeTimes[(string) $ticket->id] ?? $ticket->updated_at);
 
         return [
             'id' => (string) $ticket->id,
@@ -399,7 +412,11 @@ final class ReporterTicketHistoryQuery
             'icon' => $this->iconFor($ticket->category?->name),
             'status' => $state,
             'status_label' => $this->stateLabel($state),
-            'status_tone' => $state === Ticket::STATE_RESOLVED ? 'success' : 'high',
+            'status_tone' => match ($state) {
+                Ticket::STATE_RESOLVED => 'success',
+                Ticket::STATE_REJECTED => 'high',
+                default => 'neutral',
+            },
             'priority' => $this->priorityTone((string) $ticket->priority),
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
             'created' => $ticket->created_at?->format('d/m/Y') ?? '—',
@@ -487,6 +504,7 @@ final class ReporterTicketHistoryQuery
         return match ($state) {
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
+            Ticket::STATE_CANCELLED => 'Cancelado',
             default => ucfirst($state),
         };
     }

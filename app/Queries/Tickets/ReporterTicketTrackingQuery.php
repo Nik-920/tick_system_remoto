@@ -117,6 +117,19 @@ final class ReporterTicketTrackingQuery
         $history = $this->ticket->stateHistory;
 
         $createdAt = $this->ticket->created_at;
+
+        // Cancelled is a reporter withdrawal that happens BEFORE any review or
+        // assignment, so its stepper is intentionally short and terminal:
+        // Reportado → Cancelado (no assigned / in_progress / resolved milestones).
+        if ($state === Ticket::STATE_CANCELLED) {
+            $cancelledAt = $history->where('to_state', Ticket::STATE_CANCELLED)->last()?->created_at;
+
+            return [
+                $this->step('created', 'Reportado', 'inbox', 'done', $createdAt, null),
+                $this->finalStep('cancelled', 'Cancelado', 'ban', 'cancelled', 'neutral', $cancelledAt),
+            ];
+        }
+
         $firstHistoryAt = $history->first()?->created_at;
         $firstInProgressAt = $history->firstWhere('to_state', Ticket::STATE_IN_PROGRESS)?->created_at;
         $rejectedAt = $history->where('to_state', Ticket::STATE_REJECTED)->last()?->created_at;
@@ -239,6 +252,7 @@ final class ReporterTicketTrackingQuery
             Ticket::STATE_IN_PROGRESS => ['Trabajo iniciado', 'wrench', 'primary'],
             Ticket::STATE_RESOLVED => ['Ticket resuelto', 'circle-check', 'success'],
             Ticket::STATE_REJECTED => ['Ticket rechazado', 'x', 'high'],
+            Ticket::STATE_CANCELLED => ['Solicitud cancelada', 'ban', 'neutral'],
             Ticket::STATE_OPEN => ['Ticket reabierto', 'rotate-ccw', 'warning'],
             default => [$this->stateLabel($to), 'circle-dot', 'neutral'],
         };
@@ -354,6 +368,7 @@ final class ReporterTicketTrackingQuery
             Ticket::STATE_IN_PROGRESS => 'primary',
             Ticket::STATE_RESOLVED => 'success',
             Ticket::STATE_REJECTED => 'high',
+            Ticket::STATE_CANCELLED => 'neutral',
             default => 'neutral',
         };
     }
@@ -365,6 +380,7 @@ final class ReporterTicketTrackingQuery
             Ticket::STATE_IN_PROGRESS => 'En progreso',
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
+            Ticket::STATE_CANCELLED => 'Cancelado',
             default => ucfirst($state),
         };
     }

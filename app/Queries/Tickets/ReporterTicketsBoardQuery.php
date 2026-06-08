@@ -25,9 +25,10 @@ use Illuminate\Support\Carbon;
  * applies for the reporter role (Ticket::scopeReportedBy), re-expressed here as
  * an explicit, self-contained board query with chips/donut/labs analytics.
  *
- * Domain note: the lifecycle has exactly four states — open, in_progress,
- * resolved, rejected (no "review"/"closed"). The chips/donut use only those;
- * "Posible duplicado" is derived from the AI embedding (effectiveDuplicates).
+ * Domain note: the lifecycle has five states — open, in_progress, resolved,
+ * rejected and cancelled (reporter voluntary withdrawal; distinct from rejected).
+ * The chips/donut use those; "Posible duplicado" is derived from the AI embedding
+ * (effectiveDuplicates).
  *
  * Portability: counts use COUNT()/GROUP BY and durations are computed in PHP,
  * so the same code runs on SQLite (tests) and PostgreSQL.
@@ -35,7 +36,7 @@ use Illuminate\Support\Carbon;
 final class ReporterTicketsBoardQuery
 {
     /** @var list<string> */
-    public const STATUSES = ['all', 'open', 'in_progress', 'resolved', 'rejected', 'duplicate'];
+    public const STATUSES = ['all', 'open', 'in_progress', 'resolved', 'rejected', 'cancelled', 'duplicate'];
 
     /** @var list<string> */
     public const SORTS = ['recent', 'oldest', 'priority'];
@@ -46,6 +47,7 @@ final class ReporterTicketsBoardQuery
         Ticket::STATE_IN_PROGRESS,
         Ticket::STATE_RESOLVED,
         Ticket::STATE_REJECTED,
+        Ticket::STATE_CANCELLED,
     ];
 
     private const PRIORITY_ORDER = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END";
@@ -249,6 +251,7 @@ final class ReporterTicketsBoardQuery
             ['key' => 'in_progress', 'label' => 'En progreso', 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'tone' => 'primary'],
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $counts[Ticket::STATE_RESOLVED], 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $counts[Ticket::STATE_REJECTED], 'tone' => 'high'],
+            ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $counts[Ticket::STATE_CANCELLED], 'tone' => 'neutral'],
             ['key' => 'duplicate', 'label' => 'Posible duplicado', 'count' => $duplicates, 'tone' => 'info'],
         ];
 
@@ -295,6 +298,7 @@ final class ReporterTicketsBoardQuery
             ['key' => 'in_progress', 'label' => 'En progreso', 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'color' => '#2563eb', 'tone' => 'primary'],
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $counts[Ticket::STATE_RESOLVED], 'color' => '#16a34a', 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $counts[Ticket::STATE_REJECTED], 'color' => '#ef4444', 'tone' => 'high'],
+            ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $counts[Ticket::STATE_CANCELLED], 'color' => '#64748b', 'tone' => 'neutral'],
         ];
 
         $cursor = 0.0;
@@ -511,6 +515,7 @@ final class ReporterTicketsBoardQuery
             Ticket::STATE_IN_PROGRESS => 'primary',
             Ticket::STATE_RESOLVED => 'success',
             Ticket::STATE_REJECTED => 'high',
+            Ticket::STATE_CANCELLED => 'neutral',
             default => 'neutral',
         };
     }
@@ -522,6 +527,7 @@ final class ReporterTicketsBoardQuery
             Ticket::STATE_IN_PROGRESS => 'En progreso',
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
+            Ticket::STATE_CANCELLED => 'Cancelado',
             default => ucfirst($state),
         };
     }

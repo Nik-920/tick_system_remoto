@@ -46,6 +46,13 @@ class Ticket extends Model
 
     public const STATE_REJECTED = 'rejected';
 
+    /**
+     * Voluntary withdrawal by the reporter while the request was still open and
+     * untouched by maintenance. Distinct from 'rejected' (a maintenance/admin
+     * decision). Terminal state; the row is preserved (no hard delete).
+     */
+    public const STATE_CANCELLED = 'cancelled';
+
     public const ASSIGNMENT_SOURCE_SELF = 'self_claimed';
 
     public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
