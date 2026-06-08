@@ -41,7 +41,7 @@
     $area = '0,38 '.$line.' 100,38';
     $chartAria = collect($items)->map(fn ($p) => "{$p['label']}: {$p['count']}")->implode(', ');
 
-    $resultLabels = ['resolved' => 'resueltos', 'rejected' => 'rechazados'];
+    $resultLabels = ['resolved' => 'resueltos', 'rejected' => 'rechazados', 'cancelled' => 'cancelados'];
 @endphp
 
 <div class="rep-page">
@@ -90,6 +90,7 @@
                             <option value="all" @selected($board->activeResult === 'all')>Todos</option>
                             <option value="resolved" @selected($board->activeResult === 'resolved')>Resuelto</option>
                             <option value="rejected" @selected($board->activeResult === 'rejected')>Rechazado</option>
+                            <option value="cancelled" @selected($board->activeResult === 'cancelled')>Cancelado</option>
                         </select>
                     </div>
                     <div class="rep-field">
@@ -247,7 +248,7 @@
                         @if (! $board->hasAnyHistory())
                             <x-lucide-history width="34" height="34" stroke-width="1.5" />
                             <p class="rep-empty__title">Aún no tienes historial</p>
-                            <p class="rep-empty__note">Cuando tus tickets se resuelvan o se rechacen aparecerán aquí.</p>
+                            <p class="rep-empty__note">Cuando tus tickets se resuelvan, se rechacen o los canceles aparecerán aquí.</p>
                             <a href="{{ route('reporter.tickets.index') }}" class="rep-btn rep-btn--ghost">Ver mis tickets</a>
                         @elseif ($board->hasOtherFilters())
                             <x-lucide-search-x width="34" height="34" stroke-width="1.5" />

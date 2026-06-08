@@ -33,6 +33,7 @@ $stateLabels = [
     'in_progress' => 'En progreso',
     'resolved'    => 'Resuelto',
     'rejected'    => 'Rechazado',
+    'cancelled'   => 'Cancelado',
 ];
 
 $priorityLabels = [

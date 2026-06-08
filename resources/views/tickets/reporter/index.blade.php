@@ -208,9 +208,10 @@
                                 {{-- Kebab only renders while the reporter may still
                                      act on the ticket (own + open + unassigned +
                                      unlocked). Once maintenance takes it, it
-                                     disappears. Edit/Cancel are honest placeholders
-                                     for now: no edit screen, no cancel mutation, NO
-                                     destructive delete. --}}
+                                     disappears. Both "Editar" and "Cancelar
+                                     solicitud" are REAL now. Cancelar withdraws the
+                                     request (open → cancelled) via a PATCH form —
+                                     NOT a rejection and NOT a destructive delete. --}}
                                 @if ($t['show_actions_menu'])
                                     <div class="rep-kebab" data-rep-kebab>
                                         <button type="button" class="rep-kebab__btn"
@@ -220,18 +221,20 @@
                                         </button>
                                         <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
                                             @if ($t['can_edit'])
-                                                <button type="button" class="rep-kebab__item rep-kebab__item--soon"
-                                                        disabled aria-disabled="true"
-                                                        title="Editar ticket estará disponible en la siguiente fase">
+                                                <a href="{{ route('reporter.tickets.edit', $t['id']) }}" class="rep-kebab__item">
                                                     <x-lucide-edit width="15" height="15" stroke-width="2" /> Editar
-                                                </button>
+                                                </a>
                                             @endif
                                             @if ($t['can_cancel'])
-                                                <button type="button" class="rep-kebab__item rep-kebab__item--soon rep-kebab__item--danger"
-                                                        disabled aria-disabled="true"
-                                                        title="Cancelar solicitud estará disponible en la siguiente fase">
-                                                    <x-lucide-x width="15" height="15" stroke-width="2" /> Cancelar solicitud
-                                                </button>
+                                                <form method="POST" action="{{ route('reporter.tickets.cancel', $t['id']) }}"
+                                                      onsubmit="return confirm('¿Cancelar esta solicitud? Esta acción no se puede deshacer.');">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                                    <button type="submit" class="rep-kebab__item rep-kebab__item--danger">
+                                                        <x-lucide-x width="15" height="15" stroke-width="2" /> Cancelar solicitud
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
                                     </div>

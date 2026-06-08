@@ -11,10 +11,14 @@
     $details = $tracking->details;
     $evidence = $tracking->evidence;
 
-    $stateCaption = ['done' => 'Completado', 'current' => 'En curso', 'todo' => 'Pendiente', 'rejected' => 'Rechazado'];
+    $stateCaption = ['done' => 'Completado', 'current' => 'En curso', 'todo' => 'Pendiente', 'rejected' => 'Rechazado', 'cancelled' => 'Cancelado'];
 @endphp
 
 <div class="rep-show">
+
+    @if (session('status'))
+        <div class="alert-success">{{ session('status') }}</div>
+    @endif
 
     {{-- ── Back link ─────────────────────────────────────────────── --}}
     <a href="{{ route('reporter.tickets.index') }}" class="rep-show__back">

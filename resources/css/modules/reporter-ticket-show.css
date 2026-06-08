@@ -162,6 +162,7 @@
 .rep-step.is-done::before,
 .rep-step.is-current::before { background: #16a34a; }
 .rep-step.is-rejected::before { background: #ef4444; }
+.rep-step.is-cancelled::before { background: #94a3b8; }
 
 .rep-step__node {
     position: relative;
@@ -188,6 +189,7 @@
 }
 .rep-step.is-todo .rep-step__node { background: var(--bg-soft); color: var(--text-faint); border-color: var(--border-default); }
 .rep-step.is-rejected .rep-step__node { background: #ef4444; color: #ffffff; border-color: #ef4444; }
+.rep-step.is-cancelled .rep-step__node { background: #64748b; color: #ffffff; border-color: #64748b; }
 
 @keyframes rep-step-pulse {
     0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--r-solid) 22%, transparent); }
@@ -207,6 +209,9 @@
 .rep-step.is-current .rep-step__state { color: var(--color-primary); }
 .rep-step.is-rejected .rep-step__label { color: #b42318; }
 .rep-step.is-rejected .rep-step__state { color: #b42318; }
+.rep-step.is-cancelled .rep-step__label { color: var(--text-secondary); }
+.rep-step.is-cancelled .rep-step__state { color: #475569; }
+.rep-step.is-cancelled .rep-step__at { color: var(--text-muted); }
 
 /* ============================================================
    3. CONTENT LAYOUT (timeline + detail rail)
