@@ -41,7 +41,7 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_reporter_can_view_edit_form_for_own_open_unassigned_ticket(): void
     {
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Mi ticket editable');
 
         $response = $this->actingAs($me)->get(route('reporter.tickets.edit', $ticket->id));
@@ -61,8 +61,8 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_reporter_gets_404_for_another_reporters_ticket(): void
     {
-        $me      = $this->userWithRole('reporter');
-        $other   = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
         $foreign = $this->ticketFor($other, 'open', 'Ajeno');
 
         $this->actingAs($me)->get(route('reporter.tickets.edit', $foreign->id))->assertNotFound();
@@ -91,8 +91,8 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_reporter_cannot_edit_own_open_ticket_assigned_to_maintenance(): void
     {
-        $me     = $this->userWithRole('reporter');
-        $tech   = $this->userWithRole('maintenance');
+        $me = $this->userWithRole('reporter');
+        $tech = $this->userWithRole('maintenance');
         $ticket = $this->ticketFor($me, 'open', 'Tomado', ['assigned_to' => $tech->id]);
 
         $this->actingAs($me)->get(route('reporter.tickets.edit', $ticket->id))->assertForbidden();
@@ -101,7 +101,7 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_reporter_cannot_edit_own_open_locked_ticket(): void
     {
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Bloqueado', ['assignment_locked' => true]);
 
         $this->actingAs($me)->get(route('reporter.tickets.edit', $ticket->id))->assertForbidden();
@@ -111,7 +111,7 @@ class ReporterTicketEditPageTest extends TestCase
     public function test_maintenance_admin_super_admin_cannot_access_reporter_edit(): void
     {
         $reporter = $this->userWithRole('reporter');
-        $ticket   = $this->ticketFor($reporter, 'open', 'Solo reporter');
+        $ticket = $this->ticketFor($reporter, 'open', 'Solo reporter');
 
         foreach (['maintenance', 'admin', 'super_admin'] as $role) {
             $user = $this->userWithRole($role);
@@ -124,17 +124,17 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_reporter_can_update_safe_fields_and_is_redirected_with_success(): void
     {
-        $me          = $this->userWithRole('reporter');
-        $ticket      = $this->ticketFor($me, 'open', 'Título viejo');
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Título viejo');
         $newLocation = $this->location('LAB-9', 'Laboratorio 9');
         $newCategory = $this->category('Redes');
 
         $response = $this->actingAs($me)->patch(route('reporter.tickets.update', $ticket->id), [
-            'title'       => 'Título corregido por el reporter',
+            'title' => 'Título corregido por el reporter',
             'description' => 'Descripción nueva con suficiente detalle para pasar la validación.',
             'location_id' => $newLocation->id,
             'category_id' => $newCategory->id,
-            'priority'    => 'high',
+            'priority' => 'high',
         ]);
 
         $response->assertRedirect(route('reporter.tickets.show', $ticket->id));
@@ -153,24 +153,24 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_update_ignores_forbidden_fields(): void
     {
-        $me              = $this->userWithRole('reporter');
-        $tech            = $this->userWithRole('maintenance');
-        $ticket          = $this->ticketFor($me, 'open', 'Intento de escalada');
+        $me = $this->userWithRole('reporter');
+        $tech = $this->userWithRole('maintenance');
+        $ticket = $this->ticketFor($me, 'open', 'Intento de escalada');
         $originalReporter = $ticket->reporter_id;
 
         $this->actingAs($me)->patch(route('reporter.tickets.update', $ticket->id), [
-            'title'             => 'Título legítimo del reporter',
-            'description'       => 'Una descripción válida y suficientemente larga para validar.',
-            'location_id'       => $ticket->location_id,
-            'category_id'       => $ticket->category_id,
-            'priority'          => 'medium',
+            'title' => 'Título legítimo del reporter',
+            'description' => 'Una descripción válida y suficientemente larga para validar.',
+            'location_id' => $ticket->location_id,
+            'category_id' => $ticket->category_id,
+            'priority' => 'medium',
             // Forbidden — must be ignored entirely.
-            'state'             => 'resolved',
-            'assigned_to'       => $tech->id,
-            'reporter_id'       => $tech->id,
+            'state' => 'resolved',
+            'assigned_to' => $tech->id,
+            'reporter_id' => $tech->id,
             'assignment_locked' => true,
             'assignment_source' => 'admin_assigned',
-            'resolved_at'       => now()->toDateTimeString(),
+            'resolved_at' => now()->toDateTimeString(),
         ])->assertRedirect(route('reporter.tickets.show', $ticket->id));
 
         $ticket->refresh();
@@ -186,17 +186,17 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_update_validates_required_fields(): void
     {
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Para validación');
 
         $this->actingAs($me)
             ->from(route('reporter.tickets.edit', $ticket->id))
             ->patch(route('reporter.tickets.update', $ticket->id), [
-                'title'       => 'no', // too short
+                'title' => 'no', // too short
                 'description' => 'muy corta',
                 'location_id' => '',
                 'category_id' => '',
-                'priority'    => 'invalido',
+                'priority' => 'invalido',
             ])
             ->assertRedirect(route('reporter.tickets.edit', $ticket->id))
             ->assertSessionHasErrors(['title', 'description', 'location_id', 'category_id', 'priority']);
@@ -211,7 +211,7 @@ class ReporterTicketEditPageTest extends TestCase
     {
         Storage::fake('public');
 
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Con imagen');
 
         $this->actingAs($me)->patch(route('reporter.tickets.update', $ticket->id), array_merge(
@@ -220,7 +220,7 @@ class ReporterTicketEditPageTest extends TestCase
         ))->assertRedirect(route('reporter.tickets.show', $ticket->id));
 
         $this->assertDatabaseHas('ticket_media', [
-            'ticket_id'   => $ticket->id,
+            'ticket_id' => $ticket->id,
             'uploaded_by' => $me->id,
         ]);
 
@@ -231,14 +231,14 @@ class ReporterTicketEditPageTest extends TestCase
     {
         Storage::fake('public');
 
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Media existente');
 
         // Seed an existing TicketMedia record.
         TicketMedia::create([
-            'ticket_id'   => $ticket->id,
-            'file_url'    => 'https://example.com/existing.jpg',
-            'file_type'   => 'image/jpeg',
+            'ticket_id' => $ticket->id,
+            'file_url' => 'https://example.com/existing.jpg',
+            'file_type' => 'image/jpeg',
             'uploaded_by' => $me->id,
         ]);
 
@@ -254,13 +254,13 @@ class ReporterTicketEditPageTest extends TestCase
 
     public function test_update_text_only_does_not_affect_existing_media(): void
     {
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Solo texto');
 
         TicketMedia::create([
-            'ticket_id'   => $ticket->id,
-            'file_url'    => 'https://example.com/kept.jpg',
-            'file_type'   => 'image/jpeg',
+            'ticket_id' => $ticket->id,
+            'file_url' => 'https://example.com/kept.jpg',
+            'file_type' => 'image/jpeg',
             'uploaded_by' => $me->id,
         ]);
 
@@ -271,13 +271,13 @@ class ReporterTicketEditPageTest extends TestCase
         // Media record must remain untouched.
         $this->assertDatabaseHas('ticket_media', [
             'ticket_id' => $ticket->id,
-            'file_url'  => 'https://example.com/kept.jpg',
+            'file_url' => 'https://example.com/kept.jpg',
         ]);
     }
 
     public function test_update_rejects_invalid_file_type(): void
     {
-        $me     = $this->userWithRole('reporter');
+        $me = $this->userWithRole('reporter');
         $ticket = $this->ticketFor($me, 'open', 'Archivo inválido');
 
         $this->actingAs($me)
@@ -309,11 +309,11 @@ class ReporterTicketEditPageTest extends TestCase
     private function validPayload(): array
     {
         return [
-            'title'       => 'Un título válido para el ticket',
+            'title' => 'Un título válido para el ticket',
             'description' => 'Una descripción válida con la longitud mínima requerida por las reglas.',
             'location_id' => $this->location()->id,
             'category_id' => $this->category()->id,
-            'priority'    => 'medium',
+            'priority' => 'medium',
         ];
     }
 
@@ -335,13 +335,13 @@ class ReporterTicketEditPageTest extends TestCase
     private function ticketFor(User $reporter, string $state, string $title, array $attrs = []): Ticket
     {
         $ticket = Ticket::create([
-            'title'             => $title,
-            'description'       => 'Descripción de '.$title.' con largo suficiente.',
-            'reporter_id'       => $reporter->id,
-            'location_id'       => $attrs['location_id'] ?? $this->location()->id,
-            'category_id'       => $attrs['category_id'] ?? $this->category()->id,
-            'state'             => $state,
-            'priority'          => $attrs['priority'] ?? 'medium',
+            'title' => $title,
+            'description' => 'Descripción de '.$title.' con largo suficiente.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $attrs['location_id'] ?? $this->location()->id,
+            'category_id' => $attrs['category_id'] ?? $this->category()->id,
+            'state' => $state,
+            'priority' => $attrs['priority'] ?? 'medium',
             'assignment_locked' => $attrs['assignment_locked'] ?? false,
         ]);
 
@@ -357,10 +357,10 @@ class ReporterTicketEditPageTest extends TestCase
         return Location::firstOrCreate(
             ['room_code' => $code],
             [
-                'name'      => $name,
-                'building'  => 'Edificio A',
-                'floor'     => '1',
-                'qr_token'  => 'qr-'.Str::uuid()->toString(),
+                'name' => $name,
+                'building' => 'Edificio A',
+                'floor' => '1',
+                'qr_token' => 'qr-'.Str::uuid()->toString(),
                 'is_active' => true,
             ],
         );
