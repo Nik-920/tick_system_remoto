@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🎫 Sistema de Reporte de Incidencias
+# 🎫 INCIDEX
 
-### *Infrastructure Ticketing System*
+### *Sistema de Reporte de Incidencias de Infraestructura*
 
 [![Laravel](https://img.shields.io/badge/Laravel-12.56.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
@@ -24,7 +24,7 @@
 
 ## 📖 Descripción del Proyecto
 
-**Sistema de Reporte de Incidencias de Infraestructura** es una aplicación web que permite a alumnos y profesores reportar fallas de infraestructura (proyectores averiados, baños en mal estado, enchufes sin corriente, etc.) escaneando un **código QR** ubicado en cada aula o espacio físico.
+**INCIDEX** es una aplicación web que permite a alumnos y profesores reportar fallas de infraestructura (proyectores averiados, baños en mal estado, enchufes sin corriente, etc.) escaneando un **código QR** ubicado en cada aula o espacio físico.
 
 ### El Problema
 
@@ -168,21 +168,20 @@ El ciclo de vida del ticket es el núcleo del sistema. Se implementa como una **
 
 ### Arquitectura de Capas
 
-```
-┌─────────────────────────────────────────────────┐
-│                Presentation Layer               │
-│         Livewire Components + Blade Templates   │
-├─────────────────────────────────────────────────┤
-│                Application Layer                │
-│        Controllers + Form Requests + Jobs       │
-├─────────────────────────────────────────────────┤
-│                  Domain Layer                   │
-│ Models + State Machine + Policies + Repositories│
-│ + IA Services (Embeddings, Deduplication)       │
-├─────────────────────────────────────────────────┤
-│              Infrastructure Layer               │
-│      Supabase (PostgreSQL) + Storage + Auth     │
-└─────────────────────────────────────────────────┘
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                     │
+│    Livewire Components + Blade Templates + ViewModels       │
+├─────────────────────────────────────────────────────────────┤
+│                      Application Layer                      │
+│   Controllers + Form Requests + Jobs + Notifications        │
+├─────────────────────────────────────────────────────────────┤
+│                        Domain Layer                         │
+│ Models + Services (TicketState) + Policies + Events/Listeners│
+├─────────────────────────────────────────────────────────────┤
+│                    Infrastructure Layer                     │
+│ Supabase (DB/Auth) + Query Objects + Adapters (IA/Firebase) │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Diagrama de Flujo: Creación de Ticket con IA
