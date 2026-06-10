@@ -63,14 +63,14 @@ class UpdateReporterTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'            => ['required', 'string', 'min:5', 'max:255'],
-            'description'      => ['required', 'string', 'min:20', 'max:2000'],
-            'location_id'      => ['required', 'uuid', 'exists:locations,id'],
-            'category_id'      => ['required', 'uuid', 'exists:categories,id'],
-            'priority'         => ['required', Rule::in(self::PRIORITIES)],
+            'title' => ['required', 'string', 'min:5', 'max:255'],
+            'description' => ['required', 'string', 'min:20', 'max:2000'],
+            'location_id' => ['required', 'uuid', 'exists:locations,id'],
+            'category_id' => ['required', 'uuid', 'exists:categories,id'],
+            'priority' => ['required', Rule::in(self::PRIORITIES)],
             // Optional evidence uploads — additive only (no existing media is deleted).
-            'new_images'       => ['nullable', 'array', 'max:'.self::MAX_FILES],
-            'new_images.*'     => [
+            'new_images' => ['nullable', 'array', 'max:'.self::MAX_FILES],
+            'new_images.*' => [
                 'file',
                 'mimes:jpeg,jpg,png,gif,webp',
                 'max:'.self::MAX_FILE_KB,
@@ -84,12 +84,12 @@ class UpdateReporterTicketRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'title'        => 'titulo',
-            'description'  => 'descripcion',
-            'location_id'  => 'ubicacion',
-            'category_id'  => 'categoria',
-            'priority'     => 'prioridad',
-            'new_images'   => 'imágenes',
+            'title' => 'titulo',
+            'description' => 'descripcion',
+            'location_id' => 'ubicacion',
+            'category_id' => 'categoria',
+            'priority' => 'prioridad',
+            'new_images' => 'imágenes',
             'new_images.*' => 'imagen',
         ];
     }
@@ -101,8 +101,8 @@ class UpdateReporterTicketRequest extends FormRequest
     {
         return [
             'new_images.*.mimes' => 'Cada imagen debe ser JPG, PNG, GIF o WebP.',
-            'new_images.*.max'   => 'Cada imagen no puede superar los 10 MB.',
-            'new_images.max'     => 'Puedes subir un máximo de '.self::MAX_FILES.' imágenes por vez.',
+            'new_images.*.max' => 'Cada imagen no puede superar los 10 MB.',
+            'new_images.max' => 'Puedes subir un máximo de '.self::MAX_FILES.' imágenes por vez.',
         ];
     }
 

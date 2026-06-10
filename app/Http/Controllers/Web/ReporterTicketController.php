@@ -65,13 +65,13 @@ class ReporterTicketController extends Controller
     private function filters(Request $request): array
     {
         return [
-            'search'      => trim((string) $request->query('search', '')),
-            'priority'    => (string) $request->query('priority', ''),
+            'search' => trim((string) $request->query('search', '')),
+            'priority' => (string) $request->query('priority', ''),
             'location_id' => (string) $request->query('location_id', ''),
             'category_id' => (string) $request->query('category_id', ''),
-            'from'        => (string) $request->query('from', ''),
-            'to'          => (string) $request->query('to', ''),
-            'page'        => max(1, (int) $request->query('page', 1)),
+            'from' => (string) $request->query('from', ''),
+            'to' => (string) $request->query('to', ''),
+            'page' => max(1, (int) $request->query('page', 1)),
         ];
     }
 
@@ -114,8 +114,8 @@ class ReporterTicketController extends Controller
         $this->authorize('update', $model);
 
         return view('tickets.reporter.edit', [
-            'ticket'     => $model->load(['location', 'category', 'media']),
-            'locations'  => Location::query()->active()->orderBy('name')->get(),
+            'ticket' => $model->load(['location', 'category', 'media']),
+            'locations' => Location::query()->active()->orderBy('name')->get(),
             'categories' => Category::query()->orderBy('name')->get(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
@@ -170,9 +170,9 @@ class ReporterTicketController extends Controller
                     }
 
                     TicketMedia::create([
-                        'ticket_id'   => $model->id,
-                        'file_url'    => Storage::disk('public')->url((string) $path),
-                        'file_type'   => $file->getMimeType() ?? 'application/octet-stream',
+                        'ticket_id' => $model->id,
+                        'file_url' => Storage::disk('public')->url((string) $path),
+                        'file_type' => $file->getMimeType() ?? 'application/octet-stream',
                         'uploaded_by' => $user->id,
                     ]);
                 }
