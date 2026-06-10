@@ -347,6 +347,8 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 | **spatie/laravel-permission** | 6.25.0 | RBAC (Roles y Permisos) |
 | **simplesoftwareio/simple-qrcode** | 4.2.0 | Generación de códigos QR |
 | **Laravel Sanctum** | 4.3.1 | Autenticación de API tokens |
+| **kreait/laravel-firebase** | 6.2.x | Notificaciones Push (FCM) |
+| **sentry/sentry-laravel** | 4.25.x | Observabilidad y monitoreo de errores |
 
 ### Base de Datos y Auth
 
@@ -468,6 +470,8 @@ Paquetes Laravel principales instalados:
 - `spatie/laravel-model-states`: **2.12.1** — state machine
 - `laravel/sanctum`: **4.3.1** — autenticación API
 - `simplesoftwareio/simple-qrcode`: **4.2.0** — generación de QR
+- `kreait/laravel-firebase`: **6.2.x** — integración con Firebase Cloud Messaging
+- `sentry/sentry-laravel`: **4.25.x** — reporte de errores a Sentry
 
 ### 7) AI Integration
 
