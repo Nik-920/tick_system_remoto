@@ -185,16 +185,16 @@ El ciclo de vida del ticket es el núcleo del sistema. Se implementa como una **
 ```
 
 ### Diagrama de Flujo: Creación de Ticket con IA
-```
+```text
 ┌──────────────────────────────────────────────────┐
 │    Nuevo Ticket Creado (Descripción + Ubicación) │
 └───────────────────┬──────────────────────────────┘
                     │
-                    ▼
+                    ▼ (Job Asíncrono en Queue)
 ┌─────────────────────────────────────────────────┐
 │  Hugging Face: all-MiniLM-L6-v2 (Embedding)     │
 │  • Convierte descripción a vector (384 dims)    │
-│  • Procesa en ~100-200ms                        │
+│  • Procesa de forma asíncrona (background)      │
 └───────────────────┬─────────────────────────────┘
                     │
                     ▼
@@ -208,26 +208,26 @@ El ciclo de vida del ticket es el núcleo del sistema. Se implementa como una **
                     ▼
         ┌───────────┴───────────┐
         │                       │
-SÍ: Similitud ≥ 70%    NO: Similitud < 70%
+SÍ: Similitud ≥ Umbral  NO: Similitud < Umbral
         │                       │
         ▼                       ▼
 ┌───────────────────┐   ┌──────────────────┐
 │ DUPLICADO DETECTADO   │  TICKET NUEVO    │
-│ • Se marca        │   │ • Se crea        │
-│ • Se vincula      │   │ • Se almacena    │
+│ • Se marca flag   │   │ • Flujo normal   │
+│ • Dispara Evento  │   │ • Queda registrado│
 │ • Se audita (IA)  │   │ • Se audita (IA) │
 └───────────────────┘   └──────────────────┘
 ```
 ### Flujo de Implementación
 ### Fase 1: Detección Básica (ACTUAL)
 
-1. Usuario crea ticket con descripción
-2. Laravel dispara evento (ticket.created)
-3. Proceso sincronico llama a Hugging Face API
-4. Se genera embedding y se almacena
-5. Se buscan matches en tickets abiertos/en progreso
-6. Si similitud ≥ 0.70 → Se marca como posible duplicado
-7. Administrador revisa antes de consolidar
+1. Usuario crea ticket con descripción.
+2. Laravel dispara evento (`TicketCreated`).
+3. Listeners despachan **Jobs Asíncronos** (`DetectDuplicates` o `GenerateTicketEmbedding`).
+4. El Job llama a la API de Hugging Face para generar el embedding y lo almacena.
+5. Se buscan matches en tickets abiertos/en progreso para la misma ubicación y categoría.
+6. Si la similitud supera el umbral configurado y los textos coinciden → Se marca como duplicado y se dispara evento `DuplicateDetected`.
+7. Administrador revisa en el panel antes de consolidar o rechazar.
 
 ---
 
