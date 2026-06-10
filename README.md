@@ -219,7 +219,8 @@ SÍ: Similitud ≥ Umbral  NO: Similitud < Umbral
 └───────────────────┘   └──────────────────┘
 ```
 ### Flujo de Implementación
-### Fase 1: Detección Básica (ACTUAL)
+
+### Fase 1: Detección Básica de Duplicados (Implementado)
 
 1. Usuario crea ticket con descripción.
 2. Laravel dispara evento (`TicketCreated`).
@@ -228,6 +229,15 @@ SÍ: Similitud ≥ Umbral  NO: Similitud < Umbral
 5. Se buscan matches en tickets abiertos/en progreso para la misma ubicación y categoría.
 6. Si la similitud supera el umbral configurado y los textos coinciden → Se marca como duplicado y se dispara evento `DuplicateDetected`.
 7. Administrador revisa en el panel antes de consolidar o rechazar.
+
+### Fase 2: Análisis de Recurrencia e Historial (Implementado)
+
+1. Un ticket de mantenimiento es marcado como "Resuelto".
+2. Laravel dispara el evento (`TicketResolved`).
+3. Un Listener despacha el **Job Asíncrono** (`UpdateRecurrenceHistory`).
+4. El Job calcula el tiempo de resolución del ticket.
+5. Se actualiza el registro en `LocationIncidentHistory` (incrementando el contador de incidencias para esa ubicación/categoría y recalculando el tiempo promedio de resolución).
+6. Esta data alimenta las métricas y alertas de recurrencia en la plataforma.
 
 ---
 
