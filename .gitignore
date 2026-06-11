@@ -53,3 +53,9 @@ graphify-out/
 .cursor/
 .kilo/
 .gemini/
+
+# Terraform
+terraform/github/terraform.tfvars
+terraform/github/.terraform/
+terraform.tfstate
+terraform.tfstate.backup
