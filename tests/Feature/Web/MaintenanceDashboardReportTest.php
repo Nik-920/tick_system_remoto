@@ -98,7 +98,7 @@ class MaintenanceDashboardReportTest extends TestCase
             ->get(route('dashboard.maintenance.report', ['preset' => 'custom', 'from' => '2026-06-01', 'to' => '2026-06-10']));
 
         $response->assertOk();
-        $response->assertSeeText('Indicadores del periodo');
+        $response->assertSeeText('Indicadores clave');
         $response->assertSeeText('Resumen ejecutivo');
         $response->assertSee('2026-06-01');
         $response->assertSee('2026-06-10');
