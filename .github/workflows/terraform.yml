@@ -1,6 +1,7 @@
 name: 🏗️ Terraform — IaC Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
