@@ -184,14 +184,13 @@ class ReporterDashboardPageTest extends TestCase
         $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id))->assertOk()->assertViewIs('tickets.reporter.show');
     }
 
-    public function test_classic_dashboard_route_remains_intact(): void
+    public function test_classic_dashboard_redirects_reporter_to_reporter_dashboard(): void
     {
         $reporter = $this->userWithRole('reporter');
 
         $this->actingAs($reporter)
             ->get(route('dashboard.index'))
-            ->assertOk()
-            ->assertViewIs('dashboard.reporter');
+            ->assertRedirect(route('reporter.dashboard'));
     }
 
     // ── Fixtures ─────────────────────────────────────────────────

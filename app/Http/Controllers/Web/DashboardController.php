@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Support\Dashboard\MaintenanceDashboardV2Presenter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -18,7 +19,7 @@ class DashboardController extends Controller
         private readonly MaintenanceDashboardV2Presenter $maintenancePresenter,
     ) {}
 
-    public function index(DashboardDateRangeRequest $request): View
+    public function index(DashboardDateRangeRequest $request): View|RedirectResponse
     {
         $this->authorize('viewAny', Ticket::class);
 
@@ -28,6 +29,10 @@ class DashboardController extends Controller
         }
 
         $roleProfile = $this->resolveRoleProfile($user);
+
+        if ($roleProfile === 'reporter') {
+            return redirect()->route('reporter.dashboard');
+        }
 
         if ($roleProfile === 'maintenance') {
             // Promoted: the maintenance role now gets the redesigned V2 dashboard,

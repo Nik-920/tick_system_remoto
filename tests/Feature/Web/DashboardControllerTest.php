@@ -21,61 +21,15 @@ class DashboardControllerTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_reporter_dashboard_shows_only_related_recent_tickets(): void
+    public function test_reporter_visiting_dashboard_index_is_redirected_to_reporter_dashboard(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $otherUser = $this->createUserWithRole('reporter');
-        $ownedLocation = $this->createLocation('Aula 305', 'C-305');
-        $assignedLocation = $this->createLocation('Aula 306', 'C-306');
-        $unrelatedLocation = $this->createLocation('Aula 307', 'C-307');
-        $ownedCategory = $this->createCategory('Infraestructura', 'wrench');
-        $assignedCategory = $this->createCategory('Electricidad', 'bolt');
-        $unrelatedCategory = $this->createCategory('Red', 'network');
-
-        $owned = Ticket::create([
-            'title' => 'Ticket propio reporter',
-            'description' => 'Descripcion A',
-            'reporter_id' => $reporter->id,
-            'location_id' => $ownedLocation->id,
-            'category_id' => $ownedCategory->id,
-            'state' => 'open',
-            'priority' => 'high',
-        ]);
-        $owned->forceFill(['assigned_to' => $otherUser->id])->save();
-
-        $assigned = Ticket::create([
-            'title' => 'Ticket asignado reporter',
-            'description' => 'Descripcion B',
-            'reporter_id' => $otherUser->id,
-            'location_id' => $assignedLocation->id,
-            'category_id' => $assignedCategory->id,
-            'state' => 'in_progress',
-            'priority' => 'medium',
-        ]);
-        $assigned->forceFill(['assigned_to' => $reporter->id])->save();
-
-        $unrelated = Ticket::create([
-            'title' => 'Ticket no relacionado',
-            'description' => 'Descripcion C',
-            'reporter_id' => $otherUser->id,
-            'location_id' => $unrelatedLocation->id,
-            'category_id' => $unrelatedCategory->id,
-            'state' => 'open',
-            'priority' => 'low',
-        ]);
 
         $response = $this
             ->actingAs($reporter)
             ->get(route('dashboard.index'));
 
-        $response->assertOk();
-        $response->assertViewIs('dashboard.reporter');
-        $response->assertSeeText('Centro personal de reportes');
-        $response->assertSeeText('Mis alertas inmediatas');
-        $response->assertDontSeeText('Centro de control operativo');
-        $response->assertSeeText($owned->title);
-        $response->assertSeeText($assigned->title);
-        $response->assertDontSeeText($unrelated->title);
+        $response->assertRedirect(route('reporter.dashboard'));
     }
 
     public function test_maintenance_dashboard_shows_assigned_tickets_and_hides_other_technicians(): void
@@ -261,17 +215,13 @@ class DashboardControllerTest extends TestCase
 
     public function test_reporter_does_not_receive_maintenance_dashboard_sections(): void
     {
+        // Reporters are redirected away from /dashboard — maintenance sections
+        // are never served to them regardless.
         $reporter = $this->createUserWithRole('reporter');
 
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('dashboard.index'));
-
-        $response->assertOk();
-        $response->assertViewIs('dashboard.reporter');
-        // The reporter must not receive the maintenance (V2) sections.
-        $response->assertDontSeeText('Mis asignaciones');
-        $response->assertDontSeeText('Tasa de resolución');
+        $this->actingAs($reporter)
+            ->get(route('dashboard.index'))
+            ->assertRedirect(route('reporter.dashboard'));
     }
 
     public function test_admin_dashboard_shows_global_metrics_and_qr_issues(): void
