@@ -8,6 +8,12 @@ use App\Jobs\WriteAiAuditLog;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Observer for DuplicateDetected.
+ *
+ * This listener delegates audit persistence to LogAiDecision and WriteAiAuditLog
+ * jobs. It catches dispatch failures so the observer pipeline is not broken.
+ */
 class LogDuplicateDetectionAudit
 {
     public function handle(DuplicateDetected $event): void

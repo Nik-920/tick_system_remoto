@@ -5,6 +5,13 @@ namespace App\Listeners;
 use App\Events\TicketResolved;
 use App\Jobs\UpdateRecurrenceHistory;
 
+/**
+ * Observer for TicketResolved.
+ *
+ * This listener intentionally does not implement ShouldQueue because it only
+ * checks recurrence conditions and dispatches UpdateRecurrenceHistory. The heavy
+ * recurrence update is handled by the job.
+ */
 class UpdateRecurrenceOnTicketResolved
 {
     public function handle(TicketResolved $event): void
