@@ -1,0 +1,132 @@
+/* ============================================================
+   COMPONENT — Alerts
+   Tick System Onn
+
+   Sistema unificado de alertas/mensajes de feedback.
+   Consolida clases que antes estaban dispersas en:
+     - app-layout.css   (dark mode overrides de .alert-*)
+     - app.blade.php    (<style> inline de fallback)
+     - auth.css         (.auth-alert con variantes)
+
+   CLASES PRINCIPALES:
+     .alert-success  → mensaje de éxito (verde)
+     .alert-error    → mensaje de error (rojo)
+     .alert-warning  → mensaje de advertencia (ámbar)
+     .alert-info     → mensaje informativo (azul)
+
+   CLASES AUTH (alias con diseño propio):
+     .auth-alert              → base de alert en auth
+     .auth-alert--error       → variante error en auth
+     .auth-alert--success     → variante éxito en auth
+     .auth-alert-list         → lista de errores en auth
+   ============================================================ */
+
+/* ── Base shared por todos los alerts ── */
+.alert-success,
+.alert-error,
+.alert-warning,
+.alert-info {
+    border-radius: var(--radius-xs);
+    padding: 0.8rem 1rem;
+    font-size: 0.875rem;
+    border-width: 1px;
+    border-style: solid;
+}
+
+/* ── Éxito ── */
+.alert-success {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+    font-weight: 600;
+}
+
+/* ── Error ── */
+.alert-error {
+    background: #fff1f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+/* ── Advertencia ── */
+.alert-warning {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fde68a;
+    font-weight: 600;
+}
+
+/* ── Info ── */
+.alert-info {
+    background: #eff6ff;
+    color: #1e40af;
+    border-color: #bfdbfe;
+    font-weight: 600;
+}
+
+/* ── Auth alert — diseño propio con icono ── */
+.auth-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    border-radius: 12px;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.auth-alert svg {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.auth-alert--error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.auth-alert--success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.auth-alert-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+/* ============================================================
+   DARK MODE OVERRIDES
+   ============================================================ */
+[data-theme="dark"] .alert-success {
+    background: rgba(22, 101, 52, 0.15);
+    border-color: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .alert-error {
+    background: rgba(185, 28, 28, 0.12);
+    border-color: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .alert-warning {
+    background: rgba(146, 64, 14, 0.15);
+    border-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .alert-info {
+    background: rgba(30, 64, 175, 0.15);
+    border-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}

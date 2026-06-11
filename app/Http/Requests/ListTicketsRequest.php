@@ -28,6 +28,7 @@ class ListTicketsRequest extends FormRequest
             'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'critical'])],
             'location_id' => ['nullable', 'uuid', 'exists:locations,id'],
             'category_id' => ['nullable', 'uuid', 'exists:categories,id'],
+            'assignment' => ['nullable', Rule::in(['all', 'unassigned', 'mine', 'assigned'])],
             'search' => ['nullable', 'string', 'max:255'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],

@@ -41,7 +41,7 @@ class StoreLocationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('is_active')) {
+        if ($this->exists('is_active')) {
             $this->merge([
                 'is_active' => $this->boolean('is_active'),
             ]);

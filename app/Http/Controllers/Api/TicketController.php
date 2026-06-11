@@ -4,16 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
+use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +36,7 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
+        $user = $request->user();
         $filters = $request->validated();
 
         // Eager-load embedding and matchedTicket to expose duplicate data without N+1
@@ -42,6 +47,15 @@ class TicketController extends Controller
             'category',
             'embedding.matchedTicket',
         ]);
+
+        // Reporter-role scope: restrict to own tickets BEFORE any user-supplied filters
+        // so that query params (search, duplicates, location, etc.) cannot leak foreign tickets.
+        if ($user instanceof User
+            && $user->hasRole('reporter')
+            && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])
+        ) {
+            $query->reportedBy($user->id);
+        }
 
         $this->applyFilters($query, $filters);
 
@@ -194,6 +208,105 @@ class TicketController extends Controller
         ]);
     }
 
+    public function claim(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): JsonResponse {
+        $this->authorize('claim', $ticket);
+
+        try {
+            $updatedTicket = $assignmentService->claimByMaintenance($ticket, $request->user());
+        } catch (InvalidArgumentException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
+        } catch (AuthorizationException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
+        }
+
+        $this->loadAssignmentRelations($updatedTicket);
+
+        return response()->json([
+            'message' => 'Ticket tomado correctamente.',
+            'data' => (new TicketResource($updatedTicket))->resolve($request),
+        ]);
+    }
+
+    public function release(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): JsonResponse {
+        $this->authorize('release', $ticket);
+
+        try {
+            $updatedTicket = $assignmentService->releaseByMaintenance($ticket, $request->user());
+        } catch (InvalidArgumentException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
+        } catch (AuthorizationException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
+        }
+
+        $this->loadAssignmentRelations($updatedTicket);
+
+        return response()->json([
+            'message' => 'Ticket liberado correctamente.',
+            'data' => (new TicketResource($updatedTicket))->resolve($request),
+        ]);
+    }
+
+    public function assign(
+        AssignTicketRequest $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): JsonResponse {
+        $this->authorize('assign', $ticket);
+
+        $assignedTo = (string) $request->validated('assigned_to');
+        $target = User::query()->findOrFail($assignedTo);
+
+        try {
+            if ($ticket->assigned_to === null) {
+                $updatedTicket = $assignmentService->assignByAdmin($ticket, $request->user(), $target);
+            } else {
+                $updatedTicket = $assignmentService->reassignByAdmin($ticket, $request->user(), $target);
+            }
+        } catch (InvalidArgumentException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assigned_to', 422);
+        } catch (AuthorizationException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
+        }
+
+        $this->loadAssignmentRelations($updatedTicket);
+
+        return response()->json([
+            'message' => 'Asignacion actualizada correctamente.',
+            'data' => (new TicketResource($updatedTicket))->resolve($request),
+        ]);
+    }
+
+    public function unassign(
+        Request $request,
+        Ticket $ticket,
+        TicketAssignmentService $assignmentService
+    ): JsonResponse {
+        $this->authorize('unassign', $ticket);
+
+        try {
+            $updatedTicket = $assignmentService->unassignByAdmin($ticket, $request->user());
+        } catch (InvalidArgumentException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 422);
+        } catch (AuthorizationException $exception) {
+            return $this->assignmentErrorResponse($exception->getMessage(), 'assignment', 403);
+        }
+
+        $this->loadAssignmentRelations($updatedTicket);
+
+        return response()->json([
+            'message' => 'Asignacion eliminada correctamente.',
+            'data' => (new TicketResource($updatedTicket))->resolve($request),
+        ]);
+    }
+
     /**
      * PATCH /api/tickets/{ticket}/duplicate-review
      * Allows maintenance/admin/super_admin to confirm or dismiss an AI duplicate.
@@ -281,5 +394,18 @@ class TicketController extends Controller
                 $q->effectiveDuplicates();
             });
         }
+    }
+
+    private function loadAssignmentRelations(Ticket $ticket): Ticket
+    {
+        return $ticket->load(['reporter', 'assignee', 'location', 'category']);
+    }
+
+    private function assignmentErrorResponse(string $message, string $field, int $status): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'errors' => [$field => [$message]],
+        ], $status);
     }
 }

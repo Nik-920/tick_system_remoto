@@ -1,0 +1,93 @@
+/* ============================================================
+   UTILITIES — Animations
+   Tick System Onn
+
+   Animaciones globales compartidas entre módulos.
+
+   Antes estaban definidas en dashboard-role-shared.css, lo que
+   creaba una dependencia de orden de carga para todos los módulos
+   que usaban dashboardFadeIn / dashboardRise (tickets, locations,
+   users, categories, profile).
+
+   Ahora se cargan aquí, antes que cualquier módulo.
+   ============================================================ */
+
+/* ── Entrada suave de página/sección ── */
+@keyframes dashboardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Subida de card/KPI ── */
+@keyframes dashboardRise {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Slide de dropdown ── */
+@keyframes dropdownSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Entrada de auth card ── */
+@keyframes auth-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Pulsos de status dots ── */
+@keyframes auth-pulse-green {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+    50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.06); }
+}
+
+@keyframes auth-pulse-blue {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    50%       { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.06); }
+}
+
+@keyframes auth-pulse-amber {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+    50%       { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.06); }
+}
+
+@keyframes welcome-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
+    50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.1); }
+}
+
+/* ── Reduce motion: desactivar todas ── */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

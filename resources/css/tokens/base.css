@@ -1,0 +1,97 @@
+/* ============================================================
+   TOKENS — BASE (Light Mode defaults)
+   Tick System Onn — Única fuente de verdad para variables CSS.
+
+   Antes estas variables vivían duplicadas en:
+     - modules/app-layout.css        (:root)
+     - modules/dashboard-role-shared.css (:root)
+     - views/layouts/app.blade.php   (<style> inline)
+
+   Ahora viven aquí y se importan PRIMERO en app.css,
+   antes que cualquier módulo o componente.
+   ============================================================ */
+
+:root {
+
+    /* ── Dimensiones de layout ──────────────────────────── */
+    --sidebar-w:   260px;
+    --topbar-h:     62px;
+
+    /* ── Backgrounds ────────────────────────────────────── */
+    --bg-page:     #f1f4f8;   /* Fondo de la app (content area) */
+    --bg-surface:  #ffffff;   /* Tarjetas, paneles, modales    */
+    --bg-soft:     #f8fafc;   /* Fondo sutil: thead, cabeceras */
+    --bg-input:    #f8fafc;   /* Fondo de inputs/selects       */
+
+    /* ── Texto ──────────────────────────────────────────── */
+    --text-primary:   #0d1829;
+    --text-secondary: #334155;
+    --text-muted:     #64748b;
+    --text-faint:     #94a3b8;
+
+    /* ── Bordes ─────────────────────────────────────────── */
+    --border-default: #e2e8f0;
+    --border-light:   #f1f5f9;
+
+    /* ── Color primario (azul) ──────────────────────────── */
+    --color-primary:       #1d4ed8;
+    --color-primary-hover: #1e40af;
+    --color-primary-light: #eff6ff;
+    --color-primary-muted: #93c5fd;
+
+    /* ── Color éxito (verde) ────────────────────────────── */
+    --color-success:       #059669;
+    --color-success-light: #f0fdf4;
+    --color-success-muted: #6ee7b7;
+
+    /* ── Color advertencia (ámbar) ──────────────────────── */
+    --color-warning:       #d97706;
+    --color-warning-light: #fffbeb;
+    --color-warning-muted: #fcd34d;
+
+    /* ── Color peligro (rojo) ───────────────────────────── */
+    --color-danger:       #b91c1c;
+    --color-danger-light: #fff1f2;
+    --color-danger-muted: #fca5a5;
+
+    /* ── Color info (cyan) ──────────────────────────────── */
+    --color-info:       #0891b2;
+    --color-info-light: #ecfeff;
+    --color-info-muted: #67e8f9;
+
+    /* ── Focus ring ─────────────────────────────────────── */
+    --focus-ring-color:  #3b82f6;
+    --focus-ring-offset: 2px;
+
+    /* ── Sidebar (light) ────────────────────────────────── */
+    --sidebar-bg:            #ffffff;
+    --sidebar-border:        #e9ecef;
+    --sidebar-text:          #6c757d;
+    --sidebar-text-hover:    #313a46;
+    --sidebar-heading-color: #adb5bd;
+    --sidebar-active-bg:     #f0f6ff;
+    --sidebar-active-text:   #3b82f6;
+    --sidebar-active-border: #3b82f6;
+
+    /* ── Topbar (light) ─────────────────────────────────── */
+    --topbar-bg:          #ffffff;
+    --topbar-border:      #e9ecef;
+    --topbar-text:        #6c757d;
+    --topbar-icon-color:  #6c757d;
+    --topbar-icon-hover:  #313a46;
+    --content-bg:         #f1f4f8;  /* alias de --bg-page para retrocompatibilidad */
+
+    /* ── Border radii ───────────────────────────────────── */
+    --radius:    14px;
+    --radius-sm: 10px;
+    --radius-xs:  8px;
+
+    /* ── Sombras ────────────────────────────────────────── */
+    --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
+    --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.07);
+    --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.13);
+
+    /* ── Transición global ──────────────────────────────── */
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}

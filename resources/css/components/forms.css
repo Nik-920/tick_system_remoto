@@ -1,0 +1,120 @@
+/* ============================================================
+   COMPONENT — Forms
+   Tick System Onn
+
+   Base styles for form fields, labels, hints, and groups.
+   Includes aliases for existing module classes so Blade
+   templates do not change yet.
+   ============================================================ */
+
+/* ── Form groups ── */
+.c-form-group,
+.tickets-form-group,
+.locs-form-group,
+.users-form-group,
+.cats-form-group,
+.profile-form-group {
+    display: grid;
+    gap: 0.4rem;
+}
+
+/* ── Form grids ── */
+.c-form-grid,
+.tickets-form-grid,
+.locs-form-grid,
+.users-form-grid,
+.profile-form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+/* ── Labels ── */
+.c-field-label,
+.tickets-field-label,
+.locs-field-label,
+.users-field-label,
+.cats-field-label,
+.profile-field-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.38rem;
+}
+
+/* ── Inputs / selects / textareas ── */
+.c-field,
+.tickets-field,
+.locs-field,
+.users-field,
+.cats-field,
+.profile-field {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    background: var(--bg-input);
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+    appearance: none;
+    font-family: inherit;
+}
+
+.c-field:hover,
+.tickets-field:hover,
+.locs-field:hover,
+.users-field:hover,
+.cats-field:hover,
+.profile-field:hover {
+    border-color: #cbd5e1;
+}
+
+.c-field:focus,
+.tickets-field:focus,
+.locs-field:focus,
+.users-field:focus,
+.cats-field:focus,
+.profile-field:focus {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 0;
+    border-color: var(--focus-ring-color);
+}
+
+/* ── Errors ── */
+.c-field-error,
+.tickets-field-error,
+.locs-field-error,
+.users-field-error,
+.cats-field-error,
+.profile-field-error {
+    font-size: 0.78rem;
+    color: var(--color-danger);
+    font-weight: 600;
+}
+
+/* ── Hints ── */
+.c-field-hint,
+.tickets-field-hint,
+.locs-field-hint,
+.users-field-hint,
+.cats-field-hint,
+.profile-field-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+/* ── Actions ── */
+.c-form-actions,
+.tickets-form-actions,
+.locs-form-actions,
+.users-form-actions,
+.cats-form-actions,
+.profile-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}

@@ -25,18 +25,18 @@
             {{-- Notificaciones --}}
             @auth
                 <div class="topbar-item topbar-notif-wrapper" title="Notificaciones" id="notifWrapper">
-                    <button class="topbar-icon-btn" id="notifBtn" aria-label="Notificaciones">
+                    <button class="topbar-icon-btn" id="notifBtn" aria-label="Notificaciones" aria-expanded="false" aria-controls="notifDropdown">
                         <x-lucide-bell width="18" height="18" stroke-width="2" />
                         <span class="topbar-badge" id="notifBadge" style="display:none;">0</span>
                     </button>
 
                     {{-- Dropdown notificaciones --}}
-                    <div class="notif-dropdown" id="notifDropdown" style="display:none;">
+                    <div class="notif-dropdown" id="notifDropdown" role="region" aria-label="Notificaciones" aria-hidden="true" style="display:none;">
                         <div class="notif-dropdown-head">
                             <span class="notif-dropdown-title">Notificaciones</span>
-                            <button class="notif-mark-all" id="notifMarkAll">Marcar todas como leídas</button>
+                            <button class="notif-mark-all" id="notifMarkAll" type="button">Marcar todas como leídas</button>
                         </div>
-                        <div class="notif-list" id="notifList">
+                        <div class="notif-list" id="notifList" role="list" aria-live="polite">
                             <div class="notif-empty">Sin notificaciones</div>
                         </div>
                     </div>
@@ -45,9 +45,15 @@
 
             {{-- Toggle tema claro/oscuro --}}
             <div class="topbar-item" title="Cambiar tema">
-                <button class="topbar-icon-btn" id="themeToggleBtn" aria-label="Cambiar tema">
-                    <x-lucide-sun class="theme-icon-light" width="18" height="18" stroke-width="2" />
-                    <x-lucide-moon class="theme-icon-dark" width="18" height="18" stroke-width="2" />
+                <button
+                    class="topbar-icon-btn"
+                    id="themeToggleBtn"
+                    aria-label="Cambiar tema"
+                    aria-pressed="false"
+                    title="Cambiar tema"
+                >
+                    <x-lucide-sun class="theme-icon-light" width="18" height="18" stroke-width="2" aria-hidden="true" />
+                    <x-lucide-moon class="theme-icon-dark" width="18" height="18" stroke-width="2" aria-hidden="true" />
                 </button>
             </div>
 

@@ -1,0 +1,44 @@
+/* ============================================================
+   COMPONENT - Sidebar Panel
+   Tick System Onn
+   ============================================================ */
+
+.sidebar-panel-stack,
+.users-form-sidebar,
+.users-edit-sidebar,
+.locs-create-sidebar,
+.locs-edit-sidebar,
+.cats-edit-sidebar,
+.profile-sidebar {
+    display: grid;
+    gap: 1rem;
+    position: sticky;
+    top: 1.5rem;
+}
+
+.sidebar-panel,
+.users-sidebar-card,
+.locs-sidebar-card,
+.cats-sidebar-card,
+.profile-sidebar-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-xs);
+}
+
+.sidebar-panel--center,
+.users-sidebar-hero,
+.users-sidebar-profile,
+.locs-sidebar-hero-card,
+.locs-sidebar-preview,
+.cats-sidebar-info,
+.profile-sidebar-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.6rem;
+    padding: 1.5rem 1.25rem;
+}

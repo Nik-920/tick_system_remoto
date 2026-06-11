@@ -47,7 +47,7 @@
                     <a href="{{ route('tickets.index') }}"
                        class="sidebar-link {{ request()->routeIs('tickets.index') || request()->routeIs('tickets.show') ? 'active' : '' }}">
                         <x-lucide-file class="sidebar-icon" width="18" height="18" stroke-width="2" />
-                        <span class="sidebar-label">Tickets</span>
+                        <span class="sidebar-label">{{ (auth()->user()?->hasRole('reporter') && !auth()->user()?->hasAnyRole(['maintenance', 'admin', 'super_admin'])) ? 'Mis tickets' : 'Tickets' }}</span>
                     </a>
                 </li>
                 @endcan
