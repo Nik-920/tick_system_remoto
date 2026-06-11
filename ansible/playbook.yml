@@ -1,0 +1,90 @@
+---
+# ══════════════════════════════════════════════════════════════════
+# Ansible Playbook — tick_system_remoto (INCIDEX)
+# Configura el servidor después de que Terraform lo aprovisiona.
+# Uso: ansible-playbook -i inventory.ini ansible/playbook.yml
+# ══════════════════════════════════════════════════════════════════
+
+- name: Configurar servidor para tick_system_remoto
+  hosts: tick_app
+  become: true
+  vars:
+    app_dir: /opt/tick
+    app_user: www-data
+    docker_compose_version: "2.24.0"
+
+  tasks:
+
+    # ── Sistema base ─────────────────────────────────────────────
+    - name: Actualizar paquetes del sistema
+      apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Instalar dependencias base
+      apt:
+        name:
+          - curl
+          - git
+          - unzip
+          - nginx
+        state: present
+
+    # ── Docker ───────────────────────────────────────────────────
+    - name: Instalar Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Iniciar y habilitar Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Instalar Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+
+    # ── Aplicación ───────────────────────────────────────────────
+    - name: Crear directorio de la aplicacion
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        mode: "0755"
+
+    - name: Copiar docker-compose.yml al servidor
+      copy:
+        src: ../docker-compose.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ app_user }}"
+        mode: "0644"
+
+    - name: Copiar variables de entorno
+      copy:
+        src: ../.env.production
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ app_user }}"
+        mode: "0600"
+
+    # ── Levantar servicios ───────────────────────────────────────
+    - name: Levantar contenedores con Docker Compose
+      shell: docker-compose up -d
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Ejecutar migraciones de base de datos
+      shell: docker-compose exec -T app php artisan migrate --force
+      args:
+        chdir: "{{ app_dir }}"
+
+    # ── Verificacion ─────────────────────────────────────────────
+    - name: Verificar que la app responde
+      uri:
+        url: "http://localhost:80"
+        status_code: 200
+      retries: 5
+      delay: 10

@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  VPC con subred publica para tick_system_remoto (INCIDEX).
+  Equivalente declarativo en CloudFormation del terraform/aws/main.tf
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Entorno de despliegue
+
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Rango CIDR de la VPC
+
+  PublicSubnetCIDR:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Rango CIDR de la subred publica
+
+Resources:
+
+  # ── VPC Principal ──────────────────────────────────────────────
+  TickVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-tick-vpc"
+        - Key: Project
+          Value: INCIDEX
+
+  # ── Subred Publica ─────────────────────────────────────────────
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TickVPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-tick-public-subnet"
+        - Key: Project
+          Value: INCIDEX
+
+  # ── Internet Gateway ───────────────────────────────────────────
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-tick-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TickVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # ── Route Table ────────────────────────────────────────────────
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TickVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-tick-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # ── Security Group ─────────────────────────────────────────────
+  TickSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group para tick_system_remoto
+      VpcId: !Ref TickVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-tick-sg"
+
+Outputs:
+  VpcId:
+    Description: ID de la VPC creada
+    Value: !Ref TickVPC
+    Export:
+      Name: !Sub "${EnvironmentName}-TickVpcId"
+
+  PublicSubnetId:
+    Description: ID de la subred publica
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub "${EnvironmentName}-TickPublicSubnetId"
+
+  SecurityGroupId:
+    Description: ID del Security Group
+    Value: !Ref TickSecurityGroup
+    Export:
+      Name: !Sub "${EnvironmentName}-TickSecurityGroupId"
