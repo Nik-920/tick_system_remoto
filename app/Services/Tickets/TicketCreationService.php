@@ -21,6 +21,14 @@ class TicketCreationService
     ) {}
 
     /**
+     * Creates and persists a ticket.
+     *
+     * Observer note:
+     * This service intentionally does not dispatch TicketCreated directly.
+     * HTTP controllers dispatch TicketCreated through DispatchesTicketCreatedAfterResponse
+     * after the response is sent, so downstream observers run after the ticket exists
+     * and without adding latency to the request.
+     *
      * @param  array<string, mixed>  $payload
      * @param  array<int, UploadedFile>  $mediaFiles
      * @return array{created: bool, ticket: Ticket, reason: string|null, warning: array<string, mixed>|null, warning_pending: bool}
