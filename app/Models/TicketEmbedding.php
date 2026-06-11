@@ -23,6 +23,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $reviewed_by
  * @property Carbon|null $reviewed_at
  * @property string|null $review_note
+ * @property int|null $strategy_score
+ * @property array<int, array<string, mixed>>|null $strategy_results
+ * @property array<string, mixed>|null $strategy_metadata
+ * @property bool $strategy_suggests_recurrence
  * @property-read Ticket $ticket
  * @property-read Ticket|null $matchedTicket
  * @property-read User|null $reviewer
@@ -53,6 +57,11 @@ class TicketEmbedding extends Model
         'similarity_score',
         'matched_ticket_id',
         'is_duplicate',
+        // Strategy-engine explainability columns — AI-managed
+        'strategy_score',
+        'strategy_results',
+        'strategy_metadata',
+        'strategy_suggests_recurrence',
         // Manual review columns — never written by AI jobs
         'review_status',
         'reviewed_by',
@@ -79,6 +88,10 @@ class TicketEmbedding extends Model
             'embedding_vector' => 'array',
             'similarity_score' => 'float',
             'is_duplicate' => 'boolean',
+            'strategy_score' => 'integer',
+            'strategy_results' => 'array',
+            'strategy_metadata' => 'array',
+            'strategy_suggests_recurrence' => 'boolean',
             'reviewed_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',

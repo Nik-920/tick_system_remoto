@@ -6,6 +6,8 @@ use App\Events\DuplicateDetected;
 use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Services\Ai\DeduplicationService;
+use App\Services\Ai\Duplicates\DuplicateCandidateContext;
+use App\Services\Ai\Duplicates\DuplicateDetectionEngine;
 use App\Services\Ai\EmbeddingService;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Bus\Queueable;
@@ -13,6 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Sentry\State\Scope;
 use Throwable;
@@ -29,7 +32,8 @@ class DetectDuplicates implements ShouldQueue
     public function handle(
         DeduplicationService $deduplication,
         EmbeddingService $embeddings,
-        TicketQrLogger $logger
+        TicketQrLogger $logger,
+        DuplicateDetectionEngine $engine,
     ): void {
         $ticket = $this->ticket;
 
@@ -138,15 +142,50 @@ class DetectDuplicates implements ShouldQueue
             $isDuplicate = $deduplication->isStrongDuplicate($similarity, $titleAligned);
             $isObserved = $deduplication->isObservationCandidate($similarity, $titleAligned);
 
+            // ── Strategy engine: parallel scoring for explainability ──────────
+            // The engine evaluates all registered strategies and produces a
+            // scored decision with full traceability. This does NOT override
+            // the legacy isDuplicate gate above — it enriches the audit trail.
+            $strategyDecision = null;
+            if ($matchedTicket instanceof Ticket) {
+                try {
+                    $context = new DuplicateCandidateContext(
+                        ticket: $ticket,
+                        candidate: $matchedTicket,
+                        now: Carbon::now(),
+                        embeddingSimilarity: $similarity,
+                    );
+                    $strategyDecision = $engine->evaluate($context);
+                } catch (Throwable $strategyException) {
+                    // Strategy engine failure must NEVER break the main flow.
+                    $logger->warning('ticket.duplicate.strategy_engine_failed', [
+                        'ticket_id' => $ticket->id,
+                        'correlation_id' => $this->correlationId,
+                        'error_message' => Str::limit($strategyException->getMessage(), 300, ''),
+                    ]);
+                }
+            }
+
             if ($embedding) {
                 if ($isDuplicate || $isObserved) {
                     $embedding->similarity_score = $similarity;
                     $embedding->matched_ticket_id = $matchedTicket->id;
                     $embedding->is_duplicate = $isDuplicate;
+
+                    // Persist the Strategy decision for explainability. The
+                    // legacy gate above is the decision-maker; this only
+                    // enriches the audit trail and powers the UI explanation.
+                    if ($strategyDecision !== null) {
+                        $embedding->strategy_score = $strategyDecision->score;
+                        $embedding->strategy_results = $strategyDecision->resultsForPersistence();
+                        $embedding->strategy_metadata = $strategyDecision->summaryMetadata($isDuplicate);
+                        $embedding->strategy_suggests_recurrence = $strategyDecision->isRecurrence;
+                    }
                 } else {
                     $embedding->similarity_score = null;
                     $embedding->matched_ticket_id = null;
                     $embedding->is_duplicate = false;
+                    $this->clearStrategyExplanation($embedding);
                 }
 
                 $embedding->save();
@@ -165,6 +204,8 @@ class DetectDuplicates implements ShouldQueue
                     'title_overlap' => $titleAligned,
                     'correlation_id' => $this->correlationId,
                     'operation_type' => 'duplicate_detection',
+                    'strategy_score' => $strategyDecision?->score,
+                    'strategy_is_recurrence' => $strategyDecision?->isRecurrence,
                 ]);
             }
 
@@ -175,6 +216,18 @@ class DetectDuplicates implements ShouldQueue
                     $similarity,
                     $this->correlationId,
                 ));
+
+                if ($strategyDecision !== null) {
+                    $logger->info('ticket.duplicate.strategy_decision', array_merge(
+                        [
+                            'ticket_id' => $ticket->id,
+                            'matched_ticket_id' => $matchedTicket->id,
+                            'correlation_id' => $this->correlationId,
+                            'operation_type' => 'duplicate_detection',
+                        ],
+                        $strategyDecision->toLogContext()
+                    ));
+                }
             }
         } catch (Throwable $exception) {
             $context = [
@@ -223,6 +276,19 @@ class DetectDuplicates implements ShouldQueue
         $embedding->similarity_score = null;
         $embedding->matched_ticket_id = null;
         $embedding->is_duplicate = false;
+        $this->clearStrategyExplanation($embedding);
         $embedding->save();
+    }
+
+    /**
+     * Clear the Strategy explainability columns (AI-managed). Does not persist;
+     * the caller is responsible for saving.
+     */
+    private function clearStrategyExplanation(TicketEmbedding $embedding): void
+    {
+        $embedding->strategy_score = null;
+        $embedding->strategy_results = null;
+        $embedding->strategy_metadata = null;
+        $embedding->strategy_suggests_recurrence = false;
     }
 }
