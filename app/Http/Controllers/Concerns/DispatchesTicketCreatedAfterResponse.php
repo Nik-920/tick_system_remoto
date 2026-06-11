@@ -9,6 +9,17 @@ use App\Models\Ticket;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Dispatch TicketCreated after the HTTP response is sent.
+ *
+ * This keeps ticket creation fast and lets observers such as notifications,
+ * embeddings and duplicate detection react after the ticket has been persisted.
+ * The controller knows only the event, not its listeners.
+ *
+ * The dispatch is registered via app()->terminating() so it runs after the
+ * kernel sends the response to the client, guaranteeing that the ticket
+ * has been committed to the database before any listener processes it.
+ */
 trait DispatchesTicketCreatedAfterResponse
 {
     private function dispatchAfterResponse(Ticket $ticket, string $correlationId): void

@@ -7,6 +7,14 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Str;
 use Sentry\State\Scope;
 
+/**
+ * Listener for Laravel's JobFailed framework event.
+ *
+ * This listener intentionally does not implement ShouldQueue. A listener that
+ * reports queue failures must run immediately when the worker reports the
+ * failure; queueing the failure reporter itself could hide or delay critical
+ * error reporting and may fail if the queue system is degraded.
+ */
 class ReportFailedQueueJob
 {
     public function __construct(private TicketQrLogger $logger) {}

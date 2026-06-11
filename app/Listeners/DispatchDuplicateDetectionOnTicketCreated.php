@@ -6,6 +6,13 @@ use App\Events\TicketCreated;
 use App\Jobs\DetectDuplicates;
 use App\Services\Ai\DeduplicationService;
 
+/**
+ * Lightweight observer for TicketCreated.
+ *
+ * This listener intentionally does not implement ShouldQueue because duplicate
+ * detection is delegated to DetectDuplicates. The listener only decides whether
+ * detection is enabled and dispatches the job.
+ */
 class DispatchDuplicateDetectionOnTicketCreated
 {
     public function __construct(private DeduplicationService $deduplication) {}
