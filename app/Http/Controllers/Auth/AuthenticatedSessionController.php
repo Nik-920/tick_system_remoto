@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,12 @@ class AuthenticatedSessionController extends Controller
     public function create(): View|RedirectResponse
     {
         if (Auth::check()) {
+            $user = Auth::user();
+
+            if ($user instanceof User && $this->hasRole($user, 'reporter')) {
+                return redirect()->route('reporter.dashboard');
+            }
+
             return redirect()->route('dashboard.index');
         }
 
@@ -40,6 +47,13 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user instanceof User && $this->hasRole($user, 'reporter')) {
+            return redirect()->route('reporter.dashboard');
+        }
+
         return redirect()->intended(route('dashboard.index'));
     }
 
@@ -51,5 +65,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function hasRole(User $user, string $role): bool
+    {
+        return method_exists($user, 'hasRole') && $user->hasRole($role);
     }
 }
