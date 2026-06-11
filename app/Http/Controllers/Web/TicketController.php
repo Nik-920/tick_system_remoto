@@ -19,6 +19,7 @@ use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
+use App\Support\Tickets\DuplicateExplanationPresenter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -203,6 +204,7 @@ class TicketController extends Controller
             'maintenanceUsers' => $maintenanceUsers,
             'isMaintenance' => $isMaintenance,
             'isAvailableForClaim' => $isAvailableForClaim,
+            'duplicateExplanation' => DuplicateExplanationPresenter::present($ticket),
         ]);
     }
 

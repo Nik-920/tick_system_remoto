@@ -190,29 +190,29 @@ final class TicketAssignedEventDispatchTest extends TestCase
     private function openTicketFor(User $reporter): Ticket
     {
         $location = Location::create([
-            'name'      => 'Sala Assign ' . Str::upper(Str::random(4)),
-            'building'  => 'Edificio Test',
-            'floor'     => '1',
-            'room_code' => 'ASN-' . Str::upper(Str::random(6)),
-            'qr_token'  => 'qr-asn-' . Str::lower(Str::random(10)),
+            'name' => 'Sala Assign '.Str::upper(Str::random(4)),
+            'building' => 'Edificio Test',
+            'floor' => '1',
+            'room_code' => 'ASN-'.Str::upper(Str::random(6)),
+            'qr_token' => 'qr-asn-'.Str::lower(Str::random(10)),
             'is_active' => true,
         ]);
 
         $category = Category::create([
-            'name'        => 'Categoria Assign ' . Str::lower(Str::random(6)),
-            'icon'        => 'bolt',
+            'name' => 'Categoria Assign '.Str::lower(Str::random(6)),
+            'icon' => 'bolt',
             'description' => 'Categoria de prueba para Observer',
         ]);
 
         return Ticket::create([
-            'title'             => 'Ticket asignacion ' . Str::random(6),
-            'description'       => 'Descripcion de ticket para test de asignacion.',
-            'reporter_id'       => $reporter->id,
-            'location_id'       => $location->id,
-            'category_id'       => $category->id,
-            'state'             => 'open',
-            'priority'          => 'medium',
-            'assigned_to'       => null,
+            'title' => 'Ticket asignacion '.Str::random(6),
+            'description' => 'Descripcion de ticket para test de asignacion.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+            'assigned_to' => null,
             'assignment_locked' => false,
         ]);
     }

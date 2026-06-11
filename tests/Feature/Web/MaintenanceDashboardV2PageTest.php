@@ -347,9 +347,10 @@ class MaintenanceDashboardV2PageTest extends TestCase
     {
         // After promotion only the maintenance role gets V2; reporter/admin/
         // super_admin keep their own dashboards, untouched.
+        // Reporters are redirected to their own dedicated board.
         $this->actingAs($this->userWithRole('reporter'))
             ->get(route('dashboard.index'))
-            ->assertViewIs('dashboard.reporter');
+            ->assertRedirect(route('reporter.dashboard'));
 
         $this->actingAs($this->userWithRole('admin'))
             ->get(route('dashboard.index'))
