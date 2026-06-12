@@ -59,7 +59,7 @@ function initDeleteModal() {
 
     const open = () => {
         modal.classList.remove('hidden');
-        void modal.offsetWidth;
+        modal.getBoundingClientRect(); // Forzar reflow para que la transición de opacidad se anime.
         modal.classList.remove('opacity-0');
         modal.classList.add('opacity-100');
         modalContent.classList.remove('scale-95', 'translate-y-4');
