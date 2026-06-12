@@ -1,10 +1,8 @@
 <?php
 
-namespace App\Services\Ai\Duplicates\Strategies;
+namespace App\Services\Ai\Duplicates;
 
 use App\Contracts\Ai\Duplicates\DuplicateDetectionStrategy;
-use App\Services\Ai\Duplicates\DuplicateCandidateContext;
-use App\Services\Ai\Duplicates\DuplicateStrategyResult;
 
 /**
  * Base for Phase 3 conservative / no-op strategies.
