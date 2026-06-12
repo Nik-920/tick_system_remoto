@@ -223,12 +223,10 @@ class ReporterTicketController extends Controller
             abort(404);
         }
 
-        /** @var Ticket $model */
-        $model = Ticket::query()
+        /** @var Ticket */
+        return Ticket::query()
             ->where('reporter_id', (string) $user->id)
             ->findOrFail($ticket);
-
-        return $model;
     }
 
     /**

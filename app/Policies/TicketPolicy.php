@@ -105,28 +105,17 @@ class TicketPolicy
 
     public function updateState(User $user, Ticket $ticket): bool
     {
-        // Resolved tickets: only super_admin can reopen them.
-        if ($ticket->state === 'resolved') {
-            return $this->hasRole($user, 'super_admin');
-        }
-
-        // Rejected tickets: only admin/super_admin can reopen them.
-        if ($ticket->state === 'rejected') {
-            return $this->hasAnyRole($user, ['admin', 'super_admin']);
-        }
-
-        // Admin/super_admin can transition any open or in_progress ticket.
-        if ($this->hasAnyRole($user, ['admin', 'super_admin'])) {
-            return true;
-        }
-
-        // maintenance can only change state of tickets assigned to them.
-        // A ticket must be claimed first via claim() before state can change.
-        if ($this->hasRole($user, 'maintenance')) {
-            return $ticket->assigned_to === $user->id;
-        }
-
-        return false;
+        return match ($ticket->state) {
+            // Resolved tickets: only super_admin can reopen them.
+            'resolved' => $this->hasRole($user, 'super_admin'),
+            // Rejected tickets: only admin/super_admin can reopen them.
+            'rejected' => $this->hasAnyRole($user, ['admin', 'super_admin']),
+            // Admin/super_admin can transition any open or in_progress ticket.
+            // maintenance can only change state of tickets assigned to them
+            // (a ticket must be claimed first via claim() before state can change).
+            default => $this->hasAnyRole($user, ['admin', 'super_admin'])
+                || ($this->hasRole($user, 'maintenance') && $ticket->assigned_to === $user->id),
+        };
     }
 
     public function delete(User $user, Ticket $ticket): bool

@@ -52,6 +52,9 @@ final class ReporterTicketHistoryQuery
     /** Portable "closed at" expression: resolved_at for resolved, else updated_at. */
     private const CLOSED_AT = 'COALESCE(resolved_at, updated_at)';
 
+    /** Datetime format used for SQL bound parameters (portable SQLite/PostgreSQL). */
+    private const SQL_DATETIME_FORMAT = 'Y-m-d H:i:s';
+
     private const PER_PAGE = 5;
 
     /** Resolved tickets sampled for the average + monthly chart. */
@@ -167,10 +170,10 @@ final class ReporterTicketHistoryQuery
         $from = $this->date((string) ($this->filters['from'] ?? ''));
         $to = $this->date((string) ($this->filters['to'] ?? ''));
         if ($from !== null) {
-            $query->whereRaw(self::CLOSED_AT.' >= ?', [$from->startOfDay()->format('Y-m-d H:i:s')]);
+            $query->whereRaw(self::CLOSED_AT.' >= ?', [$from->startOfDay()->format(self::SQL_DATETIME_FORMAT)]);
         }
         if ($to !== null) {
-            $query->whereRaw(self::CLOSED_AT.' <= ?', [$to->endOfDay()->format('Y-m-d H:i:s')]);
+            $query->whereRaw(self::CLOSED_AT.' <= ?', [$to->endOfDay()->format(self::SQL_DATETIME_FORMAT)]);
         }
 
         $search = trim((string) ($this->filters['search'] ?? ''));
@@ -368,7 +371,7 @@ final class ReporterTicketHistoryQuery
         $resolvedAt = (clone $this->mineHistoryBase())
             ->where('state', Ticket::STATE_RESOLVED)
             ->whereNotNull('resolved_at')
-            ->where('resolved_at', '>=', $oldest->format('Y-m-d H:i:s'))
+            ->where('resolved_at', '>=', $oldest->format(self::SQL_DATETIME_FORMAT))
             ->limit(self::POOL_LIMIT)
             ->pluck('resolved_at');
 

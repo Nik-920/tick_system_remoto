@@ -371,11 +371,13 @@ final class AssignmentsBoardQuery
             Ticket::STATE_IN_PROGRESS => $inProgressAt ?? $ticket->assigned_at,
             default => null,
         };
-        $elapsed = $elapsedFrom !== null
-            ? $this->elapsedLabel($elapsedFrom, CarbonImmutable::now())
-            : ($state === Ticket::STATE_RESOLVED && $ticket->created_at !== null && $ticket->resolved_at !== null
-                ? $this->elapsedLabel($ticket->created_at, $ticket->resolved_at)
-                : '—');
+        if ($elapsedFrom !== null) {
+            $elapsed = $this->elapsedLabel($elapsedFrom, CarbonImmutable::now());
+        } elseif ($state === Ticket::STATE_RESOLVED && $ticket->created_at !== null && $ticket->resolved_at !== null) {
+            $elapsed = $this->elapsedLabel($ticket->created_at, $ticket->resolved_at);
+        } else {
+            $elapsed = '—';
+        }
 
         $context = collect([
             $ticket->location?->name,

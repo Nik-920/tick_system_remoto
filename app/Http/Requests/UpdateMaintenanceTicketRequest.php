@@ -28,7 +28,11 @@ class UpdateMaintenanceTicketRequest extends FormRequest
     /** Max number of evidence files per request. */
     private const MAX_FILES = 5;
 
-    /** Max size in kilobytes (10 MB) — mirrors StoreTicketRequest. */
+    /**
+     * Max size in kilobytes (10 MiB per file) — mirrors StoreTicketRequest.
+     * Intentionally bounded: together with MAX_FILES it caps a single request
+     * at 50 MiB of evidence, preventing resource-exhaustion uploads.
+     */
     private const MAX_FILE_KB = 10240;
 
     /** @var list<string> */

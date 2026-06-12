@@ -25,23 +25,32 @@ trait ResolvesCorrelationId
             return $trimmed;
         }
 
-        if (app()->bound('request')) {
-            $request = request();
-            if ($request instanceof Request) {
-                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-                if ($fromAttribute !== '') {
-                    return $fromAttribute;
-                }
+        return $this->resolveCorrelationIdFromRequest() ?? (string) Str::uuid();
+    }
 
-                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                if ($fromHeader !== '') {
-                    $request->attributes->set('correlation_id', $fromHeader);
-
-                    return $fromHeader;
-                }
-            }
+    private function resolveCorrelationIdFromRequest(): ?string
+    {
+        if (! app()->bound('request')) {
+            return null;
         }
 
-        return (string) Str::uuid();
+        $request = request();
+        if (! $request instanceof Request) {
+            return null;
+        }
+
+        $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
+        if ($fromAttribute !== '') {
+            return $fromAttribute;
+        }
+
+        $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
+        if ($fromHeader !== '') {
+            $request->attributes->set('correlation_id', $fromHeader);
+
+            return $fromHeader;
+        }
+
+        return null;
     }
 }

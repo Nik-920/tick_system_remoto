@@ -36,8 +36,10 @@ final class ReporterTicketTrackingQuery
         'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap', 'servicios' => 'droplet',
     ];
 
+    /** Datetime format shown to the reporter across the tracking screen. */
+    private const DISPLAY_DATETIME_FORMAT = 'd/m/Y · H:i';
+
     public function __construct(
-        private readonly User $user,
         private readonly Ticket $ticket,
     ) {}
 
@@ -64,7 +66,7 @@ final class ReporterTicketTrackingQuery
             ])
             ->findOrFail($ticketId);
 
-        return (new self($user, $ticket))->build();
+        return (new self($ticket))->build();
     }
 
     public function build(): ReporterTicketTrackingViewModel
@@ -203,7 +205,7 @@ final class ReporterTicketTrackingQuery
     private function stampFor(?CarbonInterface $at, string $state): string
     {
         if ($at !== null) {
-            return $at->format('d/m/Y · H:i');
+            return $at->format(self::DISPLAY_DATETIME_FORMAT);
         }
 
         return $state === 'current' ? 'En curso' : 'Pendiente';
@@ -222,7 +224,7 @@ final class ReporterTicketTrackingQuery
             'icon' => 'inbox',
             'tone' => 'neutral',
             'title' => 'Ticket creado',
-            'at' => $this->ticket->created_at?->format('d/m/Y · H:i') ?? '—',
+            'at' => $this->ticket->created_at?->format(self::DISPLAY_DATETIME_FORMAT) ?? '—',
             'actor' => $this->displayName($this->ticket->reporter),
             'note' => 'Reportaste esta incidencia.',
             'highlight' => false,
@@ -263,7 +265,7 @@ final class ReporterTicketTrackingQuery
             'icon' => $icon,
             'tone' => $tone,
             'title' => $title,
-            'at' => $h->created_at?->format('d/m/Y · H:i') ?? '—',
+            'at' => $h->created_at?->format(self::DISPLAY_DATETIME_FORMAT) ?? '—',
             'actor' => $this->displayName($h->changedBy),
             'note' => $comment !== '' ? $comment : null,
             'highlight' => false,
@@ -290,8 +292,8 @@ final class ReporterTicketTrackingQuery
                 ['icon' => 'flag', 'label' => 'Prioridad', 'value' => $this->priorityLabel((string) $this->ticket->priority)],
                 ['icon' => 'map-pin', 'label' => 'Ubicación', 'value' => $location],
                 ['icon' => 'folder', 'label' => 'Categoría', 'value' => $this->ticket->category?->name ?? 'Sin categoría'],
-                ['icon' => 'calendar', 'label' => 'Reportado', 'value' => $this->ticket->created_at?->format('d/m/Y · H:i') ?? '—'],
-                ['icon' => 'clock', 'label' => 'Última actualización', 'value' => $this->ticket->updated_at?->format('d/m/Y · H:i') ?? '—'],
+                ['icon' => 'calendar', 'label' => 'Reportado', 'value' => $this->ticket->created_at?->format(self::DISPLAY_DATETIME_FORMAT) ?? '—'],
+                ['icon' => 'clock', 'label' => 'Última actualización', 'value' => $this->ticket->updated_at?->format(self::DISPLAY_DATETIME_FORMAT) ?? '—'],
             ],
             'technician' => $assignee !== null
                 ? ['name' => $this->displayName($assignee), 'initials' => $this->initials($assignee), 'role' => 'Mantenimiento']

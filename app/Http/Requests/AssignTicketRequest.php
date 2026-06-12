@@ -28,7 +28,7 @@ class AssignTicketRequest extends FormRequest
                 // (defensa en profundidad); aquí se asegura la paridad de validación
                 // Web/API y un 422 consistente. El mensaje debe coincidir con el del
                 // service para no divergir.
-                function (string $attribute, mixed $value, Closure $fail): void {
+                function (string $_attribute, mixed $value, Closure $fail): void {
                     $target = User::query()->find($value);
 
                     if ($target === null) {

@@ -122,12 +122,12 @@ class TicketStateService
 
         // Defensa en profundidad: maintenance solo puede transicionar tickets asignados a él.
         // La policy ya bloquea en la capa HTTP; este guard protege llamadas directas al servicio.
-        if ($actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin'])) {
-            if ($ticket->assigned_to !== $actor->id) {
-                throw new InvalidArgumentException(
-                    'El técnico solo puede cambiar estado de tickets asignados a él.'
-                );
-            }
+        if ($actor->hasRole('maintenance')
+            && ! $actor->hasAnyRole(['admin', 'super_admin'])
+            && $ticket->assigned_to !== $actor->id) {
+            throw new InvalidArgumentException(
+                'El técnico solo puede cambiar estado de tickets asignados a él.'
+            );
         }
 
         if (! $this->roleCanDoTransition($actor, $ticket, $fromState, $toState)) {
