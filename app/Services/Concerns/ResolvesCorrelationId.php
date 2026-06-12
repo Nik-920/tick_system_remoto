@@ -30,27 +30,21 @@ trait ResolvesCorrelationId
 
     private function resolveCorrelationIdFromRequest(): ?string
     {
-        if (! app()->bound('request')) {
-            return null;
+        $resolved = null;
+        $request = app()->bound('request') ? request() : null;
+
+        if ($request instanceof Request) {
+            $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
+            $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
+
+            if ($fromAttribute !== '') {
+                $resolved = $fromAttribute;
+            } elseif ($fromHeader !== '') {
+                $request->attributes->set('correlation_id', $fromHeader);
+                $resolved = $fromHeader;
+            }
         }
 
-        $request = request();
-        if (! $request instanceof Request) {
-            return null;
-        }
-
-        $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-        if ($fromAttribute !== '') {
-            return $fromAttribute;
-        }
-
-        $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-        if ($fromHeader !== '') {
-            $request->attributes->set('correlation_id', $fromHeader);
-
-            return $fromHeader;
-        }
-
-        return null;
+        return $resolved;
     }
 }

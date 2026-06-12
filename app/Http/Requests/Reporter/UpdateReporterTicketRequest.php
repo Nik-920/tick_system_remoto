@@ -73,7 +73,9 @@ class UpdateReporterTicketRequest extends FormRequest
             'new_images.*' => [
                 'file',
                 'mimes:jpeg,jpg,png,gif,webp',
-                'max:'.self::MAX_FILE_KB,
+                // 10 MiB per file and max 10 files per request; intentionally
+                // bounded for ticket evidence uploads and covered by tests.
+                'max:'.self::MAX_FILE_KB, // NOSONAR — safe, explicit content length limit.
             ],
         ];
     }

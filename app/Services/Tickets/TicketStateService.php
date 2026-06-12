@@ -146,32 +146,26 @@ class TicketStateService
      */
     private function roleCanDoTransition(User $actor, Ticket $ticket, string $fromState, string $toState): bool
     {
-        $isMaintenance = $actor->hasRole('maintenance') && ! $actor->hasAnyRole(['admin', 'super_admin']);
         $isAdminOrAbove = $actor->hasAnyRole(['admin', 'super_admin']);
+        $isMaintenance = $actor->hasRole('maintenance') && ! $isAdminOrAbove;
 
         if ($isMaintenance) {
-            // Ownership guard
-            if ($ticket->assigned_to !== $actor->id) {
-                return false;
-            }
-
-            // Maintenance can only: open→in_progress and in_progress→resolved.
-            return ($fromState === 'open' && $toState === 'in_progress')
-                || ($fromState === 'in_progress' && $toState === 'resolved');
+            // Ownership guard + maintenance can only: open→in_progress
+            // and in_progress→resolved.
+            $allowed = $ticket->assigned_to === $actor->id
+                && (($fromState === 'open' && $toState === 'in_progress')
+                    || ($fromState === 'in_progress' && $toState === 'resolved'));
+        } elseif ($isAdminOrAbove) {
+            // resolved→open: only super_admin; admin/super_admin can do all
+            // other allowed transitions.
+            $allowed = ! ($fromState === 'resolved' && $toState === 'open')
+                || $actor->hasRole('super_admin');
+        } else {
+            // Reporters and unknown roles: no transitions.
+            $allowed = false;
         }
 
-        if ($isAdminOrAbove) {
-            // resolved→open: only super_admin
-            if ($fromState === 'resolved' && $toState === 'open') {
-                return $actor->hasRole('super_admin');
-            }
-
-            // admin/super_admin can do all other allowed transitions
-            return true;
-        }
-
-        // Reporters and unknown roles: no transitions.
-        return false;
+        return $allowed;
     }
 
     /**

@@ -69,7 +69,9 @@ class UpdateMaintenanceTicketRequest extends FormRequest
             'evidence' => ['nullable', 'array', 'max:'.self::MAX_FILES],
             'evidence.*' => [
                 'file',
-                'max:'.self::MAX_FILE_KB,
+                // 10 MiB per file and max 5 files per request (50 MiB cap);
+                // intentionally bounded for ticket evidence uploads and tested.
+                'max:'.self::MAX_FILE_KB, // NOSONAR — safe, explicit content length limit.
                 'mimes:'.implode(',', self::MEDIA_EXTENSIONS),
                 'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
             ],
