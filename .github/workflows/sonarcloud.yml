@@ -77,6 +77,26 @@ jobs:
           php artisan key:generate
 
       # ──────────────────────────────────────────────
+      # 5.5. Compilar Frontend (Requerido por Vite)
+      # ──────────────────────────────────────────────
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 📦 Instalar dependencias Node
+        run: npm ci
+
+      - name: 🏗️ Build frontend
+        run: npm run build
+
+      - name: 🔎 Verificar manifest Vite
+        run: |
+          ls -la public/build
+          test -f public/build/manifest.json
+
+      # ──────────────────────────────────────────────
       # 6. Ejecutar tests + generar coverage.xml
       #    La variable XDEBUG_MODE=coverage es necesaria
       #    para que PCOV/Xdebug generen el reporte

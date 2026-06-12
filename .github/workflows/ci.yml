@@ -198,6 +198,12 @@ jobs:
         if: startsWith(matrix.module, 'Feature')
         run: npm run build
 
+      - name: 🔎 Verificar manifest Vite (solo en Feature tests)
+        if: startsWith(matrix.module, 'Feature')
+        run: |
+          ls -la public/build
+          test -f public/build/manifest.json
+
       - name: Generar APP_KEY
         run: php artisan key:generate --env=testing
 
