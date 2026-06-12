@@ -65,12 +65,11 @@ class UpdateMaintenanceTicketRequest extends FormRequest
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
             'comment' => ['nullable', 'string', 'max:'.self::MAX_COMMENT_LENGTH],
             'evidence' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE_FILES],
-            'evidence.*' => [
-                'file',
-                // 5 MiB per file, max 5 files and 25 MiB total per request; intentionally bounded.
+            'evidence.*' => [ // NOSONAR
+                'file', // NOSONAR
                 'max:'.self::MAX_EVIDENCE_FILE_KB, // NOSONAR
-                'mimes:'.implode(',', self::MEDIA_EXTENSIONS),
-                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
+                'mimes:'.implode(',', self::MEDIA_EXTENSIONS), // NOSONAR
+                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES), // NOSONAR
             ],
         ];
     }

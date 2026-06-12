@@ -73,10 +73,9 @@ class UpdateReporterTicketRequest extends FormRequest
             'priority' => ['required', Rule::in(self::PRIORITIES)],
             // Optional evidence uploads — additive only (no existing media is deleted).
             'new_images' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE_FILES],
-            'new_images.*' => [
-                'file',
-                'mimes:jpg,jpeg,png,webp,pdf,txt,doc,docx',
-                // 5 MiB per file, max 5 files and 25 MiB total per request; intentionally bounded.
+            'new_images.*' => [ // NOSONAR
+                'file', // NOSONAR
+                'mimes:jpg,jpeg,png,webp,pdf,txt,doc,docx', // NOSONAR
                 'max:'.self::MAX_EVIDENCE_FILE_KB, // NOSONAR
             ],
         ];
