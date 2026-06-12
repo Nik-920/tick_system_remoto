@@ -4,11 +4,10 @@ namespace App\Listeners;
 
 use App\Events\TicketStateChanged;
 use App\Listeners\Concerns\BuildsTicketStateChangedNotification;
+use App\Listeners\Concerns\DeliversTicketInAppNotification;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 
 /**
  * Persiste la notificación in-app al reporter cuando cambia el estado del ticket.
@@ -18,6 +17,7 @@ use Throwable;
 class CreateInAppNotificationOnTicketStateChanged implements ShouldQueue
 {
     use BuildsTicketStateChangedNotification;
+    use DeliversTicketInAppNotification;
     use InteractsWithQueue;
 
     public string $queue = 'default';
@@ -30,29 +30,17 @@ class CreateInAppNotificationOnTicketStateChanged implements ShouldQueue
         private NotificationService $notificationService
     ) {}
 
+    protected function notificationService(): NotificationService
+    {
+        return $this->notificationService;
+    }
+
     public function handle(TicketStateChanged $event): void
     {
-        try {
-            $n = $this->buildTicketStateChangedNotification($event);
-            if ($n === null) {
-                return;
-            }
-
-            $this->notificationService->notifyUser(
-                user: $n['user'],
-                type: $n['type'],
-                title: $n['title'],
-                body: $n['body'],
-                url: $n['url'],
-                icon: $n['icon'],
-                ticketId: $n['ticketId'],
-                dedupKey: $n['dedupKey'],
-            );
-        } catch (Throwable $e) {
-            Log::error('Error creando notificación in-app en cambio de estado.', [
-                'ticket_id' => $event->ticket->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        $this->deliverInAppNotification(
+            fn (): ?array => $this->buildTicketStateChangedNotification($event),
+            'Error creando notificación in-app en cambio de estado.',
+            (string) $event->ticket->id,
+        );
     }
 }
