@@ -47,6 +47,8 @@
 @import './modules/tickets.css';
 /* TEMPORARY — static V2 design prototype for the maintenance Tickets tab. */
 @import './modules/tickets-maintenance-v2.css';
+/* Detalle de ticket — /tickets/{ticket} (maintenance/admin, dark-mode ready). */
+@import './modules/tickets-show.css';
 /* "Mis asignaciones" — maintenance assignments board (static visual phase). */
 @import './modules/tickets-assignments.css';
 /* "Historial" — maintenance history board (static visual phase). */
