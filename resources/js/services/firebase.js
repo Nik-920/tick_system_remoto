@@ -35,7 +35,6 @@ export async function requestPermissionAndGetToken() {
 
         // Esperar a que el SW esté activo
         await navigator.serviceWorker.ready;
-        console.log('Service Worker activo:', swRegistration);
 
         const token = await getToken(messaging, {
             vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
@@ -43,7 +42,6 @@ export async function requestPermissionAndGetToken() {
         });
 
         if (token) {
-            console.log('FCM Token obtenido:', token);
             await saveTokenToServer(token);
             return token;
         }
