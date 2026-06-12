@@ -6,7 +6,9 @@ namespace App\Http\Requests\Reporter;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Validation for a reporter editing their OWN still-open request.
@@ -21,7 +23,6 @@ use Illuminate\Validation\Rule;
  * request only shapes/sanitizes the input.
  *
  * Image uploads (new_images[]) are validated here but stored by the controller.
- * Allowed: jpeg, jpg, png, gif, webp — max 10 MB each, up to 10 files per request.
  * The reporter cannot delete existing evidence from this endpoint; that would
  * require a dedicated destroy route per media item.
  */
@@ -30,11 +31,13 @@ class UpdateReporterTicketRequest extends FormRequest
     /** @var list<string> */
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-    /** Max size in kilobytes (10 MB). */
-    private const MAX_FILE_KB = 10240;
+    public const MAX_EVIDENCE_FILES = 5;
 
-    /** Max number of new images per request. */
-    private const MAX_FILES = 10;
+    public const MAX_EVIDENCE_FILE_KB = 5120;
+
+    public const MAX_EVIDENCE_TOTAL_KB = 25600;
+
+    public const MAX_COMMENT_LENGTH = 2000;
 
     public function authorize(): bool
     {
@@ -64,20 +67,43 @@ class UpdateReporterTicketRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'min:5', 'max:255'],
-            'description' => ['required', 'string', 'min:20', 'max:2000'],
+            'description' => ['required', 'string', 'min:20', 'max:'.self::MAX_COMMENT_LENGTH],
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['required', Rule::in(self::PRIORITIES)],
             // Optional evidence uploads — additive only (no existing media is deleted).
-            'new_images' => ['nullable', 'array', 'max:'.self::MAX_FILES],
+            'new_images' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE_FILES],
             'new_images.*' => [
                 'file',
-                'mimes:jpeg,jpg,png,gif,webp',
-                // 10 MiB per file and max 10 files per request; intentionally
-                // bounded for ticket evidence uploads and covered by tests.
-                'max:'.self::MAX_FILE_KB, // NOSONAR — safe, explicit content length limit.
+                'mimes:jpg,jpeg,png,webp,pdf,txt,doc,docx',
+                // 5 MiB per file, max 5 files and 25 MiB total per request; intentionally bounded.
+                'max:'.self::MAX_EVIDENCE_FILE_KB, // NOSONAR
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $files = $this->file('new_images');
+            if (! is_array($files) || count($files) === 0) {
+                return;
+            }
+
+            $totalSize = 0;
+            foreach ($files as $file) {
+                if ($file instanceof UploadedFile) {
+                    $totalSize += $file->getSize();
+                }
+            }
+
+            if ($totalSize > (self::MAX_EVIDENCE_TOTAL_KB * 1024)) {
+                $validator->errors()->add(
+                    'new_images',
+                    'El tamaño total de los archivos no puede superar los 25 MB.'
+                );
+            }
+        });
     }
 
     /**
@@ -102,9 +128,9 @@ class UpdateReporterTicketRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'new_images.*.mimes' => 'Cada imagen debe ser JPG, PNG, GIF o WebP.',
-            'new_images.*.max' => 'Cada imagen no puede superar los 10 MB.',
-            'new_images.max' => 'Puedes subir un máximo de '.self::MAX_FILES.' imágenes por vez.',
+            'new_images.*.mimes' => 'Formato no permitido. Usa JPG, PNG, WebP, PDF, TXT, Word.',
+            'new_images.*.max' => 'Cada imagen no puede superar los 5 MB.',
+            'new_images.max' => 'Puedes subir un máximo de '.self::MAX_EVIDENCE_FILES.' imágenes por vez.',
         ];
     }
 

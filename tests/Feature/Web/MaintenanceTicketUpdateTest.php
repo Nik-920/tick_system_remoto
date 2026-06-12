@@ -312,6 +312,74 @@ class MaintenanceTicketUpdateTest extends TestCase
         $this->assertDatabaseCount('ticket_media', 0);
     }
 
+    public function test_evidence_rejects_file_larger_than_max_file_kb(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $category = $this->createCategory();
+
+        $ticket = $this->createTicket($reporter, $category);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $this->actingAs($maintenance)
+            ->from(route('tickets.show', $ticket))
+            ->patch(route('tickets.maintenance.update', $ticket), [
+                // 6 MiB is larger than 5 MiB
+                'evidence' => [UploadedFile::fake()->image('large.jpg')->size(6144)],
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect(route('tickets.show', $ticket))
+            ->assertSessionHasErrors(['evidence.0']);
+    }
+
+    public function test_evidence_rejects_more_than_max_files(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $category = $this->createCategory();
+
+        $ticket = $this->createTicket($reporter, $category);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $files = [];
+        for ($i = 0; $i < 6; $i++) {
+            $files[] = UploadedFile::fake()->image("img{$i}.jpg")->size(100);
+        }
+
+        $this->actingAs($maintenance)
+            ->from(route('tickets.show', $ticket))
+            ->patch(route('tickets.maintenance.update', $ticket), [
+                'evidence' => $files,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect(route('tickets.show', $ticket))
+            ->assertSessionHasErrors(['evidence']);
+    }
+
+    public function test_evidence_rejects_total_accumulated_size(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        $category = $this->createCategory();
+
+        $ticket = $this->createTicket($reporter, $category);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $files = [];
+        for ($i = 0; $i < 5; $i++) {
+            $files[] = UploadedFile::fake()->image("img{$i}.jpg")->size(5200);
+        }
+
+        $this->actingAs($maintenance)
+            ->from(route('tickets.show', $ticket))
+            ->patch(route('tickets.maintenance.update', $ticket), [
+                'evidence' => $files,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect(route('tickets.show', $ticket))
+            ->assertSessionHasErrors(['evidence']);
+    }
+
     // ── Vista: edición limitada visible solo para quien corresponde ─────────
 
     public function test_show_renders_category_select_and_save_button_for_assigned_maintenance(): void

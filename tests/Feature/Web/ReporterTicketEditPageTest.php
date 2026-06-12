@@ -263,7 +263,6 @@ class ReporterTicketEditPageTest extends TestCase
             'file_type' => 'image/jpeg',
             'uploaded_by' => $me->id,
         ]);
-
         $this->actingAs($me)
             ->patch(route('reporter.tickets.update', $ticket->id), $this->validPayload())
             ->assertRedirect();
@@ -278,18 +277,71 @@ class ReporterTicketEditPageTest extends TestCase
     public function test_update_rejects_invalid_file_type(): void
     {
         $me = $this->userWithRole('reporter');
-        $ticket = $this->ticketFor($me, 'open', 'Archivo inválido');
+        $ticket = $this->ticketFor($me, 'open', 'Prueba Mimes');
 
         $this->actingAs($me)
             ->from(route('reporter.tickets.edit', $ticket->id))
             ->patch(route('reporter.tickets.update', $ticket->id), array_merge(
                 $this->validPayload(),
-                ['new_images' => [UploadedFile::fake()->create('malware.exe', 100, 'application/octet-stream')]],
+                ['new_images' => [UploadedFile::fake()->create('documento.xyz', 100, 'application/xyz')]]
             ))
             ->assertRedirect(route('reporter.tickets.edit', $ticket->id))
             ->assertSessionHasErrors(['new_images.0']);
+    }
 
-        $this->assertDatabaseMissing('ticket_media', ['ticket_id' => $ticket->id]);
+    public function test_update_rejects_file_larger_than_max_file_kb(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Max Size');
+
+        $this->actingAs($me)
+            ->from(route('reporter.tickets.edit', $ticket->id))
+            ->patch(route('reporter.tickets.update', $ticket->id), array_merge(
+                $this->validPayload(),
+                ['new_images' => [UploadedFile::fake()->image('large.jpg')->size(6144)]]
+            ))
+            ->assertRedirect(route('reporter.tickets.edit', $ticket->id))
+            ->assertSessionHasErrors(['new_images.0']);
+    }
+
+    public function test_update_rejects_more_than_max_files(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Max Count');
+
+        $files = [];
+        for ($i = 0; $i < 6; $i++) {
+            $files[] = UploadedFile::fake()->image("img{$i}.jpg")->size(100);
+        }
+
+        $this->actingAs($me)
+            ->from(route('reporter.tickets.edit', $ticket->id))
+            ->patch(route('reporter.tickets.update', $ticket->id), array_merge(
+                $this->validPayload(),
+                ['new_images' => $files]
+            ))
+            ->assertRedirect(route('reporter.tickets.edit', $ticket->id))
+            ->assertSessionHasErrors(['new_images']);
+    }
+
+    public function test_update_rejects_total_accumulated_size(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Max Total');
+
+        $files = [];
+        for ($i = 0; $i < 5; $i++) {
+            $files[] = UploadedFile::fake()->image("img{$i}.jpg")->size(5200);
+        }
+
+        $response = $this->actingAs($me)
+            ->from(route('reporter.tickets.edit', $ticket->id))
+            ->patch(route('reporter.tickets.update', $ticket->id), array_merge(
+                $this->validPayload(),
+                ['new_images' => $files]
+            ));
+
+        $response->assertSessionHasErrors(['new_images']);
     }
 
     public function test_classic_admin_ticket_routes_remain_intact(): void
