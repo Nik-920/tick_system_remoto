@@ -99,6 +99,20 @@ final class MaintenanceReportQuery
 
     private const ID_SHORT_LENGTH = 8;
 
+    // ── Shared UI labels (KPIs, summary, glossary) ───────────────────────────
+
+    private const LABEL_UNCATEGORIZED = 'Sin categoría';
+
+    private const LABEL_ACTIVE_ASSIGNED = 'Asignados activos';
+
+    private const LABEL_IN_PROGRESS = 'En progreso';
+
+    private const LABEL_GLOBAL_QUEUE_AVAILABLE = 'Cola global disponible';
+
+    private const LABEL_RESOLVED_IN_PERIOD = 'Resueltos en periodo';
+
+    private const SUFFIX_DAYS = ' días';
+
     private readonly CarbonImmutable $now;
 
     public function __construct(
@@ -249,7 +263,6 @@ final class MaintenanceReportQuery
             $staleInProgress,
             $evidenceSummary,
             $closeRate,
-            $resolvedCount,
             $activeCount,
             $timeMetrics,
             $recurrenceInsights,
@@ -479,7 +492,7 @@ final class MaintenanceReportQuery
                 building: (string) ($ticket->location->building ?? ''),
                 floor: (string) ($ticket->location->floor ?? ''),
                 roomCode: (string) ($ticket->location->room_code ?? ''),
-                categoryName: (string) ($ticket->category->name ?? 'Sin categoría'),
+                categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
                 priority: (string) $ticket->priority,
                 state: (string) $ticket->state,
                 createdAt: $createdAt,
@@ -569,49 +582,34 @@ final class MaintenanceReportQuery
         ?array $duplicate,
         bool $isRecurrentPair,
     ): string {
+        // Ordered rule list (Fase 13): the FIRST matching rule wins.
         if ($priority === 'critical') {
-            return 'Atención inmediata';
-        }
-
-        if ($priority === 'high' && $state === Ticket::STATE_OPEN) {
-            return 'Priorizar hoy';
-        }
-
-        if ($duplicate !== null && (bool) $duplicate['pendingReview']) {
-            return 'Revisar posible duplicado antes de continuar';
-        }
-
-        if ($duplicate !== null && (bool) $duplicate['suggestsRecurrence']) {
-            return 'Evaluar recurrencia y revisión preventiva del laboratorio';
-        }
-
-        if ($state === Ticket::STATE_OPEN && $ageDays > self::STALE_OPEN_DAYS) {
-            return 'Iniciar atención atrasada';
-        }
-
-        if ($state === Ticket::STATE_IN_PROGRESS
+            $action = 'Atención inmediata';
+        } elseif ($priority === 'high' && $state === Ticket::STATE_OPEN) {
+            $action = 'Priorizar hoy';
+        } elseif ($duplicate !== null && (bool) $duplicate['pendingReview']) {
+            $action = 'Revisar posible duplicado antes de continuar';
+        } elseif ($duplicate !== null && (bool) $duplicate['suggestsRecurrence']) {
+            $action = 'Evaluar recurrencia y revisión preventiva del laboratorio';
+        } elseif ($state === Ticket::STATE_OPEN && $ageDays > self::STALE_OPEN_DAYS) {
+            $action = 'Iniciar atención atrasada';
+        } elseif ($state === Ticket::STATE_IN_PROGRESS
             && $lastActivityAt !== null
             && $lastActivityAt->lessThan($this->now->subDays(self::STALE_IN_PROGRESS_DAYS))) {
-            return 'Retomar y actualizar estado';
+            $action = 'Retomar y actualizar estado';
+        } elseif (! $hasFirstResponse && $state === Ticket::STATE_OPEN) {
+            $action = 'Registrar avance inicial';
+        } elseif ($evidenceCount === 0) {
+            $action = 'Adjuntar evidencia';
+        } elseif ($isRecurrentPair) {
+            $action = 'Revisión preventiva del laboratorio';
+        } elseif ($duplicate !== null && ! (bool) $duplicate['hasStrategyMetadata']) {
+            $action = 'Revisar duplicado manualmente (registro antiguo)';
+        } else {
+            $action = 'En seguimiento';
         }
 
-        if (! $hasFirstResponse && $state === Ticket::STATE_OPEN) {
-            return 'Registrar avance inicial';
-        }
-
-        if ($evidenceCount === 0) {
-            return 'Adjuntar evidencia';
-        }
-
-        if ($isRecurrentPair) {
-            return 'Revisión preventiva del laboratorio';
-        }
-
-        if ($duplicate !== null && ! (bool) $duplicate['hasStrategyMetadata']) {
-            return 'Revisar duplicado manualmente (registro antiguo)';
-        }
-
-        return 'En seguimiento';
+        return $action;
     }
 
     private function lastActivityAt(AssignmentRow $row): CarbonImmutable
@@ -744,18 +742,16 @@ final class MaintenanceReportQuery
     private function duplicateRecommendedAction(array $info): string
     {
         if ((bool) $info['pendingReview']) {
-            return 'Revisar duplicidad antes de iniciar trabajo duplicado';
+            $action = 'Revisar duplicidad antes de iniciar trabajo duplicado';
+        } elseif ((bool) $info['suggestsRecurrence']) {
+            $action = 'Evaluar recurrencia y revisión preventiva del laboratorio';
+        } elseif (! (bool) $info['hasStrategyMetadata']) {
+            $action = 'Revisión manual: registro antiguo sin desglose Strategy';
+        } else {
+            $action = 'Duplicado confirmado: coordinar consolidación con el ticket similar';
         }
 
-        if ((bool) $info['suggestsRecurrence']) {
-            return 'Evaluar recurrencia y revisión preventiva del laboratorio';
-        }
-
-        if (! (bool) $info['hasStrategyMetadata']) {
-            return 'Revisión manual: registro antiguo sin desglose Strategy';
-        }
-
-        return 'Duplicado confirmado: coordinar consolidación con el ticket similar';
+        return $action;
     }
 
     private function reviewStatusLabel(?string $status): string
@@ -825,7 +821,7 @@ final class MaintenanceReportQuery
                 idShort: $this->idShort((string) $ticket->id),
                 title: (string) $ticket->title,
                 locationName: (string) ($ticket->location->name ?? 'Sin ubicación'),
-                categoryName: (string) ($ticket->category->name ?? 'Sin categoría'),
+                categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
                 priority: (string) $ticket->priority,
                 createdAt: $createdAt,
                 resolvedAt: $resolvedAt,
@@ -891,7 +887,7 @@ final class MaintenanceReportQuery
                 idShort: $this->idShort($ticketId),
                 title: (string) $ticket->title,
                 locationName: (string) ($ticket->location->name ?? 'Sin ubicación'),
-                categoryName: (string) ($ticket->category->name ?? 'Sin categoría'),
+                categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
                 priority: (string) $ticket->priority,
                 kind: $toState === Ticket::STATE_REJECTED ? ClosedTicketRow::KIND_REJECTED : ClosedTicketRow::KIND_CANCELLED,
                 createdAt: $ticket->created_at !== null ? CarbonImmutable::parse($ticket->created_at) : null,
@@ -1055,26 +1051,8 @@ final class MaintenanceReportQuery
             $key = (string) ($ticket->location_id ?? 'none');
             $bucket = $buckets[$key] ?? $this->emptyLocationBucket($ticket);
 
-            $bucket['active']++;
-            $bucket['ids'][(string) $ticket->id] = true;
-            if ($ticket->state === Ticket::STATE_OPEN) {
-                $bucket['open']++;
-            } else {
-                $bucket['inProgress']++;
-            }
-            if (in_array($ticket->priority, self::URGENT_PRIORITIES, true)) {
-                $bucket['highCritical']++;
-            }
-
             $info = $duplicateInfoByTicket[(string) $ticket->id] ?? null;
-            if ($info !== null) {
-                $bucket['duplicates']++;
-                if ((bool) $info['suggestsRecurrence']) {
-                    $bucket['recurrences']++;
-                }
-            }
-
-            $buckets[$key] = $bucket;
+            $buckets[$key] = $this->accumulateActiveLocationBucket($bucket, $ticket, $info);
         }
 
         foreach (['created' => $createdModels, 'resolved' => $resolvedModels, 'rejected' => $rejectedModels, 'cancelled' => $cancelledModels] as $counter => $models) {
@@ -1121,6 +1099,37 @@ final class MaintenanceReportQuery
         });
 
         return array_values($rows);
+    }
+
+    /**
+     * Accumulate ONE active ticket into its location bucket (counts by state,
+     * urgency and persisted AI-duplicate signal).
+     *
+     * @param  array<string, mixed>  $bucket
+     * @param  array<string, mixed>|null  $info
+     * @return array<string, mixed>
+     */
+    private function accumulateActiveLocationBucket(array $bucket, Ticket $ticket, ?array $info): array
+    {
+        $bucket['active']++;
+        $bucket['ids'][(string) $ticket->id] = true;
+        if ($ticket->state === Ticket::STATE_OPEN) {
+            $bucket['open']++;
+        } else {
+            $bucket['inProgress']++;
+        }
+        if (in_array($ticket->priority, self::URGENT_PRIORITIES, true)) {
+            $bucket['highCritical']++;
+        }
+
+        if ($info !== null) {
+            $bucket['duplicates']++;
+            if ((bool) $info['suggestsRecurrence']) {
+                $bucket['recurrences']++;
+            }
+        }
+
+        return $bucket;
     }
 
     /**
@@ -1237,7 +1246,7 @@ final class MaintenanceReportQuery
     private function emptyCategoryBucket(Ticket $ticket): array
     {
         return [
-            'name' => (string) ($ticket->category->name ?? 'Sin categoría'),
+            'name' => (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
             'active' => 0,
             'created' => 0,
             'resolved' => 0,
@@ -1306,7 +1315,7 @@ final class MaintenanceReportQuery
         foreach ($recurrenceHistories as $history) {
             $rows[] = new RecurrenceInsightRow(
                 locationName: (string) ($history->location->name ?? 'Sin ubicación'),
-                categoryName: (string) ($history->category->name ?? 'Sin categoría'),
+                categoryName: (string) ($history->category->name ?? self::LABEL_UNCATEGORIZED),
                 recurrenceCount: (int) $history->recurrence_count,
                 lastResolvedAt: $history->last_resolved_at !== null
                     ? CarbonImmutable::parse($history->last_resolved_at)
@@ -1387,15 +1396,15 @@ final class MaintenanceReportQuery
         $period = KpiRow::CLOCK_PERIOD;
 
         return [
-            new KpiRow('assigned_active', 'Asignados activos', (string) $active, $snapshot,
+            new KpiRow('assigned_active', self::LABEL_ACTIVE_ASSIGNED, (string) $active, $snapshot,
                 'Abiertos y en progreso bajo responsabilidad del técnico.', 'neutral'),
             new KpiRow('open_active', 'Abiertos', (string) $open, $snapshot,
                 'Asignados aún sin iniciar.', 'info'),
-            new KpiRow('in_progress', 'En progreso', (string) $inProgress, $snapshot,
+            new KpiRow('in_progress', self::LABEL_IN_PROGRESS, (string) $inProgress, $snapshot,
                 'Trabajo técnico ya iniciado.', 'info'),
             new KpiRow('critical_high_active', 'Críticos / alta activos', (string) $criticalHigh, $snapshot,
                 'Prioridad crítica o alta todavía sin cerrar.', $criticalHigh > 0 ? 'critical' : 'neutral'),
-            new KpiRow('stale_open', 'Sin iniciar +'.self::STALE_OPEN_DAYS.' días', (string) $staleOpen, $snapshot,
+            new KpiRow('stale_open', 'Sin iniciar +'.self::STALE_OPEN_DAYS.self::SUFFIX_DAYS, (string) $staleOpen, $snapshot,
                 'Abiertos hace más de '.self::STALE_OPEN_DAYS.' días sin primera respuesta.', $staleOpen > 0 ? 'warning' : 'neutral'),
             new KpiRow('evidence_with', 'Activos con evidencia', (string) $evidence['withEvidence'], $snapshot,
                 'Asignaciones activas con al menos un adjunto.', 'neutral'),
@@ -1403,13 +1412,13 @@ final class MaintenanceReportQuery
                 'Asignaciones activas sin respaldo documental.', $evidence['withoutEvidence'] > 0 ? 'warning' : 'neutral'),
             new KpiRow('evidence_coverage', 'Cobertura de evidencia', $this->formatPercentOrNa($evidence['coveragePct']), $snapshot,
                 'Porcentaje de asignaciones activas con evidencia.', 'neutral'),
-            new KpiRow('global_queue', 'Cola global disponible', (string) $globalQueue, $snapshot,
+            new KpiRow('global_queue', self::LABEL_GLOBAL_QUEUE_AVAILABLE, (string) $globalQueue, $snapshot,
                 'Contexto del área: abiertos sin asignar. No es responsabilidad personal.', 'neutral'),
             // Single AI row in the KPI table: the detailed AI counters live in
             // the "Alertas IA y posibles duplicados" section (aiSummary).
             new KpiRow('ai_duplicates_active', 'Posibles duplicados IA activos', (string) $duplicatesActive, $snapshot,
                 'Señal operativa de calidad de atención. No mide productividad. Detalle en la sección de alertas IA.', $duplicatesActive > 0 ? 'warning' : 'neutral'),
-            new KpiRow('resolved_period', 'Resueltos en periodo', (string) $resolved, $period,
+            new KpiRow('resolved_period', self::LABEL_RESOLVED_IN_PERIOD, (string) $resolved, $period,
                 'Cierres por resolved_at dentro del rango.', 'positive'),
             new KpiRow('rejected_period', 'Rechazados en periodo', (string) $rejected, $period,
                 'Cierre administrativo (transición real a rejected).', 'neutral'),
@@ -1453,7 +1462,7 @@ final class MaintenanceReportQuery
                 'Todos los tickets con assigned_to = técnico, sin filtro de fecha.'),
             new ScopeUniverseRow('B', 'Activos del técnico', 'snapshot', $active,
                 'Asignados en estado abierto o en progreso al momento de generar.'),
-            new ScopeUniverseRow('C', 'Cola global disponible', 'snapshot', $globalQueue,
+            new ScopeUniverseRow('C', self::LABEL_GLOBAL_QUEUE_AVAILABLE, 'snapshot', $globalQueue,
                 'Abiertos sin asignar y sin bloqueo. Contexto del área, no responsabilidad personal.'),
             new ScopeUniverseRow('D', 'Resueltos por el técnico', 'periodo', $resolved,
                 'Asignados con resolved_at dentro del rango.'),
@@ -1489,7 +1498,6 @@ final class MaintenanceReportQuery
         array $staleInProgress,
         array $evidence,
         ?float $closeRate,
-        int $resolved,
         int $active,
         array $time,
         array $recurrenceInsights,
@@ -1782,10 +1790,10 @@ final class MaintenanceReportQuery
         int $createdInPeriod,
     ): array {
         $headlines = [
-            ['label' => 'Asignados activos', 'value' => (string) $active],
+            ['label' => self::LABEL_ACTIVE_ASSIGNED, 'value' => (string) $active],
             ['label' => 'Críticos / alta activos', 'value' => (string) $criticalHigh],
-            ['label' => 'Resueltos en periodo', 'value' => (string) $resolved],
-            ['label' => 'Abiertos +'.self::STALE_OPEN_DAYS.' días', 'value' => (string) $staleOpen],
+            ['label' => self::LABEL_RESOLVED_IN_PERIOD, 'value' => (string) $resolved],
+            ['label' => 'Abiertos +'.self::STALE_OPEN_DAYS.self::SUFFIX_DAYS, 'value' => (string) $staleOpen],
             ['label' => 'Duplicados IA activos', 'value' => (string) $duplicatesActive],
             ['label' => 'Cola global (contexto)', 'value' => (string) $globalQueue],
         ];
@@ -2023,7 +2031,7 @@ final class MaintenanceReportQuery
             'displayId' => '#TIC-'.$this->idShort((string) $ticket->id),
             'title' => (string) $ticket->title,
             'locationName' => (string) ($ticket->location->name ?? 'Sin ubicación'),
-            'categoryName' => (string) ($ticket->category->name ?? 'Sin categoría'),
+            'categoryName' => (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
             'priority' => $this->priorityLabel((string) $ticket->priority),
             'stateLabel' => $this->stateLabel((string) $ticket->state),
             'createdAt' => $ticket->created_at !== null ? CarbonImmutable::parse($ticket->created_at)->format('Y-m-d') : '—',
@@ -2186,12 +2194,12 @@ final class MaintenanceReportQuery
         return [
             ['term' => 'Snapshot', 'definition' => 'Dato medido al momento exacto de generar el informe; ignora el rango de fechas.'],
             ['term' => 'Periodo', 'definition' => 'Dato acotado al rango de fechas seleccionado.'],
-            ['term' => 'Asignados activos', 'definition' => 'Tickets asignados al técnico en estado abierto o en progreso (snapshot).'],
+            ['term' => self::LABEL_ACTIVE_ASSIGNED, 'definition' => 'Tickets asignados al técnico en estado abierto o en progreso (snapshot).'],
             ['term' => 'Abiertos', 'definition' => 'Asignados en estado abierto, aún sin iniciar.'],
-            ['term' => 'En progreso', 'definition' => 'Asignados con trabajo técnico iniciado.'],
+            ['term' => self::LABEL_IN_PROGRESS, 'definition' => 'Asignados con trabajo técnico iniciado.'],
             ['term' => 'Críticos / alta', 'definition' => 'Activos con prioridad crítica o alta.'],
-            ['term' => 'Sin iniciar +'.self::STALE_OPEN_DAYS.' días', 'definition' => 'Abiertos creados hace más de '.self::STALE_OPEN_DAYS.' días sin primera respuesta.'],
-            ['term' => 'Resueltos en periodo', 'definition' => 'Asignados con fecha de resolución (resolved_at) dentro del rango.'],
+            ['term' => 'Sin iniciar +'.self::STALE_OPEN_DAYS.self::SUFFIX_DAYS, 'definition' => 'Abiertos creados hace más de '.self::STALE_OPEN_DAYS.' días sin primera respuesta.'],
+            ['term' => self::LABEL_RESOLVED_IN_PERIOD, 'definition' => 'Asignados con fecha de resolución (resolved_at) dentro del rango.'],
             ['term' => 'Rechazados', 'definition' => 'Cierre administrativo: transición real a rechazado en state_history dentro del rango. No es un resuelto.'],
             ['term' => 'Cancelados', 'definition' => 'Retiro voluntario del reporter: transición real a cancelado dentro del rango. No penaliza al técnico ni entra en la tasa de cierre.'],
             ['term' => 'Primera respuesta', 'definition' => 'Tiempo desde la creación del ticket hasta su primera transición a en progreso (state_history).'],
@@ -2199,7 +2207,7 @@ final class MaintenanceReportQuery
             ['term' => 'Mediana resolución', 'definition' => 'Valor central de las duraciones de resolución; robusto ante casos extremos.'],
             ['term' => 'Tasa de cierre operativa', 'definition' => 'Resueltos del periodo / (resueltos del periodo + activos actuales) × 100. Excluye cancelados. Si no hay resueltos ni activos se muestra "Sin datos" porque la métrica no aplica.'],
             ['term' => 'Cobertura de evidencia', 'definition' => 'Porcentaje de asignaciones activas con al menos un archivo adjunto en ticket_media.'],
-            ['term' => 'Cola global disponible', 'definition' => 'Tickets abiertos, sin asignar y sin bloqueo de asignación. Contexto del área; no es responsabilidad personal del técnico.'],
+            ['term' => self::LABEL_GLOBAL_QUEUE_AVAILABLE, 'definition' => 'Tickets abiertos, sin asignar y sin bloqueo de asignación. Contexto del área; no es responsabilidad personal del técnico.'],
             ['term' => 'Muestra baja', 'definition' => 'Métrica calculada con menos de '.self::LOW_SAMPLE_THRESHOLD.' casos; debe interpretarse con cautela.'],
             ['term' => 'Posible duplicado IA', 'definition' => 'Ticket marcado por el sistema como similar a otro ticket existente. Señal operativa, no métrica de productividad.'],
             ['term' => 'Similitud', 'definition' => 'Valor numérico (0 a 1) que representa la cercanía semántica entre las descripciones de dos tickets.'],
@@ -2262,7 +2270,7 @@ final class MaintenanceReportQuery
     {
         return match ($state) {
             Ticket::STATE_OPEN => 'Abierto',
-            Ticket::STATE_IN_PROGRESS => 'En progreso',
+            Ticket::STATE_IN_PROGRESS => self::LABEL_IN_PROGRESS,
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
             Ticket::STATE_CANCELLED => 'Cancelado',

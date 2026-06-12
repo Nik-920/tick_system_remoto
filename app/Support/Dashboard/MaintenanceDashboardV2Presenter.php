@@ -52,6 +52,9 @@ final class MaintenanceDashboardV2Presenter
 
     private const PRIORITY_ORDER = "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END";
 
+    /** UI label for the in_progress state (KPIs, donut and state labels). */
+    private const LABEL_IN_PROGRESS = 'En progreso';
+
     /**
      * @return array<string, mixed>
      */
@@ -156,7 +159,7 @@ final class MaintenanceDashboardV2Presenter
 
         return [
             ['key' => 'total', 'value' => (string) $total, 'label' => 'Tickets totales', 'note' => 'Creados en el periodo', 'icon' => 'clipboard-list', 'tone' => 'primary'],
-            ['key' => 'in_progress', 'value' => (string) $inProgress, 'label' => 'En progreso', 'note' => $pct($inProgress), 'icon' => 'loader', 'tone' => 'warning'],
+            ['key' => 'in_progress', 'value' => (string) $inProgress, 'label' => self::LABEL_IN_PROGRESS, 'note' => $pct($inProgress), 'icon' => 'loader', 'tone' => 'warning'],
             ['key' => 'resolved', 'value' => (string) $resolved, 'label' => 'Resueltos', 'note' => $pct($resolved), 'icon' => 'circle-check', 'tone' => 'success'],
             ['key' => 'rejected', 'value' => (string) $rejected, 'label' => 'Rechazados', 'note' => $pct($rejected), 'icon' => 'x', 'tone' => 'high'],
             ['key' => 'avg', 'value' => $this->kpiValue($kpiByKey, 'avg_resolution'), 'label' => 'Tiempo prom. resolución', 'note' => 'Cierres dentro del rango', 'icon' => 'clock', 'tone' => 'purple'],
@@ -174,7 +177,7 @@ final class MaintenanceDashboardV2Presenter
         $bands = [
             ['key' => Ticket::STATE_RESOLVED, 'label' => 'Resueltos', 'color' => '#16a34a', 'tone' => 'success'],
             ['key' => Ticket::STATE_OPEN, 'label' => 'Abiertos', 'color' => '#2563eb', 'tone' => 'primary'],
-            ['key' => Ticket::STATE_IN_PROGRESS, 'label' => 'En progreso', 'color' => '#f59e0b', 'tone' => 'warning'],
+            ['key' => Ticket::STATE_IN_PROGRESS, 'label' => self::LABEL_IN_PROGRESS, 'color' => '#f59e0b', 'tone' => 'warning'],
             ['key' => Ticket::STATE_REJECTED, 'label' => 'Rechazados', 'color' => '#ef4444', 'tone' => 'high'],
         ];
 
@@ -524,7 +527,7 @@ final class MaintenanceDashboardV2Presenter
     {
         return match ($state) {
             Ticket::STATE_OPEN => 'Abierto',
-            Ticket::STATE_IN_PROGRESS => 'En progreso',
+            Ticket::STATE_IN_PROGRESS => self::LABEL_IN_PROGRESS,
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
             default => ucfirst($state),
