@@ -2,9 +2,7 @@
 
 namespace App\Services\Ai\Duplicates\Strategies;
 
-use App\Contracts\Ai\Duplicates\DuplicateDetectionStrategy;
 use App\Services\Ai\Duplicates\DuplicateCandidateContext;
-use App\Services\Ai\Duplicates\DuplicateStrategyResult;
 
 /**
  * Strategy (Phase 3 — Conservative / no-op): Historical Recurrence.
@@ -22,34 +20,28 @@ use App\Services\Ai\Duplicates\DuplicateStrategyResult;
  *
  * Config key: ai.dedup.strategies.historical_recurrence.enabled (default true)
  */
-final class HistoricalRecurrenceStrategy implements DuplicateDetectionStrategy
+final class HistoricalRecurrenceStrategy extends AbstractNoopPhase3Strategy
 {
-    public function evaluate(DuplicateCandidateContext $context): DuplicateStrategyResult
+    protected function strategyKey(): string
     {
-        $cfg = config('ai.dedup.strategies.historical_recurrence', []);
-        $enabled = (bool) ($cfg['enabled'] ?? true);
+        return 'historical_recurrence';
+    }
 
-        if (! $enabled) {
-            return new DuplicateStrategyResult(
-                strategy: 'historical_recurrence',
-                points: 0,
-                reason: 'Historical recurrence strategy disabled.',
-                metadata: ['phase' => 3, 'status' => 'disabled'],
-            );
-        }
+    protected function disabledReason(): string
+    {
+        return 'Historical recurrence strategy disabled.';
+    }
 
-        // No historical incident table exists yet.
-        // Return 0 points with clear traceability.
-        return new DuplicateStrategyResult(
-            strategy: 'historical_recurrence',
-            points: 0,
-            reason: 'Historical recurrence: no incident history table available yet (Phase 3 — no-op).',
-            metadata: [
-                'phase' => 3,
-                'status' => 'noop',
-                'location_id' => $context->ticket->location_id,
-                'category_id' => $context->ticket->category_id,
-            ],
-        );
+    protected function noopReason(): string
+    {
+        return 'Historical recurrence: no incident history table available yet (Phase 3 — no-op).';
+    }
+
+    protected function noopMetadata(DuplicateCandidateContext $context): array
+    {
+        return [
+            'location_id' => $context->ticket->location_id,
+            'category_id' => $context->ticket->category_id,
+        ];
     }
 }

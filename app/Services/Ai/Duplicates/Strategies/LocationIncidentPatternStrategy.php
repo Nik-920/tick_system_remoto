@@ -2,9 +2,7 @@
 
 namespace App\Services\Ai\Duplicates\Strategies;
 
-use App\Contracts\Ai\Duplicates\DuplicateDetectionStrategy;
 use App\Services\Ai\Duplicates\DuplicateCandidateContext;
-use App\Services\Ai\Duplicates\DuplicateStrategyResult;
 
 /**
  * Strategy (Phase 3 — Conservative / no-op): Location Incident Pattern.
@@ -22,35 +20,29 @@ use App\Services\Ai\Duplicates\DuplicateStrategyResult;
  *
  * Config key: ai.dedup.strategies.location_incident_pattern.enabled (default true)
  */
-final class LocationIncidentPatternStrategy implements DuplicateDetectionStrategy
+final class LocationIncidentPatternStrategy extends AbstractNoopPhase3Strategy
 {
-    public function evaluate(DuplicateCandidateContext $context): DuplicateStrategyResult
+    protected function strategyKey(): string
     {
-        $cfg = config('ai.dedup.strategies.location_incident_pattern', []);
-        $enabled = (bool) ($cfg['enabled'] ?? true);
+        return 'location_incident_pattern';
+    }
 
-        if (! $enabled) {
-            return new DuplicateStrategyResult(
-                strategy: 'location_incident_pattern',
-                points: 0,
-                reason: 'Location incident pattern strategy disabled.',
-                metadata: ['phase' => 3, 'status' => 'disabled'],
-            );
-        }
+    protected function disabledReason(): string
+    {
+        return 'Location incident pattern strategy disabled.';
+    }
 
-        // No location incident frequency table exists yet.
-        // Return 0 points with location context for future traceability.
-        return new DuplicateStrategyResult(
-            strategy: 'location_incident_pattern',
-            points: 0,
-            reason: 'Location incident pattern: no pattern data available yet (Phase 3 — no-op).',
-            metadata: [
-                'phase' => 3,
-                'status' => 'noop',
-                'location_id' => $context->ticket->location_id,
-                'category_id' => $context->ticket->category_id,
-                'same_location' => $context->sameLocation,
-            ],
-        );
+    protected function noopReason(): string
+    {
+        return 'Location incident pattern: no pattern data available yet (Phase 3 — no-op).';
+    }
+
+    protected function noopMetadata(DuplicateCandidateContext $context): array
+    {
+        return [
+            'location_id' => $context->ticket->location_id,
+            'category_id' => $context->ticket->category_id,
+            'same_location' => $context->sameLocation,
+        ];
     }
 }

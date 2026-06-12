@@ -22,44 +22,42 @@ final class SameCategoryStrategy implements DuplicateDetectionStrategy
         $enabled = (bool) ($cfg['enabled'] ?? true);
 
         if (! $enabled) {
-            return new DuplicateStrategyResult(
+            $result = new DuplicateStrategyResult(
                 strategy: 'same_category',
                 points: 0,
                 reason: 'Same category strategy disabled.',
             );
-        }
-
-        if ($context->sameCategory === null) {
-            return new DuplicateStrategyResult(
+        } elseif ($context->sameCategory === null) {
+            $result = new DuplicateStrategyResult(
                 strategy: 'same_category',
                 points: 0,
                 reason: 'Category data missing on ticket or candidate.',
             );
+        } else {
+            $weight = (int) ($cfg['weight'] ?? 15);
+            $penalty = (int) ($cfg['different_penalty'] ?? -10);
+
+            $metadata = [
+                'ticket_category_id' => $context->ticket->category_id,
+                'candidate_category_id' => $context->candidate->category_id,
+                'same_category' => $context->sameCategory,
+            ];
+
+            $result = $context->sameCategory
+                ? new DuplicateStrategyResult(
+                    strategy: 'same_category',
+                    points: $weight,
+                    reason: 'Ticket and candidate share the same category.',
+                    metadata: $metadata,
+                )
+                : new DuplicateStrategyResult(
+                    strategy: 'same_category',
+                    points: $penalty,
+                    reason: 'Ticket and candidate are in different categories.',
+                    metadata: $metadata,
+                );
         }
 
-        $weight = (int) ($cfg['weight'] ?? 15);
-        $penalty = (int) ($cfg['different_penalty'] ?? -10);
-
-        $metadata = [
-            'ticket_category_id' => $context->ticket->category_id,
-            'candidate_category_id' => $context->candidate->category_id,
-            'same_category' => $context->sameCategory,
-        ];
-
-        if ($context->sameCategory) {
-            return new DuplicateStrategyResult(
-                strategy: 'same_category',
-                points: $weight,
-                reason: 'Ticket and candidate share the same category.',
-                metadata: $metadata,
-            );
-        }
-
-        return new DuplicateStrategyResult(
-            strategy: 'same_category',
-            points: $penalty,
-            reason: 'Ticket and candidate are in different categories.',
-            metadata: $metadata,
-        );
+        return $result;
     }
 }

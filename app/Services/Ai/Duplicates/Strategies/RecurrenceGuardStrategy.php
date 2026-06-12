@@ -22,24 +22,35 @@ final class RecurrenceGuardStrategy implements DuplicateDetectionStrategy
     {
         $cfg = config('ai.dedup.strategies.recurrence_guard', []);
         $enabled = (bool) ($cfg['enabled'] ?? true);
+        $ageHours = $context->candidateAgeHours;
 
         if (! $enabled) {
-            return new DuplicateStrategyResult(
+            $result = new DuplicateStrategyResult(
                 strategy: 'recurrence_guard',
                 points: 0,
                 reason: 'Recurrence guard strategy disabled.',
             );
-        }
-
-        $ageHours = $context->candidateAgeHours;
-        if ($ageHours === null) {
-            return new DuplicateStrategyResult(
+        } elseif ($ageHours === null) {
+            $result = new DuplicateStrategyResult(
                 strategy: 'recurrence_guard',
                 points: 0,
                 reason: 'Candidate age unavailable; skipping recurrence guard.',
             );
+        } else {
+            $result = $this->evaluateRecurrenceSignal($context, $cfg, $ageHours);
         }
 
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $cfg
+     */
+    private function evaluateRecurrenceSignal(
+        DuplicateCandidateContext $context,
+        array $cfg,
+        int $ageHours,
+    ): DuplicateStrategyResult {
         $minDays = (int) ($cfg['min_days_for_recurrence'] ?? 30);
         $minHours = $minDays * 24;
 
@@ -53,20 +64,22 @@ final class RecurrenceGuardStrategy implements DuplicateDetectionStrategy
         ];
 
         if ($sameContext && $ageHours > $minHours) {
-            return new DuplicateStrategyResult(
+            $result = new DuplicateStrategyResult(
                 strategy: 'recurrence_guard',
                 points: -10,
                 reason: "Candidate is {$ageHours} h old (> {$minHours} h) in same location+category — likely recurrence.",
                 metadata: $metadata,
                 suggestsRecurrence: true,
             );
+        } else {
+            $result = new DuplicateStrategyResult(
+                strategy: 'recurrence_guard',
+                points: 0,
+                reason: 'No recurrence signal detected.',
+                metadata: $metadata,
+            );
         }
 
-        return new DuplicateStrategyResult(
-            strategy: 'recurrence_guard',
-            points: 0,
-            reason: 'No recurrence signal detected.',
-            metadata: $metadata,
-        );
+        return $result;
     }
 }
