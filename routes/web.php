@@ -183,6 +183,12 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
         ->middleware($ticketMutationMiddleware)
         ->name('tickets.destroy');
+    // Edición limitada operativa desde tickets.show (maintenance asignado o
+    // admin/super_admin): corrige categoría/prioridad y adjunta evidencias.
+    // NO toca título/descripción/reporter — eso vive en reporter.tickets.update.
+    Route::patch('/tickets/{ticket}/maintenance', [TicketController::class, 'updateMaintenance'])
+        ->middleware($ticketMutationMiddleware)
+        ->name('tickets.maintenance.update');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware($ticketMutationMiddleware)
         ->name('tickets.update-state');

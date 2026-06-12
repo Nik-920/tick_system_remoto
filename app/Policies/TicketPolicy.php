@@ -74,6 +74,35 @@ class TicketPolicy
             && ! $ticket->assignment_locked;
     }
 
+    /**
+     * Limited OPERATIONAL edit from tickets.show: category/priority correction,
+     * technical comment and additive evidence. Deliberately separate from
+     * 'update' (reporter edit window) so the two flows never mix.
+     *
+     * Allowed: the maintenance technician assigned to the ticket, and
+     * admin/super_admin. Blocked on terminal states (resolved/rejected/
+     * cancelled) for everyone: closed tickets are immutable audit records.
+     */
+    public function updateMaintenance(User $user, Ticket $ticket): bool
+    {
+        $terminalStates = [
+            Ticket::STATE_RESOLVED,
+            Ticket::STATE_REJECTED,
+            Ticket::STATE_CANCELLED,
+        ];
+
+        if (in_array($ticket->state, $terminalStates, true)) {
+            return false;
+        }
+
+        if ($this->hasAnyRole($user, ['admin', 'super_admin'])) {
+            return true;
+        }
+
+        return $this->hasRole($user, 'maintenance')
+            && $ticket->assigned_to === $user->id;
+    }
+
     public function updateState(User $user, Ticket $ticket): bool
     {
         // Resolved tickets: only super_admin can reopen them.

@@ -1251,8 +1251,8 @@ class TicketControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSeeText('Aún no hay cambios de estado registrados');
-        $response->assertSeeText('Open');
-        $response->assertSeeText('In progress');
+        $response->assertSeeText('Abierto');
+        $response->assertSeeText('En progreso');
         $response->assertSeeText('Revisando incidencia');
     }
 

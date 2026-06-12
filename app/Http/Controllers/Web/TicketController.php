@@ -8,9 +8,11 @@ use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
+use App\Http\Requests\UpdateMaintenanceTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\MaintenanceBoardQuery;
@@ -179,7 +181,7 @@ class TicketController extends Controller
             'assignedBy',
             'location',
             'category',
-            'media' => fn ($query) => $query->latest('created_at'),
+            'media' => fn ($query) => $query->with('uploadedBy')->latest('created_at'),
             'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
@@ -198,14 +200,101 @@ class TicketController extends Controller
             && $ticket->assigned_to === null
             && ! $ticket->assignment_locked;
 
+        // Limited operational edit (category/priority/evidence) from this view.
+        $canEditOperational = $currentUser instanceof User
+            && $currentUser->can('updateMaintenance', $ticket);
+
         return view('tickets.show', [
             'ticket' => $ticket,
             'availableTransitions' => $availableTransitions,
             'maintenanceUsers' => $maintenanceUsers,
             'isMaintenance' => $isMaintenance,
             'isAvailableForClaim' => $isAvailableForClaim,
+            'canEditOperational' => $canEditOperational,
+            'categories' => $canEditOperational
+                ? Category::query()->orderBy('name', 'asc')->get()
+                : collect(),
+            'priorities' => ['low', 'medium', 'high', 'critical'],
             'duplicateExplanation' => DuplicateExplanationPresenter::present($ticket),
         ]);
+    }
+
+    /**
+     * PATCH /tickets/{ticket}/maintenance
+     * Limited operational edit from tickets.show: the assigned maintenance
+     * technician (or admin/super_admin) corrects category/priority, attaches
+     * additional evidence and/or leaves a technical comment. Reporter fields
+     * (title, description, reporter_id) are never touched: the FormRequest
+     * does not accept them and nothing else is written to the model.
+     */
+    public function updateMaintenance(
+        UpdateMaintenanceTicketRequest $request,
+        Ticket $ticket,
+        TicketMediaStorageService $mediaStorage
+    ): RedirectResponse {
+        $this->authorize('updateMaintenance', $ticket);
+
+        $user = $request->user();
+        $validated = $request->validated();
+        $files = $request->file('evidence', []);
+        $comment = trim((string) ($validated['comment'] ?? ''));
+
+        $changeDescriptions = [];
+
+        $newCategoryId = $validated['category_id'] ?? null;
+        if ($newCategoryId !== null && $newCategoryId !== $ticket->category_id) {
+            $oldCategoryName = $ticket->category?->name ?? 'Sin categoría';
+            $newCategoryName = Category::query()->find($newCategoryId)?->name ?? $newCategoryId;
+            $ticket->category_id = $newCategoryId;
+            $changeDescriptions[] = "categoría corregida de «{$oldCategoryName}» a «{$newCategoryName}»";
+        }
+
+        $newPriority = $validated['priority'] ?? null;
+        if ($newPriority !== null && $newPriority !== $ticket->priority) {
+            $oldPriority = (string) $ticket->priority;
+            $ticket->priority = $newPriority;
+            $changeDescriptions[] = "prioridad corregida de «{$oldPriority}» a «{$newPriority}»";
+        }
+
+        if ($changeDescriptions === [] && $files === [] && $comment === '') {
+            return redirect()
+                ->route('tickets.show', $ticket)
+                ->with('status', 'No hay cambios para guardar.');
+        }
+
+        DB::transaction(function () use ($ticket, $user, $changeDescriptions, $files, $comment): void {
+            if ($ticket->isDirty()) {
+                $ticket->save();
+            }
+
+            $historyParts = [];
+            if ($changeDescriptions !== []) {
+                $historyParts[] = 'Actualización técnica: '.implode('; ', $changeDescriptions).'.';
+            }
+            if ($files !== []) {
+                $historyParts[] = 'Evidencia agregada por maintenance ('.count($files).' archivo(s)).';
+            }
+            if ($comment !== '') {
+                $historyParts[] = 'Comentario: '.$comment;
+            }
+
+            // Administrative entry: same state on both sides, no transition.
+            StateHistory::create([
+                'ticket_id' => $ticket->id,
+                'from_state' => $ticket->state,
+                'to_state' => $ticket->state,
+                'changed_by' => $user->id,
+                'comment' => implode(' ', $historyParts),
+            ]);
+        });
+
+        if ($files !== []) {
+            $mediaStorage->storeManyForTicket($ticket, $user, $files);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Cambios guardados correctamente.');
     }
 
     public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): RedirectResponse
