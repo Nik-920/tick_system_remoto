@@ -59,27 +59,20 @@ final class TitleOverlapStrategy implements DuplicateDetectionStrategy
         ];
 
         if ($ratio >= 0.70) {
-            return new DuplicateStrategyResult(
-                strategy: 'title_overlap',
-                points: $weightHigh,
-                reason: "High title overlap ratio {$ratio} (>= 0.70).",
-                metadata: $metadata,
-            );
-        }
-
-        if ($ratio >= 0.45) {
-            return new DuplicateStrategyResult(
-                strategy: 'title_overlap',
-                points: $weightMedium,
-                reason: "Medium title overlap ratio {$ratio} (>= 0.45).",
-                metadata: $metadata,
-            );
+            $points = $weightHigh;
+            $reason = "High title overlap ratio {$ratio} (>= 0.70).";
+        } elseif ($ratio >= 0.45) {
+            $points = $weightMedium;
+            $reason = "Medium title overlap ratio {$ratio} (>= 0.45).";
+        } else {
+            $points = 0;
+            $reason = "Low title overlap ratio {$ratio} (< 0.45).";
         }
 
         return new DuplicateStrategyResult(
             strategy: 'title_overlap',
-            points: 0,
-            reason: "Low title overlap ratio {$ratio} (< 0.45).",
+            points: $points,
+            reason: $reason,
             metadata: $metadata,
         );
     }

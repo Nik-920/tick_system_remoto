@@ -46,19 +46,12 @@ final class SameLocationStrategy implements DuplicateDetectionStrategy
             'same_location' => $context->sameLocation,
         ];
 
-        if ($context->sameLocation) {
-            return new DuplicateStrategyResult(
-                strategy: 'same_location',
-                points: $weight,
-                reason: 'Ticket and candidate share the same location.',
-                metadata: $metadata,
-            );
-        }
-
         return new DuplicateStrategyResult(
             strategy: 'same_location',
-            points: $penalty,
-            reason: 'Ticket and candidate are in different locations.',
+            points: $context->sameLocation ? $weight : $penalty,
+            reason: $context->sameLocation
+                ? 'Ticket and candidate share the same location.'
+                : 'Ticket and candidate are in different locations.',
             metadata: $metadata,
         );
     }

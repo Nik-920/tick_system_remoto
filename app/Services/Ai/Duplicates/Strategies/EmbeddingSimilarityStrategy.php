@@ -39,37 +39,28 @@ final class EmbeddingSimilarityStrategy implements DuplicateDetectionStrategy
         $weightLow = (int) ($cfg['weight_low'] ?? 20);
 
         if ($sim >= $highThreshold) {
-            return new DuplicateStrategyResult(
-                strategy: 'embedding_similarity',
-                points: $weightHigh,
-                reason: "High embedding similarity ({$sim}) >= {$highThreshold}.",
-                metadata: ['similarity' => $sim, 'threshold_used' => $highThreshold, 'level' => 'high'],
-            );
-        }
-
-        if ($sim >= $mediumThreshold) {
-            return new DuplicateStrategyResult(
-                strategy: 'embedding_similarity',
-                points: $weightMedium,
-                reason: "Medium embedding similarity ({$sim}) >= {$mediumThreshold}.",
-                metadata: ['similarity' => $sim, 'threshold_used' => $mediumThreshold, 'level' => 'medium'],
-            );
-        }
-
-        if ($sim >= $lowThreshold) {
-            return new DuplicateStrategyResult(
-                strategy: 'embedding_similarity',
-                points: $weightLow,
-                reason: "Low embedding similarity ({$sim}) >= {$lowThreshold}.",
-                metadata: ['similarity' => $sim, 'threshold_used' => $lowThreshold, 'level' => 'low'],
-            );
+            $points = $weightHigh;
+            $reason = "High embedding similarity ({$sim}) >= {$highThreshold}.";
+            $metadata = ['similarity' => $sim, 'threshold_used' => $highThreshold, 'level' => 'high'];
+        } elseif ($sim >= $mediumThreshold) {
+            $points = $weightMedium;
+            $reason = "Medium embedding similarity ({$sim}) >= {$mediumThreshold}.";
+            $metadata = ['similarity' => $sim, 'threshold_used' => $mediumThreshold, 'level' => 'medium'];
+        } elseif ($sim >= $lowThreshold) {
+            $points = $weightLow;
+            $reason = "Low embedding similarity ({$sim}) >= {$lowThreshold}.";
+            $metadata = ['similarity' => $sim, 'threshold_used' => $lowThreshold, 'level' => 'low'];
+        } else {
+            $points = 0;
+            $reason = "Embedding similarity ({$sim}) below all thresholds.";
+            $metadata = ['similarity' => $sim];
         }
 
         return new DuplicateStrategyResult(
             strategy: 'embedding_similarity',
-            points: 0,
-            reason: "Embedding similarity ({$sim}) below all thresholds.",
-            metadata: ['similarity' => $sim],
+            points: $points,
+            reason: $reason,
+            metadata: $metadata,
         );
     }
 }

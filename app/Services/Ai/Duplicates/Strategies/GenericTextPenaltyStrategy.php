@@ -51,35 +51,28 @@ final class GenericTextPenaltyStrategy implements DuplicateDetectionStrategy
             'min_useful_words' => $minUsefulWords,
         ];
 
-        // Too few tokens overall
-        if ($tokenCount < $minUsefulWords) {
-            return new DuplicateStrategyResult(
-                strategy: 'generic_text_penalty',
-                points: $penalty,
-                reason: "Ticket title has only {$tokenCount} useful token(s) (minimum: {$minUsefulWords}).",
-                metadata: $metadata,
-            );
-        }
-
         // Check if all tokens are generic
         $nonGeneric = array_filter(
             $tokens,
             static fn (string $t) => ! in_array($t, self::GENERIC_WORDS, true)
         );
 
-        if (count($nonGeneric) === 0) {
-            return new DuplicateStrategyResult(
-                strategy: 'generic_text_penalty',
-                points: $penalty,
-                reason: 'Ticket title consists only of generic/common words.',
-                metadata: $metadata,
-            );
+        if ($tokenCount < $minUsefulWords) {
+            // Too few tokens overall
+            $points = $penalty;
+            $reason = "Ticket title has only {$tokenCount} useful token(s) (minimum: {$minUsefulWords}).";
+        } elseif ($nonGeneric === []) {
+            $points = $penalty;
+            $reason = 'Ticket title consists only of generic/common words.';
+        } else {
+            $points = 0;
+            $reason = 'Ticket title has sufficient specific content.';
         }
 
         return new DuplicateStrategyResult(
             strategy: 'generic_text_penalty',
-            points: 0,
-            reason: 'Ticket title has sufficient specific content.',
+            points: $points,
+            reason: $reason,
             metadata: $metadata,
         );
     }

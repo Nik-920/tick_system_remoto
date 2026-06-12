@@ -50,49 +50,33 @@ final class TimeWindowStrategy implements DuplicateDetectionStrategy
 
         $metadata = ['candidate_age_hours' => $ageHours];
 
+        $suggestsRecurrence = false;
+
         if ($ageHours <= 24) {
-            return new DuplicateStrategyResult(
-                strategy: 'time_window',
-                points: $within24h,
-                reason: "Candidate created within 24 h (age: {$ageHours} h).",
-                metadata: $metadata,
-            );
+            $points = $within24h;
+            $reason = "Candidate created within 24 h (age: {$ageHours} h).";
+        } elseif ($ageHours <= 72) {
+            $points = $within72h;
+            $reason = "Candidate created within 72 h (age: {$ageHours} h).";
+        } elseif ($ageHours <= 168) { // 7 days
+            $points = $within7d;
+            $reason = "Candidate created within 7 d (age: {$ageHours} h).";
+        } elseif ($ageHours > 720) { // > 30 days
+            $points = $olderThan30dPenalty;
+            $reason = "Candidate is older than 30 d (age: {$ageHours} h) — possible recurrence.";
+            $suggestsRecurrence = true;
+        } else {
+            // 7 d < age <= 30 d: neutral
+            $points = 0;
+            $reason = "Candidate age {$ageHours} h is within 7–30 d window (neutral).";
         }
 
-        if ($ageHours <= 72) {
-            return new DuplicateStrategyResult(
-                strategy: 'time_window',
-                points: $within72h,
-                reason: "Candidate created within 72 h (age: {$ageHours} h).",
-                metadata: $metadata,
-            );
-        }
-
-        if ($ageHours <= 168) { // 7 days
-            return new DuplicateStrategyResult(
-                strategy: 'time_window',
-                points: $within7d,
-                reason: "Candidate created within 7 d (age: {$ageHours} h).",
-                metadata: $metadata,
-            );
-        }
-
-        if ($ageHours > 720) { // > 30 days
-            return new DuplicateStrategyResult(
-                strategy: 'time_window',
-                points: $olderThan30dPenalty,
-                reason: "Candidate is older than 30 d (age: {$ageHours} h) — possible recurrence.",
-                metadata: $metadata,
-                suggestsRecurrence: true,
-            );
-        }
-
-        // 7 d < age <= 30 d: neutral
         return new DuplicateStrategyResult(
             strategy: 'time_window',
-            points: 0,
-            reason: "Candidate age {$ageHours} h is within 7–30 d window (neutral).",
+            points: $points,
+            reason: $reason,
             metadata: $metadata,
+            suggestsRecurrence: $suggestsRecurrence,
         );
     }
 }

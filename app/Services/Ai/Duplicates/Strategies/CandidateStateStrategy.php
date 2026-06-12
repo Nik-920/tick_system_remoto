@@ -40,7 +40,6 @@ final class CandidateStateStrategy implements DuplicateDetectionStrategy
         $metadata = ['candidate_state' => $state];
 
         $openPoints = (int) ($cfg['open'] ?? 20);
-        $assignedPoints = (int) ($cfg['assigned'] ?? 15);
         $inProgressPoints = (int) ($cfg['in_progress'] ?? 10);
         $resolvedRecentPoints = (int) ($cfg['resolved_recent'] ?? 5);
         $cancelledPoints = (int) ($cfg['cancelled'] ?? -30);
