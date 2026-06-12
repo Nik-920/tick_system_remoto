@@ -35,7 +35,7 @@ function initOnceForms() {
     document.querySelectorAll('form.tickets-once-form, form.tickets-review-actions').forEach((form) => {
         form.addEventListener('submit', (e) => {
             const message = form.dataset.confirm;
-            if (message && !window.confirm(message)) {
+            if (message && !globalThis.confirm(message)) {
                 e.preventDefault();
                 return;
             }
@@ -91,6 +91,70 @@ function initDeleteModal() {
     });
 }
 
+function removeFileAt(input, index) {
+    const transfer = new DataTransfer();
+    [...input.files].forEach((f, i) => {
+        if (i !== index) transfer.items.add(f);
+    });
+    input.files = transfer.files;
+}
+
+function createFileItem(input, file, index, rerender) {
+    const item = document.createElement('div');
+    item.className = 'ticket-show__file-item';
+
+    const name = document.createElement('span');
+    name.className = 'truncate';
+    name.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    name.title = file.name;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'ticket-show__file-remove';
+    remove.setAttribute('aria-label', `Quitar ${file.name}`);
+    remove.textContent = '✕';
+    remove.addEventListener('click', () => {
+        removeFileAt(input, index);
+        rerender();
+    });
+
+    item.append(name, remove);
+    return item;
+}
+
+function renderSelectedFiles(input, list) {
+    list.innerHTML = '';
+    const files = [...input.files];
+    list.classList.toggle('hidden', files.length === 0);
+
+    files.forEach((file, index) => {
+        list.appendChild(createFileItem(input, file, index, () => renderSelectedFiles(input, list)));
+    });
+}
+
+function bindDropzone(dropzone, input, rerender) {
+    ['dragenter', 'dragover'].forEach((evt) =>
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('is-dragover');
+        })
+    );
+    ['dragleave', 'drop'].forEach((evt) =>
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('is-dragover');
+        })
+    );
+    dropzone.addEventListener('drop', (e) => {
+        const dropped = e.dataTransfer?.files;
+        if (!dropped?.length) return;
+        const transfer = new DataTransfer();
+        [...input.files, ...dropped].forEach((f) => transfer.items.add(f));
+        input.files = transfer.files;
+        rerender();
+    });
+}
+
 function initEvidenceUploader() {
     const wrapper = document.querySelector('[data-evidence-uploader]');
     if (!wrapper) return;
@@ -100,62 +164,12 @@ function initEvidenceUploader() {
     const dropzone = wrapper.querySelector('[data-evidence-dropzone]');
     if (!input || !list) return;
 
-    const renderList = () => {
-        list.innerHTML = '';
-        const files = [...input.files];
-        list.classList.toggle('hidden', files.length === 0);
+    const rerender = () => renderSelectedFiles(input, list);
 
-        files.forEach((file, index) => {
-            const item = document.createElement('div');
-            item.className = 'ticket-show__file-item';
-
-            const name = document.createElement('span');
-            name.className = 'truncate';
-            name.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-            name.title = file.name;
-
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className = 'ticket-show__file-remove';
-            remove.setAttribute('aria-label', `Quitar ${file.name}`);
-            remove.textContent = '✕';
-            remove.addEventListener('click', () => {
-                const transfer = new DataTransfer();
-                [...input.files].forEach((f, i) => {
-                    if (i !== index) transfer.items.add(f);
-                });
-                input.files = transfer.files;
-                renderList();
-            });
-
-            item.append(name, remove);
-            list.appendChild(item);
-        });
-    };
-
-    input.addEventListener('change', renderList);
+    input.addEventListener('change', rerender);
 
     if (dropzone) {
-        ['dragenter', 'dragover'].forEach((evt) =>
-            dropzone.addEventListener(evt, (e) => {
-                e.preventDefault();
-                dropzone.classList.add('is-dragover');
-            })
-        );
-        ['dragleave', 'drop'].forEach((evt) =>
-            dropzone.addEventListener(evt, (e) => {
-                e.preventDefault();
-                dropzone.classList.remove('is-dragover');
-            })
-        );
-        dropzone.addEventListener('drop', (e) => {
-            const dropped = e.dataTransfer?.files;
-            if (!dropped?.length) return;
-            const transfer = new DataTransfer();
-            [...input.files, ...dropped].forEach((f) => transfer.items.add(f));
-            input.files = transfer.files;
-            renderList();
-        });
+        bindDropzone(dropzone, input, rerender);
     }
 }
 
