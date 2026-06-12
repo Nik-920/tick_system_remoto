@@ -3,631 +3,228 @@
 @section('title', 'Detalle Ticket')
 
 @section('content')
-    <div class="tickets-show-page">
+@php
+    $stateLabels = [
+        'open'        => 'Abierto',
+        'in_progress' => 'En progreso',
+        'resolved'    => 'Resuelto',
+        'rejected'    => 'Rechazado',
+        'cancelled'   => 'Cancelado',
+    ];
+    $priorityLabels = [
+        'low'      => 'Baja',
+        'medium'   => 'Media',
+        'high'     => 'Alta',
+        'critical' => 'Crítica',
+    ];
+    $stateBadgeClasses = [
+        'open'        => 'ts-badge ts-badge--open',
+        'in_progress' => 'ts-badge ts-badge--in_progress',
+        'resolved'    => 'ts-badge ts-badge--resolved',
+        'rejected'    => 'ts-badge ts-badge--rejected',
+        'cancelled'   => 'ts-badge ts-badge--cancelled',
+    ];
+    $priorityBadgeClasses = [
+        'low'      => 'ts-badge ts-badge--prio-low',
+        'medium'   => 'ts-badge ts-badge--prio-medium',
+        'high'     => 'ts-badge ts-badge--prio-high',
+        'critical' => 'ts-badge ts-badge--prio-critical',
+    ];
 
-        {{-- ===== HEADER ===== --}}
-        <header class="tickets-show-header">
-            <div>
-                <h1 class="tickets-show-title">{{ $ticket?->title ?? 'Sin título' }}</h1>
-                <p class="tickets-show-subtitle">Revisión completa de la incidencia y su historial</p>
-            </div>
-            <div class="tickets-show-actions">
-                <a href="{{ route('tickets.index') }}" class="btn-secondary tickets-btn-back">Volver</a>
-                @if($ticket && Auth::user()?->can('delete', $ticket))
-                    <form id="delete-ticket-form" method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="button" class="tickets-btn-danger" onclick="openDeleteTicketModal()">Eliminar</button>
-                    </form>
-                @endif
-            </div>
-        </header>
+    $stateBadge    = $stateBadgeClasses[$ticket->state] ?? 'ts-badge ts-badge--neutral';
+    $priorityBadge = $priorityBadgeClasses[$ticket->priority] ?? 'ts-badge ts-badge--neutral';
+    $stateLabel    = $stateLabels[$ticket->state] ?? ucfirst(str_replace('_', ' ', (string) $ticket->state));
+    $priorityLabel = $priorityLabels[$ticket->priority] ?? ucfirst((string) $ticket->priority);
 
-        {{-- ===== ALERTS ===== --}}
-        @if (session('status'))
-            <div class="alert-success">{{ session('status') }}</div>
-        @endif
+    // Presentation dates in Perú time (America/Lima) — storage stays untouched.
+    $fmtDate = fn ($value, string $format = 'd/m/Y H:i') => \App\Support\LocalTime::format($value, $format);
 
-        @php
-            $embedding      = $ticket?->embedding;
-            $matchedTicket  = $embedding?->matchedTicket;
-            $reviewer       = $embedding?->reviewer;
+    // Visual code derived from the UUID (tickets has no `code` column).
+    $ticketCode = 'INC-' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr((string) $ticket->id, 0, 8));
 
-            // Use effective_duplicate (respects human review_status override)
-            $showDuplicateWarning = $embedding
-                && $embedding->effective_duplicate
-                && $matchedTicket
-                && in_array($matchedTicket->state, ['open', 'in_progress'], true);
+    $stateHistory = $ticket->stateHistory; // loaded oldest → newest
+    $lastHistory  = $stateHistory->last();
+    $lastComment  = $stateHistory->reverse()->first(
+        fn ($entry) => trim((string) $entry->comment) !== ''
+    )?->comment;
 
-            $reviewStatus   = $embedding?->review_status;
-            $canReview      = $ticket && Auth::user()?->can('reviewDuplicate', $ticket);
-        @endphp
+    // ticket_media has no author-role column: split by uploaded_by vs reporter_id.
+    $reporterEvidence = $ticket->media->filter(
+        fn ($media) => $media->uploaded_by !== null && (string) $media->uploaded_by === (string) $ticket->reporter_id
+    )->values();
+    $maintenanceEvidence = $ticket->media->reject(
+        fn ($media) => $media->uploaded_by !== null && (string) $media->uploaded_by === (string) $ticket->reporter_id
+    )->values();
 
-        {{-- ===== DUPLICATE WARNING BANNER ===== --}}
-        @if ($showDuplicateWarning)
-            <div class="tickets-dup-alert">
-                <div class="tickets-dup-banner">
-                    <div class="tickets-dup-title">
-                        @if ($reviewStatus === 'confirmed')
-                            ✅ Duplicado confirmado manualmente.
-                        @else
-                            ⚠️ Posible duplicado detectado por IA.
-                        @endif
-                    </div>
-                    <div class="tickets-dup-meta">
-                        <span class="tickets-dup-meta-item">Ticket similar: {{ $matchedTicket?->title ?? 'N/A' }}</span>
-                        <span class="tickets-dup-meta-item">Estado: {{ $matchedTicket?->state ?? 'N/A' }}</span>
-                        @can('reviewDuplicate', $ticket)
-                            <span class="tickets-dup-meta-item">Similitud: {{ $embedding?->similarity_score !== null ? number_format($embedding->similarity_score, 2) : 'N/A' }}</span>
-                        @endcan
-                        @if ($matchedTicket)
-                            <a href="{{ route('tickets.show', $matchedTicket) }}" class="btn-secondary tickets-dup-link">Ver ticket</a>
-                        @endif
-                    </div>
+    $fileNameFor = fn ($media) => basename(parse_url((string) $media->file_url, PHP_URL_PATH) ?: (string) $media->file_url);
 
-                    {{-- Manual review info --}}
-                    @if ($reviewer && $reviewStatus)
-                        <div class="tickets-dup-reviewer">
-                            Revisado por <strong>{{ $reviewer->name ?? $reviewer->email }}</strong>
-                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
-                            @if ($embedding->review_note)
-                                Nota: <em>{{ $embedding->review_note }}</em>
-                            @endif
-                        </div>
-                    @endif
+    // state_history has no action_type column: derive it from the transition.
+    $actionFor = function (?string $from, ?string $to): string {
+        if ($from === null || $from === '') {
+            return 'Creación';
+        }
 
-                    {{-- ===== AI EXPLANATION: ¿por qué fue marcado? ===== --}}
-                    @if (($duplicateExplanation['visible'] ?? false))
-                        <section class="tickets-dup-explain" aria-labelledby="duplicate-explanation-title">
-                            <h3 id="duplicate-explanation-title" class="tickets-dup-explain-title">
-                                ¿Por qué la IA lo marcó como posible duplicado?
-                            </h3>
+        if ($from === $to) {
+            return 'Actualización técnica';
+        }
 
-                            @can('reviewDuplicate', $ticket)
-                                @if (! is_null($duplicateExplanation['score']) || ! is_null($duplicateExplanation['similarity']))
-                                    <div class="tickets-dup-explain-scores">
-                                        @if (! is_null($duplicateExplanation['score']))
-                                            <span class="tickets-dup-score">Score IA: {{ $duplicateExplanation['score'] }}/100</span>
-                                        @endif
-                                        @if (! is_null($duplicateExplanation['similarity']))
-                                            <span class="tickets-dup-score">Similitud: {{ number_format($duplicateExplanation['similarity'], 2) }}</span>
-                                        @endif
-                                    </div>
-                                @endif
-                            @endcan
+        return match ($to) {
+            'in_progress' => 'Inicio de atención',
+            'resolved'    => 'Resolución',
+            'rejected'    => 'Rechazo',
+            'cancelled'   => 'Cancelación',
+            'open'        => 'Reapertura / actualización',
+            default       => 'Cambio de estado',
+        };
+    };
 
-                            @if ($duplicateExplanation['summary'] !== '')
-                                <p class="tickets-dup-explain-summary">{{ $duplicateExplanation['summary'] }}</p>
-                            @endif
+    $authId         = auth()->id();
+    $isAssignedToMe = $authId !== null && $ticket->assigned_to !== null && (string) $ticket->assigned_to === (string) $authId;
+    $isUnassigned   = $ticket->assigned_to === null;
+    $isClosed       = in_array($ticket->state, ['resolved', 'rejected', 'cancelled'], true);
+    $isMaintenance  = $isMaintenance ?? false;
+    $isAvailableForClaim   = $isAvailableForClaim ?? false;
+    $availableTransitions  = $availableTransitions ?? [];
+    $canEditOperational    = $canEditOperational ?? false;
+    $categories            = $categories ?? collect();
+    $priorities            = $priorities ?? ['low', 'medium', 'high', 'critical'];
 
-                            @if (! empty($duplicateExplanation['topReasons']))
-                                <ul class="tickets-dup-reasons" role="list">
-                                    @foreach ($duplicateExplanation['topReasons'] as $reason)
-                                        <li class="tickets-dup-reason tickets-dup-reason--positive">
-                                            <span class="tickets-dup-reason-icon" aria-hidden="true">{{ $reason['icon'] }}</span>
-                                            <span class="tickets-dup-reason-body">
-                                                <span class="tickets-dup-reason-label">
-                                                    {{ $reason['label'] }}
-                                                    @if ($reason['points'] > 0)
-                                                        <span class="tickets-dup-reason-points">(+{{ $reason['points'] }})</span>
-                                                    @endif
-                                                </span>
-                                                @if ($reason['detail'] !== '')
-                                                    <span class="tickets-dup-reason-detail">{{ $reason['detail'] }}</span>
-                                                @endif
-                                            </span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
+    $assignee   = $ticket->assignee;
+    $assignedBy = $ticket->assignedBy;
+    $assignmentLocked = (bool) $ticket->assignment_locked;
 
-                            @if (! empty($duplicateExplanation['warnings']))
-                                <ul class="tickets-dup-reasons tickets-dup-warnings" role="list">
-                                    @foreach ($duplicateExplanation['warnings'] as $warning)
-                                        <li class="tickets-dup-reason tickets-dup-reason--warning">
-                                            <span class="tickets-dup-reason-icon" aria-hidden="true">{{ $warning['icon'] }}</span>
-                                            <span class="tickets-dup-reason-body">
-                                                <span class="tickets-dup-reason-label">{{ $warning['label'] }}</span>
-                                                @if ($warning['detail'] !== '')
-                                                    <span class="tickets-dup-reason-detail">{{ $warning['detail'] }}</span>
-                                                @endif
-                                            </span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
+    if ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF) {
+        $assignmentTypeLabel = 'Tomado por mantenimiento';
+    } elseif ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_ADMIN) {
+        $assignmentTypeLabel = 'Asignación fija por administración';
+    } else {
+        $assignmentTypeLabel = 'Sin tipo registrado';
+    }
 
-                            @can('reviewDuplicate', $ticket)
-                                @if (! empty($duplicateExplanation['technicalDetails']))
-                                    <details class="tickets-dup-tech">
-                                        <summary class="tickets-dup-tech-summary">Ver detalles técnicos</summary>
-                                        <ul class="tickets-dup-tech-list" role="list">
-                                            @foreach ($duplicateExplanation['technicalDetails'] as $detail)
-                                                <li class="tickets-dup-tech-item">
-                                                    <span class="tickets-dup-tech-name">{{ $detail['label'] }}</span>
-                                                    <span class="tickets-dup-tech-points">{{ $detail['points'] > 0 ? '+' : '' }}{{ $detail['points'] }}</span>
-                                                    <span class="tickets-dup-tech-reason">{{ $detail['reason'] }}</span>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    </details>
-                                @endif
-                            @endcan
-                        </section>
-                    @endif
+    $recommendedAction = match (true) {
+        $ticket->state === 'open' && $isUnassigned && $isMaintenance => 'Toma el ticket para iniciar atención.',
+        $ticket->state === 'open' && $isAssignedToMe                 => 'Inicia la atención del ticket.',
+        $ticket->state === 'in_progress' && $isAssignedToMe          => 'Continúa la atención o resuelve el ticket si corresponde.',
+        $ticket->state === 'resolved'                                => 'Ticket resuelto. Revisa la información de cierre.',
+        $ticket->state === 'rejected'                                => 'Ticket rechazado. Revisa el motivo en el historial.',
+        $ticket->state === 'cancelled'                               => 'Ticket cancelado. Solo lectura.',
+        default                                                      => 'Revisa el estado actual y actúa según corresponda.',
+    };
 
-                    {{-- Review actions --}}
-                    @can('reviewDuplicate', $ticket)
-                        <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
-                              class="tickets-review-actions">
-                            @csrf
-                            @method('PATCH')
-                                                        <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                            <div class="tickets-review-note-wrap">
-                                <label class="tickets-review-label" for="review_note">Nota de revisión</label>
-                                <textarea id="review_note" name="review_note" rows="2" maxlength="1000"
-                                          placeholder="Escribe una nota breve (opcional)"
-                                          class="tickets-review-note">{{ $embedding?->review_note }}</textarea>
-                            </div>
-                            <div class="tickets-review-buttons">
-                                <button type="submit" name="review_status" value="dismissed" class="btn-secondary tickets-review-btn tickets-review-btn--dismiss">
-                                    🚫 Marcar como no duplicado
-                                </button>
-                                <button type="submit" name="review_status" value="confirmed" class="btn-primary tickets-review-btn tickets-review-btn--confirm">
-                                    ✅ Confirmar duplicado
-                                </button>
-                            </div>
-                        </form>
-                        @error('review')
-                            <p style="color:var(--color-danger); font-size:0.85rem;">{{ $message }}</p>
-                        @enderror
-                    @endcan
-                </div>
-            </div>
-        @elseif ($embedding && $embedding->isDismissedDuplicate())
-            {{-- Show dismissed badge for authorized users only --}}
-            @can('reviewDuplicate', $ticket)
-                <div class="alert-success tickets-dup-dismissed">
-                    <span>🚫 Duplicado descartado manualmente.</span>
-                    @if ($reviewer)
-                        <span style="font-size:0.85rem; opacity:0.8;">
-                            Por {{ $reviewer->name ?? $reviewer->email }}
-                            el {{ $embedding->reviewed_at?->format('d/m/Y H:i') ?? 'N/A' }}.
-                            @if ($embedding->review_note) — <em>{{ $embedding->review_note }}</em> @endif
-                        </span>
-                    @endif
-                    {{-- Allow re-review --}}
-                    <form method="POST" action="{{ route('tickets.duplicate-review.update', $ticket) }}"
-                          class="tickets-review-actions">
-                        @csrf
-                        @method('PATCH')
-                                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                        <input type="hidden" name="review_note" value="{{ $embedding->review_note ?? '' }}">
-                        <button type="submit" name="review_status" value="confirmed" class="c-btn c-btn--ghost c-btn--sm tickets-review-btn">
-                            ↩ Reabrir como duplicado
-                        </button>
-                    </form>
-                </div>
+    // Operational timers
+    $inProgressSince = $stateHistory->first(fn ($entry) => $entry->to_state === 'in_progress')?->created_at;
+    $closureEntry    = $stateHistory->reverse()->first(
+        fn ($entry) => in_array($entry->to_state, ['resolved', 'rejected', 'cancelled'], true) && $entry->from_state !== $entry->to_state
+    );
+    $progressEnd     = $ticket->resolved_at ?? $closureEntry?->created_at;
+    $timeInProgress  = null;
+    if ($inProgressSince !== null) {
+        $timeInProgress = $isClosed && $progressEnd !== null
+            ? $inProgressSince->diffForHumans($progressEnd, true, true, 2)
+            : ($ticket->state === 'in_progress' ? $inProgressSince->diffForHumans(null, true, true, 2) : null);
+    }
+
+    $canStart    = in_array('in_progress', $availableTransitions, true) && $ticket->state === 'open';
+    $canContinue = $ticket->state === 'in_progress' && $isAssignedToMe;
+    $canResolve  = in_array('resolved', $availableTransitions, true);
+
+    $backUrl   = $isMaintenance ? route('tickets.assignments') : route('tickets.index');
+    $backLabel = $isMaintenance ? 'Volver a mis asignaciones' : 'Volver a tickets';
+@endphp
+
+<div class="ticket-show ticket-show-page mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+    {{-- ── Link volver superior ── --}}
+    <div class="mb-5">
+        <a href="{{ $backUrl }}"
+           class="ticket-show__back-link focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+            {{ $backLabel }}
+        </a>
+    </div>
+
+    {{-- ── Alerts ── --}}
+    @if (session('status'))
+        <div class="alert-success">{{ session('status') }}</div>
+    @endif
+
+    @if (isset($errors) && $errors->any())
+        <div class="alert-error">
+            <p class="font-semibold mb-2">Errores en la actualización:</p>
+            <ul class="space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li class="text-sm">{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- ── Banner de duplicado (IA) ── --}}
+    @include('tickets.partials.show.duplicate-banner')
+
+    {{-- ── Header del ticket + métricas ── --}}
+    @include('tickets.partials.show.header')
+
+    {{-- ── Avisos operativos para maintenance ── --}}
+    @if ($isMaintenance && $isAvailableForClaim)
+        <div class="ticket-show__notice ticket-show__notice--warning">
+            <p class="ticket-show__notice-title">📋 Ticket disponible para tomar</p>
+            <p class="ticket-show__notice-text">Para iniciar atención debes tomar el ticket primero. Una vez tomado, podrás actualizar su estado.</p>
+            @can('claim', $ticket)
+                <form method="POST" action="{{ route('tickets.claim', $ticket) }}" class="mt-3 tickets-once-form">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                    <button type="submit" class="ticket-show__btn ticket-show__btn--primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Tomar este ticket
+                    </button>
+                </form>
             @endcan
-        @endif
+        </div>
+    @elseif ($isMaintenance && $isAssignedToMe)
+        <div class="ticket-show__notice ticket-show__notice--success">
+            <p class="ticket-show__notice-title">✅ Este ticket está asignado a ti</p>
+            <p class="ticket-show__notice-text">Puedes actualizar su estado según el avance de atención.</p>
+        </div>
+    @endif
 
-        @if (isset($errors) && $errors->any())
-            <div class="alert-error">
-                <p class="font-semibold mb-2">Errores en la actualización:</p>
-                <ul class="space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li class="text-sm">{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    {{-- ── Grid principal ── --}}
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
 
-        {{-- ===== INFO PRINCIPAL ===== --}}
-        <section class="tickets-show-section">
-            <header class="tickets-show-section-header">
-                <h2>Información del ticket</h2>
-            </header>
+        {{-- ── Columna izquierda ── --}}
+        <div class="flex flex-col gap-6">
+            @include('tickets.partials.show.main-info')
+            @include('tickets.partials.show.operational-state')
+            @include('tickets.partials.show.update-state')
+        </div>
 
-            @php
-                $stateLabels = [
-                    'open'        => 'Abierto',
-                    'in_progress' => 'En progreso',
-                    'resolved'    => 'Resuelto',
-                    'rejected'    => 'Rechazado',
-                ];
-                $priorityLabels = [
-                    'low'      => 'Baja',
-                    'medium'   => 'Media',
-                    'high'     => 'Alta',
-                    'critical' => 'Crítica',
-                ];
-            @endphp
+        {{-- ── Columna derecha ── --}}
+        <div class="flex flex-col gap-6">
+            @include('tickets.partials.show.assignment')
+            @include('tickets.partials.show.quick-actions')
+        </div>
 
-            <div class="tickets-show-content">
-                <div class="tickets-show-description">
-                    <h3 class="tickets-show-description-title">Descripción</h3>
-                    <p class="tickets-show-description-text">{{ $ticket?->description ?? 'Sin descripción' }}</p>
-                </div>
+    </div>{{-- fin grid principal --}}
 
-                <div class="tickets-show-grid">
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Estado</p>
-                        <p class="tickets-show-meta-value">
-                            <span class="ticket-badge ticket-badge--{{ $ticket?->state }}">
-                                {{ $stateLabels[$ticket?->state] ?? $ticket?->state ?? 'N/A' }}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Prioridad</p>
-                        <p class="tickets-show-meta-value">
-                            <span class="ticket-badge ticket-badge--{{ $ticket?->priority }}">
-                                {{ $priorityLabels[$ticket?->priority] ?? ucfirst($ticket?->priority ?? 'N/A') }}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Ubicación</p>
-                        <p class="tickets-show-meta-value">{{ $ticket?->location?->name ?? 'N/A' }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Categoría</p>
-                        <p class="tickets-show-meta-value">{{ $ticket?->category?->name ?? 'N/A' }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Reportado por</p>
-                        <p class="tickets-show-meta-value">{{ $ticket?->reporter?->name ?? $ticket?->reporter?->email ?? 'N/A' }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Creado</p>
-                        <p class="tickets-show-meta-value">{{ $ticket?->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+    @include('tickets.partials.show.evidence')
+    @include('tickets.partials.show.history')
+    @include('tickets.partials.show.closing-info')
 
-        {{-- ===== PANEL OPERATIVO MAINTENANCE ===== --}}
-        @if (isset($isMaintenance) && $isMaintenance)
-            @if (isset($isAvailableForClaim) && $isAvailableForClaim)
-                <div class="alert-info" style="border-left:4px solid var(--color-warning,#f59e0b); background:rgba(245,158,11,.08); padding:1rem 1.25rem; border-radius:0.5rem; margin-bottom:0.5rem;">
-                    <p style="font-weight:700; margin:0 0 .25rem;">📋 Ticket disponible para tomar</p>
-                    <p style="margin:0; font-size:.9rem; opacity:.85;">Para iniciar atención debes tomar el ticket primero. Una vez tomado, podrás actualizar su estado.</p>
-                    @can('claim', $ticket)
-                        <form method="POST" action="{{ route('tickets.claim', $ticket) }}" style="margin-top:0.75rem;">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                            <button type="submit" class="btn-primary">Tomar este ticket</button>
-                        </form>
-                    @endcan
-                </div>
-            @elseif ($ticket?->assigned_to === auth()->id())
-                <div class="alert-success" style="padding:.75rem 1.25rem; border-radius:0.5rem; margin-bottom:0.5rem;">
-                    <p style="font-weight:700; margin:0 0 .25rem;">✅ Este ticket está asignado a ti</p>
-                    <p style="margin:0; font-size:.9rem; opacity:.85;">Puedes actualizar su estado según el avance de atención.</p>
-                </div>
-            @endif
-        @endif
-
-        @php
-            $assignee = $ticket?->assignee;
-            $assignedBy = $ticket?->assignedBy;
-            $assignmentSource = $ticket?->assignment_source;
-            $assignmentLocked = (bool) ($ticket?->assignment_locked ?? false);
-            $assignedAt = $ticket?->assigned_at;
-
-            $assigneeLabel = $assignee?->name ?? $assignee?->email ?? 'Sin asignar';
-            $assignedByLabel = $assignedBy?->name ?? $assignedBy?->email ?? '—';
-
-            if ($assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF) {
-                $assignmentTypeLabel = 'Tomado por mantenimiento';
-            } elseif ($assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_ADMIN) {
-                $assignmentTypeLabel = 'Asignación fija por administración';
-            } else {
-                $assignmentTypeLabel = 'Sin asignación';
-            }
-
-            $user = Auth::user();
-                $maintenanceOnly = $user?->hasRole('maintenance')
-                    && ! $user?->hasAnyRole(['admin', 'super_admin']);
-                $isAdmin = $user?->hasAnyRole(['admin', 'super_admin']) ?? false;
-
-                $canRelease = $maintenanceOnly
-                && $ticket?->state === \App\Models\Ticket::STATE_OPEN
-                && $ticket?->assigned_to === $user?->id
-                && ! $assignmentLocked
-                && $assignmentSource === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF;
-        @endphp
-
-        {{-- ===== ASIGNACIÓN ===== --}}
-        <section class="tickets-show-section ticket-assignment-panel">
-            <header class="tickets-show-section-header">
-                <h2>Asignación</h2>
-            </header>
-
-            <div class="tickets-show-content">
-                <div class="tickets-show-grid">
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Asignado a</p>
-                        <p class="tickets-show-meta-value">{{ $assigneeLabel }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Asignado por</p>
-                        <p class="tickets-show-meta-value">{{ $assignedByLabel }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Fecha de asignación</p>
-                        <p class="tickets-show-meta-value">{{ $assignedAt?->format('d/m/Y H:i') ?? '—' }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Tipo de asignación</p>
-                        <p class="tickets-show-meta-value">{{ $assignmentTypeLabel }}</p>
-                    </div>
-                    <div class="tickets-show-meta">
-                        <p class="tickets-show-meta-label">Estado de bloqueo</p>
-                        <p class="tickets-show-meta-value">
-                            @if ($assignmentLocked)
-                                <span class="assignment-badge assignment-badge--locked">Fija</span>
-                            @elseif ($ticket?->assigned_to)
-                                <span class="assignment-badge assignment-badge--flexible">Flexible</span>
-                            @else
-                                <span class="assignment-badge assignment-badge--none">Sin asignación</span>
-                            @endif
-                        </p>
-                    </div>
-                </div>
-
-                @if ($maintenanceOnly)
-                    <div class="assignment-actions">
-                        @if ($canRelease)
-                            <form method="POST" action="{{ route('tickets.release', $ticket) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                <button type="submit" class="btn-secondary">Liberar ticket</button>
-                            </form>
-                        @endif
-
-                        @if ($assignmentLocked && $ticket?->assigned_to === $user?->id)
-                            <p class="tickets-show-meta-value" style="font-size:0.85rem; opacity:0.8;">
-                                Asignación fija por administración. Solo Admin o SuperAdmin puede cambiarla.
-                            </p>
-                        @endif
-                    </div>
-                @endif
-
-                @if ($isAdmin)
-                    <div class="assignment-actions">
-                        <form method="POST" action="{{ route('tickets.assign', $ticket) }}" class="assignment-actions">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                            <div class="tickets-form-group" style="min-width:220px;">
-                                <label for="assigned_to" class="tickets-field-label">Asignar a</label>
-                                <select id="assigned_to" name="assigned_to" class="tickets-field" required>
-                                    <option value="">Selecciona maintenance</option>
-                                    @foreach (($maintenanceUsers ?? collect()) as $maintenanceUser)
-                                        <option value="{{ $maintenanceUser->id }}" @selected($ticket?->assigned_to === $maintenanceUser->id)>
-                                            {{ $maintenanceUser->name ?? $maintenanceUser->email ?? $maintenanceUser->id }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('assigned_to')
-                                    <p class="tickets-field-error">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <button type="submit" class="btn-primary">
-                                {{ $ticket?->assigned_to ? 'Reasignar' : 'Asignar' }}
-                            </button>
-                        </form>
-
-                        @if ($ticket?->assigned_to)
-                            <form method="POST" action="{{ route('tickets.unassign', $ticket) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                <button type="submit" class="btn-secondary">Desasignar</button>
-                            </form>
-                        @endif
-                    </div>
-                @endif
-
-                @error('assignment')
-                    <p class="tickets-field-error">{{ $message }}</p>
-                @enderror
-            </div>
-        </section>
-
-        {{-- ===== ADJUNTOS ===== --}}
-        @if (optional($ticket?->media)->isNotEmpty())
-            <section class="tickets-show-section">
-                <header class="tickets-show-section-header">
-                    <h2>Adjuntos ({{ $ticket->media->count() }})</h2>
-                </header>
-
-                <div class="tickets-media-grid">
-                    @foreach ($ticket->media as $media)
-                        <article class="tickets-media-item">
-                            @if ($media?->file_type === 'image')
-                                <a href="{{ $media?->file_url }}" target="_blank" rel="noopener noreferrer">
-                                    <img src="{{ $media?->file_url }}" alt="Adjunto" class="tickets-media-image">
-                                </a>
-                            @else
-                                <div class="tickets-media-file">
-                                    <p class="tickets-media-type">{{ strtoupper($media?->file_type ?? 'FILE') }}</p>
-                                </div>
-                            @endif
-                            <div class="tickets-media-info">
-                                <p class="tickets-media-label">{{ $media?->file_type ?? 'Desconocido' }}</p>
-                                <p class="tickets-media-date">{{ $media?->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
-                                <a href="{{ $media?->file_url }}" target="_blank" rel="noopener noreferrer" class="tickets-media-link">Ver archivo</a>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
-        {{-- ===== ACTUALIZAR ESTADO ===== --}}
-        @php $availableTransitions = $availableTransitions ?? []; @endphp
-        @can('updateState', $ticket)
-        @if (count($availableTransitions) > 0)
-        <section class="tickets-show-section">
-            <header class="tickets-show-section-header">
-                <h2>Actualizar estado</h2>
-            </header>
-
-            <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="tickets-update-form">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-
-                <div class="tickets-form-group">
-                    <label for="to_state" class="tickets-field-label">Nuevo estado *</label>
-                    <select id="to_state" name="to_state" class="tickets-field" required>
-                        <option value="">Selecciona estado</option>
-                        @php
-                            $stateLabelsForm = [
-                                'open'        => 'Abierto',
-                                'in_progress' => 'En progreso',
-                                'resolved'    => 'Resuelto',
-                                'rejected'    => 'Rechazado',
-                            ];
-                        @endphp
-                        @foreach ($availableTransitions as $state)
-                            <option value="{{ $state }}" @selected(old('to_state') === $state)>
-                                {{ $stateLabelsForm[$state] ?? ucfirst(str_replace('_', ' ', $state)) }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('to_state')
-                        <p class="tickets-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="tickets-form-group">
-                    <label for="comment" class="tickets-field-label">Comentario</label>
-                    <textarea id="comment" name="comment" rows="3"
-                              placeholder="Explica brevemente por qué cambias el estado o qué acción se realizó"
-                              class="tickets-field">{{ old('comment') }}</textarea>
-                    @error('comment')
-                        <p class="tickets-field-error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="tickets-form-actions">
-                    <button type="submit" class="btn-primary">Actualizar estado</button>
-                </div>
-            </form>
-        </section>
-        @endif
-        @endcan
-
-        {{-- ===== HISTORIAL ===== --}}
-        <section class="tickets-show-section">
-            <header class="tickets-show-section-header">
-                <h2>Historial de estados</h2>
-            </header>
-
-            <div class="tickets-history-list">
-                @forelse ($ticket->stateHistory as $entry)
-                    <article class="tickets-history-item">
-                        <div class="tickets-history-transition">
-                            <span class="tickets-history-badge">{{ ucfirst(str_replace('_', ' ', $entry->from_state ?? 'Inicio')) }}</span>
-                            <x-lucide-arrow-right class="tickets-history-arrow" />
-                            <span class="tickets-history-badge tickets-history-badge--target">{{ ucfirst(str_replace('_', ' ', $entry->to_state ?? '')) }}</span>
-                        </div>
-                        @if ($entry->changedBy)
-                            <p class="tickets-history-actor">Cambiado por: <strong>{{ $entry->changedBy->name ?? $entry->changedBy->email }}</strong></p>
-                        @endif
-                        <p class="tickets-history-comment">{{ $entry->comment ?? '(sin comentario)' }}</p>
-                        <p class="tickets-history-date">{{ $entry->created_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
-                    </article>
-                @empty
-                    <p class="tickets-history-empty">Aún no hay cambios de estado registrados</p>
-                @endforelse
-            </div>
-        </section>
-
+    {{-- ── Botón volver inferior ── --}}
+    <div class="mt-6 pb-2">
+        <a href="{{ $backUrl }}"
+           class="ticket-show__back-link focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Volver
+        </a>
     </div>
 
-<script>
-// Lógica para el modal premium
-function openDeleteTicketModal() {
-    const modal = document.getElementById('deleteTicketModal');
-    const modalContent = modal.querySelector('.relative');
-    
-    // Mostrar contenedor
-    modal.classList.remove('hidden');
-    
-    // Forzar reflow para aplicar la transición
-    void modal.offsetWidth;
-    
-    // Animar entrada
-    modal.classList.remove('opacity-0');
-    modal.classList.add('opacity-100');
-    modalContent.classList.remove('scale-95', 'translate-y-4');
-    modalContent.classList.add('scale-100', 'translate-y-0');
-}
-
-function closeDeleteTicketModal() {
-    const modal = document.getElementById('deleteTicketModal');
-    const modalContent = modal.querySelector('.relative');
-    
-    // Animar salida
-    modal.classList.remove('opacity-100');
-    modal.classList.add('opacity-0');
-    modalContent.classList.remove('scale-100', 'translate-y-0');
-    modalContent.classList.add('scale-95', 'translate-y-4');
-    
-    // Ocultar completamente después de la transición
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300);
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const forms = document.querySelectorAll('.tickets-update-form, .tickets-review-actions');
-    forms.forEach(function (form) {
-        form.addEventListener('submit', function () {
-            const buttons = form.querySelectorAll('button[type="submit"]');
-            buttons.forEach(function (button) {
-                button.disabled = true;
-                button.setAttribute('aria-disabled', 'true');
-            });
-        }, { once: true });
-    });
-});
-</script>
-
-{{-- Custom Delete Modal Overlay --}}
-<div id="deleteTicketModal" class="fixed inset-0 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300" style="backdrop-filter: blur(5px);">
-    <!-- Backdrop oscuro -->
-    <button type="button" class="absolute inset-0 w-full h-full border-0 p-0 m-0 cursor-default" style="background-color: rgba(15, 23, 42, 0.55);" onclick="closeDeleteTicketModal()" aria-label="Cerrar modal" tabindex="-1"></button>
-
-    <!-- Contenido del Modal -->
-    <div class="relative w-full max-w-sm rounded-2xl p-6 transform scale-95 translate-y-4 transition-all duration-300 shadow-2xl" style="background-color: var(--bg-surface); border: 1px solid var(--border-default);">
-        
-        <!-- Icono centrado -->
-        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4" style="background-color: rgba(225, 29, 72, 0.12);">
-            <x-lucide-alert-triangle width="28" height="28" style="color: #e11d48;" stroke-width="2.5" />
-        </div>
-        
-        <!-- Título y descripción -->
-        <div class="text-center mb-6">
-            <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">¿Eliminar este ticket?</h3>
-            <p class="text-sm" style="color: var(--text-muted); line-height: 1.5;">Esta acción no se puede deshacer. Se eliminará el ticket junto con todos sus adjuntos.</p>
-        </div>
-        
-        <!-- Botones de Acción -->
-        <div class="flex gap-3 justify-center mt-2">
-            <button type="button" class="btn-secondary flex-1 text-center justify-center" onclick="closeDeleteTicketModal()">
-                Cancelar
-            </button>
-            <button type="button" class="btn-danger flex-1 text-center justify-center" onclick="document.getElementById('delete-ticket-form').submit();">
-                Sí, eliminar
-            </button>
-        </div>
-    </div>
 </div>
+
+@include('tickets.partials.show.delete-modal')
 @endsection
