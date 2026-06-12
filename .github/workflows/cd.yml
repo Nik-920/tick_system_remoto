@@ -18,9 +18,6 @@ jobs:
       name: staging
       url: ${{ vars.APP_URL }}
     steps:
-      - name: 📥 Checkout código
-        uses: actions/checkout@v4
-
       - name: 🚂 Instalar Railway CLI
         run: npm install -g @railway/cli
 
@@ -77,6 +74,7 @@ jobs:
         if: always()
         run: |
           echo "## 🚀 CD Deploy Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Hora:** $(date)" >> $GITHUB_STEP_SUMMARY
           echo "**URL:** ${{ vars.APP_URL }}" >> $GITHUB_STEP_SUMMARY
