@@ -23,6 +23,7 @@ use App\ViewModels\Dashboard\MaintenanceReportViewModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -131,6 +132,13 @@ final class MaintenanceReportQuery
             ->orderByDesc('resolved_at')
             ->get();
 
+        // ── Universe G: created within the period (created_at) ───────────────
+        $createdModels = $this->mine()
+            ->whereBetween('created_at', [$this->range->from, $this->range->to])
+            ->with(['location', 'category'])
+            ->orderByDesc('created_at')
+            ->get();
+
         $historyByTicket = $this->historyByTicket(
             $activeTickets->pluck('id')
                 ->merge($resolvedModels->pluck('id'))
@@ -139,7 +147,21 @@ final class MaintenanceReportQuery
                 ->all()
         );
 
-        $recurrenceHistories = $this->recurrenceHistories($activeTickets);
+        // ── Universes E/F: administrative closures (real transitions) ────────
+        $rejectedClosures = $this->administrativeClosures(Ticket::STATE_REJECTED);
+        $cancelledClosures = $this->administrativeClosures(Ticket::STATE_CANCELLED);
+
+        // Recurrences look at every (location, category) pair relevant to the
+        // report — active, created in period, resolved and administrative
+        // closures — not only active assignments.
+        $recurrenceBase = $activeTickets->toBase()
+            ->concat($createdModels)
+            ->concat($resolvedModels)
+            ->concat($rejectedClosures['models'])
+            ->concat($cancelledClosures['models'])
+            ->unique('id')
+            ->values();
+        $recurrenceHistories = $this->recurrenceHistories($recurrenceBase);
 
         // AI duplicate signal per active ticket (persisted metadata only).
         $duplicateInfoByTicket = [];
@@ -152,8 +174,8 @@ final class MaintenanceReportQuery
 
         $assignments = $this->assignmentRows($activeTickets, $historyByTicket, $recurrenceHistories, $duplicateInfoByTicket);
         $resolvedRows = $this->resolvedRows($resolvedModels);
-        $rejectedRows = $this->administrativeClosures(Ticket::STATE_REJECTED);
-        $cancelledRows = $this->administrativeClosures(Ticket::STATE_CANCELLED);
+        $rejectedRows = $rejectedClosures['rows'];
+        $cancelledRows = $cancelledClosures['rows'];
         $duplicateAlerts = $this->duplicateAlerts($activeTickets, $duplicateInfoByTicket);
 
         // ── Counters ─────────────────────────────────────────────────────────
@@ -179,15 +201,14 @@ final class MaintenanceReportQuery
         $rejectedCount = count($rejectedRows);
         $cancelledCount = count($cancelledRows);
         $closedCount = $resolvedCount + $rejectedCount; // cancelled stays out on purpose.
-        $createdInPeriod = $this->mine()
-            ->whereBetween('created_at', [$this->range->from, $this->range->to])
-            ->count();
+        $createdInPeriod = $createdModels->count();
         $assignedAllTime = $this->mine()->count();
 
         // Close rate: resolved / (resolved + active). Cancelled and AI
-        // duplicates never enter this formula.
+        // duplicates never enter this formula. With an empty denominator the
+        // metric does not apply (null → "Sin datos"), never a misleading 0 %.
         $closeDenominator = $resolvedCount + $activeCount;
-        $closeRate = $closeDenominator > 0 ? round($resolvedCount / $closeDenominator * 100, 1) : 0.0;
+        $closeRate = $closeDenominator > 0 ? round($resolvedCount / $closeDenominator * 100, 1) : null;
 
         $timeMetrics = $this->timeMetrics($resolvedRows);
         $evidenceSummary = $this->evidenceSummary($assignments);
@@ -205,8 +226,22 @@ final class MaintenanceReportQuery
         $recurrenceInsights = $this->recurrenceInsights($recurrenceHistories);
         $dataQuality = $this->dataQuality($activeTickets, $historyByTicket, $duplicateInfoByTicket);
 
-        $locationBreakdown = $this->locationBreakdown($activeTickets, $resolvedModels, $duplicateInfoByTicket);
-        $categoryBreakdown = $this->categoryBreakdown($activeTickets, $resolvedModels, $duplicateInfoByTicket);
+        $locationBreakdown = $this->locationBreakdown(
+            $activeTickets,
+            $createdModels,
+            $resolvedModels,
+            $rejectedClosures['models'],
+            $cancelledClosures['models'],
+            $duplicateInfoByTicket,
+        );
+        $categoryBreakdown = $this->categoryBreakdown(
+            $activeTickets,
+            $createdModels,
+            $resolvedModels,
+            $rejectedClosures['models'],
+            $cancelledClosures['models'],
+            $duplicateInfoByTicket,
+        );
 
         $risks = $this->risks(
             $assignments,
@@ -236,7 +271,16 @@ final class MaintenanceReportQuery
             $categoryBreakdown,
             $recurrenceInsights,
             $globalQueue['count'],
+            $activeCount,
         );
+
+        $aiSummary = [
+            'active' => $duplicatesActive,
+            'pendingReview' => $duplicatesPending,
+            'suggestsRecurrence' => $recurrenceSuggested,
+            'legacyWithoutStrategy' => $duplicatesLegacy,
+            'allZero' => ($duplicatesActive + $duplicatesPending + $recurrenceSuggested + $duplicatesLegacy) === 0,
+        ];
 
         return new MaintenanceReportViewModel(
             technician: [
@@ -259,6 +303,8 @@ final class MaintenanceReportQuery
                 $duplicatesActive,
                 $duplicatesPending,
                 $globalQueue['count'],
+                $assignedAllTime,
+                $createdInPeriod,
             ),
             scope: $this->scopeRows(
                 $assignedAllTime,
@@ -280,9 +326,6 @@ final class MaintenanceReportQuery
                 $evidenceSummary,
                 $globalQueue['count'],
                 $duplicatesActive,
-                $duplicatesPending,
-                $recurrenceSuggested,
-                $duplicatesLegacy,
                 $resolvedCount,
                 $rejectedCount,
                 $cancelledCount,
@@ -309,7 +352,8 @@ final class MaintenanceReportQuery
             risks: $risks,
             recommendations: $recommendations,
             globalQueueContext: $globalQueue,
-            appendixTickets: $this->appendix($assignments, $resolvedRows, $rejectedRows, $cancelledRows),
+            aiSummary: $aiSummary,
+            appendixTickets: $this->appendix($assignments, $resolvedRows, $rejectedRows, $cancelledRows, $createdModels),
             definitions: $this->definitions(),
             dataQuality: $dataQuality,
         );
@@ -797,9 +841,11 @@ final class MaintenanceReportQuery
 
     /**
      * Closures sourced from real state_history transitions within the period.
-     * One row per ticket (first matching transition in range).
+     * One row per ticket (first matching transition in range). Models are
+     * returned alongside the rows so breakdowns and recurrences can reuse
+     * them without re-querying.
      *
-     * @return list<ClosedTicketRow>
+     * @return array{rows: list<ClosedTicketRow>, models: EloquentCollection<int, Ticket>}
      */
     private function administrativeClosures(string $toState): array
     {
@@ -820,7 +866,7 @@ final class MaintenanceReportQuery
         }
 
         if ($closedAtByTicket === []) {
-            return [];
+            return ['rows' => [], 'models' => new EloquentCollection];
         }
 
         $tickets = Ticket::query()
@@ -854,7 +900,7 @@ final class MaintenanceReportQuery
             );
         }
 
-        return $rows;
+        return ['rows' => $rows, 'models' => $tickets->values()];
     }
 
     // ── Time metrics (clock: periodo) ─────────────────────────────────────────
@@ -982,14 +1028,25 @@ final class MaintenanceReportQuery
     // ── Breakdowns (snapshot + periodo, labelled apart) ──────────────────────
 
     /**
+     * Per-location workload. Snapshot columns (active/open/in progress/
+     * critical/duplicates) plus period columns (created/resolved/rejected/
+     * cancelled). `totalRelevant` counts distinct tickets in the bucket, so a
+     * ticket created in the period that is still active counts once.
+     *
      * @param  EloquentCollection<int, Ticket>  $activeTickets
+     * @param  EloquentCollection<int, Ticket>  $createdModels
      * @param  EloquentCollection<int, Ticket>  $resolvedModels
+     * @param  EloquentCollection<int, Ticket>  $rejectedModels
+     * @param  EloquentCollection<int, Ticket>  $cancelledModels
      * @param  array<string, array<string, mixed>>  $duplicateInfoByTicket
      * @return list<LocationBreakdownRow>
      */
     private function locationBreakdown(
         EloquentCollection $activeTickets,
+        EloquentCollection $createdModels,
         EloquentCollection $resolvedModels,
+        EloquentCollection $rejectedModels,
+        EloquentCollection $cancelledModels,
         array $duplicateInfoByTicket,
     ): array {
         $buckets = [];
@@ -999,6 +1056,7 @@ final class MaintenanceReportQuery
             $bucket = $buckets[$key] ?? $this->emptyLocationBucket($ticket);
 
             $bucket['active']++;
+            $bucket['ids'][(string) $ticket->id] = true;
             if ($ticket->state === Ticket::STATE_OPEN) {
                 $bucket['open']++;
             } else {
@@ -1019,11 +1077,14 @@ final class MaintenanceReportQuery
             $buckets[$key] = $bucket;
         }
 
-        foreach ($resolvedModels as $ticket) {
-            $key = (string) ($ticket->location_id ?? 'none');
-            $bucket = $buckets[$key] ?? $this->emptyLocationBucket($ticket);
-            $bucket['resolved']++;
-            $buckets[$key] = $bucket;
+        foreach (['created' => $createdModels, 'resolved' => $resolvedModels, 'rejected' => $rejectedModels, 'cancelled' => $cancelledModels] as $counter => $models) {
+            foreach ($models as $ticket) {
+                $key = (string) ($ticket->location_id ?? 'none');
+                $bucket = $buckets[$key] ?? $this->emptyLocationBucket($ticket);
+                $bucket[$counter]++;
+                $bucket['ids'][(string) $ticket->id] = true;
+                $buckets[$key] = $bucket;
+            }
         }
 
         $rows = array_map(
@@ -1035,7 +1096,11 @@ final class MaintenanceReportQuery
                 activeCount: $bucket['active'],
                 openCount: $bucket['open'],
                 inProgressCount: $bucket['inProgress'],
+                createdInPeriod: $bucket['created'],
                 resolvedInPeriod: $bucket['resolved'],
+                rejectedInPeriod: $bucket['rejected'],
+                cancelledInPeriod: $bucket['cancelled'],
+                totalRelevant: count($bucket['ids']),
                 highCriticalActive: $bucket['highCritical'],
                 possibleDuplicateActive: $bucket['duplicates'],
                 possibleRecurrenceActive: $bucket['recurrences'],
@@ -1044,12 +1109,12 @@ final class MaintenanceReportQuery
         );
 
         usort($rows, static function (LocationBreakdownRow $a, LocationBreakdownRow $b): int {
-            if ($a->activeCount !== $b->activeCount) {
-                return $b->activeCount <=> $a->activeCount;
+            if ($a->totalRelevant !== $b->totalRelevant) {
+                return $b->totalRelevant <=> $a->totalRelevant;
             }
 
-            if ($a->resolvedInPeriod !== $b->resolvedInPeriod) {
-                return $b->resolvedInPeriod <=> $a->resolvedInPeriod;
+            if ($a->activeCount !== $b->activeCount) {
+                return $b->activeCount <=> $a->activeCount;
             }
 
             return strcmp($a->locationName, $b->locationName);
@@ -1059,7 +1124,7 @@ final class MaintenanceReportQuery
     }
 
     /**
-     * @return array{name: string, building: string, floor: string, roomCode: string, active: int, open: int, inProgress: int, resolved: int, highCritical: int, duplicates: int, recurrences: int}
+     * @return array{name: string, building: string, floor: string, roomCode: string, active: int, open: int, inProgress: int, created: int, resolved: int, rejected: int, cancelled: int, highCritical: int, duplicates: int, recurrences: int, ids: array<string, true>}
      */
     private function emptyLocationBucket(Ticket $ticket): array
     {
@@ -1071,37 +1136,45 @@ final class MaintenanceReportQuery
             'active' => 0,
             'open' => 0,
             'inProgress' => 0,
+            'created' => 0,
             'resolved' => 0,
+            'rejected' => 0,
+            'cancelled' => 0,
             'highCritical' => 0,
             'duplicates' => 0,
             'recurrences' => 0,
+            'ids' => [],
         ];
     }
 
     /**
+     * Per-category frequency over every relevant universe of the report.
+     * `totalRelevant` and `percentage` count distinct tickets per bucket.
+     *
      * @param  EloquentCollection<int, Ticket>  $activeTickets
+     * @param  EloquentCollection<int, Ticket>  $createdModels
      * @param  EloquentCollection<int, Ticket>  $resolvedModels
+     * @param  EloquentCollection<int, Ticket>  $rejectedModels
+     * @param  EloquentCollection<int, Ticket>  $cancelledModels
      * @param  array<string, array<string, mixed>>  $duplicateInfoByTicket
      * @return list<CategoryBreakdownRow>
      */
     private function categoryBreakdown(
         EloquentCollection $activeTickets,
+        EloquentCollection $createdModels,
         EloquentCollection $resolvedModels,
+        EloquentCollection $rejectedModels,
+        EloquentCollection $cancelledModels,
         array $duplicateInfoByTicket,
     ): array {
         $buckets = [];
 
         foreach ($activeTickets as $ticket) {
             $key = (string) ($ticket->category_id ?? 'none');
-            $bucket = $buckets[$key] ?? [
-                'name' => (string) ($ticket->category->name ?? 'Sin categoría'),
-                'active' => 0,
-                'resolved' => 0,
-                'duplicates' => 0,
-                'recurrences' => 0,
-            ];
+            $bucket = $buckets[$key] ?? $this->emptyCategoryBucket($ticket);
 
             $bucket['active']++;
+            $bucket['ids'][(string) $ticket->id] = true;
 
             $info = $duplicateInfoByTicket[(string) $ticket->id] ?? null;
             if ($info !== null) {
@@ -1114,32 +1187,32 @@ final class MaintenanceReportQuery
             $buckets[$key] = $bucket;
         }
 
-        foreach ($resolvedModels as $ticket) {
-            $key = (string) ($ticket->category_id ?? 'none');
-            $bucket = $buckets[$key] ?? [
-                'name' => (string) ($ticket->category->name ?? 'Sin categoría'),
-                'active' => 0,
-                'resolved' => 0,
-                'duplicates' => 0,
-                'recurrences' => 0,
-            ];
-            $bucket['resolved']++;
-            $buckets[$key] = $bucket;
+        foreach (['created' => $createdModels, 'resolved' => $resolvedModels, 'rejected' => $rejectedModels, 'cancelled' => $cancelledModels] as $counter => $models) {
+            foreach ($models as $ticket) {
+                $key = (string) ($ticket->category_id ?? 'none');
+                $bucket = $buckets[$key] ?? $this->emptyCategoryBucket($ticket);
+                $bucket[$counter]++;
+                $bucket['ids'][(string) $ticket->id] = true;
+                $buckets[$key] = $bucket;
+            }
         }
 
         $grandTotal = 0;
         foreach ($buckets as $bucket) {
-            $grandTotal += $bucket['active'] + $bucket['resolved'];
+            $grandTotal += count($bucket['ids']);
         }
 
         $rows = array_map(
             static fn (array $bucket): CategoryBreakdownRow => new CategoryBreakdownRow(
                 categoryName: $bucket['name'],
                 activeCount: $bucket['active'],
+                createdInPeriod: $bucket['created'],
                 resolvedInPeriod: $bucket['resolved'],
-                totalRelevant: $bucket['active'] + $bucket['resolved'],
+                rejectedInPeriod: $bucket['rejected'],
+                cancelledInPeriod: $bucket['cancelled'],
+                totalRelevant: count($bucket['ids']),
                 percentage: $grandTotal > 0
-                    ? round(($bucket['active'] + $bucket['resolved']) / $grandTotal * 100, 1)
+                    ? round(count($bucket['ids']) / $grandTotal * 100, 1)
                     : 0.0,
                 possibleDuplicateActive: $bucket['duplicates'],
                 possibleRecurrenceActive: $bucket['recurrences'],
@@ -1158,30 +1231,49 @@ final class MaintenanceReportQuery
         return array_values($rows);
     }
 
+    /**
+     * @return array{name: string, active: int, created: int, resolved: int, rejected: int, cancelled: int, duplicates: int, recurrences: int, ids: array<string, true>}
+     */
+    private function emptyCategoryBucket(Ticket $ticket): array
+    {
+        return [
+            'name' => (string) ($ticket->category->name ?? 'Sin categoría'),
+            'active' => 0,
+            'created' => 0,
+            'resolved' => 0,
+            'rejected' => 0,
+            'cancelled' => 0,
+            'duplicates' => 0,
+            'recurrences' => 0,
+            'ids' => [],
+        ];
+    }
+
     // ── Historical recurrences (location_incident_history, no AI) ────────────
 
     /**
-     * Incident-history rows matching exact (location, category) pairs of the
-     * technician's active assignments.
+     * Incident-history rows matching exact (location, category) pairs of any
+     * ticket relevant to the report (active, created in period, resolved,
+     * rejected or cancelled), not only active assignments.
      *
-     * @param  EloquentCollection<int, Ticket>  $activeTickets
+     * @param  SupportCollection<int, Ticket>  $relevantTickets
      * @return array<string, LocationIncidentHistory> keyed "locationId|categoryId"
      */
-    private function recurrenceHistories(EloquentCollection $activeTickets): array
+    private function recurrenceHistories(SupportCollection $relevantTickets): array
     {
-        if ($activeTickets->isEmpty()) {
+        if ($relevantTickets->isEmpty()) {
             return [];
         }
 
-        $locationIds = $activeTickets->pluck('location_id')->filter()->unique()->values()->all();
-        $categoryIds = $activeTickets->pluck('category_id')->filter()->unique()->values()->all();
+        $locationIds = $relevantTickets->pluck('location_id')->filter()->unique()->values()->all();
+        $categoryIds = $relevantTickets->pluck('category_id')->filter()->unique()->values()->all();
 
         if ($locationIds === [] || $categoryIds === []) {
             return [];
         }
 
         $pairs = [];
-        foreach ($activeTickets as $ticket) {
+        foreach ($relevantTickets as $ticket) {
             $pairs[$ticket->location_id.'|'.$ticket->category_id] = true;
         }
 
@@ -1283,16 +1375,13 @@ final class MaintenanceReportQuery
         array $evidence,
         int $globalQueue,
         int $duplicatesActive,
-        int $duplicatesPending,
-        int $recurrenceSuggested,
-        int $duplicatesLegacy,
         int $resolved,
         int $rejected,
         int $cancelled,
         int $created,
         int $closed,
         array $time,
-        float $closeRate,
+        ?float $closeRate,
     ): array {
         $snapshot = KpiRow::CLOCK_SNAPSHOT;
         $period = KpiRow::CLOCK_PERIOD;
@@ -1316,14 +1405,10 @@ final class MaintenanceReportQuery
                 'Porcentaje de asignaciones activas con evidencia.', 'neutral'),
             new KpiRow('global_queue', 'Cola global disponible', (string) $globalQueue, $snapshot,
                 'Contexto del área: abiertos sin asignar. No es responsabilidad personal.', 'neutral'),
+            // Single AI row in the KPI table: the detailed AI counters live in
+            // the "Alertas IA y posibles duplicados" section (aiSummary).
             new KpiRow('ai_duplicates_active', 'Posibles duplicados IA activos', (string) $duplicatesActive, $snapshot,
-                'Señal operativa de calidad de atención. No mide productividad.', $duplicatesActive > 0 ? 'warning' : 'neutral'),
-            new KpiRow('ai_duplicates_pending', 'Duplicados pendientes de revisión', (string) $duplicatesPending, $snapshot,
-                'Posibles duplicados IA sin revisión humana.', $duplicatesPending > 0 ? 'warning' : 'neutral'),
-            new KpiRow('ai_recurrence_suggested', 'Posibles recurrencias (Strategy)', (string) $recurrenceSuggested, $snapshot,
-                'El motor Strategy sugiere recurrencia, no duplicado inmediato.', 'neutral'),
-            new KpiRow('ai_duplicates_legacy', 'Duplicados sin desglose Strategy', (string) $duplicatesLegacy, $snapshot,
-                'Registros antiguos sin metadata de explicación; requieren revisión manual.', 'neutral'),
+                'Señal operativa de calidad de atención. No mide productividad. Detalle en la sección de alertas IA.', $duplicatesActive > 0 ? 'warning' : 'neutral'),
             new KpiRow('resolved_period', 'Resueltos en periodo', (string) $resolved, $period,
                 'Cierres por resolved_at dentro del rango.', 'positive'),
             new KpiRow('rejected_period', 'Rechazados en periodo', (string) $rejected, $period,
@@ -1340,8 +1425,10 @@ final class MaintenanceReportQuery
                 'Valor central, robusto ante casos extremos.', 'neutral', $time['resolutionLowSample']),
             new KpiRow('first_response', 'Primera respuesta promedio', $this->formatHours($time['avgFirstResponseHours']), $period,
                 'Promedio hasta la primera transición a en progreso.', 'neutral', $time['firstResponseLowSample']),
-            new KpiRow('close_rate', 'Tasa de cierre operativa', $this->formatPercent($closeRate), $period,
-                'Resueltos / (resueltos + activos). Excluye cancelados y señales IA.', 'neutral'),
+            new KpiRow('close_rate', 'Tasa de cierre operativa', $this->formatPercentOrNa($closeRate), $period,
+                $closeRate !== null
+                    ? 'Resueltos / (resueltos + activos). Excluye cancelados y señales IA.'
+                    : 'No aplica: sin resueltos en el periodo ni carga activa, la tasa no tiene denominador.', 'neutral'),
         ];
     }
 
@@ -1401,7 +1488,7 @@ final class MaintenanceReportQuery
         array $staleOpen,
         array $staleInProgress,
         array $evidence,
-        float $closeRate,
+        ?float $closeRate,
         int $resolved,
         int $active,
         array $time,
@@ -1479,7 +1566,7 @@ final class MaintenanceReportQuery
                 array_map(static fn (array $row): string => '#TIC-'.$row['idShort'], $evidence['missing']));
         }
 
-        if ($active > 0 && ($resolved + $active) > 0 && $closeRate < self::LOW_CLOSURE_RATE_PCT) {
+        if ($active > 0 && $closeRate !== null && $closeRate < self::LOW_CLOSURE_RATE_PCT) {
             $risks[] = new RiskRow('low_closure', RiskRow::SEVERITY_WARNING, $active,
                 'Tasa de cierre operativa baja ('.$this->formatPercent($closeRate).') frente a la carga activa.');
         }
@@ -1603,6 +1690,7 @@ final class MaintenanceReportQuery
         array $categoryBreakdown,
         array $recurrenceInsights,
         int $globalQueue,
+        int $active,
     ): array {
         $items = [];
 
@@ -1634,8 +1722,16 @@ final class MaintenanceReportQuery
             $items[] = 'Reducir el tiempo de primera respuesta (promedio actual '.$this->formatHours($time['avgFirstResponseHours']).').';
         }
 
+        // Without closures in the period, the advice depends on the real load:
+        // never suggest closing active tickets when there are none.
         if ($resolved === 0) {
-            $items[] = 'No se registran cierres en el periodo; planificar el cierre de los tickets activos.';
+            if ($active > 0) {
+                $items[] = 'No se registran cierres en el periodo; priorizar el avance y cierre de las asignaciones activas.';
+            } elseif ($globalQueue > 0) {
+                $items[] = 'No hay carga activa asignada ni cierres en el periodo; evaluar tomar tickets disponibles de la cola global si corresponde.';
+            } else {
+                $items[] = 'No hay carga activa asignada ni cierres en el periodo; no se registran acciones operativas pendientes al momento de generar el informe. Mantener disponibilidad o revisar nuevas asignaciones.';
+            }
         }
 
         $leader = $locationBreakdown[0] ?? null;
@@ -1682,6 +1778,8 @@ final class MaintenanceReportQuery
         int $duplicatesActive,
         int $duplicatesPending,
         int $globalQueue,
+        int $assignedAllTime,
+        int $createdInPeriod,
     ): array {
         $headlines = [
             ['label' => 'Asignados activos', 'value' => (string) $active],
@@ -1722,30 +1820,93 @@ final class MaintenanceReportQuery
             $narrative[] = 'La cobertura de evidencia en asignaciones activas es del '.$this->formatPercent($evidence['coveragePct']).'.';
         }
 
-        if (count($narrative) < 5 && $globalQueue > 0) {
+        // Low-data narrative: explain why scope counts exist while there is no
+        // active load, instead of leaving contradictory sections.
+        if ($active === 0 && $globalQueue === 0 && $resolved === 0) {
+            $narrative[] = 'No se registra carga operativa activa al momento de generación.';
+
+            if ($assignedAllTime > 0 || $createdInPeriod > 0) {
+                $narrative[] = 'Existe actividad histórica o del periodo asociada al técnico, detallada en el anexo.';
+            }
+        }
+
+        if (count($narrative) < 6 && $globalQueue > 0) {
             $narrative[] = "La cola global disponible contiene {$globalQueue} ticket(s) sin asignar, mostrada solo como contexto del área.";
         }
 
         return [
             'headlines' => $headlines,
-            'narrative' => array_slice($narrative, 0, 5),
+            'narrative' => array_slice($narrative, 0, 6),
         ];
     }
 
     // ── Appendix ─────────────────────────────────────────────────────────────
 
+    private const REASON_ACTIVE = 'Activo';
+
+    private const REASON_CREATED = 'Creado en periodo';
+
+    private const REASON_HISTORICAL = 'Asignado histórico';
+
+    private const REASON_RESOLVED = 'Resuelto en periodo';
+
+    private const REASON_REJECTED = 'Rechazado en periodo';
+
+    private const REASON_CANCELLED = 'Cancelado en periodo';
+
     /**
+     * Appendix: one deduplicated row per relevant ticket with the reasons that
+     * put it in the report. Covers active assignments, created in period,
+     * resolved/rejected/cancelled in period, and remaining historical
+     * assignments, so a report with universe A or G > 0 never shows an empty
+     * appendix.
+     *
      * @param  list<AssignmentRow>  $assignments
      * @param  list<ResolvedTicketRow>  $resolved
      * @param  list<ClosedTicketRow>  $rejected
      * @param  list<ClosedTicketRow>  $cancelled
-     * @return array{rows: list<array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string}>, truncated: bool, totalRows: int}
+     * @param  EloquentCollection<int, Ticket>  $createdModels
+     * @return array{rows: list<array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}>, truncated: bool, totalRows: int}
      */
-    private function appendix(array $assignments, array $resolved, array $rejected, array $cancelled): array
-    {
-        $rows = [];
+    private function appendix(
+        array $assignments,
+        array $resolved,
+        array $rejected,
+        array $cancelled,
+        EloquentCollection $createdModels,
+    ): array {
+        // Reasons per ticket, in presentation order.
+        $reasons = [];
+        $push = static function (string $ticketId, string $reason) use (&$reasons): void {
+            $reasons[$ticketId] ??= [];
+            if (! in_array($reason, $reasons[$ticketId], true)) {
+                $reasons[$ticketId][] = $reason;
+            }
+        };
 
         foreach ($assignments as $row) {
+            $push($row->id, self::REASON_ACTIVE);
+        }
+        foreach ($createdModels as $ticket) {
+            $push((string) $ticket->id, self::REASON_CREATED);
+        }
+        foreach ($resolved as $row) {
+            $push($row->id, self::REASON_RESOLVED);
+        }
+        foreach ($rejected as $row) {
+            $push($row->id, self::REASON_REJECTED);
+        }
+        foreach ($cancelled as $row) {
+            $push($row->id, self::REASON_CANCELLED);
+        }
+
+        $reasonLabel = static fn (string $ticketId): string => implode(' · ', $reasons[$ticketId] ?? []);
+
+        $rows = [];
+        $included = [];
+
+        foreach ($assignments as $row) {
+            $included[$row->id] = true;
             $rows[] = [
                 'displayId' => $row->displayId(),
                 'title' => $row->title,
@@ -1765,10 +1926,12 @@ final class MaintenanceReportQuery
                     ? 'Sí · '.($row->duplicateReviewStatus === null ? 'pendiente' : $row->duplicateReviewStatus)
                     : 'No',
                 'duplicateReasons' => $this->joinReasonLabels($row->duplicateTopReasons),
+                'inclusionReason' => $reasonLabel($row->id),
             ];
         }
 
         foreach ($resolved as $row) {
+            $included[$row->id] = true;
             $rows[] = [
                 'displayId' => $row->displayId(),
                 'title' => $row->title,
@@ -1784,10 +1947,12 @@ final class MaintenanceReportQuery
                 'evidence' => $row->evidenceCount > 0 ? 'Sí ('.$row->evidenceCount.')' : 'No',
                 'duplicate' => 'No',
                 'duplicateReasons' => '',
+                'inclusionReason' => $reasonLabel($row->id),
             ];
         }
 
         foreach ([...$rejected, ...$cancelled] as $row) {
+            $included[$row->id] = true;
             $rows[] = [
                 'displayId' => $row->displayId(),
                 'title' => $row->title,
@@ -1803,7 +1968,35 @@ final class MaintenanceReportQuery
                 'evidence' => '—',
                 'duplicate' => 'No',
                 'duplicateReasons' => '',
+                'inclusionReason' => $reasonLabel($row->id),
             ];
+        }
+
+        // Created in the period but not active/closed yet (e.g. resolved
+        // outside the range or never started): still relevant for universe G.
+        foreach ($createdModels as $ticket) {
+            $ticketId = (string) $ticket->id;
+            if (isset($included[$ticketId])) {
+                continue;
+            }
+
+            $included[$ticketId] = true;
+            $rows[] = $this->genericAppendixRow($ticket, $reasonLabel($ticketId));
+        }
+
+        // Remaining historical assignments (universe A) so the appendix never
+        // contradicts the scope counts. Bounded to the appendix limit.
+        if (count($rows) < self::APPENDIX_LIMIT) {
+            $historicalModels = $this->mine()
+                ->whereNotIn('id', array_keys($included))
+                ->with(['location', 'category'])
+                ->orderByDesc('created_at')
+                ->limit(self::APPENDIX_LIMIT - count($rows))
+                ->get();
+
+            foreach ($historicalModels as $ticket) {
+                $rows[] = $this->genericAppendixRow($ticket, self::REASON_HISTORICAL);
+            }
         }
 
         $total = count($rows);
@@ -1813,6 +2006,35 @@ final class MaintenanceReportQuery
             'rows' => array_slice($rows, 0, self::APPENDIX_LIMIT),
             'truncated' => $truncated,
             'totalRows' => $total,
+        ];
+    }
+
+    /**
+     * Appendix row for tickets that are not in the active/resolved/closed row
+     * sets (created in period without closure, or historical assignments).
+     *
+     * @return array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}
+     */
+    private function genericAppendixRow(Ticket $ticket, string $inclusionReason): array
+    {
+        $resolvedAt = $ticket->resolved_at !== null ? CarbonImmutable::parse($ticket->resolved_at) : null;
+
+        return [
+            'displayId' => '#TIC-'.$this->idShort((string) $ticket->id),
+            'title' => (string) $ticket->title,
+            'locationName' => (string) ($ticket->location->name ?? 'Sin ubicación'),
+            'categoryName' => (string) ($ticket->category->name ?? 'Sin categoría'),
+            'priority' => $this->priorityLabel((string) $ticket->priority),
+            'stateLabel' => $this->stateLabel((string) $ticket->state),
+            'createdAt' => $ticket->created_at !== null ? CarbonImmutable::parse($ticket->created_at)->format('Y-m-d') : '—',
+            'assignedAt' => $ticket->assigned_at !== null ? CarbonImmutable::parse($ticket->assigned_at)->format('Y-m-d') : '—',
+            'closedAt' => $resolvedAt?->format('Y-m-d') ?? '—',
+            'ageOrDuration' => '—',
+            'lastTransition' => '—',
+            'evidence' => '—',
+            'duplicate' => 'No',
+            'duplicateReasons' => '',
+            'inclusionReason' => $inclusionReason,
         ];
     }
 
@@ -1975,7 +2197,7 @@ final class MaintenanceReportQuery
             ['term' => 'Primera respuesta', 'definition' => 'Tiempo desde la creación del ticket hasta su primera transición a en progreso (state_history).'],
             ['term' => 'Promedio resolución', 'definition' => 'Media de horas entre creación y resolución de los resueltos del periodo.'],
             ['term' => 'Mediana resolución', 'definition' => 'Valor central de las duraciones de resolución; robusto ante casos extremos.'],
-            ['term' => 'Tasa de cierre operativa', 'definition' => 'Resueltos del periodo / (resueltos del periodo + activos actuales) × 100. Excluye cancelados.'],
+            ['term' => 'Tasa de cierre operativa', 'definition' => 'Resueltos del periodo / (resueltos del periodo + activos actuales) × 100. Excluye cancelados. Si no hay resueltos ni activos se muestra "Sin datos" porque la métrica no aplica.'],
             ['term' => 'Cobertura de evidencia', 'definition' => 'Porcentaje de asignaciones activas con al menos un archivo adjunto en ticket_media.'],
             ['term' => 'Cola global disponible', 'definition' => 'Tickets abiertos, sin asignar y sin bloqueo de asignación. Contexto del área; no es responsabilidad personal del técnico.'],
             ['term' => 'Muestra baja', 'definition' => 'Métrica calculada con menos de '.self::LOW_SAMPLE_THRESHOLD.' casos; debe interpretarse con cautela.'],

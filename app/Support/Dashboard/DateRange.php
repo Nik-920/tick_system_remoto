@@ -135,8 +135,8 @@ final class DateRange
     {
         return match ($this->preset) {
             self::PRESET_TODAY => 'Hoy',
-            self::PRESET_LAST_7_DAYS => 'Ultimos 7 dias',
-            self::PRESET_LAST_30_DAYS => 'Ultimos 30 dias',
+            self::PRESET_LAST_7_DAYS => 'Últimos 7 días',
+            self::PRESET_LAST_30_DAYS => 'Últimos 30 días',
             self::PRESET_THIS_MONTH => 'Este mes',
             self::PRESET_PREVIOUS_MONTH => 'Mes anterior',
             default => 'Personalizado',

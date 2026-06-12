@@ -392,7 +392,8 @@ class MaintenanceReportQueryTest extends TestCase
         $this->assertNull($alert->strategyScore);
         $this->assertSame([], $alert->topReasons);
         $this->assertStringContainsString('No hay un desglose detallado', $alert->summary);
-        $this->assertSame('1', $this->kpi($vm, 'ai_duplicates_legacy')->value);
+        // El detalle IA vive en aiSummary (sección de alertas), no en los KPIs.
+        $this->assertSame(1, $vm->aiSummary['legacyWithoutStrategy']);
     }
 
     public function test_strategy_recurrence_signal_is_differentiated_from_immediate_duplicate(): void
@@ -428,7 +429,7 @@ class MaintenanceReportQueryTest extends TestCase
         $alert = $vm->duplicateAlerts[0];
 
         $this->assertTrue($alert->suggestsRecurrence);
-        $this->assertSame('1', $this->kpi($vm, 'ai_recurrence_suggested')->value);
+        $this->assertSame(1, $vm->aiSummary['suggestsRecurrence']);
 
         $types = array_map(static fn ($risk): string => $risk->type, $vm->risks);
         $this->assertContains('possible_recurrence_detected', $types);
@@ -585,6 +586,203 @@ class MaintenanceReportQueryTest extends TestCase
         $this->assertNotEmpty($vm->executiveSummary['narrative']);
         $this->assertNotEmpty($vm->definitions);
         $this->assertSame(0, $vm->appendixTickets['totalRows']);
+    }
+
+    // ── Correcciones con poca data (tasa de cierre, anexo, breakdowns) ──────
+
+    public function test_close_rate_shows_sin_datos_when_denominator_is_zero(): void
+    {
+        // Sin activos ni resueltos: la tasa no aplica y nunca muestra 0 %.
+        $vm = $this->buildReport();
+
+        $kpi = $this->kpi($vm, 'close_rate');
+        $this->assertSame('Sin datos', $kpi->value);
+        $this->assertStringNotContainsString('0 %', $kpi->value);
+    }
+
+    public function test_close_rate_still_shows_percentage_with_data(): void
+    {
+        $resolved = $this->createAssignedTicket($this->technician, ['state' => 'resolved']);
+        $resolved->forceFill([
+            'created_at' => Carbon::parse('2026-06-09 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-06-10 10:00:00'),
+        ])->save();
+
+        $vm = $this->buildReport();
+
+        $this->assertSame('100 %', $this->kpi($vm, 'close_rate')->value);
+    }
+
+    public function test_appendix_includes_created_in_period_ticket_even_without_active_or_resolved(): void
+    {
+        // A=1 / G=1 pero B=0 y D=0: resuelto fuera del periodo, creado dentro.
+        $ticket = $this->createAssignedTicket($this->technician, ['state' => 'resolved', 'title' => 'Creado en rango']);
+        $ticket->forceFill([
+            'created_at' => Carbon::parse('2026-06-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-06-20 10:00:00'), // fuera del rango 01–15
+        ])->save();
+
+        $vm = $this->buildReport();
+
+        $this->assertSame([], $vm->currentAssignments);
+        $this->assertSame([], $vm->resolvedTickets);
+        $this->assertSame(1, $vm->appendixTickets['totalRows']);
+        $this->assertSame('Creado en rango', $vm->appendixTickets['rows'][0]['title']);
+        $this->assertStringContainsString('Creado en periodo', $vm->appendixTickets['rows'][0]['inclusionReason']);
+    }
+
+    public function test_appendix_includes_historical_assigned_tickets_with_reason(): void
+    {
+        // A=1 pero ni activo, ni creado en periodo, ni cerrado en periodo.
+        $old = $this->createAssignedTicket($this->technician, ['state' => 'resolved', 'title' => 'Histórico']);
+        $old->forceFill([
+            'created_at' => Carbon::parse('2026-01-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-01-06 10:00:00'),
+        ])->save();
+
+        $vm = $this->buildReport();
+
+        $this->assertSame(1, $vm->appendixTickets['totalRows']);
+        $this->assertSame('Asignado histórico', $vm->appendixTickets['rows'][0]['inclusionReason']);
+    }
+
+    public function test_appendix_deduplicates_tickets_and_joins_reasons(): void
+    {
+        // Activo creado dentro del periodo: una sola fila con ambos motivos.
+        $this->createAssignedTicket($this->technician, ['state' => 'open', 'title' => 'Activo y creado']);
+
+        $vm = $this->buildReport();
+
+        $this->assertSame(1, $vm->appendixTickets['totalRows']);
+        $this->assertSame('Activo · Creado en periodo', $vm->appendixTickets['rows'][0]['inclusionReason']);
+    }
+
+    public function test_breakdowns_include_created_in_period_tickets(): void
+    {
+        // G=1 sin activos ni resueltos: laboratorio y categoría no quedan vacíos.
+        $ticket = $this->createAssignedTicket($this->technician, ['state' => 'resolved', 'title' => 'Solo creado']);
+        $ticket->forceFill([
+            'created_at' => Carbon::parse('2026-06-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-07-01 10:00:00'),
+        ])->save();
+
+        $vm = $this->buildReport();
+
+        $this->assertCount(1, $vm->locationBreakdown);
+        $this->assertSame('Laboratorio 1', $vm->locationBreakdown[0]->locationName);
+        $this->assertSame(1, $vm->locationBreakdown[0]->createdInPeriod);
+        $this->assertSame(0, $vm->locationBreakdown[0]->activeCount);
+        $this->assertSame(1, $vm->locationBreakdown[0]->totalRelevant);
+
+        $this->assertCount(1, $vm->categoryBreakdown);
+        $this->assertSame('Hardware', $vm->categoryBreakdown[0]->categoryName);
+        $this->assertSame(1, $vm->categoryBreakdown[0]->createdInPeriod);
+        $this->assertSame(1, $vm->categoryBreakdown[0]->totalRelevant);
+        $this->assertSame(100.0, $vm->categoryBreakdown[0]->percentage);
+    }
+
+    public function test_breakdown_total_relevant_counts_distinct_tickets(): void
+    {
+        // Activo creado en el periodo: created=1, active=1, pero total=1.
+        $this->createAssignedTicket($this->technician, ['state' => 'open']);
+
+        $vm = $this->buildReport();
+
+        $row = $vm->locationBreakdown[0];
+        $this->assertSame(1, $row->activeCount);
+        $this->assertSame(1, $row->createdInPeriod);
+        $this->assertSame(1, $row->totalRelevant);
+    }
+
+    // ── Recomendación agregada según carga real ─────────────────────────────
+
+    public function test_recommendation_without_actives_and_empty_queue_does_not_suggest_closing(): void
+    {
+        $vm = $this->buildReport();
+
+        $joined = implode(' ', $vm->recommendations);
+        $this->assertStringNotContainsString('cierre de los tickets activos', $joined);
+        $this->assertStringNotContainsString('asignaciones activas', $joined);
+        $this->assertStringContainsString('No hay carga activa asignada ni cierres en el periodo', $joined);
+        $this->assertStringContainsString('Mantener disponibilidad', $joined);
+    }
+
+    public function test_recommendation_without_actives_but_queue_suggests_global_queue(): void
+    {
+        $this->createTicket(['state' => 'open', 'title' => 'Disponible en cola']);
+
+        $vm = $this->buildReport();
+
+        $joined = implode(' ', $vm->recommendations);
+        $this->assertStringContainsString('evaluar tomar tickets disponibles de la cola global', $joined);
+        $this->assertStringNotContainsString('cierre de los tickets activos', $joined);
+    }
+
+    public function test_recommendation_with_actives_and_no_closures_prioritises_active_work(): void
+    {
+        $this->createAssignedTicket($this->technician, ['state' => 'open']);
+
+        $vm = $this->buildReport();
+
+        $joined = implode(' ', $vm->recommendations);
+        $this->assertStringContainsString('priorizar el avance y cierre de las asignaciones activas', $joined);
+    }
+
+    // ── Recurrencias más allá de las asignaciones activas ───────────────────
+
+    public function test_recurrences_consider_created_in_period_pairs_not_only_active(): void
+    {
+        $ticket = $this->createAssignedTicket($this->technician, ['state' => 'resolved', 'title' => 'Cerrado fuera']);
+        $ticket->forceFill([
+            'created_at' => Carbon::parse('2026-06-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-07-01 10:00:00'),
+        ])->save();
+
+        LocationIncidentHistory::create([
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+            'last_resolved_at' => Carbon::parse('2026-05-20 10:00:00'),
+            'recurrence_count' => 3,
+            'avg_resolution_time' => '1 día aprox.',
+        ]);
+
+        $vm = $this->buildReport();
+
+        $this->assertCount(1, $vm->recurrenceInsights);
+        $this->assertSame('Laboratorio 1', $vm->recurrenceInsights[0]->locationName);
+        // El promedio histórico string se muestra tal cual, sin recálculo.
+        $this->assertSame('1 día aprox.', $vm->recurrenceInsights[0]->avgResolutionLabel);
+    }
+
+    // ── Ruido IA y narrativa con poca data ───────────────────────────────────
+
+    public function test_kpis_contain_a_single_ai_row(): void
+    {
+        $vm = $this->buildReport();
+
+        $aiKpis = array_values(array_filter(
+            $vm->kpis,
+            static fn (KpiRow $kpi): bool => str_starts_with($kpi->key, 'ai_'),
+        ));
+
+        $this->assertCount(1, $aiKpis);
+        $this->assertSame('ai_duplicates_active', $aiKpis[0]->key);
+        $this->assertTrue($vm->aiSummary['allZero']);
+    }
+
+    public function test_low_data_narrative_explains_no_active_load_and_points_to_appendix(): void
+    {
+        $old = $this->createAssignedTicket($this->technician, ['state' => 'resolved', 'title' => 'Histórico']);
+        $old->forceFill([
+            'created_at' => Carbon::parse('2026-01-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-01-06 10:00:00'),
+        ])->save();
+
+        $vm = $this->buildReport();
+
+        $joined = implode(' ', $vm->executiveSummary['narrative']);
+        $this->assertStringContainsString('No se registra carga operativa activa al momento de generación.', $joined);
+        $this->assertStringContainsString('Existe actividad histórica o del periodo asociada al técnico, detallada en el anexo.', $joined);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

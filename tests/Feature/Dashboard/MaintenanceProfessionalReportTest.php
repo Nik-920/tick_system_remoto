@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
+use Database\Seeders\MaintenanceReportScenarioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -122,7 +123,7 @@ class MaintenanceProfessionalReportTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('El técnico no tiene asignaciones activas');
-        $response->assertSeeText('No se detectan tickets activos del técnico marcados como posibles duplicados por IA.');
+        $response->assertSeeText('No se detectan alertas IA activas para los tickets del técnico en este informe.');
         $response->assertSeeText('No se registran incidencias recurrentes relevantes');
     }
 
@@ -294,6 +295,92 @@ class MaintenanceProfessionalReportTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Retirado por reporter');
         $response->assertSeeText('no penaliza al técnico');
+    }
+
+    public function test_cover_separates_kicker_and_title_and_uses_accents(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this->actingAs($maintenance)
+            ->get(route('dashboard.maintenance.report'));
+
+        $response->assertOk();
+        $response->assertSeeText('INCIDEX · Sistema de Gestión de Incidencias');
+        $response->assertSeeText('Informe Profesional de Mantenimiento');
+        // Kicker y título son bloques separados, en ese orden.
+        $response->assertSeeInOrder(['cover-kicker', 'cover-title'], false);
+        // Etiqueta del periodo por defecto con tildes.
+        $response->assertSeeText('Últimos 30 días');
+        $response->assertSeeText('Fecha de generación');
+        $response->assertSeeText('Técnico');
+    }
+
+    public function test_report_with_no_data_avoids_contradictory_texts(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $response = $this->actingAs($maintenance)
+            ->get(route('dashboard.maintenance.report'));
+
+        $response->assertOk();
+        // Recomendación coherente: nada de "cerrar tickets activos" con 0 activos.
+        $response->assertDontSeeText('planificar el cierre de los tickets activos');
+        $response->assertSeeText('No hay carga activa asignada ni cierres en el periodo');
+        // Tasa de cierre sin denominador: "Sin datos", nunca 0 %.
+        $response->assertSeeText('Tasa de cierre operativa');
+        $response->assertSeeText('Sin datos');
+    }
+
+    public function test_appendix_shows_inclusion_reason_for_period_activity(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        // Creado en el periodo pero resuelto fuera: solo universo A/G.
+        $ticket = $this->createAssignedTicket($maintenance, ['title' => 'Actividad del periodo', 'state' => 'resolved']);
+        $ticket->forceFill([
+            'created_at' => Carbon::parse('2026-06-05 10:00:00'),
+            'resolved_at' => Carbon::parse('2026-07-01 10:00:00'),
+        ])->save();
+
+        $response = $this->actingAs($maintenance)
+            ->get(route('dashboard.maintenance.report', [
+                'preset' => 'custom',
+                'from' => '2026-06-01',
+                'to' => '2026-06-15',
+            ]));
+
+        $response->assertOk();
+        $response->assertSeeText('Motivo de inclusión');
+        $response->assertSeeText('Actividad del periodo');
+        $response->assertSeeText('Creado en periodo');
+        // El breakdown por laboratorio/categoría no queda vacío con G=1.
+        $response->assertDontSeeText('Sin tickets relevantes por laboratorio');
+        $response->assertDontSeeText('Sin categorías relevantes');
+    }
+
+    // ── Seeder de escenario ──────────────────────────────────────────────────
+
+    public function test_scenario_seeder_builds_a_full_dataset_and_the_report_renders(): void
+    {
+        $this->seed(MaintenanceReportScenarioSeeder::class);
+        // Idempotente: una segunda corrida no duplica datos.
+        $this->seed(MaintenanceReportScenarioSeeder::class);
+
+        $technician = User::query()->where('email', 'tecnico.informe@incidex.test')->firstOrFail();
+        $this->assertSame(5, Ticket::query()->where('assigned_to', $technician->id)
+            ->whereIn('state', ['open', 'in_progress'])->count());
+
+        $response = $this->actingAs($technician)
+            ->get(route('dashboard.maintenance.report'));
+
+        $response->assertOk();
+        $response->assertSeeText('Demo · Crítico activo');
+        $response->assertSeeText('Demo · Resuelto dentro del periodo');
+        $response->assertSeeText('Demo · Cola global disponible');
+        // No-leak: la carga del otro técnico jamás aparece.
+        $response->assertDontSeeText('Demo · Carga de otro técnico');
+        // El ticket con assignment_locked no entra a la cola global.
+        $response->assertDontSeeText('Demo · Bloqueado fuera de cola');
     }
 
     // ── PDF ──────────────────────────────────────────────────────────────────

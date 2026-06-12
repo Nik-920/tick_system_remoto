@@ -13,7 +13,7 @@
 
     {{-- ===== 1. PORTADA ===== --}}
     <div class="cover">
-        <p class="cover-kicker">INCIDEX · Sistema de gestión de incidencias</p>
+        <div class="cover-kicker">INCIDEX · Sistema de Gestión de Incidencias</div>
         <h1 class="cover-title">Informe Profesional de Mantenimiento</h1>
         <p class="cover-subtitle">Reporte operativo del técnico para entrega a su superior</p>
 
@@ -230,19 +230,21 @@
     {{-- ===== 7. TICKETS POR LABORATORIO ===== --}}
     <div class="r-section">
         <h2 class="r-h2">Tickets por laboratorio</h2>
-        <p class="r-note">Columnas de carga activa: snapshot. Columna "Resueltos": periodo seleccionado.</p>
+        <p class="r-note">Columnas de carga activa: snapshot. Columnas "Creados", "Resueltos", "Rechazados" y "Cancelados": periodo seleccionado. "Total" cuenta tickets distintos del informe.</p>
         @if (count($vm->locationBreakdown) > 0)
             <table class="dt">
                 <thead>
                     <tr>
                         <th>Laboratorio</th>
-                        <th style="width:46px">Activos</th>
-                        <th style="width:50px">Abiertos</th>
-                        <th style="width:54px">En curso</th>
-                        <th style="width:54px">Crít./alta</th>
-                        <th style="width:50px">Dup. IA</th>
-                        <th style="width:54px">Recurr. IA</th>
-                        <th style="width:56px">Resueltos</th>
+                        <th style="width:42px">Activos</th>
+                        <th style="width:46px">Abiertos</th>
+                        <th style="width:48px">En curso</th>
+                        <th style="width:48px">Crít./alta</th>
+                        <th style="width:46px">Creados</th>
+                        <th style="width:52px">Resueltos</th>
+                        <th style="width:54px">Rechazados</th>
+                        <th style="width:56px">Cancelados</th>
+                        <th style="width:40px">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -258,9 +260,11 @@
                             <td class="num">{{ $row->openCount }}</td>
                             <td class="num">{{ $row->inProgressCount }}</td>
                             <td class="num">{{ $row->highCriticalActive }}</td>
-                            <td class="num">{{ $row->possibleDuplicateActive }}</td>
-                            <td class="num">{{ $row->possibleRecurrenceActive }}</td>
+                            <td class="num">{{ $row->createdInPeriod }}</td>
                             <td class="num">{{ $row->resolvedInPeriod }}</td>
+                            <td class="num">{{ $row->rejectedInPeriod }}</td>
+                            <td class="num">{{ $row->cancelledInPeriod }}</td>
+                            <td class="num">{{ $row->totalRelevant }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -273,18 +277,19 @@
     {{-- ===== 8. TICKETS POR CATEGORÍA ===== --}}
     <div class="r-section">
         <h2 class="r-h2">Tickets por categoría</h2>
-        <p class="r-note">Total relevante = activos (snapshot) + resueltos del periodo. El porcentaje es sobre ese total.</p>
+        <p class="r-note">Activos: snapshot. Creados/Resueltos/Rechazados/Cancelados: periodo. "Total relevante" cuenta tickets distintos y el porcentaje es sobre ese total.</p>
         @if (count($vm->categoryBreakdown) > 0)
             <table class="dt">
                 <thead>
                     <tr>
                         <th>Categoría</th>
-                        <th style="width:46px">Activos</th>
-                        <th style="width:56px">Resueltos</th>
-                        <th style="width:46px">Total</th>
-                        <th style="width:46px">%</th>
-                        <th style="width:50px">Dup. IA</th>
-                        <th style="width:54px">Recurr. IA</th>
+                        <th style="width:42px">Activos</th>
+                        <th style="width:46px">Creados</th>
+                        <th style="width:52px">Resueltos</th>
+                        <th style="width:56px">Rechazados</th>
+                        <th style="width:56px">Cancelados</th>
+                        <th style="width:40px">Total</th>
+                        <th style="width:40px">%</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -292,11 +297,12 @@
                         <tr>
                             <td><strong>{{ $row->categoryName }}</strong></td>
                             <td class="num">{{ $row->activeCount }}</td>
+                            <td class="num">{{ $row->createdInPeriod }}</td>
                             <td class="num">{{ $row->resolvedInPeriod }}</td>
+                            <td class="num">{{ $row->rejectedInPeriod }}</td>
+                            <td class="num">{{ $row->cancelledInPeriod }}</td>
                             <td class="num">{{ $row->totalRelevant }}</td>
                             <td class="num">{{ $row->percentage }} %</td>
-                            <td class="num">{{ $row->possibleDuplicateActive }}</td>
-                            <td class="num">{{ $row->possibleRecurrenceActive }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -441,7 +447,7 @@
     {{-- ===== 12. INCIDENCIAS RECURRENTES POR LABORATORIO ===== --}}
     <div class="r-section">
         <h2 class="r-h2">Incidencias recurrentes por laboratorio</h2>
-        <p class="r-note">Fuente: historial de incidencias (location_incident_history) para los laboratorios y categorías de las asignaciones activas. El promedio histórico es texto de referencia.</p>
+        <p class="r-note">Fuente: historial de incidencias (location_incident_history) para los laboratorios y categorías de todos los tickets relevantes del informe (activos, creados, resueltos y cierres del periodo). El promedio histórico es texto de referencia.</p>
         @if (count($vm->recurrenceInsights) > 0)
             <table class="dt">
                 <thead><tr><th>Laboratorio</th><th>Categoría</th><th style="width:60px">Recurr.</th><th style="width:70px">Última resol.</th><th style="width:90px">Promedio hist.</th><th>Recomendación</th></tr></thead>
@@ -503,6 +509,28 @@
             Señal operativa de calidad de atención: no mide productividad, no penaliza al técnico y no afecta la tasa de cierre.
             Las explicaciones provienen de la metadata Strategy persistida; no se recalcula ningún motor al generar este informe.
         </p>
+        @if ($vm->aiSummary['allZero'])
+            <p class="empty">No se detectan alertas IA activas para los tickets del técnico en este informe.</p>
+        @else
+            <table class="dt" style="margin-bottom:7px">
+                <thead>
+                    <tr>
+                        <th style="width:25%">Posibles duplicados IA activos</th>
+                        <th style="width:25%">Pendientes de revisión</th>
+                        <th style="width:25%">Posibles recurrencias (Strategy)</th>
+                        <th style="width:25%">Sin desglose Strategy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="num">{{ $vm->aiSummary['active'] }}</td>
+                        <td class="num">{{ $vm->aiSummary['pendingReview'] }}</td>
+                        <td class="num">{{ $vm->aiSummary['suggestsRecurrence'] }}</td>
+                        <td class="num">{{ $vm->aiSummary['legacyWithoutStrategy'] }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        @endif
         @if (count($vm->duplicateAlerts) > 0)
             @foreach ($vm->duplicateAlerts as $alert)
                 <div class="dup-block">
@@ -527,7 +555,7 @@
                     <p class="dup-action">Acción recomendada: {{ $alert->recommendedAction }}</p>
                 </div>
             @endforeach
-        @else
+        @elseif (! $vm->aiSummary['allZero'])
             <p class="empty">No se detectan tickets activos del técnico marcados como posibles duplicados por IA.</p>
         @endif
     </div>
@@ -584,7 +612,7 @@
     {{-- ===== 18. ANEXO: DETALLE COMPLETO ===== --}}
     <div class="r-section page-break">
         <h2 class="r-h2">Anexo — Detalle completo de tickets</h2>
-        <p class="r-note">Asignaciones activas (orden operativo), resueltos del periodo y cierres administrativos.</p>
+        <p class="r-note">Todos los tickets relevantes del informe, sin duplicados: asignaciones activas (orden operativo), creados en el periodo, resueltos, cierres administrativos y asignados históricos.</p>
         @if (count($appendix['rows']) > 0)
             <table class="dt">
                 <thead>
@@ -601,6 +629,7 @@
                         <th style="width:64px">Última transición</th>
                         <th style="width:40px">Evid.</th>
                         <th style="width:52px">Dup. IA</th>
+                        <th style="width:78px">Motivo de inclusión</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -621,6 +650,7 @@
                                 {{ $row['duplicate'] }}
                                 @if ($row['duplicateReasons'] !== '')<br>{{ $row['duplicateReasons'] }}@endif
                             </td>
+                            <td class="muted">{{ $row['inclusionReason'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>

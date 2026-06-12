@@ -53,7 +53,8 @@ final class MaintenanceReportViewModel
      * @param  list<RiskRow>  $risks
      * @param  list<string>  $recommendations
      * @param  array{count: int, preview: list<array{idShort: string, title: string, locationName: string, priority: string, ageDays: int}>}  $globalQueueContext
-     * @param  array{rows: list<array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string}>, truncated: bool, totalRows: int}  $appendixTickets
+     * @param  array{active: int, pendingReview: int, suggestsRecurrence: int, legacyWithoutStrategy: int, allZero: bool}  $aiSummary
+     * @param  array{rows: list<array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}>, truncated: bool, totalRows: int}  $appendixTickets
      * @param  list<array{term: string, definition: string}>  $definitions
      * @param  list<array{check: string, detail: string, count: int}>  $dataQuality
      */
@@ -78,6 +79,7 @@ final class MaintenanceReportViewModel
         public readonly array $risks,
         public readonly array $recommendations,
         public readonly array $globalQueueContext,
+        public readonly array $aiSummary,
         public readonly array $appendixTickets,
         public readonly array $definitions,
         public readonly array $dataQuality,

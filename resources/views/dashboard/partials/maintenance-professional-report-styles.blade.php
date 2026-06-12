@@ -13,15 +13,19 @@
 
     /* ── Cover ─────────────────────────────────────────────── */
     .cover { padding: 90px 10px 0; page-break-after: always; }
+    /* Kicker and title are separate block boxes with explicit spacing so
+       DomPDF never renders them glued together on the cover. */
     .cover-kicker {
-        font-size: 10px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
+        display: block;
+        font-size: 11px;
+        letter-spacing: 1.5px;
         color: #b45309;
         font-weight: bold;
-        margin: 0 0 6px;
+        margin: 0 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #fed7aa;
     }
-    .cover-title { font-size: 26px; font-weight: bold; color: #0f172a; margin: 0 0 4px; }
+    .cover-title { display: block; font-size: 26px; font-weight: bold; color: #0f172a; margin: 0 0 4px; }
     .cover-subtitle { font-size: 12px; color: #475569; margin: 0 0 28px; }
     .cover-meta { width: 100%; border-collapse: collapse; margin-top: 18px; }
     .cover-meta td {

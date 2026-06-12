@@ -6,8 +6,9 @@ namespace App\ViewModels\Dashboard\MaintenanceReport;
 
 /**
  * Workload of one laboratory/location for the technician. Snapshot columns
- * (active/open/in progress/critical/duplicates) and the period column
- * (resolvedInPeriod) are kept apart and labelled in the PDF.
+ * (active/open/in progress/critical/duplicates) and period columns
+ * (created/resolved/rejected/cancelled) are kept apart and labelled in the
+ * PDF. `totalRelevant` counts distinct tickets across both clocks.
  */
 final class LocationBreakdownRow
 {
@@ -19,7 +20,11 @@ final class LocationBreakdownRow
         public readonly int $activeCount,
         public readonly int $openCount,
         public readonly int $inProgressCount,
+        public readonly int $createdInPeriod,
         public readonly int $resolvedInPeriod,
+        public readonly int $rejectedInPeriod,
+        public readonly int $cancelledInPeriod,
+        public readonly int $totalRelevant,
         public readonly int $highCriticalActive,
         public readonly int $possibleDuplicateActive,
         public readonly int $possibleRecurrenceActive,
