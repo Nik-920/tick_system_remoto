@@ -65,7 +65,20 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Timezone used ONLY to render dates to end users (via App\Support\LocalTime).
+    | Storage keeps using 'timezone' above (UTC by default), so changing this
+    | value never alters what is persisted in the database.
+    |
+    */
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Lima'),
 
     /*
     |--------------------------------------------------------------------------

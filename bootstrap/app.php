@@ -16,9 +16,9 @@ use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 $builder = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        api: __DIR__ . '/../routes/api.php',
-        web: __DIR__ . '/../routes/web.php',
-        commands: __DIR__ . '/../routes/console.php',
+        api: __DIR__.'/../routes/api.php',
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
@@ -68,10 +68,10 @@ $builder = Application::configure(basePath: dirname(__DIR__))
                 $route = $request->route();
                 $scope->setContext('http_request', array_filter([
                     'method' => $request->method(),
-                    'path' => '/' . ltrim($request->path(), '/'),
+                    'path' => '/'.ltrim($request->path(), '/'),
                     'route_name' => is_object($route) ? $route->getName() : null,
                     'request_id' => trim((string) $request->headers->get('X-Request-Id', '')),
-                ], static fn(mixed $value): bool => $value !== null && $value !== ''));
+                ], static fn (mixed $value): bool => $value !== null && $value !== ''));
 
                 $user = $request->user();
                 if ($user !== null) {
@@ -87,7 +87,7 @@ $app = $builder->create();
 $fallbackEnvFiles = ['.env.production', '.env.sentry.production'];
 if (! is_file($app->environmentFilePath())) {
     foreach ($fallbackEnvFiles as $fallbackEnvFile) {
-        $candidate = $app->environmentPath() . DIRECTORY_SEPARATOR . $fallbackEnvFile;
+        $candidate = $app->environmentPath().DIRECTORY_SEPARATOR.$fallbackEnvFile;
         if (is_file($candidate)) {
             $app->loadEnvironmentFrom($fallbackEnvFile);
             break;
