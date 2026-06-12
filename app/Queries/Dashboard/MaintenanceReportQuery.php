@@ -103,6 +103,10 @@ final class MaintenanceReportQuery
 
     private const LABEL_UNCATEGORIZED = 'Sin categoría';
 
+    private const LABEL_NO_LOCATION = 'Sin ubicación';
+
+    private const TICKET_REFERENCE_PREFIX = '#TIC-';
+
     private const LABEL_ACTIVE_ASSIGNED = 'Asignados activos';
 
     private const LABEL_IN_PROGRESS = 'En progreso';
@@ -475,55 +479,10 @@ final class MaintenanceReportQuery
         $rows = [];
 
         foreach ($activeTickets as $ticket) {
-            $ticketId = (string) $ticket->id;
-            $createdAt = $ticket->created_at !== null ? CarbonImmutable::parse($ticket->created_at) : null;
-            $ageDays = $createdAt !== null ? (int) floor($createdAt->diffInDays($this->now)) : 0;
-            $lastTransition = $this->lastTransitionFor($ticketId, $history);
-            $firstResponseAt = $this->firstResponseFor($ticketId, $history);
-            $evidenceCount = (int) $ticket->getAttribute('media_count');
-            $duplicate = $duplicateInfoByTicket[$ticketId] ?? null;
+            $duplicate = $duplicateInfoByTicket[(string) $ticket->id] ?? null;
             $isRecurrentPair = isset($recurrenceHistories[$ticket->location_id.'|'.$ticket->category_id]);
 
-            $rows[] = new AssignmentRow(
-                id: $ticketId,
-                idShort: $this->idShort($ticketId),
-                title: (string) $ticket->title,
-                locationName: (string) ($ticket->location->name ?? 'Sin ubicación'),
-                building: (string) ($ticket->location->building ?? ''),
-                floor: (string) ($ticket->location->floor ?? ''),
-                roomCode: (string) ($ticket->location->room_code ?? ''),
-                categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
-                priority: (string) $ticket->priority,
-                state: (string) $ticket->state,
-                createdAt: $createdAt,
-                ageDays: $ageDays,
-                assignedAt: $ticket->assigned_at !== null ? CarbonImmutable::parse($ticket->assigned_at) : null,
-                lastTransition: $lastTransition,
-                firstResponseAt: $firstResponseAt,
-                hasFirstResponse: $firstResponseAt !== null,
-                evidenceCount: $evidenceCount,
-                hasEvidence: $evidenceCount > 0,
-                recommendedAction: $this->recommendedActionFor(
-                    (string) $ticket->state,
-                    (string) $ticket->priority,
-                    $ageDays,
-                    $firstResponseAt !== null,
-                    $lastTransition['at'] ?? $createdAt,
-                    $evidenceCount,
-                    $duplicate,
-                    $isRecurrentPair,
-                ),
-                sortRank: $this->sortRankFor((string) $ticket->priority, (string) $ticket->state, $firstResponseAt !== null),
-                hasDuplicateWarning: $duplicate !== null,
-                duplicateSimilarity: $duplicate !== null ? $this->floatOrNull($duplicate['similarity']) : null,
-                duplicateStrategyScore: $duplicate !== null ? $this->intOrNull($duplicate['strategyScore']) : null,
-                duplicateMatchedTicketId: $duplicate !== null ? $this->stringOrNull($duplicate['matchedTicketId']) : null,
-                duplicateMatchedTicketTitle: $duplicate !== null ? $this->stringOrNull($duplicate['matchedTicketTitle']) : null,
-                duplicateReviewStatus: $duplicate !== null ? $this->stringOrNull($duplicate['reviewStatus']) : null,
-                duplicateSuggestsRecurrence: $duplicate !== null && (bool) $duplicate['suggestsRecurrence'],
-                duplicateTopReasons: $duplicate !== null ? $this->reasonsList($duplicate) : [],
-                duplicateExplanationSummary: $duplicate !== null ? $this->stringOrNull($duplicate['summary']) : null,
-            );
+            $rows[] = $this->assignmentRowFor($ticket, $history, $duplicate, $isRecurrentPair);
         }
 
         // Deterministic operational order: critical > high > (open, oldest,
@@ -545,6 +504,65 @@ final class MaintenanceReportQuery
         });
 
         return array_values($rows);
+    }
+
+    /**
+     * @param  array<string, list<array{toState: string, at: CarbonImmutable, comment: string}>>  $history
+     * @param  array<string, mixed>|null  $duplicate
+     */
+    private function assignmentRowFor(
+        Ticket $ticket,
+        array $history,
+        ?array $duplicate,
+        bool $isRecurrentPair,
+    ): AssignmentRow {
+        $ticketId = (string) $ticket->id;
+        $createdAt = $ticket->created_at !== null ? CarbonImmutable::parse($ticket->created_at) : null;
+        $ageDays = $createdAt !== null ? (int) floor($createdAt->diffInDays($this->now)) : 0;
+        $lastTransition = $this->lastTransitionFor($ticketId, $history);
+        $firstResponseAt = $this->firstResponseFor($ticketId, $history);
+        $evidenceCount = (int) $ticket->getAttribute('media_count');
+
+        return new AssignmentRow(
+            id: $ticketId,
+            idShort: $this->idShort($ticketId),
+            title: (string) $ticket->title,
+            locationName: (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
+            building: (string) ($ticket->location->building ?? ''),
+            floor: (string) ($ticket->location->floor ?? ''),
+            roomCode: (string) ($ticket->location->room_code ?? ''),
+            categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
+            priority: (string) $ticket->priority,
+            state: (string) $ticket->state,
+            createdAt: $createdAt,
+            ageDays: $ageDays,
+            assignedAt: $ticket->assigned_at !== null ? CarbonImmutable::parse($ticket->assigned_at) : null,
+            lastTransition: $lastTransition,
+            firstResponseAt: $firstResponseAt,
+            hasFirstResponse: $firstResponseAt !== null,
+            evidenceCount: $evidenceCount,
+            hasEvidence: $evidenceCount > 0,
+            recommendedAction: $this->recommendedActionFor(
+                (string) $ticket->state,
+                (string) $ticket->priority,
+                $ageDays,
+                $firstResponseAt !== null,
+                $lastTransition['at'] ?? $createdAt,
+                $evidenceCount,
+                $duplicate,
+                $isRecurrentPair,
+            ),
+            sortRank: $this->sortRankFor((string) $ticket->priority, (string) $ticket->state, $firstResponseAt !== null),
+            hasDuplicateWarning: $duplicate !== null,
+            duplicateSimilarity: $duplicate !== null ? $this->floatOrNull($duplicate['similarity']) : null,
+            duplicateStrategyScore: $duplicate !== null ? $this->intOrNull($duplicate['strategyScore']) : null,
+            duplicateMatchedTicketId: $duplicate !== null ? $this->stringOrNull($duplicate['matchedTicketId']) : null,
+            duplicateMatchedTicketTitle: $duplicate !== null ? $this->stringOrNull($duplicate['matchedTicketTitle']) : null,
+            duplicateReviewStatus: $duplicate !== null ? $this->stringOrNull($duplicate['reviewStatus']) : null,
+            duplicateSuggestsRecurrence: $duplicate !== null && (bool) $duplicate['suggestsRecurrence'],
+            duplicateTopReasons: $duplicate !== null ? $this->reasonsList($duplicate) : [],
+            duplicateExplanationSummary: $duplicate !== null ? $this->stringOrNull($duplicate['summary']) : null,
+        );
     }
 
     /**
@@ -583,6 +601,17 @@ final class MaintenanceReportQuery
         bool $isRecurrentPair,
     ): string {
         // Ordered rule list (Fase 13): the FIRST matching rule wins.
+        return $this->urgentOrDuplicateAction($state, $priority, $duplicate)
+            ?? $this->followUpAction($state, $ageDays, $hasFirstResponse, $lastActivityAt, $evidenceCount, $duplicate, $isRecurrentPair);
+    }
+
+    /**
+     * Highest-priority rules: urgency and AI-duplicate review (Fase 13 order).
+     *
+     * @param  array<string, mixed>|null  $duplicate
+     */
+    private function urgentOrDuplicateAction(string $state, string $priority, ?array $duplicate): ?string
+    {
         if ($priority === 'critical') {
             $action = 'Atención inmediata';
         } elseif ($priority === 'high' && $state === Ticket::STATE_OPEN) {
@@ -591,7 +620,28 @@ final class MaintenanceReportQuery
             $action = 'Revisar posible duplicado antes de continuar';
         } elseif ($duplicate !== null && (bool) $duplicate['suggestsRecurrence']) {
             $action = 'Evaluar recurrencia y revisión preventiva del laboratorio';
-        } elseif ($state === Ticket::STATE_OPEN && $ageDays > self::STALE_OPEN_DAYS) {
+        } else {
+            $action = null;
+        }
+
+        return $action;
+    }
+
+    /**
+     * Remaining ordered rules when no urgent/duplicate rule matched.
+     *
+     * @param  array<string, mixed>|null  $duplicate
+     */
+    private function followUpAction(
+        string $state,
+        int $ageDays,
+        bool $hasFirstResponse,
+        ?CarbonImmutable $lastActivityAt,
+        int $evidenceCount,
+        ?array $duplicate,
+        bool $isRecurrentPair,
+    ): string {
+        if ($state === Ticket::STATE_OPEN && $ageDays > self::STALE_OPEN_DAYS) {
             $action = 'Iniciar atención atrasada';
         } elseif ($state === Ticket::STATE_IN_PROGRESS
             && $lastActivityAt !== null
@@ -820,7 +870,7 @@ final class MaintenanceReportQuery
                 id: (string) $ticket->id,
                 idShort: $this->idShort((string) $ticket->id),
                 title: (string) $ticket->title,
-                locationName: (string) ($ticket->location->name ?? 'Sin ubicación'),
+                locationName: (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
                 categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
                 priority: (string) $ticket->priority,
                 createdAt: $createdAt,
@@ -886,7 +936,7 @@ final class MaintenanceReportQuery
                 id: $ticketId,
                 idShort: $this->idShort($ticketId),
                 title: (string) $ticket->title,
-                locationName: (string) ($ticket->location->name ?? 'Sin ubicación'),
+                locationName: (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
                 categoryName: (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
                 priority: (string) $ticket->priority,
                 kind: $toState === Ticket::STATE_REJECTED ? ClosedTicketRow::KIND_REJECTED : ClosedTicketRow::KIND_CANCELLED,
@@ -1138,7 +1188,7 @@ final class MaintenanceReportQuery
     private function emptyLocationBucket(Ticket $ticket): array
     {
         return [
-            'name' => (string) ($ticket->location->name ?? 'Sin ubicación'),
+            'name' => (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
             'building' => (string) ($ticket->location->building ?? ''),
             'floor' => (string) ($ticket->location->floor ?? ''),
             'roomCode' => (string) ($ticket->location->room_code ?? ''),
@@ -1314,7 +1364,7 @@ final class MaintenanceReportQuery
 
         foreach ($recurrenceHistories as $history) {
             $rows[] = new RecurrenceInsightRow(
-                locationName: (string) ($history->location->name ?? 'Sin ubicación'),
+                locationName: (string) ($history->location->name ?? self::LABEL_NO_LOCATION),
                 categoryName: (string) ($history->category->name ?? self::LABEL_UNCATEGORIZED),
                 recurrenceCount: (int) $history->recurrence_count,
                 lastResolvedAt: $history->last_resolved_at !== null
@@ -1356,7 +1406,7 @@ final class MaintenanceReportQuery
             ->map(fn (Ticket $ticket): array => [
                 'idShort' => $this->idShort((string) $ticket->id),
                 'title' => (string) $ticket->title,
-                'locationName' => (string) ($ticket->location->name ?? 'Sin ubicación'),
+                'locationName' => (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
                 'priority' => (string) $ticket->priority,
                 'ageDays' => $ticket->created_at !== null
                     ? (int) floor(CarbonImmutable::parse($ticket->created_at)->diffInDays($this->now))
@@ -1505,6 +1555,33 @@ final class MaintenanceReportQuery
         array $duplicateInfoByTicket,
         array $dataQuality,
     ): array {
+        $risks = [
+            ...$this->assignmentRisks($assignments, $staleOpen, $staleInProgress),
+            ...$this->duplicateWarningRisks($duplicateInfoByTicket),
+            ...$this->operationalRisks($evidence, $closeRate, $active, $dataQuality),
+            ...$this->informativeRisks($time, $duplicateInfoByTicket, $recurrenceInsights, $globalQueue),
+        ];
+
+        // Stable order: critical, then warning, then info (rule order preserved).
+        usort($risks, static function (RiskRow $a, RiskRow $b): int {
+            $order = [RiskRow::SEVERITY_CRITICAL => 0, RiskRow::SEVERITY_WARNING => 1, RiskRow::SEVERITY_INFO => 2];
+
+            return ($order[$a->severity] ?? 3) <=> ($order[$b->severity] ?? 3);
+        });
+
+        return array_values($risks);
+    }
+
+    /**
+     * Priority and staleness risks over the active assignments.
+     *
+     * @param  list<AssignmentRow>  $assignments
+     * @param  list<AssignmentRow>  $staleOpen
+     * @param  list<AssignmentRow>  $staleInProgress
+     * @return list<RiskRow>
+     */
+    private function assignmentRisks(array $assignments, array $staleOpen, array $staleInProgress): array
+    {
         $risks = [];
 
         $criticalActive = $this->filterByPriority($assignments, 'critical');
@@ -1533,6 +1610,19 @@ final class MaintenanceReportQuery
                 $this->displayIds($staleInProgress));
         }
 
+        return $risks;
+    }
+
+    /**
+     * Warning-level risks derived from the AI-duplicate snapshot.
+     *
+     * @param  array<string, array<string, mixed>>  $duplicateInfoByTicket
+     * @return list<RiskRow>
+     */
+    private function duplicateWarningRisks(array $duplicateInfoByTicket): array
+    {
+        $risks = [];
+
         $pendingDuplicates = $this->duplicateDisplayIds($duplicateInfoByTicket, 'pendingReview');
         if ($pendingDuplicates !== []) {
             $risks[] = new RiskRow('possible_duplicate_pending_review', RiskRow::SEVERITY_WARNING, count($pendingDuplicates),
@@ -1544,7 +1634,7 @@ final class MaintenanceReportQuery
         foreach ($duplicateInfoByTicket as $ticketId => $info) {
             $similarity = $this->floatOrNull($info['similarity']);
             if ($similarity !== null && $similarity >= self::HIGH_SIMILARITY_THRESHOLD) {
-                $highSimilarity[] = '#TIC-'.$this->idShort($ticketId);
+                $highSimilarity[] = self::TICKET_REFERENCE_PREFIX.$this->idShort($ticketId);
             }
         }
         if ($highSimilarity !== []) {
@@ -1559,7 +1649,7 @@ final class MaintenanceReportQuery
             if ((bool) $info['pendingReview']
                 && $flaggedAt instanceof CarbonImmutable
                 && $flaggedAt->lessThan($this->now->subDays(self::DUPLICATE_REVIEW_OVERDUE_DAYS))) {
-                $overdue[] = '#TIC-'.$this->idShort($ticketId);
+                $overdue[] = self::TICKET_REFERENCE_PREFIX.$this->idShort($ticketId);
             }
         }
         if ($overdue !== []) {
@@ -1568,10 +1658,24 @@ final class MaintenanceReportQuery
                 $overdue);
         }
 
+        return $risks;
+    }
+
+    /**
+     * Evidence, closure-rate and data-quality risks.
+     *
+     * @param  array{withEvidence: int, withoutEvidence: int, coveragePct: float|null, missing: list<array{idShort: string, title: string}>}  $evidence
+     * @param  list<array{check: string, detail: string, count: int}>  $dataQuality
+     * @return list<RiskRow>
+     */
+    private function operationalRisks(array $evidence, ?float $closeRate, int $active, array $dataQuality): array
+    {
+        $risks = [];
+
         if ($evidence['withoutEvidence'] > 0) {
             $risks[] = new RiskRow('missing_evidence', RiskRow::SEVERITY_WARNING, $evidence['withoutEvidence'],
                 'Asignaciones activas sin evidencia adjunta.',
-                array_map(static fn (array $row): string => '#TIC-'.$row['idShort'], $evidence['missing']));
+                array_map(static fn (array $row): string => self::TICKET_REFERENCE_PREFIX.$row['idShort'], $evidence['missing']));
         }
 
         if ($active > 0 && $closeRate !== null && $closeRate < self::LOW_CLOSURE_RATE_PCT) {
@@ -1588,6 +1692,25 @@ final class MaintenanceReportQuery
                 'Inconsistencias de datos detectadas; ver sección de calidad de datos.');
         }
 
+        return $risks;
+    }
+
+    /**
+     * Info-level risks: context signals that do not require immediate action.
+     *
+     * @param  array{avgResolutionHours: float|null, medianResolutionHours: float|null, resolutionSample: int, resolutionLowSample: bool, avgFirstResponseHours: float|null, firstResponseSample: int, firstResponseLowSample: bool}  $time
+     * @param  array<string, array<string, mixed>>  $duplicateInfoByTicket
+     * @param  list<RecurrenceInsightRow>  $recurrenceInsights
+     * @return list<RiskRow>
+     */
+    private function informativeRisks(
+        array $time,
+        array $duplicateInfoByTicket,
+        array $recurrenceInsights,
+        int $globalQueue,
+    ): array {
+        $risks = [];
+
         if ($time['avgFirstResponseHours'] !== null && $time['avgFirstResponseHours'] > self::HIGH_FIRST_RESPONSE_HOURS) {
             $risks[] = new RiskRow('high_first_response', RiskRow::SEVERITY_INFO, $time['firstResponseSample'],
                 'Primera respuesta promedio elevada ('.$this->formatHours($time['avgFirstResponseHours']).').');
@@ -1603,7 +1726,7 @@ final class MaintenanceReportQuery
         $legacyIds = [];
         foreach ($duplicateInfoByTicket as $ticketId => $info) {
             if (! (bool) $info['hasStrategyMetadata']) {
-                $legacyIds[] = '#TIC-'.$this->idShort($ticketId);
+                $legacyIds[] = self::TICKET_REFERENCE_PREFIX.$this->idShort($ticketId);
             }
         }
         if ($legacyIds !== []) {
@@ -1628,14 +1751,7 @@ final class MaintenanceReportQuery
                 'Métricas de tiempo calculadas con muestra baja (n < '.self::LOW_SAMPLE_THRESHOLD.'); interpretar con cautela.');
         }
 
-        // Stable order: critical, then warning, then info (rule order preserved).
-        usort($risks, static function (RiskRow $a, RiskRow $b): int {
-            $order = [RiskRow::SEVERITY_CRITICAL => 0, RiskRow::SEVERITY_WARNING => 1, RiskRow::SEVERITY_INFO => 2];
-
-            return ($order[$a->severity] ?? 3) <=> ($order[$b->severity] ?? 3);
-        });
-
-        return array_values($risks);
+        return $risks;
     }
 
     /**
@@ -1668,7 +1784,7 @@ final class MaintenanceReportQuery
         $ids = [];
         foreach ($duplicateInfoByTicket as $ticketId => $info) {
             if ((bool) $info[$flag]) {
-                $ids[] = '#TIC-'.$this->idShort($ticketId);
+                $ids[] = self::TICKET_REFERENCE_PREFIX.$this->idShort($ticketId);
             }
         }
 
@@ -1700,6 +1816,34 @@ final class MaintenanceReportQuery
         int $globalQueue,
         int $active,
     ): array {
+        $items = [
+            ...$this->actionRecommendations($criticalHigh, $staleOpen, $duplicatesPending, $recurrenceSuggested, $duplicatesLegacy, $evidence, $time),
+            ...$this->contextRecommendations($resolved, $active, $globalQueue, $locationBreakdown, $categoryBreakdown, $recurrenceInsights),
+        ];
+
+        if ($items === []) {
+            $items[] = 'Carga bajo control. Mantener el ritmo de cierres y la documentación de evidencias.';
+        }
+
+        return array_slice($items, 0, self::RECOMMENDATIONS_LIMIT);
+    }
+
+    /**
+     * Direct operational actions over the technician's own load.
+     *
+     * @param  array{withEvidence: int, withoutEvidence: int, coveragePct: float|null, missing: list<array{idShort: string, title: string}>}  $evidence
+     * @param  array{avgResolutionHours: float|null, medianResolutionHours: float|null, resolutionSample: int, resolutionLowSample: bool, avgFirstResponseHours: float|null, firstResponseSample: int, firstResponseLowSample: bool}  $time
+     * @return list<string>
+     */
+    private function actionRecommendations(
+        int $criticalHigh,
+        int $staleOpen,
+        int $duplicatesPending,
+        int $recurrenceSuggested,
+        int $duplicatesLegacy,
+        array $evidence,
+        array $time,
+    ): array {
         $items = [];
 
         if ($criticalHigh > 0) {
@@ -1729,6 +1873,27 @@ final class MaintenanceReportQuery
         if ($time['avgFirstResponseHours'] !== null && $time['avgFirstResponseHours'] > self::HIGH_FIRST_RESPONSE_HOURS) {
             $items[] = 'Reducir el tiempo de primera respuesta (promedio actual '.$this->formatHours($time['avgFirstResponseHours']).').';
         }
+
+        return $items;
+    }
+
+    /**
+     * Context recommendations: period closures, breakdown leaders and area queue.
+     *
+     * @param  list<LocationBreakdownRow>  $locationBreakdown
+     * @param  list<CategoryBreakdownRow>  $categoryBreakdown
+     * @param  list<RecurrenceInsightRow>  $recurrenceInsights
+     * @return list<string>
+     */
+    private function contextRecommendations(
+        int $resolved,
+        int $active,
+        int $globalQueue,
+        array $locationBreakdown,
+        array $categoryBreakdown,
+        array $recurrenceInsights,
+    ): array {
+        $items = [];
 
         // Without closures in the period, the advice depends on the real load:
         // never suggest closing active tickets when there are none.
@@ -1760,11 +1925,7 @@ final class MaintenanceReportQuery
             $items[] = "La cola global del área tiene {$globalQueue} ticket(s) disponibles (solo contexto, no responsabilidad personal).";
         }
 
-        if ($items === []) {
-            $items[] = 'Carga bajo control. Mantener el ritmo de cierres y la documentación de evidencias.';
-        }
-
-        return array_slice($items, 0, self::RECOMMENDATIONS_LIMIT);
+        return $items;
     }
 
     // ── Executive summary ────────────────────────────────────────────────────
@@ -1798,6 +1959,41 @@ final class MaintenanceReportQuery
             ['label' => 'Cola global (contexto)', 'value' => (string) $globalQueue],
         ];
 
+        $narrative = $this->summaryNarrative(
+            $active, $open, $inProgress, $criticalHigh, $staleOpen,
+            $resolved, $rejected, $cancelled, $evidence,
+            $duplicatesActive, $duplicatesPending, $globalQueue,
+            $assignedAllTime, $createdInPeriod,
+        );
+
+        return [
+            'headlines' => $headlines,
+            'narrative' => array_slice($narrative, 0, 6),
+        ];
+    }
+
+    /**
+     * Narrative sentences for the executive summary, in fixed rule order.
+     *
+     * @param  array{withEvidence: int, withoutEvidence: int, coveragePct: float|null, missing: list<array{idShort: string, title: string}>}  $evidence
+     * @return list<string>
+     */
+    private function summaryNarrative(
+        int $active,
+        int $open,
+        int $inProgress,
+        int $criticalHigh,
+        int $staleOpen,
+        int $resolved,
+        int $rejected,
+        int $cancelled,
+        array $evidence,
+        int $duplicatesActive,
+        int $duplicatesPending,
+        int $globalQueue,
+        int $assignedAllTime,
+        int $createdInPeriod,
+    ): array {
         $narrative = [];
 
         $narrative[] = $active > 0
@@ -1842,10 +2038,7 @@ final class MaintenanceReportQuery
             $narrative[] = "La cola global disponible contiene {$globalQueue} ticket(s) sin asignar, mostrada solo como contexto del área.";
         }
 
-        return [
-            'headlines' => $headlines,
-            'narrative' => array_slice($narrative, 0, 6),
-        ];
+        return $narrative;
     }
 
     // ── Appendix ─────────────────────────────────────────────────────────────
@@ -1883,31 +2076,7 @@ final class MaintenanceReportQuery
         array $cancelled,
         EloquentCollection $createdModels,
     ): array {
-        // Reasons per ticket, in presentation order.
-        $reasons = [];
-        $push = static function (string $ticketId, string $reason) use (&$reasons): void {
-            $reasons[$ticketId] ??= [];
-            if (! in_array($reason, $reasons[$ticketId], true)) {
-                $reasons[$ticketId][] = $reason;
-            }
-        };
-
-        foreach ($assignments as $row) {
-            $push($row->id, self::REASON_ACTIVE);
-        }
-        foreach ($createdModels as $ticket) {
-            $push((string) $ticket->id, self::REASON_CREATED);
-        }
-        foreach ($resolved as $row) {
-            $push($row->id, self::REASON_RESOLVED);
-        }
-        foreach ($rejected as $row) {
-            $push($row->id, self::REASON_REJECTED);
-        }
-        foreach ($cancelled as $row) {
-            $push($row->id, self::REASON_CANCELLED);
-        }
-
+        $reasons = $this->appendixInclusionReasons($assignments, $resolved, $rejected, $cancelled, $createdModels);
         $reasonLabel = static fn (string $ticketId): string => implode(' · ', $reasons[$ticketId] ?? []);
 
         $rows = [];
@@ -1915,69 +2084,17 @@ final class MaintenanceReportQuery
 
         foreach ($assignments as $row) {
             $included[$row->id] = true;
-            $rows[] = [
-                'displayId' => $row->displayId(),
-                'title' => $row->title,
-                'locationName' => $row->locationName,
-                'categoryName' => $row->categoryName,
-                'priority' => $this->priorityLabel($row->priority),
-                'stateLabel' => $this->stateLabel($row->state),
-                'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
-                'assignedAt' => $row->assignedAt?->format('Y-m-d') ?? '—',
-                'closedAt' => '—',
-                'ageOrDuration' => $row->ageDays.' día(s)',
-                'lastTransition' => $row->lastTransition !== null
-                    ? $this->stateLabel($row->lastTransition['toState']).' · '.$row->lastTransition['at']->format('Y-m-d')
-                    : 'Sin transiciones',
-                'evidence' => $row->hasEvidence ? 'Sí ('.$row->evidenceCount.')' : 'No',
-                'duplicate' => $row->hasDuplicateWarning
-                    ? 'Sí · '.($row->duplicateReviewStatus === null ? 'pendiente' : $row->duplicateReviewStatus)
-                    : 'No',
-                'duplicateReasons' => $this->joinReasonLabels($row->duplicateTopReasons),
-                'inclusionReason' => $reasonLabel($row->id),
-            ];
+            $rows[] = $this->activeAppendixRow($row, $reasonLabel($row->id));
         }
 
         foreach ($resolved as $row) {
             $included[$row->id] = true;
-            $rows[] = [
-                'displayId' => $row->displayId(),
-                'title' => $row->title,
-                'locationName' => $row->locationName,
-                'categoryName' => $row->categoryName,
-                'priority' => $this->priorityLabel($row->priority),
-                'stateLabel' => 'Resuelto',
-                'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
-                'assignedAt' => '—',
-                'closedAt' => $row->resolvedAt?->format('Y-m-d') ?? '—',
-                'ageOrDuration' => $row->durationHours !== null ? $this->formatHours($row->durationHours) : '—',
-                'lastTransition' => 'Resuelto · '.($row->resolvedAt?->format('Y-m-d') ?? '—'),
-                'evidence' => $row->evidenceCount > 0 ? 'Sí ('.$row->evidenceCount.')' : 'No',
-                'duplicate' => 'No',
-                'duplicateReasons' => '',
-                'inclusionReason' => $reasonLabel($row->id),
-            ];
+            $rows[] = $this->resolvedAppendixRow($row, $reasonLabel($row->id));
         }
 
         foreach ([...$rejected, ...$cancelled] as $row) {
             $included[$row->id] = true;
-            $rows[] = [
-                'displayId' => $row->displayId(),
-                'title' => $row->title,
-                'locationName' => $row->locationName,
-                'categoryName' => $row->categoryName,
-                'priority' => $this->priorityLabel($row->priority),
-                'stateLabel' => $row->kindLabel(),
-                'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
-                'assignedAt' => '—',
-                'closedAt' => $row->closedAt !== null ? $row->closedAt->format('Y-m-d') : '—',
-                'ageOrDuration' => '—',
-                'lastTransition' => $row->kindLabel().' · '.($row->closedAt !== null ? $row->closedAt->format('Y-m-d') : '—'),
-                'evidence' => '—',
-                'duplicate' => 'No',
-                'duplicateReasons' => '',
-                'inclusionReason' => $reasonLabel($row->id),
-            ];
+            $rows[] = $this->closedAppendixRow($row, $reasonLabel($row->id));
         }
 
         // Created in the period but not active/closed yet (e.g. resolved
@@ -2018,6 +2135,126 @@ final class MaintenanceReportQuery
     }
 
     /**
+     * Reasons per ticket, in presentation order.
+     *
+     * @param  list<AssignmentRow>  $assignments
+     * @param  list<ResolvedTicketRow>  $resolved
+     * @param  list<ClosedTicketRow>  $rejected
+     * @param  list<ClosedTicketRow>  $cancelled
+     * @param  EloquentCollection<int, Ticket>  $createdModels
+     * @return array<string, list<string>>
+     */
+    private function appendixInclusionReasons(
+        array $assignments,
+        array $resolved,
+        array $rejected,
+        array $cancelled,
+        EloquentCollection $createdModels,
+    ): array {
+        $reasons = [];
+        $push = static function (string $ticketId, string $reason) use (&$reasons): void {
+            $reasons[$ticketId] ??= [];
+            if (! in_array($reason, $reasons[$ticketId], true)) {
+                $reasons[$ticketId][] = $reason;
+            }
+        };
+
+        foreach ($assignments as $row) {
+            $push($row->id, self::REASON_ACTIVE);
+        }
+        foreach ($createdModels as $ticket) {
+            $push((string) $ticket->id, self::REASON_CREATED);
+        }
+        foreach ($resolved as $row) {
+            $push($row->id, self::REASON_RESOLVED);
+        }
+        foreach ($rejected as $row) {
+            $push($row->id, self::REASON_REJECTED);
+        }
+        foreach ($cancelled as $row) {
+            $push($row->id, self::REASON_CANCELLED);
+        }
+
+        return $reasons;
+    }
+
+    /**
+     * @return array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}
+     */
+    private function activeAppendixRow(AssignmentRow $row, string $inclusionReason): array
+    {
+        return [
+            'displayId' => $row->displayId(),
+            'title' => $row->title,
+            'locationName' => $row->locationName,
+            'categoryName' => $row->categoryName,
+            'priority' => $this->priorityLabel($row->priority),
+            'stateLabel' => $this->stateLabel($row->state),
+            'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
+            'assignedAt' => $row->assignedAt?->format('Y-m-d') ?? '—',
+            'closedAt' => '—',
+            'ageOrDuration' => $row->ageDays.' día(s)',
+            'lastTransition' => $row->lastTransition !== null
+                ? $this->stateLabel($row->lastTransition['toState']).' · '.$row->lastTransition['at']->format('Y-m-d')
+                : 'Sin transiciones',
+            'evidence' => $row->hasEvidence ? 'Sí ('.$row->evidenceCount.')' : 'No',
+            'duplicate' => $row->hasDuplicateWarning
+                ? 'Sí · '.($row->duplicateReviewStatus === null ? 'pendiente' : $row->duplicateReviewStatus)
+                : 'No',
+            'duplicateReasons' => $this->joinReasonLabels($row->duplicateTopReasons),
+            'inclusionReason' => $inclusionReason,
+        ];
+    }
+
+    /**
+     * @return array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}
+     */
+    private function resolvedAppendixRow(ResolvedTicketRow $row, string $inclusionReason): array
+    {
+        return [
+            'displayId' => $row->displayId(),
+            'title' => $row->title,
+            'locationName' => $row->locationName,
+            'categoryName' => $row->categoryName,
+            'priority' => $this->priorityLabel($row->priority),
+            'stateLabel' => 'Resuelto',
+            'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
+            'assignedAt' => '—',
+            'closedAt' => $row->resolvedAt?->format('Y-m-d') ?? '—',
+            'ageOrDuration' => $row->durationHours !== null ? $this->formatHours($row->durationHours) : '—',
+            'lastTransition' => 'Resuelto · '.($row->resolvedAt?->format('Y-m-d') ?? '—'),
+            'evidence' => $row->evidenceCount > 0 ? 'Sí ('.$row->evidenceCount.')' : 'No',
+            'duplicate' => 'No',
+            'duplicateReasons' => '',
+            'inclusionReason' => $inclusionReason,
+        ];
+    }
+
+    /**
+     * @return array{displayId: string, title: string, locationName: string, categoryName: string, priority: string, stateLabel: string, createdAt: string, assignedAt: string, closedAt: string, ageOrDuration: string, lastTransition: string, evidence: string, duplicate: string, duplicateReasons: string, inclusionReason: string}
+     */
+    private function closedAppendixRow(ClosedTicketRow $row, string $inclusionReason): array
+    {
+        return [
+            'displayId' => $row->displayId(),
+            'title' => $row->title,
+            'locationName' => $row->locationName,
+            'categoryName' => $row->categoryName,
+            'priority' => $this->priorityLabel($row->priority),
+            'stateLabel' => $row->kindLabel(),
+            'createdAt' => $row->createdAt?->format('Y-m-d') ?? '—',
+            'assignedAt' => '—',
+            'closedAt' => $row->closedAt !== null ? $row->closedAt->format('Y-m-d') : '—',
+            'ageOrDuration' => '—',
+            'lastTransition' => $row->kindLabel().' · '.($row->closedAt !== null ? $row->closedAt->format('Y-m-d') : '—'),
+            'evidence' => '—',
+            'duplicate' => 'No',
+            'duplicateReasons' => '',
+            'inclusionReason' => $inclusionReason,
+        ];
+    }
+
+    /**
      * Appendix row for tickets that are not in the active/resolved/closed row
      * sets (created in period without closure, or historical assignments).
      *
@@ -2028,9 +2265,9 @@ final class MaintenanceReportQuery
         $resolvedAt = $ticket->resolved_at !== null ? CarbonImmutable::parse($ticket->resolved_at) : null;
 
         return [
-            'displayId' => '#TIC-'.$this->idShort((string) $ticket->id),
+            'displayId' => self::TICKET_REFERENCE_PREFIX.$this->idShort((string) $ticket->id),
             'title' => (string) $ticket->title,
-            'locationName' => (string) ($ticket->location->name ?? 'Sin ubicación'),
+            'locationName' => (string) ($ticket->location->name ?? self::LABEL_NO_LOCATION),
             'categoryName' => (string) ($ticket->category->name ?? self::LABEL_UNCATEGORIZED),
             'priority' => $this->priorityLabel((string) $ticket->priority),
             'stateLabel' => $this->stateLabel((string) $ticket->state),
@@ -2121,7 +2358,19 @@ final class MaintenanceReportQuery
                 'Evidencias registradas sin URL de archivo.');
         }
 
-        // AI-duplicate consistency (read-only; the report never blocks on these).
+        return array_merge($issues, $this->duplicateDataQualityIssues($activeTickets, $duplicateInfoByTicket));
+    }
+
+    /**
+     * AI-duplicate consistency (read-only; the report never blocks on these).
+     *
+     * @param  EloquentCollection<int, Ticket>  $activeTickets
+     * @param  array<string, array<string, mixed>>  $duplicateInfoByTicket
+     * @return list<array{check: string, detail: string, count: int}>
+     */
+    private function duplicateDataQualityIssues(EloquentCollection $activeTickets, array $duplicateInfoByTicket): array
+    {
+        $issues = [];
         $dupWithoutMatch = 0;
         $dupWithoutSimilarity = 0;
         $dupBrokenMatch = 0;

@@ -53,6 +53,9 @@ final class AssignmentsBoardQuery
     /** Activity entries shown in the detail rail. */
     private const ACTIVITY_LIMIT = 8;
 
+    /** Formato de fecha-hora 12 h mostrado en el board. */
+    private const DISPLAY_DATETIME_12H_FORMAT = 'd/m/Y h:i A';
+
     /** SLA-ish overdue thresholds (days) for an active ticket, by priority. */
     private const OVERDUE_DAYS = ['critical' => 1, 'high' => 1, 'medium' => 3, 'low' => 7];
 
@@ -395,9 +398,9 @@ final class AssignmentsBoardQuery
             'state_label' => $this->stateLabel($state),
             'context' => $context !== '' ? $context : 'Sin ubicación',
             'description' => (string) ($ticket->description ?? ''),
-            'assigned_at' => $ticket->assigned_at?->format('d/m/Y h:i A') ?? '—',
+            'assigned_at' => $ticket->assigned_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
             'assigned_by' => $this->displayName($ticket->assignedBy),
-            'taken_at' => $inProgressAt?->format('d/m/Y h:i A') ?? ($ticket->assigned_at?->format('d/m/Y h:i A') ?? '—'),
+            'taken_at' => $inProgressAt?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? ($ticket->assigned_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—'),
             'elapsed' => $elapsed,
             'can_start' => $this->canStart($ticket),
             'can_release' => $this->canRelease($ticket),
@@ -428,6 +431,14 @@ final class AssignmentsBoardQuery
         $finalAt = $stateTimes[$isRejected ? Ticket::STATE_REJECTED : Ticket::STATE_RESOLVED]
             ?? ($ticket->resolved_at instanceof CarbonInterface ? $ticket->resolved_at : null);
 
+        if ($inProgressAt !== null) {
+            $inProgressTime = $short($inProgressAt);
+        } elseif ($state === Ticket::STATE_IN_PROGRESS) {
+            $inProgressTime = 'Actual';
+        } else {
+            $inProgressTime = '—';
+        }
+
         return [
             ['key' => 'open', 'label' => 'Abierto', 'status' => 'done', 'at' => $short($ticket->created_at)],
             [
@@ -440,7 +451,7 @@ final class AssignmentsBoardQuery
                 'key' => 'in_progress',
                 'label' => 'En progreso',
                 'status' => $inProgressStatus,
-                'at' => $inProgressAt !== null ? $short($inProgressAt) : ($state === Ticket::STATE_IN_PROGRESS ? 'Actual' : '—'),
+                'at' => $inProgressTime,
             ],
             [
                 'key' => 'closed',
@@ -483,7 +494,7 @@ final class AssignmentsBoardQuery
                     'tone' => $tone,
                     'text' => $text,
                     'actor' => $this->displayName($h->changedBy),
-                    'at' => $h->created_at?->format('d/m/Y h:i A') ?? '—',
+                    'at' => $h->created_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
                 ];
             })
             ->values()

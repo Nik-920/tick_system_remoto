@@ -54,6 +54,9 @@ final class ReporterTicketsBoardQuery
 
     private const PER_PAGE = 5;
 
+    /** Etiqueta visible del estado in_progress. */
+    private const LABEL_IN_PROGRESS = 'En progreso';
+
     private const LABS_LIMIT = 5;
 
     /** Tickets sampled to compute the average first-response time. */
@@ -248,7 +251,7 @@ final class ReporterTicketsBoardQuery
         $chips = [
             ['key' => 'all', 'label' => 'Todos', 'count' => $total, 'tone' => 'neutral'],
             ['key' => 'open', 'label' => 'Abiertos', 'count' => $counts[Ticket::STATE_OPEN], 'tone' => 'purple'],
-            ['key' => 'in_progress', 'label' => 'En progreso', 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'tone' => 'primary'],
+            ['key' => 'in_progress', 'label' => self::LABEL_IN_PROGRESS, 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'tone' => 'primary'],
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $counts[Ticket::STATE_RESOLVED], 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $counts[Ticket::STATE_REJECTED], 'tone' => 'high'],
             ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $counts[Ticket::STATE_CANCELLED], 'tone' => 'neutral'],
@@ -295,7 +298,7 @@ final class ReporterTicketsBoardQuery
     {
         $bands = [
             ['key' => 'open', 'label' => 'Abiertos', 'count' => $counts[Ticket::STATE_OPEN], 'color' => '#9333ea', 'tone' => 'purple'],
-            ['key' => 'in_progress', 'label' => 'En progreso', 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'color' => '#2563eb', 'tone' => 'primary'],
+            ['key' => 'in_progress', 'label' => self::LABEL_IN_PROGRESS, 'count' => $counts[Ticket::STATE_IN_PROGRESS], 'color' => '#2563eb', 'tone' => 'primary'],
             ['key' => 'resolved', 'label' => 'Resueltos', 'count' => $counts[Ticket::STATE_RESOLVED], 'color' => '#16a34a', 'tone' => 'success'],
             ['key' => 'rejected', 'label' => 'Rechazados', 'count' => $counts[Ticket::STATE_REJECTED], 'color' => '#ef4444', 'tone' => 'high'],
             ['key' => 'cancelled', 'label' => 'Cancelados', 'count' => $counts[Ticket::STATE_CANCELLED], 'color' => '#64748b', 'tone' => 'neutral'],
@@ -524,7 +527,7 @@ final class ReporterTicketsBoardQuery
     {
         return match ($state) {
             Ticket::STATE_OPEN => 'Abierto',
-            Ticket::STATE_IN_PROGRESS => 'En progreso',
+            Ticket::STATE_IN_PROGRESS => self::LABEL_IN_PROGRESS,
             Ticket::STATE_RESOLVED => 'Resuelto',
             Ticket::STATE_REJECTED => 'Rechazado',
             Ticket::STATE_CANCELLED => 'Cancelado',
