@@ -12,13 +12,13 @@ use App\Http\Requests\UpdateTicketStateRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\TicketIndexQuery;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -36,28 +36,9 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
-        $user = $request->user();
         $filters = $request->validated();
 
-        // Eager-load embedding and matchedTicket to expose duplicate data without N+1
-        $query = Ticket::query()->with([
-            'reporter',
-            'assignee',
-            'location',
-            'category',
-            'embedding.matchedTicket',
-        ]);
-
-        // Reporter-role scope: restrict to own tickets BEFORE any user-supplied filters
-        // so that query params (search, duplicates, location, etc.) cannot leak foreign tickets.
-        if ($user instanceof User
-            && $user->hasRole('reporter')
-            && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])
-        ) {
-            $query->reportedBy($user->id);
-        }
-
-        $this->applyFilters($query, $filters);
+        $query = TicketIndexQuery::build($request->user(), $filters);
 
         $tickets = $query
             ->latest('created_at')
@@ -347,53 +328,6 @@ class TicketController extends Controller
             'message' => 'Revisión de duplicado actualizada.',
             'data' => (new TicketResource($ticket))->resolve($request),
         ]);
-    }
-
-    /**
-     * @param  array<string, mixed>  $filters
-     */
-    private function applyFilters(Builder $query, array $filters): void
-    {
-        if (! empty($filters['state'])) {
-            $query->where('state', $filters['state']);
-        }
-
-        if (! empty($filters['priority'])) {
-            $query->where('priority', $filters['priority']);
-        }
-
-        if (! empty($filters['location_id'])) {
-            $query->where('location_id', $filters['location_id']);
-        }
-
-        if (! empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
-        }
-
-        if (! empty($filters['search'])) {
-            $search = trim((string) $filters['search']);
-            $query->where(function (Builder $innerQuery) use ($search): void {
-                $innerQuery
-                    ->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if (! empty($filters['from'])) {
-            $query->whereDate('created_at', '>=', $filters['from']);
-        }
-
-        if (! empty($filters['to'])) {
-            $query->whereDate('created_at', '<=', $filters['to']);
-        }
-
-        // Duplicate filter: effective_duplicate = true (sql-equivalent)
-        if (! empty($filters['duplicates'])) {
-            $query->whereHas('embedding', function (Builder $q): void {
-                /** @phpstan-ignore-next-line */
-                $q->effectiveDuplicates();
-            });
-        }
     }
 
     private function loadAssignmentRelations(Ticket $ticket): Ticket

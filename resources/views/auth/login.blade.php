@@ -166,17 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. Subtle scale in on load
-    if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.98) translateY(10px)';
-        card.style.transition = 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
-        
-        setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1) translateY(0)';
-        }, 100);
-    }
+    // The card entrance animation is handled in CSS (.auth-card → auth-card-in),
+    // which also honours prefers-reduced-motion. No JS animation needed here.
 });
 </script>
 

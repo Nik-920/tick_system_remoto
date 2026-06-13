@@ -3,17 +3,23 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\DashboardDateRangeRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Dashboard\MaintenanceDashboardV2Presenter;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function __construct(
+        private readonly MaintenanceDashboardV2Presenter $maintenancePresenter,
+    ) {}
+
+    public function index(DashboardDateRangeRequest $request): View|RedirectResponse
     {
         $this->authorize('viewAny', Ticket::class);
 
@@ -23,12 +29,21 @@ class DashboardController extends Controller
         }
 
         $roleProfile = $this->resolveRoleProfile($user);
+
+        if ($roleProfile === 'reporter') {
+            return redirect()->route('reporter.dashboard');
+        }
+
+        if ($roleProfile === 'maintenance') {
+            // Promoted: the maintenance role now gets the redesigned V2 dashboard,
+            // built from the same shared presenter as /dashboard/maintenance-v2.
+            return view('dashboard.maintenance-v2', $this->maintenancePresenter->payload($user, $request));
+        }
+
         $dashboardView = $this->resolveDashboardView($roleProfile);
-        $dashboardData = match ($roleProfile) {
-            'admin' => $this->buildAdminDashboardData(),
-            'maintenance' => $this->buildMaintenanceDashboardData($user),
-            default => $this->buildReporterDashboardData($user),
-        };
+        $dashboardData = $roleProfile === 'admin'
+            ? $this->buildAdminDashboardData($user)
+            : $this->buildReporterDashboardData($user);
 
         return view($dashboardView, [
             'roleProfile' => $roleProfile,
@@ -43,7 +58,6 @@ class DashboardController extends Controller
     {
         return match ($roleProfile) {
             'admin' => 'dashboard.admin',
-            'maintenance' => 'dashboard.maintenance',
             default => 'dashboard.reporter',
         };
     }
@@ -99,19 +113,15 @@ class DashboardController extends Controller
             ->limit(6)
             ->get();
 
-        $stateBreakdown = Ticket::query()
-            ->selectRaw('state, COUNT(*) as total')
-            ->where('reporter_id', $user->id)
-            ->groupBy('state')
-            ->pluck('total', 'state')
-            ->toArray();
+        $stateBreakdown = $this->countByColumn(
+            Ticket::query()->where('reporter_id', $user->id),
+            'state'
+        );
 
-        $priorityBreakdown = Ticket::query()
-            ->selectRaw('priority, COUNT(*) as total')
-            ->where('reporter_id', $user->id)
-            ->groupBy('priority')
-            ->pluck('total', 'priority')
-            ->toArray();
+        $priorityBreakdown = $this->countByColumn(
+            Ticket::query()->where('reporter_id', $user->id),
+            'priority'
+        );
 
         return [
             'hero' => [
@@ -163,152 +173,7 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function buildMaintenanceDashboardData(User $user): array
-    {
-        $sevenDaysAgo = now()->subDays(7);
-        $thirtyDaysAgo = now()->subDays(30);
-
-        $availableTicketsCount = Ticket::query()
-            ->where('state', 'open')
-            ->whereNull('assigned_to')
-            ->count();
-
-        $assignedOpenCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'open')
-            ->count();
-
-        $assignedInProgressCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'in_progress')
-            ->count();
-
-        $assignedCriticalCount = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->where('priority', 'critical')
-            ->count();
-
-        $resolvedLast7Days = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->where('resolved_at', '>=', $sevenDaysAgo)
-            ->count();
-
-        $resolvedTicketsLast30Days = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->whereNotNull('resolved_at')
-            ->where('resolved_at', '>=', $thirtyDaysAgo)
-            ->get(['created_at', 'resolved_at']);
-
-        $avgResolutionHoursLast30Days = (int) round($resolvedTicketsLast30Days->avg(function (Ticket $ticket): int {
-            if ($ticket->resolved_at === null) {
-                return 0;
-            }
-
-            return (int) $ticket->created_at->diffInHours($ticket->resolved_at);
-        }) ?? 0);
-
-        $workloadQueue = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->with(['reporter', 'assignee', 'location', 'category'])
-            ->orderByRaw($this->priorityOrderExpression())
-            ->oldest('created_at')
-            ->limit(10)
-            ->get();
-
-        $recentResolved = Ticket::query()
-            ->where('assigned_to', $user->id)
-            ->where('state', 'resolved')
-            ->with(['reporter', 'location', 'category'])
-            ->latest('resolved_at')
-            ->limit(6)
-            ->get();
-
-        $stateBreakdown = Ticket::query()
-            ->selectRaw('state, COUNT(*) as total')
-            ->where('assigned_to', $user->id)
-            ->groupBy('state')
-            ->pluck('total', 'state')
-            ->toArray();
-
-        $priorityBreakdown = Ticket::query()
-            ->selectRaw('priority, COUNT(*) as total')
-            ->where('assigned_to', $user->id)
-            ->whereIn('state', ['open', 'in_progress'])
-            ->groupBy('priority')
-            ->pluck('total', 'priority')
-            ->toArray();
-
-        return [
-            'hero' => [
-                'badge' => 'Panel maintenance',
-                'title' => 'Consola de mantenimiento',
-                'subtitle' => 'Gestiona tu cola operativa con enfoque en urgencias, tiempos de respuesta y cierres de calidad.',
-            ],
-            'quickActions' => [
-                [
-                    'label' => 'Ver tickets disponibles',
-                    'href' => route('tickets.available'),
-                    'variant' => 'primary',
-                ],
-                [
-                    'label' => 'Ir a cola de tickets',
-                    'href' => route('tickets.index'),
-                    'variant' => 'secondary',
-                ],
-                [
-                    'label' => 'Registrar incidencia',
-                    'href' => route('tickets.create'),
-                    'variant' => 'secondary',
-                ],
-            ],
-            'kpis' => [
-                [
-                    'label' => 'Tickets disponibles',
-                    'value' => $availableTicketsCount,
-                    'hint' => 'Incidencias abiertas listas para tomar.',
-                ],
-                [
-                    'label' => 'Asignados abiertos',
-                    'value' => $assignedOpenCount,
-                    'hint' => 'Pendientes por iniciar.',
-                ],
-                [
-                    'label' => 'En progreso',
-                    'value' => $assignedInProgressCount,
-                    'hint' => 'Trabajo tecnico actualmente activo.',
-                ],
-                [
-                    'label' => 'Criticos activos',
-                    'value' => $assignedCriticalCount,
-                    'hint' => 'Casos de alta prioridad en tu cola.',
-                ],
-                [
-                    'label' => 'Resueltos 7 dias',
-                    'value' => $resolvedLast7Days,
-                    'hint' => 'Cierres concretados en la ultima semana.',
-                ],
-                [
-                    'label' => 'Promedio resolucion 30 dias',
-                    'value' => $avgResolutionHoursLast30Days.' h',
-                    'hint' => 'Tiempo medio de resolucion para tickets cerrados.',
-                ],
-            ],
-            'workloadQueue' => $workloadQueue,
-            'recentResolved' => $recentResolved,
-            'stateBreakdown' => $stateBreakdown,
-            'priorityBreakdown' => $priorityBreakdown,
-            'avgResolutionHoursLast30Days' => $avgResolutionHoursLast30Days,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildAdminDashboardData(): array
+    private function buildAdminDashboardData(User $user): array
     {
         $sevenDaysAgo = now()->subDays(7);
 
@@ -333,17 +198,8 @@ class DashboardController extends Controller
             ? round(($resolvedLast7Days / $createdLast7Days) * 100, 1)
             : 0.0;
 
-        $stateBreakdown = Ticket::query()
-            ->selectRaw('state, COUNT(*) as total')
-            ->groupBy('state')
-            ->pluck('total', 'state')
-            ->toArray();
-
-        $priorityBreakdown = Ticket::query()
-            ->selectRaw('priority, COUNT(*) as total')
-            ->groupBy('priority')
-            ->pluck('total', 'priority')
-            ->toArray();
+        $stateBreakdown = $this->countByColumn(Ticket::query(), 'state');
+        $priorityBreakdown = $this->countByColumn(Ticket::query(), 'priority');
 
         $totalLocations = Location::query()->count();
         $activeLocations = Location::query()->active()->count();
@@ -384,12 +240,7 @@ class DashboardController extends Controller
             ->limit(6)
             ->get();
 
-        $qrStatusSummary = [
-            'pending' => Location::query()->where('qr_generation_status', 'pending')->count(),
-            'processing' => Location::query()->where('qr_generation_status', 'processing')->count(),
-            'failed' => Location::query()->where('qr_generation_status', 'failed')->count(),
-            'ready' => Location::query()->where('qr_generation_status', 'ready')->count(),
-        ];
+        $qrStatusSummary = $this->qrStatusSummary();
 
         return [
             'hero' => [
@@ -398,28 +249,7 @@ class DashboardController extends Controller
                 'subtitle' => 'Supervisa flujo global, distribuye carga y anticipa riesgos en tickets, QR y catalogos.',
                 'resolutionRate7Days' => $this->formatPercentage($resolutionRate7Days),
             ],
-            'quickActions' => [
-                [
-                    'label' => 'Gestionar ubicaciones',
-                    'href' => route('locations.index'),
-                    'variant' => 'primary',
-                ],
-                [
-                    'label' => 'Asignar tickets pendientes',
-                    'href' => route('tickets.available'),
-                    'variant' => 'secondary',
-                ],
-                [
-                    'label' => 'Gestionar categorias',
-                    'href' => route('categories.index'),
-                    'variant' => 'secondary',
-                ],
-                [
-                    'label' => 'Revisar tickets',
-                    'href' => route('tickets.index'),
-                    'variant' => 'secondary',
-                ],
-            ],
+            'quickActions' => $this->adminQuickActions($user),
             'kpis' => [
                 [
                     'label' => 'Tickets totales',
@@ -464,6 +294,56 @@ class DashboardController extends Controller
             'recentTickets' => $recentTickets,
             'qrIssues' => $qrIssues,
         ];
+    }
+
+    /**
+     * Agrupa y cuenta tickets por una columna sobre una query base ya filtrada.
+     * Centraliza el patrón selectRaw/groupBy/pluck repetido en los 3 perfiles.
+     *
+     * @param  Builder<Ticket>  $query
+     * @return array<string, int>
+     */
+    private function countByColumn(Builder $query, string $column): array
+    {
+        return $query
+            ->selectRaw("{$column}, COUNT(*) as total")
+            ->groupBy($column)
+            ->pluck('total', $column)
+            ->toArray();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function qrStatusSummary(): array
+    {
+        return [
+            'pending' => Location::query()->where('qr_generation_status', 'pending')->count(),
+            'processing' => Location::query()->where('qr_generation_status', 'processing')->count(),
+            'failed' => Location::query()->where('qr_generation_status', 'failed')->count(),
+            'ready' => Location::query()->where('qr_generation_status', 'ready')->count(),
+        ];
+    }
+
+    /**
+     * Acciones rápidas del panel admin. super_admin suma la gestión de usuarios.
+     *
+     * @return array<int, array{label:string,href:string,variant:string}>
+     */
+    private function adminQuickActions(User $user): array
+    {
+        $actions = [
+            ['label' => 'Gestionar ubicaciones', 'href' => route('locations.index'), 'variant' => 'primary'],
+            ['label' => 'Asignar tickets pendientes', 'href' => route('tickets.available'), 'variant' => 'secondary'],
+            ['label' => 'Gestionar categorias', 'href' => route('categories.index'), 'variant' => 'secondary'],
+            ['label' => 'Revisar tickets', 'href' => route('tickets.index'), 'variant' => 'secondary'],
+        ];
+
+        if ($this->hasRole($user, 'super_admin')) {
+            $actions[] = ['label' => 'Gestionar usuarios', 'href' => route('users.index'), 'variant' => 'secondary'];
+        }
+
+        return $actions;
     }
 
     private function priorityOrderExpression(): string

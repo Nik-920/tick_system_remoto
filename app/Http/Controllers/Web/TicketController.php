@@ -8,15 +8,20 @@ use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\ListTicketsRequest;
 use App\Http\Requests\ReviewDuplicateRequest;
 use App\Http\Requests\StoreTicketRequest;
+use App\Http\Requests\UpdateMaintenanceTicketRequest;
 use App\Http\Requests\UpdateTicketStateRequest;
 use App\Models\Category;
 use App\Models\Location;
+use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\MaintenanceBoardQuery;
+use App\Queries\Tickets\TicketIndexQuery;
 use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
+use App\Support\Tickets\DuplicateExplanationPresenter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -36,24 +41,21 @@ class TicketController extends Controller
     {
         $this->authorize('viewAny', Ticket::class);
 
-        $filters = $request->validated();
         $user = $request->user();
 
-        // Eager-load embedding and matchedTicket to show duplicate badge without N+1
-        $query = Ticket::query()->with([
-            'reporter',
-            'assignee',
-            'assignedBy',
-            'location',
-            'category',
-            'embedding.matchedTicket',
-        ]);
-
-        if ($user instanceof User && $user->hasRole('reporter') && ! $user->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
-            $query->reportedBy($user->id);
+        // Maintenance technicians get the operational, prioritised board;
+        // reporters and admins keep the classic table below.
+        if (
+            $user instanceof User
+            && $user->hasRole('maintenance')
+            && ! $user->hasAnyRole(['admin', 'super_admin'])
+        ) {
+            return $this->maintenanceBoard($request, $user);
         }
 
-        $this->applyFilters($query, $filters, $user);
+        $filters = $request->validated();
+
+        $query = TicketIndexQuery::build($user, $filters);
 
         $tickets = $query
             ->latest('created_at')
@@ -115,7 +117,8 @@ class TicketController extends Controller
         $this->applyFilters($query, $filters, $request->user());
 
         $tickets = $query
-            ->latest('created_at')
+            ->orderByRaw("CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END")
+            ->oldest('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15))
             ->withQueryString();
 
@@ -160,12 +163,12 @@ class TicketController extends Controller
             ->with('status', $message);
     }
 
-    public function show(Ticket $ticket): View
+    public function show(Ticket $ticket, TicketStateService $ticketStateService): View
     {
         $this->authorize('view', $ticket);
 
-        $maintenanceUsers = collect();
         $currentUser = request()->user();
+        $maintenanceUsers = collect();
         if ($currentUser instanceof User && $currentUser->hasAnyRole(['admin', 'super_admin'])) {
             $maintenanceUsers = User::role('maintenance')
                 ->orderBy('name')
@@ -178,17 +181,120 @@ class TicketController extends Controller
             'assignedBy',
             'location',
             'category',
-            'media' => fn ($query) => $query->latest('created_at'),
+            'media' => fn ($query) => $query->with('uploadedBy')->latest('created_at'),
             'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
         ]);
 
+        $availableTransitions = $currentUser instanceof User
+            ? $ticketStateService->availableTransitionsFor($ticket, $currentUser)
+            : [];
+
+        $isMaintenance = $currentUser instanceof User
+            && $currentUser->hasRole('maintenance')
+            && ! $currentUser->hasAnyRole(['admin', 'super_admin']);
+
+        $isAvailableForClaim = $isMaintenance
+            && $ticket->state === Ticket::STATE_OPEN
+            && $ticket->assigned_to === null
+            && ! $ticket->assignment_locked;
+
+        // Limited operational edit (category/priority/evidence) from this view.
+        $canEditOperational = $currentUser instanceof User
+            && $currentUser->can('updateMaintenance', $ticket);
+
         return view('tickets.show', [
             'ticket' => $ticket,
-            'states' => ['open', 'in_progress', 'resolved', 'rejected'],
+            'availableTransitions' => $availableTransitions,
             'maintenanceUsers' => $maintenanceUsers,
+            'isMaintenance' => $isMaintenance,
+            'isAvailableForClaim' => $isAvailableForClaim,
+            'canEditOperational' => $canEditOperational,
+            'categories' => $canEditOperational
+                ? Category::query()->orderBy('name', 'asc')->get()
+                : collect(),
+            'priorities' => ['low', 'medium', 'high', 'critical'],
+            'duplicateExplanation' => DuplicateExplanationPresenter::present($ticket),
         ]);
+    }
+
+    /**
+     * PATCH /tickets/{ticket}/maintenance
+     * Limited operational edit from tickets.show: the assigned maintenance
+     * technician (or admin/super_admin) corrects category/priority, attaches
+     * additional evidence and/or leaves a technical comment. Reporter fields
+     * (title, description, reporter_id) are never touched: the FormRequest
+     * does not accept them and nothing else is written to the model.
+     */
+    public function updateMaintenance(
+        UpdateMaintenanceTicketRequest $request,
+        Ticket $ticket,
+        TicketMediaStorageService $mediaStorage
+    ): RedirectResponse {
+        $this->authorize('updateMaintenance', $ticket);
+
+        $user = $request->user();
+        $validated = $request->validated();
+        $files = $request->file('evidence', []);
+        $comment = trim((string) ($validated['comment'] ?? ''));
+
+        $changeDescriptions = [];
+
+        $newCategoryId = $validated['category_id'] ?? null;
+        if ($newCategoryId !== null && $newCategoryId !== $ticket->category_id) {
+            $oldCategoryName = $ticket->category?->name ?? 'Sin categoría';
+            $newCategoryName = Category::query()->find($newCategoryId)?->name ?? $newCategoryId;
+            $ticket->category_id = $newCategoryId;
+            $changeDescriptions[] = "categoría corregida de «{$oldCategoryName}» a «{$newCategoryName}»";
+        }
+
+        $newPriority = $validated['priority'] ?? null;
+        if ($newPriority !== null && $newPriority !== $ticket->priority) {
+            $oldPriority = (string) $ticket->priority;
+            $ticket->priority = $newPriority;
+            $changeDescriptions[] = "prioridad corregida de «{$oldPriority}» a «{$newPriority}»";
+        }
+
+        if ($changeDescriptions === [] && $files === [] && $comment === '') {
+            return redirect()
+                ->route('tickets.show', $ticket)
+                ->with('status', 'No hay cambios para guardar.');
+        }
+
+        DB::transaction(function () use ($ticket, $user, $changeDescriptions, $files, $comment): void {
+            if ($ticket->isDirty()) {
+                $ticket->save();
+            }
+
+            $historyParts = [];
+            if ($changeDescriptions !== []) {
+                $historyParts[] = 'Actualización técnica: '.implode('; ', $changeDescriptions).'.';
+            }
+            if ($files !== []) {
+                $historyParts[] = 'Evidencia agregada por maintenance ('.count($files).' archivo(s)).';
+            }
+            if ($comment !== '') {
+                $historyParts[] = 'Comentario: '.$comment;
+            }
+
+            // Administrative entry: same state on both sides, no transition.
+            StateHistory::create([
+                'ticket_id' => $ticket->id,
+                'from_state' => $ticket->state,
+                'to_state' => $ticket->state,
+                'changed_by' => $user->id,
+                'comment' => implode(' ', $historyParts),
+            ]);
+        });
+
+        if ($files !== []) {
+            $mediaStorage->storeManyForTicket($ticket, $user, $files);
+        }
+
+        return redirect()
+            ->route('tickets.show', $ticket)
+            ->with('status', 'Cambios guardados correctamente.');
     }
 
     public function destroy(Ticket $ticket, TicketMediaStorageService $mediaStorage): RedirectResponse
@@ -359,8 +465,32 @@ class TicketController extends Controller
     }
 
     /**
-     * @param  array<string, mixed>  $filters
+     * Operational, prioritised board for maintenance technicians (the V2 view).
+     * Read-only: claim/manage are delegated to the existing ticket routes.
      */
+    private function maintenanceBoard(ListTicketsRequest $request, User $user): View
+    {
+        $board = MaintenanceBoardQuery::for(
+            $user,
+            $request->validated(),
+            $this->resolveBoardView($request),
+        );
+
+        return view('tickets.maintenance-v2', [
+            'board' => $board,
+            'locations' => Location::query()->active()->orderBy('name')->get(),
+            'categories' => Category::query()->orderBy('name')->get(),
+        ]);
+    }
+
+    private function resolveBoardView(ListTicketsRequest $request): string
+    {
+        $view = (string) $request->query('view', 'all');
+
+        return in_array($view, MaintenanceBoardQuery::VIEWS, true) ? $view : 'all';
+    }
+
+    /** @param array<string, mixed> $filters */
     private function applyFilters(Builder $query, array $filters, ?User $user = null): void
     {
         if (! empty($filters['state'])) {
@@ -407,7 +537,6 @@ class TicketController extends Controller
             $query->whereDate('created_at', '<=', $filters['to']);
         }
 
-        // Duplicate filter: effective_duplicate = true (sql-equivalent)
         if (! empty($filters['duplicates'])) {
             $query->whereHas('embedding', function (Builder $q): void {
                 /** @phpstan-ignore-next-line */

@@ -2,18 +2,24 @@
 
 namespace App\Services\Ai;
 
+use App\Contracts\Ai\EmbeddingProvider;
 use InvalidArgumentException;
 
 class EmbeddingService
 {
-    public function __construct(private HuggingFaceService $huggingFace) {}
+    public function __construct(private EmbeddingProvider $provider) {}
+
+    public function isAvailable(): bool
+    {
+        return $this->provider->isAvailable();
+    }
 
     /**
      * @return array<int, float>
      */
     public function generate(string $text): array
     {
-        return $this->toFloatVector($this->huggingFace->embedding($text));
+        return $this->toFloatVector($this->provider->generate($text));
     }
 
     /**

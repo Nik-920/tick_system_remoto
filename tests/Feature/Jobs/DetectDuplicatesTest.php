@@ -10,11 +10,14 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\Services\Ai\DeduplicationService;
+use App\Services\Ai\Duplicates\DuplicateCandidateContext;
+use App\Services\Ai\Duplicates\DuplicateDetectionEngine;
 use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
 use App\Services\Observability\TicketQrLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
+use Tests\Fakes\FakeEmbeddingProvider;
 use Tests\TestCase;
 
 class DetectDuplicatesTest extends TestCase
@@ -58,7 +61,7 @@ class DetectDuplicatesTest extends TestCase
         $embeddings = $this->makeEmbeddingService([0.0, 1.0]);
 
         $job = new DetectDuplicates($ticket, 'corr-dup-001');
-        $job->handle($deduplication, $embeddings, $this->makeLogger());
+        $job->handle($deduplication, $embeddings, $this->makeLogger(), $this->makeEngine());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertSame($matched->id, $embedding->matched_ticket_id);
@@ -101,7 +104,7 @@ class DetectDuplicatesTest extends TestCase
         $embeddings = $this->makeEmbeddingService([0.0, 1.0]);
 
         $job = new DetectDuplicates($ticket, 'corr-dup-002');
-        $job->handle($deduplication, $embeddings, $this->makeLogger());
+        $job->handle($deduplication, $embeddings, $this->makeLogger(), $this->makeEngine());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertFalse($embedding->is_duplicate);
@@ -124,6 +127,7 @@ class DetectDuplicatesTest extends TestCase
         $ticket = $this->createTicket('Ticket con error');
 
         $embeddingService = $this->createMock(EmbeddingService::class);
+        $embeddingService->method('isAvailable')->willReturn(true);
         $embeddingService->expects($this->once())
             ->method('generate')
             ->willThrowException(new \RuntimeException('fail'));
@@ -143,7 +147,8 @@ class DetectDuplicatesTest extends TestCase
         $job->handle(
             new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
             $embeddingService,
-            $logger
+            $logger,
+            $this->makeEngine()
         );
 
         $this->assertDatabaseMissing('ticket_embeddings', ['ticket_id' => $ticket->id]);
@@ -188,7 +193,7 @@ class DetectDuplicatesTest extends TestCase
         ]);
 
         $job = new DetectDuplicates($ticket, 'corr-dup-004');
-        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger());
+        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger(), $this->makeEngine());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertFalse($embedding->is_duplicate);
@@ -237,7 +242,7 @@ class DetectDuplicatesTest extends TestCase
         ]);
 
         $job = new DetectDuplicates($ticket, 'corr-dup-005');
-        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger());
+        $job->handle(new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])), $this->makeEmbeddingService([0.0, 1.0]), $this->makeLogger(), $this->makeEngine());
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
         $this->assertTrue($embedding->is_duplicate);
@@ -284,17 +289,7 @@ class DetectDuplicatesTest extends TestCase
 
     private function makeEmbeddingService(array $vector): EmbeddingService
     {
-        $huggingFace = new class($vector) extends HuggingFaceService
-        {
-            public function __construct(private array $vector) {}
-
-            public function embedding(string $text, ?string $model = null): array
-            {
-                return $this->vector;
-            }
-        };
-
-        return new EmbeddingService($huggingFace);
+        return new EmbeddingService(new FakeEmbeddingProvider($vector));
     }
 
     private function makeLogger(): TicketQrLogger
@@ -311,6 +306,15 @@ class DetectDuplicatesTest extends TestCase
              */
             public function warning(string $eventName, array $context = []): void {}
         };
+    }
+
+    /**
+     * Build a DuplicateDetectionEngine with all strategies from the container.
+     * Uses the real AppServiceProvider registrations.
+     */
+    private function makeEngine(): DuplicateDetectionEngine
+    {
+        return app(DuplicateDetectionEngine::class);
     }
 
     public function test_job_does_not_clear_review_status_when_no_candidates_found(): void
@@ -344,7 +348,8 @@ class DetectDuplicatesTest extends TestCase
         $job->handle(
             new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
             $this->makeEmbeddingService([0.0, 1.0]),
-            $this->makeLogger()
+            $this->makeLogger(),
+            $this->makeEngine()
         );
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
@@ -399,7 +404,8 @@ class DetectDuplicatesTest extends TestCase
         $job->handle(
             new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
             $this->makeEmbeddingService([0.0, 1.0]),
-            $this->makeLogger()
+            $this->makeLogger(),
+            $this->makeEngine()
         );
 
         $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
@@ -411,5 +417,280 @@ class DetectDuplicatesTest extends TestCase
         $this->assertSame('dismissed', $embedding->review_status);
         $this->assertSame($reviewer->id, $embedding->reviewed_by);
         $this->assertSame('Revisado previamente.', $embedding->review_note);
+    }
+
+    // ── New Strategy integration tests ────────────────────────────────────────
+
+    public function test_strategy_engine_runs_in_parallel_and_does_not_block_duplicate_detection(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket('Proyector sala C-301 no enciende');
+        $matched = $this->createTicket('Proyector sala C-301 falla encendido', $ticket->location_id, $ticket->category_id);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-strategy-001');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        // Legacy gate: duplicate should still be detected
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertTrue($embedding->is_duplicate);
+
+        // DuplicateDetected event must still fire
+        Event::assertDispatched(DuplicateDetected::class);
+    }
+
+    public function test_strategy_engine_does_not_break_flow_when_no_candidates(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket('Ticket sin candidatos strategy');
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-strategy-002');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        // No candidates — embedding must be reset, no event dispatched
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->matched_ticket_id);
+
+        Event::assertNotDispatched(DuplicateDetected::class);
+    }
+
+    public function test_strategy_engine_evaluates_candidate_with_same_location_and_category(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Impresora fuera de servicio');
+        $matched = $this->createTicket('Impresora sin toner', $ticket->location_id, $ticket->category_id);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $engine = $this->makeEngine();
+        $context = new DuplicateCandidateContext(
+            ticket: $ticket,
+            candidate: $matched,
+            now: Carbon::now(),
+            embeddingSimilarity: 1.0,
+        );
+
+        $decision = $engine->evaluate($context);
+
+        // Engine produces a decision with a positive score (same loc+cat+similarity)
+        $this->assertGreaterThan(0, $decision->score);
+        $this->assertNotEmpty($decision->results);
+        $this->assertNotEmpty($decision->reasons);
+    }
+
+    public function test_strategy_engine_result_contains_strategy_metadata_for_audit(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Aire acondicionado roto sala D-401');
+        $matched = $this->createTicket('Falla aire acondicionado D-401', $ticket->location_id, $ticket->category_id);
+
+        $engine = $this->makeEngine();
+        $context = new DuplicateCandidateContext(
+            ticket: $ticket,
+            candidate: $matched,
+            now: Carbon::now(),
+            embeddingSimilarity: 0.95,
+        );
+
+        $decision = $engine->evaluate($context);
+        $logContext = $decision->toLogContext();
+
+        $this->assertArrayHasKey('strategy_score', $logContext);
+        $this->assertArrayHasKey('is_duplicate', $logContext);
+        $this->assertArrayHasKey('is_recurrence', $logContext);
+        $this->assertArrayHasKey('reasons', $logContext);
+        $this->assertArrayHasKey('strategies_metadata', $logContext);
+        $this->assertIsInt($logContext['strategy_score']);
+    }
+
+    public function test_job_persists_strategy_explanation_when_duplicate_detected(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket(
+            'Proyector sala A-201 no enciende',
+            null,
+            null,
+            'El proyector de la sala A-201 no responde al intentar encenderlo.'
+        );
+        $matched = $this->createTicket(
+            'Problema con proyector en sala A-201',
+            $ticket->location_id,
+            $ticket->category_id,
+            'El proyector no prende y la luz power parpadea.'
+        );
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $matched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $matched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-strategy-persist-001');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        // Legacy decision intact.
+        $this->assertTrue($embedding->is_duplicate);
+        Event::assertDispatched(DuplicateDetected::class);
+
+        // Strategy explainability persisted.
+        $this->assertIsInt($embedding->strategy_score);
+        $this->assertGreaterThan(0, $embedding->strategy_score);
+
+        $this->assertIsArray($embedding->strategy_results);
+        $this->assertNotEmpty($embedding->strategy_results);
+
+        $first = $embedding->strategy_results[0];
+        $this->assertArrayHasKey('strategy', $first);
+        $this->assertArrayHasKey('points', $first);
+        $this->assertArrayHasKey('reason', $first);
+
+        $this->assertIsArray($embedding->strategy_metadata);
+        $this->assertSame('legacy_with_strategy_metadata', $embedding->strategy_metadata['decision_source']);
+        $this->assertTrue($embedding->strategy_metadata['legacy_is_duplicate']);
+    }
+
+    public function test_job_clears_strategy_explanation_when_no_candidates_found(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Ticket con strategy previa');
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => true,
+            'strategy_score' => 80,
+            'strategy_results' => [
+                ['strategy' => 'embedding_similarity', 'points' => 50, 'reason' => 'x', 'metadata' => [], 'blocksDuplicate' => false, 'suggestsRecurrence' => false],
+            ],
+            'strategy_metadata' => ['decision_source' => 'legacy_with_strategy_metadata'],
+            'strategy_suggests_recurrence' => true,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-strategy-clear-001');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->strategy_score);
+        $this->assertNull($embedding->strategy_results);
+        $this->assertNull($embedding->strategy_metadata);
+        $this->assertFalse($embedding->strategy_suggests_recurrence);
     }
 }

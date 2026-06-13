@@ -4,7 +4,7 @@ namespace Tests\Unit\Services\Ai;
 
 use App\Services\Ai\DeduplicationService;
 use App\Services\Ai\EmbeddingService;
-use App\Services\Ai\HuggingFaceService;
+use Tests\Fakes\FakeEmbeddingProvider;
 use Tests\TestCase;
 
 class DeduplicationServiceTest extends TestCase
@@ -67,16 +67,6 @@ class DeduplicationServiceTest extends TestCase
 
     private function makeEmbeddingService(array $vector): EmbeddingService
     {
-        $huggingFace = new class($vector) extends HuggingFaceService
-        {
-            public function __construct(private array $vector) {}
-
-            public function embedding(string $text, ?string $model = null): array
-            {
-                return $this->vector;
-            }
-        };
-
-        return new EmbeddingService($huggingFace);
+        return new EmbeddingService(new FakeEmbeddingProvider($vector));
     }
 }

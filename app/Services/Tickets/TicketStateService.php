@@ -7,14 +7,15 @@ use App\Events\TicketStateChanged;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class TicketStateService
 {
+    use ResolvesCorrelationId;
+
     public function __construct(private TicketQrLogger $logger) {}
 
     public function transition(
@@ -43,7 +44,7 @@ class TicketStateService
         }
 
         $this->assertTransitionIsAllowed($fromState, $toState);
-        $this->assertRoleCanTransition($actor, $fromState, $toState);
+        $this->assertRoleCanTransition($actor, $ticket, $fromState, $toState);
         $this->assertCommentIsValid($fromState, $toState, $comment);
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, $toState, $comment, $fromState): Ticket {
@@ -67,9 +68,8 @@ class TicketStateService
             return $ticket;
         });
 
-        $event = TicketResolved::forTicket($updatedTicket, $correlationId);
-        if ($event !== null) {
-            event($event);
+        if ($toState === 'resolved') {
+            event(new TicketResolved($updatedTicket, $correlationId));
         }
 
         event(new TicketStateChanged(
@@ -96,14 +96,7 @@ class TicketStateService
 
     private function assertTransitionIsAllowed(string $fromState, string $toState): void
     {
-        $allowedTransitions = [
-            'open' => ['in_progress'],
-            'in_progress' => ['resolved', 'rejected'],
-            'rejected' => ['open'],
-            'resolved' => ['open'],
-        ];
-
-        $allowed = $allowedTransitions[$fromState] ?? [];
+        $allowed = $this->allowedTransitions()[$fromState] ?? [];
         if (! in_array($toState, $allowed, true)) {
             throw new InvalidArgumentException('Transicion de estado no permitida.');
         }
@@ -121,57 +114,100 @@ class TicketStateService
         }
     }
 
-    private function assertRoleCanTransition(User $actor, string $fromState, string $toState): void
+    private function assertRoleCanTransition(User $actor, Ticket $ticket, string $fromState, string $toState): void
     {
         if (! method_exists($actor, 'hasAnyRole') || ! method_exists($actor, 'hasRole')) {
             throw new InvalidArgumentException('No se puede validar roles para la transicion solicitada.');
         }
 
-        if ($fromState === 'open' && $toState === 'in_progress' && ! $actor->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
-            throw new InvalidArgumentException('Solo maintenance/admin/super_admin pueden tomar tickets.');
+        // Defensa en profundidad: maintenance solo puede transicionar tickets asignados a él.
+        // La policy ya bloquea en la capa HTTP; este guard protege llamadas directas al servicio.
+        if ($actor->hasRole('maintenance')
+            && ! $actor->hasAnyRole(['admin', 'super_admin'])
+            && $ticket->assigned_to !== $actor->id) {
+            throw new InvalidArgumentException(
+                'El técnico solo puede cambiar estado de tickets asignados a él.'
+            );
         }
 
-        if ($fromState === 'in_progress' && $toState === 'resolved' && ! $actor->hasAnyRole(['maintenance', 'admin', 'super_admin'])) {
-            throw new InvalidArgumentException('Solo maintenance/admin/super_admin pueden resolver tickets.');
-        }
-
-        if ($fromState === 'in_progress' && $toState === 'rejected' && ! $actor->hasAnyRole(['admin', 'super_admin'])) {
-            throw new InvalidArgumentException('Solo admin/super_admin pueden rechazar tickets.');
-        }
-
-        if ($fromState === 'rejected' && $toState === 'open' && ! $actor->hasAnyRole(['admin', 'super_admin'])) {
-            throw new InvalidArgumentException('Solo admin/super_admin pueden reabrir tickets rechazados.');
-        }
-
-        if ($fromState === 'resolved' && $toState === 'open' && ! $actor->hasRole('super_admin')) {
-            throw new InvalidArgumentException('Solo super_admin puede reabrir tickets resueltos.');
+        if (! $this->roleCanDoTransition($actor, $ticket, $fromState, $toState)) {
+            throw new InvalidArgumentException(
+                "El usuario no tiene permisos para la transición {$fromState} → {$toState}."
+            );
         }
     }
 
-    private function resolveCorrelationId(string $correlationId): string
+    /**
+     * Single source of truth: determines if $actor can transition $ticket
+     * from $fromState to $toState based on role rules.
+     *
+     * Used by both assertRoleCanTransition() and availableTransitionsFor()
+     * to guarantee they never diverge.
+     */
+    private function roleCanDoTransition(User $actor, Ticket $ticket, string $fromState, string $toState): bool
     {
-        $trimmed = trim($correlationId);
-        if ($trimmed !== '') {
-            return $trimmed;
+        $isAdminOrAbove = $actor->hasAnyRole(['admin', 'super_admin']);
+        $isMaintenance = $actor->hasRole('maintenance') && ! $isAdminOrAbove;
+
+        if ($isMaintenance) {
+            // Ownership guard + maintenance can only: open→in_progress
+            // and in_progress→resolved.
+            $allowed = $ticket->assigned_to === $actor->id
+                && (($fromState === 'open' && $toState === 'in_progress')
+                    || ($fromState === 'in_progress' && $toState === 'resolved'));
+        } elseif ($isAdminOrAbove) {
+            // resolved→open: only super_admin; admin/super_admin can do all
+            // other allowed transitions.
+            $allowed = ! ($fromState === 'resolved' && $toState === 'open')
+                || $actor->hasRole('super_admin');
+        } else {
+            // Reporters and unknown roles: no transitions.
+            $allowed = false;
         }
 
-        if (app()->bound('request')) {
-            $request = request();
-            if ($request instanceof Request) {
-                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-                if ($fromAttribute !== '') {
-                    return $fromAttribute;
-                }
+        return $allowed;
+    }
 
-                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                if ($fromHeader !== '') {
-                    $request->attributes->set('correlation_id', $fromHeader);
-
-                    return $fromHeader;
-                }
-            }
+    /**
+     * Returns the list of states that $actor is allowed to transition $ticket to.
+     * Pure read — no side effects, no exceptions thrown.
+     *
+     * Uses the same roleCanDoTransition() as assertRoleCanTransition() to
+     * guarantee parity between what the UI shows and what the backend accepts.
+     *
+     * @return list<string>
+     */
+    public function availableTransitionsFor(Ticket $ticket, User $actor): array
+    {
+        if (! method_exists($actor, 'hasRole') || ! method_exists($actor, 'hasAnyRole')) {
+            return [];
         }
 
-        return (string) Str::uuid();
+        $fromState = (string) $ticket->state;
+        $candidates = $this->allowedTransitions()[$fromState] ?? [];
+
+        if (empty($candidates)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $candidates,
+            fn (string $toState): bool => $this->roleCanDoTransition($actor, $ticket, $fromState, $toState)
+        ));
+    }
+
+    /**
+     * State machine: which transitions are structurally valid regardless of role.
+     *
+     * @return array<string, list<string>>
+     */
+    private function allowedTransitions(): array
+    {
+        return [
+            'open' => ['in_progress'],
+            'in_progress' => ['resolved', 'rejected'],
+            'rejected' => ['open'],
+            'resolved' => ['open'],
+        ];
     }
 }

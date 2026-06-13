@@ -5,21 +5,30 @@ namespace App\Services\Tickets;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class TicketCreationService
 {
+    use ResolvesCorrelationId;
+
     public function __construct(
         private TicketQrLogger $logger,
         private TicketMediaStorageService $ticketMediaStorage,
     ) {}
 
     /**
+     * Creates and persists a ticket.
+     *
+     * Observer note:
+     * This service intentionally does not dispatch TicketCreated directly.
+     * HTTP controllers dispatch TicketCreated through DispatchesTicketCreatedAfterResponse
+     * after the response is sent, so downstream observers run after the ticket exists
+     * and without adding latency to the request.
+     *
      * @param  array<string, mixed>  $payload
      * @param  array<int, UploadedFile>  $mediaFiles
      * @return array{created: bool, ticket: Ticket, reason: string|null, warning: array<string, mixed>|null, warning_pending: bool}
@@ -73,32 +82,5 @@ class TicketCreationService
             'warning' => null,
             'warning_pending' => false,
         ];
-    }
-
-    private function resolveCorrelationId(string $correlationId): string
-    {
-        $trimmed = trim($correlationId);
-        if ($trimmed !== '') {
-            return $trimmed;
-        }
-
-        if (app()->bound('request')) {
-            $request = request();
-            if ($request instanceof Request) {
-                $fromAttribute = trim((string) $request->attributes->get('correlation_id', ''));
-                if ($fromAttribute !== '') {
-                    return $fromAttribute;
-                }
-
-                $fromHeader = trim((string) $request->headers->get('X-Correlation-Id', ''));
-                if ($fromHeader !== '') {
-                    $request->attributes->set('correlation_id', $fromHeader);
-
-                    return $fromHeader;
-                }
-            }
-        }
-
-        return (string) Str::uuid();
     }
 }

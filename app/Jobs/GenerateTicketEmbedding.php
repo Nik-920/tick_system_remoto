@@ -26,7 +26,7 @@ class GenerateTicketEmbedding implements ShouldQueue
 
     public function handle(EmbeddingService $embeddings, TicketQrLogger $logger): void
     {
-        if (! (bool) config('ai.enabled') || ! (bool) config('ai.huggingface.enabled')) {
+        if (! $embeddings->isAvailable()) {
             return;
         }
 

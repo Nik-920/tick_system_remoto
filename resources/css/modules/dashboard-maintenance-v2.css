@@ -1,0 +1,701 @@
+/* ============================================================
+   MODULE — Dashboard · Maintenance V2 (parallel redesign)
+   INCIDEX
+
+   Scoped under .mdv2-page. A SaaS-style analytics dashboard for
+   the maintenance role at /dashboard/maintenance-v2. Does NOT
+   replace the current dashboard. Reuses the global tokens
+   (tokens/base.css) so light/dark themes adapt automatically.
+
+   FIRST VISUAL PHASE — static prototype. Not a permanent name
+   collision: this is the deliberate "V2" parallel route.
+   ============================================================ */
+
+.mdv2-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    color: var(--text-primary);
+}
+
+/* ── Per-tone palette ─────────────────────────────────────────
+   Soft surface, readable foreground, solid hue. Foregrounds clear
+   ≥4.5:1 on their soft surface, so colour is never the only signal. */
+.mdv2-tone-primary { --m-soft: #eff6ff; --m-fg: #1d4ed8; --m-solid: #2563eb; }
+.mdv2-tone-success { --m-soft: #dcfce7; --m-fg: #15803d; --m-solid: #16a34a; }
+.mdv2-tone-warning { --m-soft: #fff7ed; --m-fg: #9a3412; --m-solid: #f97316; }
+.mdv2-tone-amber   { --m-soft: #fef3c7; --m-fg: #92400e; --m-solid: #f59e0b; }
+.mdv2-tone-high    { --m-soft: #fee2e2; --m-fg: #b42318; --m-solid: #ef4444; }
+.mdv2-tone-purple  { --m-soft: #f3e8ff; --m-fg: #7e22ce; --m-solid: #9333ea; }
+.mdv2-tone-info    { --m-soft: #e0f2fe; --m-fg: #0369a1; --m-solid: #0891b2; }
+.mdv2-tone-low     { --m-soft: #dcfce7; --m-fg: #15803d; --m-solid: #22c55e; }
+.mdv2-tone-medium  { --m-soft: #fef3c7; --m-fg: #92400e; --m-solid: #f59e0b; }
+.mdv2-tone-neutral { --m-soft: #f1f5f9; --m-fg: #334155; --m-solid: #64748b; }
+
+/* ── Shared card ── */
+.mdv2-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    padding: 1.1rem;
+}
+
+.mdv2-card__title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.mdv2-card__title svg { color: var(--text-muted); }
+
+.mdv2-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+}
+
+.mdv2-card__head .mdv2-card__title { margin: 0; }
+
+.mdv2-card__total {
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+}
+
+.mdv2-card__total strong { color: var(--text-primary); font-weight: 800; }
+
+/* ============================================================
+   1. HEADER
+   ============================================================ */
+.mdv2-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.mdv2-header__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    text-wrap: balance;
+}
+
+.mdv2-header__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    text-wrap: pretty;
+}
+
+.mdv2-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.mdv2-daterange {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.83rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.mdv2-daterange svg { color: var(--text-muted); flex-shrink: 0; }
+
+.mdv2-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 1rem;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.mdv2-btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.mdv2-btn--ghost { background: var(--bg-surface); color: var(--text-secondary); border-color: var(--border-default); }
+.mdv2-btn--ghost:hover { background: var(--bg-soft); color: var(--text-primary); border-color: #cbd5e1; }
+
+.mdv2-btn--primary { background: var(--color-primary); color: #ffffff; }
+.mdv2-btn--primary:hover { background: var(--color-primary-hover); }
+
+.mdv2-btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
+
+/* Range preset selector — matches the pill/button height. */
+.mdv2-select {
+    height: 40px;
+    padding: 0 2rem 0 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    transition: var(--transition);
+}
+
+.mdv2-select:hover { border-color: #cbd5e1; color: var(--text-primary); }
+.mdv2-select:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.mdv2-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Custom from/to inputs — shown server-side (and toggled by JS) for "Personalizado". */
+.mdv2-custom { display: inline-flex; align-items: center; gap: 0.4rem; }
+.mdv2-custom--hidden { display: none; }
+.mdv2-custom__sep { color: var(--text-muted); font-weight: 700; }
+
+.mdv2-date {
+    height: 40px;
+    padding: 0 0.6rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: var(--transition);
+}
+
+.mdv2-date:hover { border-color: #cbd5e1; }
+.mdv2-date:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ============================================================
+   2. KPI ROW
+   ============================================================ */
+.mdv2-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.9rem;
+}
+
+.mdv2-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem 1.1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+
+.mdv2-kpi:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+
+.mdv2-kpi__top { display: flex; align-items: center; gap: 0.6rem; }
+
+.mdv2-kpi__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    background: var(--m-soft);
+    color: var(--m-fg);
+    flex-shrink: 0;
+}
+
+.mdv2-kpi__value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text-primary); }
+.mdv2-kpi__label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-top: 0.1rem; }
+.mdv2-kpi__note { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+
+/* ============================================================
+   3. CHARTS ROW
+   ============================================================ */
+.mdv2-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+/* ── Donut ── */
+.mdv2-donut-wrap { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; }
+
+.mdv2-donut {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mdv2-donut--empty { background: var(--bg-soft); }
+
+.mdv2-donut::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+.mdv2-donut__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.mdv2-donut__total { font-size: 1.4rem; font-weight: 800; line-height: 1; color: var(--text-primary); }
+.mdv2-donut__caption { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); }
+
+.mdv2-legend { display: flex; flex-direction: column; gap: 0.45rem; flex: 1; min-width: 140px; }
+.mdv2-legend__row { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; }
+.mdv2-legend__dot { width: 9px; height: 9px; border-radius: 999px; background: var(--m-solid); flex-shrink: 0; }
+.mdv2-legend__label { color: var(--text-secondary); font-weight: 600; }
+.mdv2-legend__value { margin-left: auto; color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ── Vertical bars ── */
+.mdv2-vbars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    gap: 0.75rem;
+    height: 150px;
+    padding-top: 0.5rem;
+}
+
+.mdv2-vbar { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; flex: 1; height: 100%; justify-content: flex-end; }
+
+.mdv2-vbar__track {
+    width: 100%;
+    max-width: 46px;
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    background: var(--bg-soft);
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+}
+
+.mdv2-vbar__fill {
+    width: 100%;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+    background: var(--m-solid);
+    min-height: 4px;
+}
+
+.mdv2-vbar__count { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+.mdv2-vbar__label { font-size: 0.74rem; font-weight: 600; color: var(--text-muted); }
+
+/* ── Horizontal bars ── */
+.mdv2-hbars { display: flex; flex-direction: column; gap: 0.7rem; }
+.mdv2-hbar__head { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem; }
+.mdv2-hbar__label { color: var(--text-secondary); font-weight: 600; }
+.mdv2-hbar__value { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.mdv2-hbar__track { height: 8px; border-radius: 999px; background: var(--bg-soft); overflow: hidden; }
+.mdv2-hbar__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary), #60a5fa); }
+
+/* ============================================================
+   4. MAIN LAYOUT (activity + assignments | rail)
+   ============================================================ */
+.mdv2-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.25rem;
+    align-items: stretch;
+}
+
+.mdv2-main { min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: stretch; }
+
+/* Cards that should fill their column: header on top, list flexes, pager pinned
+   to the bottom. This balances "Actividad reciente" and "Mis asignaciones" with
+   each other and with the rail, removing the large void below the main column. */
+.mdv2-card--fill { display: flex; flex-direction: column; }
+.mdv2-card--fill .mdv2-feed,
+.mdv2-card--fill .mdv2-assign { flex: 1 1 auto; }
+
+.mdv2-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-xs);
+    transition: var(--transition);
+}
+
+.mdv2-link:hover { background: var(--color-primary-light); }
+.mdv2-link:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.mdv2-card__foot { margin-top: 0.6rem; }
+
+/* Honest empty state for lists/charts with no data in the period. */
+.mdv2-empty {
+    margin: 0;
+    padding: 0.9rem 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ── Activity feed ── */
+.mdv2-feed { display: flex; flex-direction: column; }
+
+.mdv2-event {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.mdv2-event:last-child { border-bottom: none; }
+
+.mdv2-event__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--m-soft);
+    color: var(--m-fg);
+    flex-shrink: 0;
+}
+
+.mdv2-event__body { min-width: 0; flex: 1; }
+.mdv2-event__top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.mdv2-event__title { margin: 0; font-size: 0.86rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+.mdv2-event__meta { font-size: 0.74rem; color: var(--text-muted); font-weight: 600; margin-top: 0.15rem; }
+.mdv2-event__foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap; }
+.mdv2-event__at { font-size: 0.72rem; color: var(--text-faint); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mdv2-event__text { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; }
+
+/* ── Assignments list ── */
+.mdv2-assign { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.mdv2-assign__row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    background: var(--bg-soft);
+}
+
+.mdv2-assign__rail { width: 4px; align-self: stretch; border-radius: 999px; background: var(--m-solid); flex-shrink: 0; }
+.mdv2-assign__body { min-width: 0; flex: 1; }
+.mdv2-assign__title { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+.mdv2-assign__meta { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-top: 0.1rem; }
+
+/* ── Compact pager (placeholder, shaped for real pagination) ──
+   Lives at the bottom of a .mdv2-card--fill so it stays pinned even when the
+   list is short. Status text on the left, numbered controls on the right. */
+.mdv2-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border-light);
+}
+
+.mdv2-pager__status {
+    margin: 0;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.mdv2-pager__status strong { color: var(--text-secondary); font-weight: 800; }
+
+.mdv2-pager__controls { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+.mdv2-pager__btn,
+.mdv2-pager__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 0.35rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xs);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.mdv2-pager__btn:hover:not(:disabled),
+.mdv2-pager__num:hover:not(.is-active) { background: var(--bg-soft); color: var(--text-primary); border-color: #cbd5e1; }
+
+.mdv2-pager__num.is-active { background: var(--color-primary); color: #ffffff; border-color: var(--color-primary); cursor: default; }
+
+.mdv2-pager__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.mdv2-pager__btn:focus-visible,
+.mdv2-pager__num:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ============================================================
+   5. RAIL (SLA · avg · trend · alerts)
+   ============================================================ */
+.mdv2-rail { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+/* ── SLA gauge ── */
+.mdv2-gauge-wrap { display: flex; align-items: center; gap: 1rem; }
+
+.mdv2-gauge {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mdv2-gauge::after {
+    content: "";
+    position: absolute;
+    inset: 13px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+.mdv2-gauge__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; }
+.mdv2-gauge__value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--text-primary); }
+.mdv2-gauge__caption { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); }
+
+.mdv2-gauge-side { min-width: 0; }
+.mdv2-gauge-side__label { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); }
+.mdv2-gauge-side__detail { margin-top: 0.4rem; font-size: 0.74rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* ── Resolution times list ── */
+.mdv2-times { display: flex; flex-direction: column; gap: 0.55rem; margin: 0; }
+.mdv2-time { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+.mdv2-time__label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+.mdv2-time__value { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Trend line chart (fixed viewBox · grid · markers) ── */
+.mdv2-chart { width: 100%; }
+.mdv2-chart__svg { width: 100%; height: auto; display: block; }
+
+.mdv2-chart__grid { stroke: var(--border-light); stroke-width: 1; }
+.mdv2-chart__axis { fill: var(--text-faint); font-family: inherit; font-size: 9px; font-weight: 600; }
+
+.mdv2-chart__line { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.mdv2-chart__line--created { stroke: var(--color-primary); }
+.mdv2-chart__line--resolved { stroke: var(--color-success); }
+
+.mdv2-chart__dot { stroke: var(--bg-surface); stroke-width: 1.5; }
+.mdv2-chart__dot--created { fill: var(--color-primary); }
+.mdv2-chart__dot--resolved { fill: var(--color-success); }
+
+.mdv2-line-legend { display: flex; gap: 1rem; margin-top: 0.6rem; }
+.mdv2-line-legend__item { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); }
+.mdv2-line-legend__swatch { width: 10px; height: 10px; border-radius: 999px; }
+.mdv2-line-legend__swatch--created { background: var(--color-primary); }
+.mdv2-line-legend__swatch--resolved { background: var(--color-success); }
+
+/* ── Alerts ── */
+.mdv2-alerts { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.mdv2-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: var(--radius-sm);
+    background: var(--m-soft);
+    border: 1px solid transparent;
+}
+
+.mdv2-alert__icon { color: var(--m-fg); flex-shrink: 0; margin-top: 0.1rem; }
+.mdv2-alert__title { font-size: 0.82rem; font-weight: 800; color: var(--text-primary); }
+.mdv2-alert__title strong { color: var(--m-fg); }
+.mdv2-alert__note { font-size: 0.74rem; color: var(--text-muted); font-weight: 600; margin-top: 0.1rem; }
+
+/* ============================================================
+   6. BADGES
+   ============================================================ */
+.mdv2-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.16rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.mdv2-badge__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+.mdv2-status--open        { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
+.mdv2-status--resolved    { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.mdv2-status--in_progress { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.mdv2-status--taken       { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.mdv2-status--waiting     { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
+.mdv2-status--rejected    { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+.mdv2-prio { background: var(--m-soft); color: var(--m-fg); }
+.mdv2-prio .mdv2-badge__dot { background: var(--m-solid); }
+
+/* ============================================================
+   7. BOTTOM CARDS
+   ============================================================ */
+.mdv2-bottom {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.mdv2-stat { display: flex; align-items: center; gap: 1rem; padding: 1.1rem; }
+
+.mdv2-stat__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: var(--m-soft);
+    color: var(--m-fg);
+    flex-shrink: 0;
+}
+
+.mdv2-stat__value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; color: var(--text-primary); }
+.mdv2-stat__label { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-top: 0.15rem; }
+.mdv2-stat__note { font-size: 0.74rem; color: var(--text-muted); font-weight: 600; margin-top: 0.1rem; }
+
+/* ============================================================
+   8. RESPONSIVE
+   ============================================================ */
+@media (max-width: 1023px) {
+    .mdv2-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+    .mdv2-main { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .mdv2-header__title { font-size: 1.3rem; }
+    .mdv2-header__actions { width: 100%; }
+    .mdv2-daterange,
+    .mdv2-select,
+    .mdv2-header__actions .mdv2-btn { flex: 1 1 auto; justify-content: center; }
+    .mdv2-custom { width: 100%; }
+    .mdv2-date { flex: 1 1 auto; min-width: 0; }
+
+    /* Comfortable touch targets. */
+    .mdv2-btn { min-height: 42px; }
+    .mdv2-vbars { height: 130px; }
+
+    /* Pager: centre the controls and grow tap targets to ≥40px. */
+    .mdv2-pager { justify-content: center; }
+    .mdv2-pager__status { width: 100%; text-align: center; }
+    .mdv2-pager__btn,
+    .mdv2-pager__num { min-width: 40px; height: 40px; }
+}
+
+/* ============================================================
+   9. DARK MODE — tune fixed-hue chips
+   ============================================================ */
+[data-theme="dark"] .mdv2-tone-primary { --m-soft: rgba(37, 99, 235, 0.16);  --m-fg: #93c5fd; }
+[data-theme="dark"] .mdv2-tone-success,
+[data-theme="dark"] .mdv2-tone-low     { --m-soft: rgba(34, 197, 94, 0.16);  --m-fg: #86efac; }
+[data-theme="dark"] .mdv2-tone-warning { --m-soft: rgba(249, 115, 22, 0.16); --m-fg: #fdba74; }
+[data-theme="dark"] .mdv2-tone-amber,
+[data-theme="dark"] .mdv2-tone-medium  { --m-soft: rgba(245, 158, 11, 0.16); --m-fg: #fbbf24; }
+[data-theme="dark"] .mdv2-tone-high    { --m-soft: rgba(239, 68, 68, 0.16);  --m-fg: #fca5a5; }
+[data-theme="dark"] .mdv2-tone-purple  { --m-soft: rgba(147, 51, 234, 0.18); --m-fg: #d8b4fe; }
+[data-theme="dark"] .mdv2-tone-info    { --m-soft: rgba(8, 145, 178, 0.16);  --m-fg: #67e8f9; }
+[data-theme="dark"] .mdv2-tone-neutral { --m-soft: rgba(148, 163, 184, 0.16); --m-fg: #cbd5e1; }
+
+[data-theme="dark"] .mdv2-status--open        { background: rgba(8, 145, 178, 0.16);  color: #67e8f9; border-color: rgba(8, 145, 178, 0.3); }
+[data-theme="dark"] .mdv2-status--resolved    { background: rgba(34, 197, 94, 0.16);  color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
+[data-theme="dark"] .mdv2-status--in_progress { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+[data-theme="dark"] .mdv2-status--taken       { background: rgba(99, 102, 241, 0.16); color: #c7d2fe; border-color: rgba(99, 102, 241, 0.3); }
+[data-theme="dark"] .mdv2-status--waiting     { background: rgba(8, 145, 178, 0.16);  color: #67e8f9; border-color: rgba(8, 145, 178, 0.3); }
+[data-theme="dark"] .mdv2-status--rejected    { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+
+[data-theme="dark"] .mdv2-btn--ghost:hover { background: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .mdv2-select:hover { border-color: rgba(255, 255, 255, 0.24); }
+
+/* ============================================================
+   10. REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .mdv2-kpi,
+    .mdv2-kpi:hover { transition: none; transform: none; }
+}
+
+/* ── Mobile: 16px prevents iOS auto-zoom on focus (date range + selects) ── */
+@media (max-width: 640px) {
+    .mdv2-select,
+    .mdv2-date {
+        font-size: 16px;
+    }
+}

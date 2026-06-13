@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read User|null $assignee
  * @property-read User|null $assignedBy
  * @property-read TicketEmbedding|null $embedding
+ * @property-read Collection<int, StateHistory> $stateHistory
+ * @property-read Collection<int, TicketMedia> $media
  */
 class Ticket extends Model
 {
@@ -42,11 +46,26 @@ class Ticket extends Model
 
     public const STATE_REJECTED = 'rejected';
 
+    /**
+     * Voluntary withdrawal by the reporter while the request was still open and
+     * untouched by maintenance. Distinct from 'rejected' (a maintenance/admin
+     * decision). Terminal state; the row is preserved (no hard delete).
+     */
+    public const STATE_CANCELLED = 'cancelled';
+
     public const ASSIGNMENT_SOURCE_SELF = 'self_claimed';
 
     public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
 
-    /** @var list<string> */
+    /**
+     * Nota: 'id' se mantiene mass-assignable a propósito. Varios tests
+     * construyen instancias en memoria con id determinista
+     * (new Ticket(['id' => ...])) para eventos/listeners de IA sin tocar la BD.
+     * No hay ruta HTTP que asigne 'id' por mass-assignment (los controllers
+     * construyen arrays explícitos), por lo que no es un vector de escalada.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
         'id',
         'title',
@@ -145,9 +164,40 @@ class Ticket extends Model
 
     public function scopeAvailableForClaim(Builder $query): Builder
     {
-        return $query
-            ->where('state', self::STATE_OPEN)
-            ->whereNull('assigned_to');
+        return self::applyAssignmentUnlocked(
+            $query
+                ->where('state', self::STATE_OPEN)
+                ->whereNull('assigned_to')
+        );
+    }
+
+    /**
+     * Tickets that a maintenance user can see:
+     * - tickets assigned to them, OR
+     * - tickets that are open and unassigned (available to claim).
+     */
+    public function scopeVisibleToMaintenance(Builder $query, string $userId): Builder
+    {
+        return $query->where(function (Builder $q) use ($userId): void {
+            $q->where('assigned_to', $userId)
+                ->orWhere(function (Builder $inner): void {
+                    $inner->where('state', self::STATE_OPEN)
+                        ->whereNull('assigned_to');
+                    self::applyAssignmentUnlocked($inner);
+                });
+        });
+    }
+
+    private static function applyAssignmentUnlocked(Builder $query): Builder
+    {
+        $connection = $query->getConnection();
+        $driver = $connection instanceof Connection ? $connection->getDriverName() : '';
+
+        if ($driver === 'pgsql') {
+            return $query->whereRaw('assignment_locked is false');
+        }
+
+        return $query->where('assignment_locked', false);
     }
 
     public function scopeAssignedToUser(Builder $query, string $userId): Builder

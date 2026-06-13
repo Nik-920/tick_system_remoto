@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
@@ -394,6 +395,7 @@ class TicketApiControllerTest extends TestCase
             'state' => 'open',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
             'to_state' => 'in_progress',
@@ -594,6 +596,7 @@ class TicketApiControllerTest extends TestCase
             'state' => 'in_progress',
             'priority' => 'medium',
         ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
 
         $correlationId = 'corr-ticket-resolve-001';
 
@@ -610,6 +613,133 @@ class TicketApiControllerTest extends TestCase
             return $job->ticket->id === $ticket->id
                 && $job->correlationId === $correlationId;
         });
+    }
+
+    // ── Phase 1: maintenance API ownership tests ────────────────────────
+
+    public function test_maintenance_api_index_only_sees_assigned_and_available_tickets(): void
+    {
+        $maintenanceA = $this->createUserWithRole('maintenance');
+        $maintenanceB = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($maintenanceA);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket assigned to A — must appear
+        $ownTicket = Ticket::create([
+            'title' => 'Ticket propio API maintenance A',
+            'description' => 'Asignado al tecnico A para API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        $ownTicket->forceFill(['assigned_to' => $maintenanceA->id])->save();
+
+        // Open + unassigned — must appear (claim queue)
+        $availableTicket = Ticket::create([
+            'title' => 'Ticket disponible API',
+            'description' => 'Open y sin asignar, visible para tecnico en API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+
+        // Ticket assigned to B — must NOT appear
+        $otherTicket = Ticket::create([
+            'title' => 'Ticket de otro tecnico API',
+            'description' => 'Asignado a B, no debe verse por A en API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $otherTicket->forceFill(['assigned_to' => $maintenanceB->id])->save();
+
+        $response = $this->getJson(route('api.tickets.index'));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ownTicket->id, $ids, 'Ticket asignado a A debe aparecer');
+        $this->assertContains($availableTicket->id, $ids, 'Ticket disponible debe aparecer');
+        $this->assertNotContains($otherTicket->id, $ids, 'Ticket de B no debe aparecer para A');
+    }
+
+    public function test_maintenance_api_cannot_update_state_of_unassigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Open ticket not assigned to this maintenance
+        $ticket = Ticket::create([
+            'title' => 'Ticket sin asignar API',
+            'description' => 'Open pero no asignado, no debe poder cambiar estado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
+            'to_state' => 'in_progress',
+            'comment' => 'Intento no autorizado via API.',
+        ]);
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'state' => 'open',
+        ]);
+    }
+
+    public function test_maintenance_api_can_update_state_of_assigned_ticket(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $maintenance = $this->createUserWithRole('maintenance');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $ticket = Ticket::create([
+            'title' => 'Ticket asignado al tecnico API',
+            'description' => 'Asignado al tecnico que realiza la peticion API.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $ticket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $response = $this->patchJson(route('api.tickets.update-state', $ticket), [
+            'to_state' => 'in_progress',
+            'comment' => 'Iniciando atencion via API.',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.state', 'in_progress');
+
+        $this->assertDatabaseHas('state_history', [
+            'ticket_id' => $ticket->id,
+            'from_state' => 'open',
+            'to_state' => 'in_progress',
+            'changed_by' => $maintenance->id,
+        ]);
     }
 
     private function createUserWithRole(string $role): User
@@ -935,6 +1065,278 @@ class TicketApiControllerTest extends TestCase
         );
 
         $response->assertUnprocessable();
+    }
+
+    // ── Fase 0 Group C: documenta bug — filtro assignment ignorado en API ────
+    // Estos tests FALLARÁN con el código actual (bug BUG-1).
+    // Pasarán después de la Fase 3 cuando se migre Api\TicketController al Builder.
+
+    public function test_api_index_assignment_mine_returns_only_tickets_assigned_to_user(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($maintenance);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        // Ticket asignado al propio maintenance — debe aparecer con assignment=mine
+        $ownTicket = Ticket::create([
+            'title' => 'Ticket asignado al tecnico API mine',
+            'description' => 'Ticket asignado al maintenance autenticado.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+        $ownTicket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        // Ticket open+unassigned — visible via visibleToMaintenance pero NO es "mine"
+        $availableTicket = Ticket::create([
+            'title' => 'Ticket disponible no asignado API',
+            'description' => 'Ticket open sin asignar, visible pero no asignado al tecnico.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'low',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['assignment' => 'mine']));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ownTicket->id, $ids, 'El ticket asignado al tecnico debe aparecer con assignment=mine');
+        $this->assertNotContains($availableTicket->id, $ids, 'El ticket open+unassigned NO debe aparecer con assignment=mine');
+    }
+
+    public function test_api_index_assignment_unassigned_returns_only_unassigned_tickets(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $assignedTicket = Ticket::create([
+            'title' => 'Ticket con asignado API unassigned check',
+            'description' => 'Ticket asignado a un tecnico.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+        $assignedTicket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $unassignedTicket = Ticket::create([
+            'title' => 'Ticket sin asignar API unassigned check',
+            'description' => 'Ticket open sin asignar al tecnico.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'low',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['assignment' => 'unassigned']));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($unassignedTicket->id, $ids, 'El ticket sin asignar debe aparecer');
+        $this->assertNotContains($assignedTicket->id, $ids, 'El ticket asignado NO debe aparecer con assignment=unassigned');
+    }
+
+    public function test_api_index_assignment_assigned_returns_only_assigned_tickets(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($admin);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $assignedTicket = Ticket::create([
+            'title' => 'Ticket asignado API assigned check',
+            'description' => 'Ticket asignado a un tecnico, debe aparecer.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'high',
+        ]);
+        $assignedTicket->forceFill(['assigned_to' => $maintenance->id])->save();
+
+        $unassignedTicket = Ticket::create([
+            'title' => 'Ticket libre API assigned check',
+            'description' => 'Ticket open sin asignar, NO debe aparecer.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'low',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['assignment' => 'assigned']));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($assignedTicket->id, $ids, 'El ticket asignado debe aparecer');
+        $this->assertNotContains($unassignedTicket->id, $ids, 'El ticket sin asignar NO debe aparecer con assignment=assigned');
+    }
+
+    // ── Fase 0 Group D: paridad API — filtros que deben funcionar en API ────
+
+    public function test_api_index_location_filter_works(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $locationA = Location::create([
+            'name' => 'Lab API Filtro A',
+            'building' => 'Edificio X',
+            'floor' => '1',
+            'room_code' => 'X-'.Str::upper(Str::random(5)),
+            'qr_token' => 'qr-x-'.Str::lower(Str::random(8)),
+            'is_active' => true,
+        ]);
+        $locationB = Location::create([
+            'name' => 'Lab API Filtro B',
+            'building' => 'Edificio Y',
+            'floor' => '2',
+            'room_code' => 'Y-'.Str::upper(Str::random(5)),
+            'qr_token' => 'qr-y-'.Str::lower(Str::random(8)),
+            'is_active' => true,
+        ]);
+        $category = $this->createCategory();
+
+        $ticketA = Ticket::create([
+            'title' => 'Ticket en Ubicacion A API',
+            'description' => 'Ticket del reporter en la ubicacion A.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $locationA->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ticketB = Ticket::create([
+            'title' => 'Ticket en Ubicacion B API',
+            'description' => 'Ticket del reporter en la ubicacion B.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $locationB->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['location_id' => $locationA->id]));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ticketA->id, $ids);
+        $this->assertNotContains($ticketB->id, $ids);
+    }
+
+    public function test_api_index_category_filter_works(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $categoryA = Category::create([
+            'name' => 'Cat API A '.Str::random(4),
+            'icon' => 'bolt',
+            'description' => 'Categoria A para test API',
+        ]);
+        $categoryB = Category::create([
+            'name' => 'Cat API B '.Str::random(4),
+            'icon' => 'wifi',
+            'description' => 'Categoria B para test API',
+        ]);
+
+        $ticketA = Ticket::create([
+            'title' => 'Ticket Categoria A API',
+            'description' => 'Ticket del reporter en categoria A.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryA->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ticketB = Ticket::create([
+            'title' => 'Ticket Categoria B API',
+            'description' => 'Ticket del reporter en categoria B.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $categoryB->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->getJson(route('api.tickets.index', ['category_id' => $categoryA->id]));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($ticketA->id, $ids);
+        $this->assertNotContains($ticketB->id, $ids);
+    }
+
+    public function test_api_index_date_range_filter_works(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        Sanctum::actingAs($reporter);
+
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $oldTicket = Ticket::create([
+            'title' => 'Ticket antiguo API fecha',
+            'description' => 'Ticket creado hace 5 dias, fuera del rango.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'low',
+        ]);
+        $oldTicket->forceFill(['created_at' => now()->subDays(5)])->save();
+
+        $recentTicket = Ticket::create([
+            'title' => 'Ticket reciente API fecha',
+            'description' => 'Ticket creado hoy, dentro del rango.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'high',
+        ]);
+        $recentTicket->forceFill(['created_at' => now()])->save();
+
+        $today = now()->toDateString();
+
+        $response = $this->getJson(route('api.tickets.index', ['from' => $today, 'to' => $today]));
+
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($recentTicket->id, $ids, 'El ticket de hoy debe aparecer en el rango');
+        $this->assertNotContains($oldTicket->id, $ids, 'El ticket antiguo NO debe aparecer');
     }
 
     public function test_review_endpoint_validates_invalid_review_status(): void

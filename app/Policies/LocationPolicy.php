@@ -7,6 +7,14 @@ use App\Models\User;
 
 class LocationPolicy
 {
+    /**
+     * Lectura de catálogo: abierta a cualquier usuario autenticado.
+     *
+     * Divergencia Web/API INTENCIONAL: la API expone el listado de ubicaciones
+     * a reporter/maintenance (lo necesitan para crear tickets desde clientes),
+     * mientras que el módulo Web de gestión restringe el index a admin/super_admin
+     * usando la ability `create`. La gestión (create/update/delete) sí es admin+.
+     */
     public function viewAny(User $user): bool
     {
         return $user->id !== '';

@@ -9,11 +9,18 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\MaintenanceDashboardReportController;
+use App\Http\Controllers\Web\MaintenanceDashboardV2Controller;
 use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
+use App\Http\Controllers\Web\ReporterDashboardController;
+use App\Http\Controllers\Web\ReporterGuideController;
+use App\Http\Controllers\Web\ReporterTicketController;
+use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketController;
+use App\Http\Controllers\Web\TicketHistoryController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +29,12 @@ Route::get('/', function () {
 });
 
 Route::get('/health', HealthController::class)->name('health.show');
-Route::get('/metrics', MetricsController::class)
+
+// Métricas operativas: exponen conteos de usuarios/roles y datos agregados.
+// Requieren sesión autenticada con rol admin/super_admin (no es endpoint público).
+// Si se necesita scraping por Prometheus, usar un middleware de token/IP-allowlist.
+Route::middleware(['auth', 'role:admin|super_admin'])
+    ->get('/metrics', MetricsController::class)
     ->name('metrics');
 
 Route::middleware('guest')->group(function (): void {
@@ -62,6 +74,21 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
+    // Self-service maintenance report (HTML preview + PDF) for the date range.
+    // Scoped to the maintenance role: admin/super_admin have their own analytics
+    // and must not export another technician's report from here.
+    Route::middleware('role:maintenance')->group(function (): void {
+        Route::get('/dashboard/maintenance/report', [MaintenanceDashboardReportController::class, 'preview'])
+            ->name('dashboard.maintenance.report');
+        Route::get('/dashboard/maintenance/report.pdf', [MaintenanceDashboardReportController::class, 'pdf'])
+            ->name('dashboard.maintenance.report.pdf');
+
+        // Dashboard Maintenance V2 — parallel redesign (static visual phase).
+        // Does NOT replace /dashboard; the PDF button reuses the report.pdf route above.
+        Route::get('/dashboard/maintenance-v2', MaintenanceDashboardV2Controller::class)
+            ->name('dashboard.maintenance-v2');
+    });
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])
         ->middleware('throttle:mutations')
@@ -80,10 +107,62 @@ Route::middleware('auth')->group(function (): void {
     $ticketMutationMiddleware = ['idempotency', 'throttle:mutations'];
     $ticketAdminMutationMiddleware = ['role:admin|super_admin', ...$ticketMutationMiddleware];
 
+    // Reporter home dashboard — redesigned personal panel (static visual phase).
+    // Parallel to /dashboard (which keeps rendering the live dashboard.reporter
+    // view); this is the surface the sidebar "Dashboard" links to for reporters.
+    Route::get('/reporter/dashboard', ReporterDashboardController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.dashboard');
+
+    // "Guía del reporter" — static help page (destination of the "Ver guía"
+    // links across the reporter surfaces).
+    Route::get('/reporter/guide', ReporterGuideController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.guide');
+
+    // "Mis tickets" — reporter-only board + per-ticket tracking (static visual
+    // phase, no live data yet). Parallel to the classic /tickets list, which
+    // stays intact for live data; this is the redesigned reporter surface the
+    // sidebar links to for reporters.
+    Route::middleware('role:reporter')
+        ->prefix('reporter/tickets')
+        ->name('reporter.tickets.')
+        ->group(function () use ($ticketMutationMiddleware): void {
+            Route::get('/', [ReporterTicketController::class, 'index'])->name('index');
+            // "Historial" — literal segment registered before /{ticket} so it is
+            // not captured as a ticket id.
+            Route::get('/history', [ReporterTicketController::class, 'history'])->name('history');
+            // Edit ONE own request. The controller resolves it inside the
+            // reporter_id boundary (404 otherwise) and re-checks editability via
+            // TicketPolicy@update (own + open + unassigned + unlocked). The
+            // literal /edit segment is registered before /{ticket} for clarity.
+            Route::get('/{ticket}/edit', [ReporterTicketController::class, 'edit'])->name('edit');
+            Route::patch('/{ticket}', [ReporterTicketController::class, 'update'])
+                ->middleware($ticketMutationMiddleware)
+                ->name('update');
+            // "Cancelar solicitud" — voluntary withdrawal (open → cancelled). Same
+            // ownership boundary + cancellation window (own + open + unassigned +
+            // unlocked) as edit. NOT a rejection and NOT a delete.
+            Route::patch('/{ticket}/cancel', [ReporterTicketController::class, 'cancel'])
+                ->middleware($ticketMutationMiddleware)
+                ->name('cancel');
+            Route::get('/{ticket}', [ReporterTicketController::class, 'show'])->name('show');
+        });
+
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/available', [TicketController::class, 'available'])
         ->middleware('role:maintenance|admin|super_admin')
         ->name('tickets.available');
+    // "Mis asignaciones" — maintenance-only board (static visual phase, no live data yet).
+    // Registered before /tickets/{ticket} so the literal segment is not captured as a model.
+    Route::get('/tickets/assignments', TicketAssignmentsController::class)
+        ->middleware('role:maintenance')
+        ->name('tickets.assignments');
+    // "Historial" — maintenance-only history board (static visual phase, no live data yet).
+    // Registered before /tickets/{ticket} so the literal segment is not captured as a model.
+    Route::get('/tickets/history', TicketHistoryController::class)
+        ->middleware('role:maintenance')
+        ->name('tickets.history');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])
         ->middleware(['idempotency', 'throttle:creations'])
@@ -104,6 +183,12 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])
         ->middleware($ticketMutationMiddleware)
         ->name('tickets.destroy');
+    // Edición limitada operativa desde tickets.show (maintenance asignado o
+    // admin/super_admin): corrige categoría/prioridad y adjunta evidencias.
+    // NO toca título/descripción/reporter — eso vive en reporter.tickets.update.
+    Route::patch('/tickets/{ticket}/maintenance', [TicketController::class, 'updateMaintenance'])
+        ->middleware($ticketMutationMiddleware)
+        ->name('tickets.maintenance.update');
     Route::patch('/tickets/{ticket}/state', [TicketController::class, 'updateState'])
         ->middleware($ticketMutationMiddleware)
         ->name('tickets.update-state');

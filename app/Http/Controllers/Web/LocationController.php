@@ -193,10 +193,8 @@ class LocationController extends Controller
      */
     private function applyFilters(Builder $query, array $filters): void
     {
-        if (array_key_exists('is_active', $filters)) {
-            $query->withActiveState(
-                $filters['is_active'] === null ? null : (bool) $filters['is_active']
-            );
+        if (($filters['is_active'] ?? null) !== null) {
+            $query->withActiveState((bool) $filters['is_active']);
         }
 
         if (! empty($filters['building'])) {

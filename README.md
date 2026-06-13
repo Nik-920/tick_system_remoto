@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🎫 Sistema de Reporte de Incidencias
+# 🎫 INCIDEX
 
-### *Infrastructure Ticketing System*
+### *Sistema de Reporte de Incidencias de Infraestructura*
 
 [![Laravel](https://img.shields.io/badge/Laravel-12.56.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
@@ -24,7 +24,7 @@
 
 ## 📖 Descripción del Proyecto
 
-**Sistema de Reporte de Incidencias de Infraestructura** es una aplicación web que permite a alumnos y profesores reportar fallas de infraestructura (proyectores averiados, baños en mal estado, enchufes sin corriente, etc.) escaneando un **código QR** ubicado en cada aula o espacio físico.
+**INCIDEX** es una aplicación web que permite a alumnos y profesores reportar fallas de infraestructura (proyectores averiados, baños en mal estado, enchufes sin corriente, etc.) escaneando un **código QR** ubicado en cada aula o espacio físico.
 
 ### El Problema
 
@@ -59,31 +59,38 @@ Antes de escribir una sola línea de código, es fundamental analizar objetivame
 ### ❌ Contras y Riesgos — Con Mitigaciones
 
 #### 1. 🔗 Dependencia de Conectividad
+>
 > **Riesgo:** Si la red Wi-Fi del campus cae, el sistema queda inoperativo.
 
 **Mitigación:** Implementar un *Service Worker* para soporte offline básico (PWA) que encole los tickets y los sincronice cuando se recupere la conexión.
 
 #### 2. 🖨️ Gestión Física de los Códigos QR
+>
 > **Riesgo:** Los QR pueden dañarse, cubrirse con graffiti o ser reemplazados por QR fraudulentos.
 
 **Mitigación:**
+
 - Imprimir QR con laminado resistente.
 - Firmar digitalmente cada QR (contienen un *token* único + hash de la ubicación verificado en el backend).
 - Validar en servidor que el QR pertenece a un espacio registrado antes de crear el ticket.
 
 #### 3. 🗑️ Tickets Spam / Duplicados
+>
 > **Riesgo:** Un mismo problema puede generar decenas de tickets idénticos desde cualquier vía (QR, API REST, formulario manual).
 
 **Mitigación:**
+
 - **`TicketDeduplicationService`** centralizado: toda ruta de creación (QR controller, API controller, Livewire form) invoca este servicio antes de insertar. Si existe un ticket *Abierto* o *En Proceso* para la misma ubicación **y categoría**, redirige al ticket existente.
 - **Índice UNIQUE parcial en DB** (última línea de defensa): `UNIQUE (location_id, category_id) WHERE state IN ('open', 'in_progress')`. Aunque la lógica de aplicación falle, la base de datos rechaza el duplicado.
 - Rate limiting por IP (`throttle:10,1`) y por usuario autenticado (`throttle:5,1`) en todas las rutas de creación.
 - El bloqueo aplica mientras el ticket permanezca *Abierto* o *En Proceso*.
 
 #### 4. 🔐 Autenticación y Anonimato
+>
 > **Riesgo:** Sin login, cualquiera con el QR puede enumerar incidencias del edificio (riesgo de privacidad e ingeniería social).
 
 **Mitigación:**
+
 - **Crear** un ticket siempre requiere autenticación (OAuth con cuenta institucional Google/Microsoft).
 - **Ver el estado** de un ticket vía QR también requiere login (se redirige al flujo OAuth antes de mostrar cualquier información). El escaneo QR sin login solo muestra una pantalla de bienvenida genérica sin revelar datos de incidencias.
 - Los IDs de ticket internos (UUID) **no se exponen en URLs públicas**; se usa un `slug` opaco o el `qr_token` de la ubicación como referencia externa.
@@ -91,14 +98,17 @@ Antes de escribir una sola línea de código, es fundamental analizar objetivame
 - Las políticas RLS de Supabase bloquean toda consulta sin JWT válido (`auth.role() = 'authenticated'`).
 
 #### 5. 📊 Adopción por el Equipo de Mantenimiento
+>
 > **Riesgo:** Si mantenimiento no actualiza los estados, el sistema pierde credibilidad rápidamente.
 
 **Mitigación:**
+
 - Notificaciones push/email automáticas al crear un ticket.
 - Dashboard simple con KPIs visibles para jefatura.
 - SLA visible: tiempo promedio de resolución por categoría.
 
 #### 6. 🧩 Complejidad del Stack para un Equipo Junior
+>
 > **Riesgo:** Laravel + Supabase + QR + RBAC + CI/CD puede ser demasiado para un equipo sin experiencia previa.
 
 **Mitigación — Fases de implementación incrementales para 2 devs:**
@@ -116,9 +126,11 @@ Antes de escribir una sola línea de código, es fundamental analizar objetivame
 - **Una fase a la vez**: no pasar a la siguiente hasta que los tests de la actual estén en verde.
 
 #### 7. 🔒 Seguridad del API Key de Supabase
+>
 > **Riesgo:** Exponer `SUPABASE_ANON_KEY` o `SUPABASE_SERVICE_ROLE_KEY` en un bundle público o en el repositorio permite acceso directo a la base de datos.
 
 **Mitigación:**
+
 - **`SUPABASE_ANON_KEY`** vive **solo en el backend Laravel** (archivo `.env`, nunca en código JS compilado ni en variables de entorno del frontend). Todo acceso a Supabase pasa por el backend que actúa como proxy.
 - **`SUPABASE_SERVICE_ROLE_KEY`** se usa exclusivamente para tareas de sistema (seeds, migraciones, sync de roles). Se almacena en **GitHub Secrets** (CI/CD) o en el gestor de secretos del host de producción; jamás en `.env` de desarrollo compartido.
 - **Rotación de claves:** cada 90 días (o inmediatamente si hay sospecha de compromiso) regenerar las claves en el panel de Supabase y actualizar los Secrets de GitHub y del servidor de producción.
@@ -134,9 +146,11 @@ Antes de escribir una sola línea de código, es fundamental analizar objetivame
 - Toda la lógica de negocio pasa por el backend Laravel; Row Level Security (RLS) actúa como segunda línea de defensa.
 
 #### 8. 📈 Escalabilidad de Supabase en Plan Gratuito
+>
 > **Riesgo:** El plan free de Supabase tiene límites de conexiones y almacenamiento.
 
 **Mitigación:**
+
 - Documentar los límites en el README.
 - Preparar el proyecto para migrar a un plan pago o a PostgreSQL self-hosted con mínimos cambios (la capa ORM de Laravel abstrae esto).
 
@@ -168,34 +182,34 @@ El ciclo de vida del ticket es el núcleo del sistema. Se implementa como una **
 
 ### Arquitectura de Capas
 
-```
-┌─────────────────────────────────────────────────┐
-│                Presentation Layer               │
-│         Livewire Components + Blade Templates   │
-├─────────────────────────────────────────────────┤
-│                Application Layer                │
-│        Controllers + Form Requests + Jobs       │
-├─────────────────────────────────────────────────┤
-│                  Domain Layer                   │
-│ Models + State Machine + Policies + Repositories│
-│ + IA Services (Embeddings, Deduplication)       │
-├─────────────────────────────────────────────────┤
-│              Infrastructure Layer               │
-│      Supabase (PostgreSQL) + Storage + Auth     │
-└─────────────────────────────────────────────────┘
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                     │
+│    Livewire Components + Blade Templates + ViewModels       │
+├─────────────────────────────────────────────────────────────┤
+│                      Application Layer                      │
+│   Controllers + Form Requests + Jobs + Notifications        │
+├─────────────────────────────────────────────────────────────┤
+│                        Domain Layer                         │
+│ Models + Services (TicketState) + Policies + Events/Listeners│
+├─────────────────────────────────────────────────────────────┤
+│                    Infrastructure Layer                     │
+│ Supabase (DB/Auth) + Query Objects + Adapters (IA/Firebase) │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Diagrama de Flujo: Creación de Ticket con IA
-```
+
+```text
 ┌──────────────────────────────────────────────────┐
 │    Nuevo Ticket Creado (Descripción + Ubicación) │
 └───────────────────┬──────────────────────────────┘
                     │
-                    ▼
+                    ▼ (Job Asíncrono en Queue)
 ┌─────────────────────────────────────────────────┐
 │  Hugging Face: all-MiniLM-L6-v2 (Embedding)     │
 │  • Convierte descripción a vector (384 dims)    │
-│  • Procesa en ~100-200ms                        │
+│  • Procesa de forma asíncrona (background)      │
 └───────────────────┬─────────────────────────────┘
                     │
                     ▼
@@ -209,26 +223,37 @@ El ciclo de vida del ticket es el núcleo del sistema. Se implementa como una **
                     ▼
         ┌───────────┴───────────┐
         │                       │
-SÍ: Similitud ≥ 70%    NO: Similitud < 70%
+SÍ: Similitud ≥ Umbral  NO: Similitud < Umbral
         │                       │
         ▼                       ▼
 ┌───────────────────┐   ┌──────────────────┐
 │ DUPLICADO DETECTADO   │  TICKET NUEVO    │
-│ • Se marca        │   │ • Se crea        │
-│ • Se vincula      │   │ • Se almacena    │
+│ • Se marca flag   │   │ • Flujo normal   │
+│ • Dispara Evento  │   │ • Queda registrado│
 │ • Se audita (IA)  │   │ • Se audita (IA) │
 └───────────────────┘   └──────────────────┘
 ```
-### Flujo de Implementación
-### Fase 1: Detección Básica (ACTUAL)
 
-1. Usuario crea ticket con descripción
-2. Laravel dispara evento (ticket.created)
-3. Proceso sincronico llama a Hugging Face API
-4. Se genera embedding y se almacena
-5. Se buscan matches en tickets abiertos/en progreso
-6. Si similitud ≥ 0.70 → Se marca como posible duplicado
-7. Administrador revisa antes de consolidar
+### Flujo de Implementación
+
+### Fase 1: Detección Básica de Duplicados (Implementado)
+
+1. Usuario crea ticket con descripción.
+2. Laravel dispara evento (`TicketCreated`).
+3. Listeners despachan **Jobs Asíncronos** (`DetectDuplicates` o `GenerateTicketEmbedding`).
+4. El Job llama a la API de Hugging Face para generar el embedding y lo almacena.
+5. Se buscan matches en tickets abiertos/en progreso para la misma ubicación y categoría.
+6. Si la similitud supera el umbral configurado y los textos coinciden → Se marca como duplicado y se dispara evento `DuplicateDetected`.
+7. Administrador revisa en el panel antes de consolidar o rechazar.
+
+### Fase 2: Análisis de Recurrencia e Historial (Implementado)
+
+1. Un ticket de mantenimiento es marcado como "Resuelto".
+2. Laravel dispara el evento (`TicketResolved`).
+3. Un Listener despacha el **Job Asíncrono** (`UpdateRecurrenceHistory`).
+4. El Job calcula el tiempo de resolución del ticket.
+5. Se actualiza el registro en `LocationIncidentHistory` (incrementando el contador de incidencias para esa ubicación/categoría y recalculando el tiempo promedio de resolución).
+6. Esta data alimenta las métricas y alertas de recurrencia en la plataforma.
 
 ---
 
@@ -311,6 +336,7 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 ## 🛠️ Stack Tecnológico
 
 ### Backend
+
 | Tecnología | Versión | Propósito |
 |---|---|---|
 | **PHP** | 8.2.12 (CLI, ZTS Visual C++ 2019 x64) | Runtime backend |
@@ -321,8 +347,11 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 | **spatie/laravel-permission** | 6.25.0 | RBAC (Roles y Permisos) |
 | **simplesoftwareio/simple-qrcode** | 4.2.0 | Generación de códigos QR |
 | **Laravel Sanctum** | 4.3.1 | Autenticación de API tokens |
+| **kreait/laravel-firebase** | 6.2.x | Notificaciones Push (FCM) |
+| **sentry/sentry-laravel** | 4.25.x | Observabilidad y monitoreo de errores |
 
 ### Base de Datos y Auth
+
 | Tecnología | Propósito |
 |---|---|
 | **Supabase** | PostgreSQL gestionado + Auth + Storage |
@@ -331,6 +360,7 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 | **Row Level Security** | Seguridad a nivel de fila en PostgreSQL |
 
 ### Frontend
+
 | Tecnología | Versión | Propósito |
 |---|---|---|
 | **Node.js** | v22.20.0 | Runtime frontend |
@@ -340,6 +370,7 @@ No todos los patrones de diseño son adecuados para este sistema. Los siguientes
 | **Heroicons** | - | Iconografía |
 
 ### DevOps y Calidad
+
 | Tecnología | Propósito |
 |---|---|
 | **GitHub Actions** | Pipeline CI/CD |
@@ -439,14 +470,16 @@ Paquetes Laravel principales instalados:
 - `spatie/laravel-model-states`: **2.12.1** — state machine
 - `laravel/sanctum`: **4.3.1** — autenticación API
 - `simplesoftwareio/simple-qrcode`: **4.2.0** — generación de QR
+- `kreait/laravel-firebase`: **6.2.x** — integración con Firebase Cloud Messaging
+- `sentry/sentry-laravel`: **4.25.x** — reporte de errores a Sentry
 
 ### 7) AI Integration
 
 - **Proveedor**: Hugging Face Inference API
 - **Uso**: embeddings semánticos y deduplicación inteligente
 - **Modelos configurados**:
-    - `sentence-transformers/all-MiniLM-L6-v2` (embeddings)
-    - `facebook/bart-large-mnli` (clasificación zero-shot)
+  - `sentence-transformers/all-MiniLM-L6-v2` (embeddings)
+  - `facebook/bart-large-mnli` (clasificación zero-shot)
 
 Variables de entorno asociadas:
 
@@ -576,7 +609,6 @@ Motor y esquema actual:
 | Gestionar usuarios y roles | ❌ | ❌ | ❌ | ✅ |
 | Ver dashboard completo | ❌ | ❌ | ✅ | ✅ |
 | Exportar reportes | ❌ | ❌ | ✅ | ✅ |
-
 
 ### Estrategia única de autenticación y sincronización de roles (lista corta para 2 devs junior)
 
@@ -713,6 +745,7 @@ ticket activo  pre-rellenado con
 ### GitHub Actions — CI (ajustado a Supabase y RLS)
 
 Flujo simple para 2 devs junior:
+
 1. **Lint** (composer + pint + phpstan).
 2. **Tests** con base Supabase (imagen oficial con extensiones `auth.*` y `pgcrypto`) para que la migración que referencia `auth.users` no falle.
 3. **Smoke RLS**: genera un JWT con `app_role` y hace una consulta mínima contra PostgREST para verificar que la política responde (sin cubrir todo el sistema).
@@ -759,8 +792,6 @@ Sin observabilidad, los problemas en producción tardan en detectarse y la credi
 | **Local** | [Laravel Telescope](https://laravel.com/docs/telescope) | `composer require laravel/telescope --dev` + `php artisan telescope:install` |
 | **Staging / Producción** | Canal `stack` de Laravel (stdout → servicio de logs) | `LOG_CHANNEL=stack` + `LOG_STACK=daily,stderr` |
 | **Errores no controlados** | Integrar [Sentry](https://sentry.io) o similar | `composer require sentry/sentry-laravel` + `SENTRY_LARAVEL_DSN=...` |
-
-
 
 ---
 

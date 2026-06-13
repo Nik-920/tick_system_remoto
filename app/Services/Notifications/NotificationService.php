@@ -9,22 +9,24 @@ use Throwable;
 
 class NotificationService
 {
-    public function notifyUser(
-        User $user,
-        string $type,
-        string $title,
-        string $body,
-        ?string $url = null,
-        string $icon = '🔔'
-    ): void {
+    public function notifyUser(User $user, NotificationPayload $payload): void
+    {
         try {
+            // Idempotencia (Fases 5.2 / 5.4): evitar duplicar la notificación in-app
+            // ante reintentos de listeners encolados.
+            if ($this->isDuplicate($user->id, $payload->type, $payload->ticketId, $payload->dedupKey)) {
+                return;
+            }
+
             Notification::create([
                 'user_id' => $user->id,
-                'type' => $type,
-                'title' => $title,
-                'body' => $body,
-                'url' => $url,
-                'icon' => $icon,
+                'ticket_id' => $payload->ticketId,
+                'dedup_key' => $payload->dedupKey,
+                'type' => $payload->type,
+                'title' => $payload->title,
+                'body' => $payload->body,
+                'url' => $payload->url,
+                'icon' => $payload->icon,
             ]);
         } catch (Throwable $e) {
             Log::error('Error guardando notificación interna.', [
@@ -34,19 +36,45 @@ class NotificationService
         }
     }
 
-    public function notifyAdmins(
-        string $type,
-        string $title,
-        string $body,
-        ?string $url = null,
-        string $icon = '🔔'
-    ): void {
+    public function notifyAdmins(NotificationPayload $payload): void
+    {
         $adminIds = User::role(['admin', 'super_admin'])
             ->pluck('id')
             ->unique();
 
-        User::whereIn('id', $adminIds)->get()->each(function (User $admin) use ($type, $title, $body, $url, $icon) {
-            $this->notifyUser($admin, $type, $title, $body, $url, $icon);
+        User::whereIn('id', $adminIds)->get()->each(function (User $admin) use ($payload) {
+            $this->notifyUser($admin, $payload);
         });
+    }
+
+    /**
+     * ¿Ya existe hoy una notificación in-app equivalente para este usuario?
+     *
+     * - Si viene dedup_key (Fase 5.4): identidad precisa del evento lógico
+     *   (incluye from/to state o action), permitiendo múltiples notificaciones
+     *   legítimas del mismo ticket el mismo día y bloqueando solo reintentos.
+     * - Si no viene: fallback (Fase 5.2) por user_id + type + ticket_id + día.
+     * - Sin ticket_id ni dedup_key: no hay clave → no se deduplica.
+     */
+    private function isDuplicate(string $userId, string $type, ?string $ticketId, ?string $dedupKey): bool
+    {
+        if ($dedupKey !== null) {
+            return Notification::query()
+                ->where('user_id', $userId)
+                ->where('dedup_key', $dedupKey)
+                ->whereDate('created_at', now()->toDateString())
+                ->exists();
+        }
+
+        if ($ticketId !== null) {
+            return Notification::query()
+                ->where('user_id', $userId)
+                ->where('type', $type)
+                ->where('ticket_id', $ticketId)
+                ->whereDate('created_at', now()->toDateString())
+                ->exists();
+        }
+
+        return false;
     }
 }

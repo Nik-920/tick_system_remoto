@@ -8,6 +8,8 @@ $priorityValue = (string) ($filters['priority'] ?? '');
 $locationValue = (string) ($filters['location_id'] ?? '');
 $categoryValue = (string) ($filters['category_id'] ?? '');
 $perPageValue  = (string) ($filters['per_page'] ?? '');
+$user = auth()->user();
+$isMaintenance = $user && $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin', 'super_admin']);
 @endphp
 
 <div class="tickets-page available-ticket-list">
@@ -15,10 +17,14 @@ $perPageValue  = (string) ($filters['per_page'] ?? '');
         <div class="tickets-hero-inner">
             <div>
                 <p class="tickets-overline">Cola operativa</p>
-                <h1 class="tickets-title">Tickets disponibles</h1>
-                <p class="tickets-subtitle">Selecciona un ticket para tomarlo y atenderlo.</p>
+                <h1 class="tickets-title">Tickets disponibles para tomar</h1>
+                <p class="tickets-subtitle">Selecciona una incidencia abierta y sin responsable para iniciar atención.</p>
             </div>
-            <a href="{{ route('tickets.index') }}" class="btn-secondary tickets-btn-create">Ver todos</a>
+            @if ($isMaintenance)
+                <a href="{{ route('tickets.index', ['assignment' => 'mine']) }}" class="btn-secondary tickets-btn-create">Volver a mis tickets</a>
+            @else
+                <a href="{{ route('tickets.index') }}" class="btn-secondary tickets-btn-create">Ver todos</a>
+            @endif
         </div>
     </section>
 
@@ -98,7 +104,7 @@ $perPageValue  = (string) ($filters['per_page'] ?? '');
                         <th>Ubicacion</th>
                         <th>Categoria</th>
                         <th>Prioridad</th>
-                        <th>Creado</th>
+                        <th>Antigüedad</th>
                         <th>Accion</th>
                     </tr>
                 </thead>
@@ -113,23 +119,31 @@ $perPageValue  = (string) ($filters['per_page'] ?? '');
                                     {{ ucfirst($ticket->priority) }}
                                 </span>
                             </td>
-                            <td class="tickets-td-meta">{{ $ticket->created_at?->format('d/m/Y') }}</td>
+                            <td class="tickets-td-meta">{{ $ticket->created_at?->diffForHumans() ?? 'N/A' }}</td>
                             <td>
-                                <form method="POST" action="{{ route('tickets.claim', $ticket) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                    <button type="submit" class="tickets-link-action">Tomar</button>
-                                </form>
+                                @can('claim', $ticket)
+                                    <form method="POST" action="{{ route('tickets.claim', $ticket) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                        <button type="submit" class="tickets-link-action">Tomar</button>
+                                    </form>
+                                @else
+                                    <span class="tickets-td-meta">No disponible</span>
+                                @endcan
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="6" class="tickets-empty-cell">
                                 <div class="empty-state">
-                                    <p class="empty-state__title">No hay tickets disponibles</p>
-                                    <p class="empty-state__note">Las incidencias abiertas sin asignar apareceran aqui.</p>
-                                    <a href="{{ route('tickets.index') }}" class="btn-primary">Ver todos los tickets</a>
+                                    <p class="empty-state__title">No hay tickets disponibles en este momento</p>
+                                    <p class="empty-state__note">Cuando un reporte abierto quede sin responsable, aparecerá aquí.</p>
+                                    @if ($isMaintenance)
+                                        <a href="{{ route('tickets.index', ['assignment' => 'mine']) }}" class="btn-primary">Volver a mis tickets</a>
+                                    @else
+                                        <a href="{{ route('tickets.index') }}" class="btn-primary">Ver todos los tickets</a>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

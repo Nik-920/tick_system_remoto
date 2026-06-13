@@ -1,6 +1,6 @@
 /* ============================================================
    COMPONENT — Badges
-   Tick System Onn
+   INCIDEX
 
    Unified badge tokens and aliases for existing badge systems.
    Blade templates stay the same while we consolidate styles.
@@ -76,6 +76,7 @@
 .c-badge--closed,
 .badge-closed,
 .ticket-badge--closed,
+.ticket-badge--cancelled,
 .dash-state-badge--closed,
 .dash-qr-badge--pending,
 .locs-badge--qr-pending {
@@ -220,6 +221,7 @@
 
 [data-theme="dark"] .badge-closed,
 [data-theme="dark"] .ticket-badge--closed,
+[data-theme="dark"] .ticket-badge--cancelled,
 [data-theme="dark"] .dash-state-badge--closed,
 [data-theme="dark"] .dash-qr-badge--pending,
 [data-theme="dark"] .locs-badge--qr-pending {

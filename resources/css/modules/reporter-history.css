@@ -1,0 +1,126 @@
+/* ============================================================
+   MODULE — Tickets · Historial (Reporter)
+   INCIDEX
+
+   The reporter's own CLOSED tickets (resolved / rejected / cancelled)
+   plus personal analytics. Shares the .rep-page shell and the .rep-*
+   primitives from modules/reporter-tickets.css (header, toolbar,
+   search, chips, rows, badges, panels, donut, avg); this file only
+   adds the history-specific pieces: the "Próximamente" tag, the clear
+   link, the cancelled badge, the two-date stamps and the monthly chart.
+
+   FIRST VISUAL PHASE — static prototype, global tokens, light/dark aware.
+   ============================================================ */
+
+/* "Próximamente" tag inside the Exportar button. */
+.rep-soon {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Clear-filters link (pushed to the end of the chip row). */
+.rep-chips__clear {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.5rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius-xs);
+    color: var(--color-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.rep-chips__clear:hover { background: var(--color-primary-light); }
+.rep-chips__clear:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* Cancelled status badge (the board module only defines the active states). */
+.rep-status--cancelled { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+/* ── History row side: two date stamps + actions ─────────────── */
+.rep-hist-side {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+.rep-stamps { display: flex; gap: 1.25rem; margin: 0; }
+.rep-stamp { text-align: right; line-height: 1.25; }
+.rep-stamp__label {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-faint);
+}
+.rep-stamp__label--closed { color: var(--r-fg); }
+.rep-stamp__date {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Resolved-per-month area chart ───────────────────────────── */
+.rep-area { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.rep-area__svg {
+    width: 100%;
+    height: 96px;
+    overflow: visible;
+    color: var(--color-primary);
+}
+
+.rep-area__fill { fill: color-mix(in srgb, var(--color-primary) 14%, transparent); stroke: none; }
+.rep-area__line {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+.rep-area__dot { fill: var(--bg-surface); stroke: var(--color-primary); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+
+.rep-area__labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-faint);
+}
+
+/* ── Responsive: stack the row side under the body on small screens ── */
+@media (max-width: 640px) {
+    .rep-hist-side {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        border-top: 1px solid var(--border-light);
+        padding-top: 0.6rem;
+    }
+    .rep-stamp { text-align: left; }
+}
+
+/* ── Dark mode ───────────────────────────────────────────────── */
+[data-theme="dark"] .rep-status--cancelled { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+[data-theme="dark"] .rep-area__fill { fill: color-mix(in srgb, var(--color-primary) 22%, transparent); }
+[data-theme="dark"] .rep-area__dot { fill: var(--bg-surface); }

@@ -1,0 +1,252 @@
+/* ============================================================
+   MODULE — Guía del reporter
+   INCIDEX
+
+   Static help page for the reporter role: how to file a good report
+   (steps, best practices, good/poor examples, categories, notes).
+   Shares the .rep-page shell, .rep-panel, .rep-tone-* and .rep-btn-*
+   primitives from the other reporter modules; this file adds the
+   guide-specific pieces.
+
+   FIRST VISUAL PHASE — static prototype, global tokens, light/dark aware.
+   ============================================================ */
+
+/* ── Header + CTA card ───────────────────────────────────────── */
+.rep-guide-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.rep-guide-cta {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    background: var(--color-primary-light);
+    border: 1px solid var(--color-primary-muted);
+    flex-shrink: 0;
+}
+.rep-guide-cta__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+.rep-guide-cta__body { min-width: 0; }
+.rep-guide-cta__title { margin: 0; font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.rep-guide-cta__text { margin: 0.1rem 0 0; font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+.rep-guide-cta__btn { flex-shrink: 0; }
+
+/* ── 1. Steps ────────────────────────────────────────────────── */
+.rep-guide-steps {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: rep-guide;
+}
+
+.rep-guide-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Connector line between step nodes. */
+.rep-guide-step:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    top: 26px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border-default);
+    z-index: 0;
+}
+
+.rep-guide-step__node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary-muted);
+    margin-bottom: 0.25rem;
+}
+
+.rep-guide-step__num {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    border: 2px solid var(--bg-surface);
+}
+
+.rep-guide-step__title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+.rep-guide-step__desc { font-size: 0.76rem; line-height: 1.4; color: var(--text-muted); text-wrap: pretty; }
+
+/* ── 2-column grid for the lower sections ────────────────────── */
+.rep-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+}
+
+/* ── Best-practices checklist ────────────────────────────────── */
+.rep-practice { display: flex; flex-direction: column; gap: 0.7rem; list-style: none; margin: 0; padding: 0; }
+.rep-practice__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+.rep-practice__check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #15803d;
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+}
+
+/* ── Good / poor examples ────────────────────────────────────── */
+.rep-example { padding: 0.8rem 0.9rem; border-radius: var(--radius-sm); border: 1px solid transparent; }
+.rep-example + .rep-example { margin-top: 0.7rem; }
+.rep-example__head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+}
+.rep-example__text { margin: 0; font-size: 0.82rem; line-height: 1.45; color: var(--text-secondary); text-wrap: pretty; }
+.rep-example--good { background: #f0fdf4; border-color: #86efac; }
+.rep-example--good .rep-example__head { color: #15803d; }
+.rep-example--bad { background: #fef2f2; border-color: #fca5a5; }
+.rep-example--bad .rep-example__head { color: #b42318; }
+
+/* ── Available categories ────────────────────────────────────── */
+.rep-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; }
+.rep-cat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.85rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    text-align: center;
+}
+.rep-cat__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    background: var(--r-soft);
+    color: var(--r-fg);
+}
+.rep-cat__label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
+
+/* ── Important info ──────────────────────────────────────────── */
+.rep-info { display: flex; flex-direction: column; gap: 0.75rem; list-style: none; margin: 0; padding: 0; }
+.rep-info__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+.rep-info__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1023px) {
+    .rep-guide-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+    .rep-guide-cta { width: 100%; flex-wrap: wrap; }
+    .rep-guide-cta__btn { width: 100%; justify-content: center; }
+
+    /* Steps stack vertically; the connector becomes a left rail. */
+    .rep-guide-steps { grid-template-columns: 1fr; gap: 0; }
+    .rep-guide-step {
+        flex-direction: row;
+        align-items: flex-start;
+        text-align: left;
+        gap: 0.85rem;
+        padding-bottom: 1rem;
+        display: grid;
+        grid-template-columns: 52px 1fr;
+        grid-template-rows: auto auto;
+    }
+    .rep-guide-step__node { grid-row: 1 / 3; margin-bottom: 0; }
+    .rep-guide-step:not(:first-child)::before {
+        top: -50%;
+        left: 26px;
+        width: 2px;
+        height: 100%;
+    }
+    .rep-guide-step__title { align-self: center; }
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+[data-theme="dark"] .rep-practice__check { background: rgba(34, 197, 94, 0.18); color: #86efac; }
+[data-theme="dark"] .rep-example--good { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3); }
+[data-theme="dark"] .rep-example--good .rep-example__head { color: #86efac; }
+[data-theme="dark"] .rep-example--bad { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); }
+[data-theme="dark"] .rep-example--bad .rep-example__head { color: #fca5a5; }

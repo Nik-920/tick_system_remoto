@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Services\Ai\HuggingFaceService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -95,5 +96,104 @@ class HuggingFaceServiceTest extends TestCase
         $this->assertSame(['refund', 'legal', 'faq'], $result['labels']);
         $this->assertSame([0.91, 0.06, 0.03], $result['scores']);
         $this->assertSame('Necesito un reembolso', $result['sequence']);
+    }
+
+    public function test_classify_zero_shot_returns_early_if_labels_are_empty(): void
+    {
+        Http::fake(); // Should not be called
+
+        $service = new HuggingFaceService;
+        $result = $service->classifyZeroShot('test', []);
+
+        $this->assertSame([], $result['labels']);
+        $this->assertSame([], $result['scores']);
+        $this->assertNull($result['sequence']);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_post_throws_exception_if_api_key_is_missing(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.huggingface.api_key' => '',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Hugging Face API key is not configured.');
+
+        $service = new HuggingFaceService;
+        $service->embedding('test');
+    }
+
+    public function test_post_throws_exception_if_disabled(): void
+    {
+        config([
+            'ai.enabled' => false,
+            'ai.huggingface.enabled' => true,
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Hugging Face integration is disabled.');
+
+        $service = new HuggingFaceService;
+        $service->embedding('test');
+    }
+
+    public function test_post_throws_exception_if_model_is_missing(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.huggingface.api_key' => 'test',
+            'ai.huggingface.embedding_model' => '',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Hugging Face model is not configured.');
+
+        $service = new HuggingFaceService;
+        $service->embedding('test');
+    }
+
+    public function test_post_throws_exception_if_response_contains_error_key(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.huggingface.api_key' => 'test',
+            'ai.huggingface.embedding_model' => 'model',
+        ]);
+
+        Http::fake([
+            '*' => Http::response(['error' => 'Model is loading'], 200),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Hugging Face error: Model is loading');
+
+        $service = new HuggingFaceService;
+        $service->embedding('test');
+    }
+
+    public function test_post_throws_exception_on_request_exception_without_response(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.huggingface.enabled' => true,
+            'ai.huggingface.api_key' => 'test',
+            'ai.huggingface.embedding_model' => 'model',
+        ]);
+
+        Http::fake(function () {
+            throw new ConnectionException('Connection timed out');
+        });
+
+        $this->expectException(ConnectionException::class);
+        $this->expectExceptionMessage('Connection timed out');
+
+        $service = new HuggingFaceService;
+        $service->embedding('test');
     }
 }

@@ -1,0 +1,241 @@
+/* ============================================================
+   MODULE — Dashboard (Reporter)
+   INCIDEX
+
+   The reporter's home panel: welcome hero, KPI strip, recent
+   reports, quick actions and an insights rail. Shares the .rep-page
+   shell and the .rep-* primitives from the other reporter modules
+   (rows, badges, panels, donut, avg, timeline); this file only adds
+   the dashboard-specific pieces: hero, KPI cards and quick actions.
+
+   FIRST VISUAL PHASE — static prototype, global tokens, light/dark aware.
+   Parallel to /dashboard; does not replace it.
+   ============================================================ */
+
+/* ============================================================
+   1. WELCOME HERO
+   ============================================================ */
+.rep-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    overflow: hidden;
+    padding: 1.6rem 1.75rem;
+    border-radius: var(--radius);
+    background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 48%, #3b82f6 100%);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Soft decorative blooms behind the content. */
+.rep-hero::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -5%;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 70%);
+    pointer-events: none;
+}
+
+.rep-hero__content { position: relative; z-index: 1; min-width: 0; }
+
+.rep-hero__eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.rep-hero__title {
+    margin: 0.4rem 0 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+}
+
+.rep-hero__subtitle {
+    margin: 0.45rem 0 0;
+    max-width: 56ch;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.88);
+    text-wrap: pretty;
+}
+
+.rep-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 1.1rem;
+    height: 42px;
+    padding: 0 1.15rem;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    color: var(--color-primary);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.rep-hero__cta:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.rep-hero__cta:focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
+
+/* Decorative cluster on the right (hidden on small screens). */
+.rep-hero__art { position: relative; z-index: 1; flex-shrink: 0; display: flex; align-items: center; gap: 0.75rem; }
+
+.rep-hero__chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(4px);
+}
+.rep-hero__chip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #16a34a;
+    flex-shrink: 0;
+}
+.rep-hero__chip-lines { display: flex; flex-direction: column; gap: 0.35rem; }
+.rep-hero__chip-bar { display: block; width: 88px; height: 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.7); }
+.rep-hero__chip-bar--short { width: 54px; background: rgba(255, 255, 255, 0.45); }
+
+.rep-hero__sparkle { color: rgba(255, 255, 255, 0.85); }
+
+/* ============================================================
+   2. KPI STRIP
+   ============================================================ */
+.rep-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.85rem;
+}
+
+.rep-kpi {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.95rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+.rep-kpi:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+
+.rep-kpi__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    background: var(--r-soft);
+    color: var(--r-fg);
+    flex-shrink: 0;
+}
+
+.rep-kpi__body { display: flex; flex-direction: column; min-width: 0; }
+.rep-kpi__value { font-size: 1.5rem; font-weight: 800; line-height: 1.05; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rep-kpi__label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-top: 0.1rem; }
+
+/* ============================================================
+   3. PANEL HEAD (title + inline link)
+   ============================================================ */
+.rep-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+.rep-panel__head .rep-panel__title { margin: 0; }
+.rep-link--inline { margin-top: 0; padding: 0.3rem 0.4rem; }
+
+/* ============================================================
+   4. QUICK ACTIONS
+   ============================================================ */
+.rep-quick {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.rep-quick__tile {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.rep-quick__tile:hover { border-color: var(--r-solid); background: var(--r-soft); transform: translateY(-1px); box-shadow: var(--shadow-xs); }
+.rep-quick__tile:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.rep-quick__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    background: var(--r-soft);
+    color: var(--r-fg);
+    flex-shrink: 0;
+}
+.rep-quick__label { flex: 1; min-width: 0; }
+.rep-quick__arrow { color: var(--text-faint); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+.rep-quick__tile:hover .rep-quick__arrow { color: var(--r-fg); transform: translateX(2px); }
+
+/* ============================================================
+   5. RESPONSIVE
+   ============================================================ */
+@media (max-width: 880px) {
+    .rep-hero__art { display: none; }
+}
+
+@media (max-width: 640px) {
+    .rep-hero { padding: 1.3rem 1.25rem; }
+    .rep-hero__title { font-size: 1.35rem; }
+    .rep-hero__cta { width: 100%; justify-content: center; }
+    .rep-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   6. REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .rep-kpi,
+    .rep-kpi:hover,
+    .rep-quick__tile,
+    .rep-quick__tile:hover,
+    .rep-hero__cta:hover { transition: none; transform: none; }
+    .rep-quick__tile:hover .rep-quick__arrow { transform: none; }
+}

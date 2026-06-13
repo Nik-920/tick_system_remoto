@@ -33,10 +33,16 @@ class ListLocationsRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->exists('is_active')) {
-            $this->merge([
-                'is_active' => $this->boolean('is_active'),
-            ]);
+        if (! $this->exists('is_active')) {
+            return;
         }
+
+        $this->merge([
+            'is_active' => match ((string) $this->input('is_active')) {
+                '1' => true,
+                '0' => false,
+                default => null,
+            },
+        ]);
     }
 }

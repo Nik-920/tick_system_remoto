@@ -114,12 +114,20 @@ return is_string($category->icon) && trim($category->icon) !== '';
                                     Editar
                                 </a>
                                 @can('delete', $category)
+                                @php
+                                    $hasRelations = ((int) $category->tickets_count) > 0 || ((int) $category->incident_history_count) > 0;
+                                @endphp
+                                @if ($hasRelations)
+                                <button type="button" class="cats-btn-delete" disabled aria-disabled="true"
+                                    title="Tiene tickets o incidencias asociadas; no se puede eliminar.">Eliminar</button>
+                                @else
                                 <form method="POST" action="{{ route('categories.destroy', $category) }}"
-                                    onsubmit="return confirm('Esta acción eliminará la categoría y sus datos relacionados. ¿Deseas continuar?');">
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar la categoría «{{ $category->name }}»? Esta acción no se puede deshacer.');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="cats-btn-delete">Eliminar</button>
                                 </form>
+                                @endif
                                 @endcan
                             </div>
                         </td>

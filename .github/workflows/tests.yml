@@ -47,5 +47,22 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate
 
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 📦 Instalar dependencias Node
+        run: npm ci
+
+      - name: 🏗️ Build frontend
+        run: npm run build
+
+      - name: 🔎 Verificar manifest Vite
+        run: |
+          ls -la public/build
+          test -f public/build/manifest.json
+
       - name: Execute tests
         run: vendor/bin/phpunit
