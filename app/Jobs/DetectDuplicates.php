@@ -43,41 +43,48 @@ class DetectDuplicates implements ShouldQueue
                 return;
             }
 
-            $embedding = $this->resolveEmbedding($ticket, $embeddings, $deduplication, $logger);
-            if ($embedding === null) {
-                return;
-            }
-
-            $candidates = $this->fetchCandidates($ticket, $embedding->embedding_vector, $deduplication);
-            if ($candidates === []) {
-                $this->resetEmbeddingMatch($embedding);
-
-                return;
-            }
-
-            $best = $deduplication->findBestMatch($embedding->embedding_vector, $candidates);
-            if ($best === null) {
-                $this->resetEmbeddingMatch($embedding);
-
-                return;
-            }
-
-            $matchedTicket = $best['ticket'] ?? null;
-            $similarity = $best['similarity'] ?? null;
-
-            if (! $matchedTicket || ! is_numeric($similarity)) {
-                $this->resetEmbeddingMatch($embedding);
-
-                return;
-            }
-
-            $similarity = (float) $similarity;
-            $this->processBestMatch($ticket, $matchedTicket, $similarity, $embedding, $deduplication, $engine, $logger);
+            $this->runDetection($ticket, $deduplication, $embeddings, $engine, $logger);
         } catch (Throwable $exception) {
             $context = $this->errorContext($ticket, $exception);
             $logger->error('ticket.duplicate.failed', $context);
             $this->reportToSentry($exception, $context);
         }
+    }
+
+    /**
+     * Core detection flow after the enabled-gate passes.
+     * Extracted to keep handle() under 3 returns (early-exit + catch).
+     */
+    private function runDetection(
+        Ticket $ticket,
+        DeduplicationService $deduplication,
+        EmbeddingService $embeddings,
+        DuplicateDetectionEngine $engine,
+        TicketQrLogger $logger,
+    ): void {
+        $embedding = $this->resolveEmbedding($ticket, $embeddings, $logger);
+        if ($embedding === null) {
+            return;
+        }
+
+        $candidates = $this->fetchCandidates($ticket, $deduplication);
+        if ($candidates === []) {
+            $this->resetEmbeddingMatch($embedding);
+
+            return;
+        }
+
+        $best = $deduplication->findBestMatch($embedding->embedding_vector, $candidates);
+        $matchedTicket = $best['ticket'] ?? null;
+        $similarity = $best['similarity'] ?? null;
+
+        if ($best === null || ! $matchedTicket || ! is_numeric($similarity)) {
+            $this->resetEmbeddingMatch($embedding);
+
+            return;
+        }
+
+        $this->processBestMatch($ticket, $matchedTicket, (float) $similarity, $embedding, $deduplication, $engine, $logger);
     }
 
     /**
@@ -87,7 +94,6 @@ class DetectDuplicates implements ShouldQueue
     private function resolveEmbedding(
         Ticket $ticket,
         EmbeddingService $embeddings,
-        DeduplicationService $deduplication,
         TicketQrLogger $logger,
     ): ?TicketEmbedding {
         $text = $ticket->embeddingText();
@@ -129,12 +135,9 @@ class DetectDuplicates implements ShouldQueue
     }
 
     /**
-     * Fetch candidate embeddings within the deduplication window.
-     *
-     * @param  list<float>  $vector
      * @return list<array{ticket: Ticket, embedding: list<float>}>
      */
-    private function fetchCandidates(Ticket $ticket, array $vector, DeduplicationService $deduplication): array
+    private function fetchCandidates(Ticket $ticket, DeduplicationService $deduplication): array
     {
         $windowStart = now()->subHours($deduplication->windowHours());
 

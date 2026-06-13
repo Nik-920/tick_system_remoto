@@ -7,6 +7,7 @@ namespace App\Queries\Dashboard;
 use App\Models\LocationIncidentHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Dashboard\MaintenanceReport\AssignmentActionContext;
 use App\Support\Dashboard\DateRange;
 use App\Support\Tickets\DuplicateExplanationPresenter;
 use App\ViewModels\Dashboard\MaintenanceReport\AssignmentRow;
@@ -542,16 +543,16 @@ final class MaintenanceReportQuery
             hasFirstResponse: $firstResponseAt !== null,
             evidenceCount: $evidenceCount,
             hasEvidence: $evidenceCount > 0,
-            recommendedAction: $this->recommendedActionFor(
-                (string) $ticket->state,
-                (string) $ticket->priority,
-                $ageDays,
-                $firstResponseAt !== null,
-                $lastTransition['at'] ?? $createdAt,
-                $evidenceCount,
-                $duplicate,
-                $isRecurrentPair,
-            ),
+            recommendedAction: $this->recommendedActionFor(new AssignmentActionContext(
+                state: (string) $ticket->state,
+                priority: (string) $ticket->priority,
+                ageDays: $ageDays,
+                hasFirstResponse: $firstResponseAt !== null,
+                lastActivityAt: $lastTransition['at'] ?? $createdAt,
+                evidenceCount: $evidenceCount,
+                duplicate: $duplicate,
+                isRecurrentPair: $isRecurrentPair,
+            )),
             sortRank: $this->sortRankFor((string) $ticket->priority, (string) $ticket->state, $firstResponseAt !== null),
             hasDuplicateWarning: $duplicate !== null,
             duplicateSimilarity: $duplicate !== null ? $this->floatOrNull($duplicate['similarity']) : null,
@@ -585,24 +586,12 @@ final class MaintenanceReportQuery
         return $priorityBucket * 100 + $stateBucket * 10 + ($hasFirstResponse ? 1 : 0);
     }
 
-    /**
-     * Deterministic per-ticket recommendation (Fase 13 priority order).
-     *
-     * @param  array<string, mixed>|null  $duplicate
-     */
-    private function recommendedActionFor(
-        string $state,
-        string $priority,
-        int $ageDays,
-        bool $hasFirstResponse,
-        ?CarbonImmutable $lastActivityAt,
-        int $evidenceCount,
-        ?array $duplicate,
-        bool $isRecurrentPair,
-    ): string {
+    /** Deterministic per-ticket recommendation (Fase 13 priority order). */
+    private function recommendedActionFor(AssignmentActionContext $ctx): string
+    {
         // Ordered rule list (Fase 13): the FIRST matching rule wins.
-        return $this->urgentOrDuplicateAction($state, $priority, $duplicate)
-            ?? $this->followUpAction($state, $ageDays, $hasFirstResponse, $lastActivityAt, $evidenceCount, $duplicate, $isRecurrentPair);
+        return $this->urgentOrDuplicateAction($ctx->state, $ctx->priority, $ctx->duplicate)
+            ?? $this->followUpAction($ctx->state, $ctx->ageDays, $ctx->hasFirstResponse, $ctx->lastActivityAt, $ctx->evidenceCount, $ctx->duplicate, $ctx->isRecurrentPair);
     }
 
     /**
