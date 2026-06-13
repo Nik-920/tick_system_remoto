@@ -182,7 +182,9 @@ function initNotifications() {
 
     if (!notifBtn || !notifDropdown) return;
 
-    let notifications = [];
+    let notifications   = [];
+    let notifLoaded     = false;
+    let fetchInFlight   = null;
 
     async function fetchAndRender() {
         await fetchNotifications();
@@ -190,19 +192,26 @@ function initNotifications() {
     }
 
     async function fetchNotifications() {
-        try {
-            const res  = await fetch('/notifications', {
-                headers: {
-                    'Accept':            'application/json',
-                    'X-Requested-With':  'XMLHttpRequest',
-                }
-            });
-            const data = await res.json();
-            notifications = data.notifications ?? [];
-            updateBadge(data.unread_count ?? 0);
-        } catch (e) {
-            console.error('Error cargando notificaciones:', e);
-        }
+        if (fetchInFlight) return fetchInFlight;
+        fetchInFlight = (async () => {
+            try {
+                const res  = await fetch('/notifications', {
+                    headers: {
+                        'Accept':            'application/json',
+                        'X-Requested-With':  'XMLHttpRequest',
+                    }
+                });
+                const data = await res.json();
+                notifications = data.notifications ?? [];
+                updateBadge(data.unread_count ?? 0);
+                notifLoaded = true;
+            } catch (e) {
+                console.error('Error cargando notificaciones:', e);
+            } finally {
+                fetchInFlight = null;
+            }
+        })();
+        return fetchInFlight;
     }
 
     function updateBadge(count) {
@@ -264,7 +273,6 @@ function initNotifications() {
                 e.stopPropagation();
                 const id = btn.dataset.id;
                 await markAsRead(id);
-                await fetchAndRender();
             });
         });
     }
@@ -279,6 +287,12 @@ function initNotifications() {
                     'Accept':       'application/json',
                 }
             });
+            // Update locally: no re-fetch needed
+            const now = new Date().toISOString();
+            notifications = notifications.map(n => n.id === id ? { ...n, read_at: now } : n);
+            const unread = notifications.filter(n => !n.read_at).length;
+            updateBadge(unread);
+            renderNotifications();
         } catch (e) {
             console.error('Error marcando notificación:', e);
         }
@@ -294,7 +308,11 @@ function initNotifications() {
                     'Accept':       'application/json',
                 }
             });
-            await fetchAndRender();
+            // Update locally: no re-fetch needed
+            const now = new Date().toISOString();
+            notifications = notifications.map(n => ({ ...n, read_at: n.read_at ?? now }));
+            updateBadge(0);
+            renderNotifications();
         } catch (e) {
             console.error('Error marcando todas:', e);
         }
@@ -307,7 +325,11 @@ function initNotifications() {
         notifDropdown.setAttribute('aria-hidden', isVisible ? 'true' : 'false');
         notifBtn.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
         if (!isVisible) {
-            await fetchAndRender();
+            if (notifLoaded) {
+                renderNotifications();
+            } else {
+                await fetchAndRender();
+            }
         }
     });
 
@@ -316,13 +338,16 @@ function initNotifications() {
         await markAllAsRead();
     });
 
-    // Cargar badge al inicio
+    // Cargar solo el badge al inicio (sin renderizar el dropdown)
     fetchNotifications();
 
-    // Polling cada 30 segundos
+    // Polling cada 60 segundos (solo badge, no renderiza a menos que el dropdown esté abierto)
     setInterval(async () => {
         await fetchNotifications();
-    }, 30000);
+        if (notifDropdown.style.display === 'block') {
+            renderNotifications();
+        }
+    }, 60000);
 
     // Exponer función global para agregar desde Firebase en tiempo real
     globalThis.addNotification = function(title, body, url = null, icon = '🔔') {
@@ -336,6 +361,8 @@ function initNotifications() {
             time:    'ahora',
         });
         updateBadge(notifications.filter(n => !n.read_at).length);
-        renderNotifications();
+        if (notifDropdown.style.display === 'block') {
+            renderNotifications();
+        }
     };
 }
