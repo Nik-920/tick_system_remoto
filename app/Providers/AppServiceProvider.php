@@ -29,9 +29,12 @@ use App\Services\Ai\Duplicates\Strategies\VisionEvidenceStrategy;
 use App\Services\Ai\HuggingFaceEmbeddingAdapter;
 use App\Services\Firebase\FirebasePushNotificationAdapter;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -89,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiters();
         $this->guardAgainstSqliteFallbackInProtectedEnvironments();
+        $this->listenForSlowQueries();
     }
 
     private function configureRateLimiters(): void
@@ -114,6 +118,28 @@ class AppServiceProvider extends ServiceProvider
         }
 
         return (string) $request->ip();
+    }
+
+    private function listenForSlowQueries(): void
+    {
+        if (! app()->environment('local') || ! config('app.log_slow_queries', false)) {
+            return;
+        }
+
+        $threshold = (int) config('app.slow_query_ms', 100);
+
+        DB::listen(function (object $query) use ($threshold): void {
+            /** @var QueryExecuted $query */
+            if ($query->time < $threshold) {
+                return;
+            }
+
+            Log::channel('single')->warning('Slow query detected', [
+                'time_ms' => $query->time,
+                'sql' => $query->sql,
+                'bindings_count' => count($query->bindings),
+            ]);
+        });
     }
 
     private function guardAgainstSqliteFallbackInProtectedEnvironments(): void

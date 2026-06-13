@@ -15,19 +15,20 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
-        $notifications = $user->appNotifications()
-            ->take(30)
-            ->get()
-            ->map(fn (Notification $n) => [
-                'id' => $n->id,
-                'type' => $n->type,
-                'title' => $n->title,
-                'body' => $n->body,
-                'url' => $n->url,
-                'icon' => $n->icon,
-                'read_at' => $n->read_at,
-                'time' => $n->created_at?->diffForHumans(),
-            ]);
+        $items = $user->appNotifications()
+            ->take(15)
+            ->get(['id', 'type', 'title', 'body', 'url', 'icon', 'read_at', 'created_at']);
+
+        $notifications = $items->map(fn (Notification $n) => [
+            'id' => $n->id,
+            'type' => $n->type,
+            'title' => $n->title,
+            'body' => $n->body,
+            'url' => $n->url,
+            'icon' => $n->icon,
+            'read_at' => $n->read_at,
+            'time' => $n->created_at?->diffForHumans(),
+        ]);
 
         $unreadCount = $user->appNotifications()
             ->whereNull('read_at')

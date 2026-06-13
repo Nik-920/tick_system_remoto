@@ -34,6 +34,19 @@ final class TicketIndexQuery
     {
         $query = Ticket::query()->with($this->resolveRelations());
 
+        // Load embedding for the duplicate badge — but skip embedding_vector
+        // (a large JSON column not needed for the index view). matchedTicket
+        // only needs id+state to compute $effectiveDup in the view.
+        $query->with([
+            'embedding' => function ($q): void {
+                $q->select(['id', 'ticket_id', 'is_duplicate', 'matched_ticket_id',
+                    'similarity_score', 'review_status']);
+            },
+            'embedding.matchedTicket' => function ($q): void {
+                $q->select(['id', 'state']);
+            },
+        ]);
+
         // Role scope MUST be applied before any user-supplied filter so that
         // search, duplicates, location, etc. cannot leak tickets outside the
         // boundary established by the user's role.
@@ -167,13 +180,6 @@ final class TicketIndexQuery
     /** @return string[] */
     private function resolveRelations(): array
     {
-        return [
-            'reporter',
-            'assignee',
-            'assignedBy',
-            'location',
-            'category',
-            'embedding.matchedTicket',
-        ];
+        return ['reporter', 'assignee', 'assignedBy', 'location', 'category'];
     }
 }

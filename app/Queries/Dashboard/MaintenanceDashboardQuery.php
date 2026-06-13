@@ -306,19 +306,25 @@ final class MaintenanceDashboardQuery
      */
     private function dailyTrend(): array
     {
-        $createdByDay = $this->countByDay(
-            $this->mineTable()
-                ->whereBetween('created_at', [$this->range->from, $this->range->to])
-                ->pluck('created_at')
-        );
+        // Use SQL-level DATE() grouping instead of plucking every timestamp into PHP.
+        // DATE() is portable across SQLite (tests) and PostgreSQL.
+        $createdByDay = $this->mineTable()
+            ->whereBetween('created_at', [$this->range->from, $this->range->to])
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
+            ->groupByRaw('DATE(created_at)')
+            ->pluck('total', 'day')
+            ->map(fn ($v): int => (int) $v)
+            ->all();
 
-        $resolvedByDay = $this->countByDay(
-            $this->mineTable()
-                ->where('state', Ticket::STATE_RESOLVED)
-                ->whereNotNull('resolved_at')
-                ->whereBetween('resolved_at', [$this->range->from, $this->range->to])
-                ->pluck('resolved_at')
-        );
+        $resolvedByDay = $this->mineTable()
+            ->where('state', Ticket::STATE_RESOLVED)
+            ->whereNotNull('resolved_at')
+            ->whereBetween('resolved_at', [$this->range->from, $this->range->to])
+            ->selectRaw('DATE(resolved_at) as day, COUNT(*) as total')
+            ->groupByRaw('DATE(resolved_at)')
+            ->pluck('total', 'day')
+            ->map(fn ($v): int => (int) $v)
+            ->all();
 
         $trend = [];
         $cursor = $this->range->from->startOfDay();
@@ -336,26 +342,6 @@ final class MaintenanceDashboardQuery
         }
 
         return $trend;
-    }
-
-    /**
-     * @param  SupportCollection<int,mixed>  $timestamps
-     * @return array<string,int>
-     */
-    private function countByDay(SupportCollection $timestamps): array
-    {
-        $buckets = [];
-
-        foreach ($timestamps as $timestamp) {
-            if ($timestamp === null) {
-                continue;
-            }
-
-            $key = CarbonImmutable::parse((string) $timestamp)->format('Y-m-d');
-            $buckets[$key] = ($buckets[$key] ?? 0) + 1;
-        }
-
-        return $buckets;
     }
 
     /**
