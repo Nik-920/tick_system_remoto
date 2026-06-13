@@ -973,7 +973,7 @@ final class MaintenanceReportQuery
             'avgResolutionHours' => $avg,
             'medianResolutionHours' => $median,
             'resolutionSample' => count($durations),
-            'resolutionLowSample' => count($durations) > 0 && count($durations) < self::LOW_SAMPLE_THRESHOLD,
+            'resolutionLowSample' => ! empty($durations) && count($durations) < self::LOW_SAMPLE_THRESHOLD,
             'avgFirstResponseHours' => $firstResponseAvg,
             'firstResponseSample' => $firstResponseSample,
             'firstResponseLowSample' => $firstResponseSample > 0 && $firstResponseSample < self::LOW_SAMPLE_THRESHOLD,
@@ -1959,12 +1959,21 @@ final class MaintenanceReportQuery
             ['label' => 'Cola global (contexto)', 'value' => (string) $globalQueue],
         ];
 
-        $narrative = $this->summaryNarrative(
-            $active, $open, $inProgress, $criticalHigh, $staleOpen,
-            $resolved, $rejected, $cancelled, $evidence,
-            $duplicatesActive, $duplicatesPending, $globalQueue,
-            $assignedAllTime, $createdInPeriod,
-        );
+        $narrative = $this->summaryNarrative([
+            'active' => $active,
+            'open' => $open,
+            'inProgress' => $inProgress,
+            'criticalHigh' => $criticalHigh,
+            'staleOpen' => $staleOpen,
+            'resolved' => $resolved,
+            'rejected' => $rejected,
+            'cancelled' => $cancelled,
+            'duplicatesActive' => $duplicatesActive,
+            'duplicatesPending' => $duplicatesPending,
+            'globalQueue' => $globalQueue,
+            'assignedAllTime' => $assignedAllTime,
+            'createdInPeriod' => $createdInPeriod,
+        ], $evidence);
 
         return [
             'headlines' => $headlines,
@@ -1975,25 +1984,28 @@ final class MaintenanceReportQuery
     /**
      * Narrative sentences for the executive summary, in fixed rule order.
      *
+     * @param  array<string, int>  $counts
      * @param  array{withEvidence: int, withoutEvidence: int, coveragePct: float|null, missing: list<array{idShort: string, title: string}>}  $evidence
      * @return list<string>
      */
-    private function summaryNarrative(
-        int $active,
-        int $open,
-        int $inProgress,
-        int $criticalHigh,
-        int $staleOpen,
-        int $resolved,
-        int $rejected,
-        int $cancelled,
-        array $evidence,
-        int $duplicatesActive,
-        int $duplicatesPending,
-        int $globalQueue,
-        int $assignedAllTime,
-        int $createdInPeriod,
-    ): array {
+    private function summaryNarrative(array $counts, array $evidence): array
+    {
+        [
+            'active' => $active,
+            'open' => $open,
+            'inProgress' => $inProgress,
+            'criticalHigh' => $criticalHigh,
+            'staleOpen' => $staleOpen,
+            'resolved' => $resolved,
+            'rejected' => $rejected,
+            'cancelled' => $cancelled,
+            'duplicatesActive' => $duplicatesActive,
+            'duplicatesPending' => $duplicatesPending,
+            'globalQueue' => $globalQueue,
+            'assignedAllTime' => $assignedAllTime,
+            'createdInPeriod' => $createdInPeriod,
+        ] = $counts;
+
         $narrative = [];
 
         $narrative[] = $active > 0
@@ -2004,14 +2016,7 @@ final class MaintenanceReportQuery
             ? "Existen {$criticalHigh} ticket(s) de prioridad alta o crítica pendientes de cierre."
             : 'No hay tickets de prioridad alta o crítica pendientes.';
 
-        $periodSentence = "Durante el periodo se resolvieron {$resolved} ticket(s)";
-        if ($rejected > 0) {
-            $periodSentence .= ", con {$rejected} cierre(s) administrativo(s) por rechazo";
-        }
-        if ($cancelled > 0) {
-            $periodSentence .= " y {$cancelled} cancelación(es) del reporter que no penalizan al técnico";
-        }
-        $narrative[] = $periodSentence.'.';
+        $narrative[] = $this->periodClosureSentence($resolved, $rejected, $cancelled);
 
         if ($staleOpen > 0) {
             $narrative[] = "{$staleOpen} ticket(s) abiertos acumulan más de ".self::STALE_OPEN_DAYS.' días sin iniciar atención.';
@@ -2039,6 +2044,19 @@ final class MaintenanceReportQuery
         }
 
         return $narrative;
+    }
+
+    private function periodClosureSentence(int $resolved, int $rejected, int $cancelled): string
+    {
+        $sentence = "Durante el periodo se resolvieron {$resolved} ticket(s)";
+        if ($rejected > 0) {
+            $sentence .= ", con {$rejected} cierre(s) administrativo(s) por rechazo";
+        }
+        if ($cancelled > 0) {
+            $sentence .= " y {$cancelled} cancelación(es) del reporter que no penalizan al técnico";
+        }
+
+        return $sentence.'.';
     }
 
     // ── Appendix ─────────────────────────────────────────────────────────────
@@ -2198,12 +2216,19 @@ final class MaintenanceReportQuery
                 ? $this->stateLabel($row->lastTransition['toState']).' · '.$row->lastTransition['at']->format('Y-m-d')
                 : 'Sin transiciones',
             'evidence' => $row->hasEvidence ? 'Sí ('.$row->evidenceCount.')' : 'No',
-            'duplicate' => $row->hasDuplicateWarning
-                ? 'Sí · '.($row->duplicateReviewStatus === null ? 'pendiente' : $row->duplicateReviewStatus)
-                : 'No',
+            'duplicate' => $this->duplicateWarningLabel($row->hasDuplicateWarning, $row->duplicateReviewStatus),
             'duplicateReasons' => $this->joinReasonLabels($row->duplicateTopReasons),
             'inclusionReason' => $inclusionReason,
         ];
+    }
+
+    private function duplicateWarningLabel(bool $hasWarning, ?string $reviewStatus): string
+    {
+        if (! $hasWarning) {
+            return 'No';
+        }
+
+        return 'Sí · '.($reviewStatus ?? 'pendiente');
     }
 
     /**
@@ -2370,57 +2395,67 @@ final class MaintenanceReportQuery
      */
     private function duplicateDataQualityIssues(EloquentCollection $activeTickets, array $duplicateInfoByTicket): array
     {
-        $issues = [];
-        $dupWithoutMatch = 0;
-        $dupWithoutSimilarity = 0;
-        $dupBrokenMatch = 0;
-        $dupCorruptResults = 0;
-        $recurrenceWithoutMetadata = 0;
+        $counters = [
+            'dupWithoutMatch' => 0,
+            'dupWithoutSimilarity' => 0,
+            'dupBrokenMatch' => 0,
+            'dupCorruptResults' => 0,
+            'recurrenceWithoutMetadata' => 0,
+        ];
 
         foreach ($activeTickets as $ticket) {
-            $embedding = $ticket->embedding;
-            if ($embedding === null || ! $embedding->effective_duplicate) {
-                continue;
-            }
-
-            if ($embedding->matched_ticket_id === null) {
-                $dupWithoutMatch++;
-
-                continue;
-            }
-
             $info = $duplicateInfoByTicket[(string) $ticket->id] ?? null;
-
-            if ($embedding->similarity_score === null) {
-                $dupWithoutSimilarity++;
-            }
-
-            if ($info !== null && ! (bool) $info['matchedExists']) {
-                $dupBrokenMatch++;
-            }
-
-            $raw = $embedding->getAttribute('strategy_results');
-            if ($raw !== null && $raw !== [] && ! $this->strategyResultsUsable($raw)) {
-                $dupCorruptResults++;
-            }
-
-            if ((bool) $embedding->strategy_suggests_recurrence && ! $this->strategyResultsUsable($raw)) {
-                $recurrenceWithoutMetadata++;
-            }
+            $this->tallyDuplicateIssues($ticket, $info, $counters);
         }
 
-        $this->pushIssue($issues, $dupWithoutMatch, 'duplicado_sin_match',
+        $issues = [];
+        $this->pushIssue($issues, $counters['dupWithoutMatch'], 'duplicado_sin_match',
             'Tickets marcados como duplicado sin ticket similar referenciado (matched_ticket_id).');
-        $this->pushIssue($issues, $dupWithoutSimilarity, 'duplicado_sin_similitud',
+        $this->pushIssue($issues, $counters['dupWithoutSimilarity'], 'duplicado_sin_similitud',
             'Duplicados IA sin similarity_score registrado.');
-        $this->pushIssue($issues, $dupBrokenMatch, 'duplicado_match_inexistente',
+        $this->pushIssue($issues, $counters['dupBrokenMatch'], 'duplicado_match_inexistente',
             'Duplicados IA cuyo ticket similar referenciado ya no existe.');
-        $this->pushIssue($issues, $dupCorruptResults, 'strategy_results_corrupto',
+        $this->pushIssue($issues, $counters['dupCorruptResults'], 'strategy_results_corrupto',
             'Duplicados IA con desglose Strategy corrupto o ilegible; se aplicó fallback.');
-        $this->pushIssue($issues, $recurrenceWithoutMetadata, 'recurrencia_sin_metadata',
+        $this->pushIssue($issues, $counters['recurrenceWithoutMetadata'], 'recurrencia_sin_metadata',
             'Señal de recurrencia Strategy sin metadata asociada.');
 
         return $issues;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $info
+     * @param  array<string, int>  $counters
+     */
+    private function tallyDuplicateIssues(Ticket $ticket, ?array $info, array &$counters): void
+    {
+        $embedding = $ticket->embedding;
+        if ($embedding === null || ! $embedding->effective_duplicate) {
+            return;
+        }
+
+        if ($embedding->matched_ticket_id === null) {
+            $counters['dupWithoutMatch']++;
+
+            return;
+        }
+
+        if ($embedding->similarity_score === null) {
+            $counters['dupWithoutSimilarity']++;
+        }
+
+        if ($info !== null && ! (bool) $info['matchedExists']) {
+            $counters['dupBrokenMatch']++;
+        }
+
+        $raw = $embedding->getAttribute('strategy_results');
+        if ($raw !== null && $raw !== [] && ! $this->strategyResultsUsable($raw)) {
+            $counters['dupCorruptResults']++;
+        }
+
+        if ((bool) $embedding->strategy_suggests_recurrence && ! $this->strategyResultsUsable($raw)) {
+            $counters['recurrenceWithoutMetadata']++;
+        }
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Models\Location;
 use App\Models\Notification;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -53,8 +54,9 @@ class NotificationIdempotencyTest extends TestCase
 
         $service = new NotificationService;
 
-        $service->notifyUser($reporter, 'ticket_state_changed', 'T', 'B', '/u', '🔔', $ticket->id);
-        $service->notifyUser($reporter, 'ticket_state_changed', 'T', 'B', '/u', '🔔', $ticket->id);
+        $payload = new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B', url: '/u', icon: '🔔', ticketId: $ticket->id);
+        $service->notifyUser($reporter, $payload);
+        $service->notifyUser($reporter, $payload);
 
         $this->assertSame(
             1,
@@ -69,8 +71,9 @@ class NotificationIdempotencyTest extends TestCase
         $service = new NotificationService;
 
         // Sin ticketId no hay clave de dedup → ambas se crean (comportamiento previo intacto).
-        $service->notifyUser($reporter, 'system', 'T', 'B');
-        $service->notifyUser($reporter, 'system', 'T', 'B');
+        $noTicketPayload = new NotificationPayload(type: 'system', title: 'T', body: 'B');
+        $service->notifyUser($reporter, $noTicketPayload);
+        $service->notifyUser($reporter, $noTicketPayload);
 
         $this->assertSame(
             2,
@@ -85,8 +88,8 @@ class NotificationIdempotencyTest extends TestCase
 
         $service = new NotificationService;
 
-        $service->notifyUser($reporter, 'ticket_state_changed', 'T', 'B', '/u', '🔔', $ticketA->id);
-        $service->notifyUser($reporter, 'ticket_state_changed', 'T', 'B', '/u', '🔔', $ticketB->id);
+        $service->notifyUser($reporter, new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B', url: '/u', icon: '🔔', ticketId: $ticketA->id));
+        $service->notifyUser($reporter, new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B', url: '/u', icon: '🔔', ticketId: $ticketB->id));
 
         $this->assertSame(
             2,

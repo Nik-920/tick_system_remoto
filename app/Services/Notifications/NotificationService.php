@@ -9,32 +9,24 @@ use Throwable;
 
 class NotificationService
 {
-    public function notifyUser(
-        User $user,
-        string $type,
-        string $title,
-        string $body,
-        ?string $url = null,
-        string $icon = '🔔',
-        ?string $ticketId = null,
-        ?string $dedupKey = null
-    ): void {
+    public function notifyUser(User $user, NotificationPayload $payload): void
+    {
         try {
             // Idempotencia (Fases 5.2 / 5.4): evitar duplicar la notificación in-app
             // ante reintentos de listeners encolados.
-            if ($this->isDuplicate($user->id, $type, $ticketId, $dedupKey)) {
+            if ($this->isDuplicate($user->id, $payload->type, $payload->ticketId, $payload->dedupKey)) {
                 return;
             }
 
             Notification::create([
                 'user_id' => $user->id,
-                'ticket_id' => $ticketId,
-                'dedup_key' => $dedupKey,
-                'type' => $type,
-                'title' => $title,
-                'body' => $body,
-                'url' => $url,
-                'icon' => $icon,
+                'ticket_id' => $payload->ticketId,
+                'dedup_key' => $payload->dedupKey,
+                'type' => $payload->type,
+                'title' => $payload->title,
+                'body' => $payload->body,
+                'url' => $payload->url,
+                'icon' => $payload->icon,
             ]);
         } catch (Throwable $e) {
             Log::error('Error guardando notificación interna.', [
@@ -44,21 +36,14 @@ class NotificationService
         }
     }
 
-    public function notifyAdmins(
-        string $type,
-        string $title,
-        string $body,
-        ?string $url = null,
-        string $icon = '🔔',
-        ?string $ticketId = null,
-        ?string $dedupKey = null
-    ): void {
+    public function notifyAdmins(NotificationPayload $payload): void
+    {
         $adminIds = User::role(['admin', 'super_admin'])
             ->pluck('id')
             ->unique();
 
-        User::whereIn('id', $adminIds)->get()->each(function (User $admin) use ($type, $title, $body, $url, $icon, $ticketId, $dedupKey) {
-            $this->notifyUser($admin, $type, $title, $body, $url, $icon, $ticketId, $dedupKey);
+        User::whereIn('id', $adminIds)->get()->each(function (User $admin) use ($payload) {
+            $this->notifyUser($admin, $payload);
         });
     }
 

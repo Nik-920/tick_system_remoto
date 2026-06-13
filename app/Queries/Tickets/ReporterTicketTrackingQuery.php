@@ -167,7 +167,7 @@ final class ReporterTicketTrackingQuery
      */
     private function step(string $key, string $label, string $icon, string $baseState, ?CarbonInterface $at, ?string $currentKey): array
     {
-        // The current live stage wins over a "done"/"todo" computed from signals.
+        // The current live stage wins over the base state computed from signals.
         $state = $key === $currentKey ? 'current' : $baseState;
 
         $tone = match ($state) {

@@ -3,6 +3,7 @@
 namespace App\Listeners\Concerns;
 
 use App\Models\User;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -36,8 +37,7 @@ trait DeliversTicketInAppNotification
                 return;
             }
 
-            $this->notificationService()->notifyUser(
-                user: $n['user'],
+            $this->notificationService()->notifyUser($n['user'], new NotificationPayload(
                 type: $n['type'],
                 title: $n['title'],
                 body: $n['body'],
@@ -45,7 +45,7 @@ trait DeliversTicketInAppNotification
                 icon: $n['icon'],
                 ticketId: $n['ticketId'],
                 dedupKey: $n['dedupKey'],
-            );
+            ));
         } catch (Throwable $e) {
             Log::error($errorMessage, [
                 'ticket_id' => $ticketId,

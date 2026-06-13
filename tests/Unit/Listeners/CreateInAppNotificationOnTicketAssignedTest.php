@@ -6,6 +6,7 @@ use App\Events\TicketAssigned;
 use App\Listeners\CreateInAppNotificationOnTicketAssigned;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -78,8 +79,8 @@ class CreateInAppNotificationOnTicketAssignedTest extends TestCase
         $capturedTicketId = 'unset';
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyUser')
-            ->willReturnCallback(function (User $u, string $type, string $title, string $body, ?string $url, string $icon, ?string $ticketId) use (&$capturedTicketId) {
-                $capturedTicketId = $ticketId;
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedTicketId) {
+                $capturedTicketId = $p->ticketId;
             });
 
         $event = new TicketAssigned($this->makeTicket(), $this->makeUser('actor-1'), null, $this->makeUser('assignee-1'), 'assigned');
@@ -95,8 +96,8 @@ class CreateInAppNotificationOnTicketAssignedTest extends TestCase
         $capturedDedupKey = 'unset';
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyUser')
-            ->willReturnCallback(function (User $u, string $type, string $title, string $body, ?string $url, string $icon, ?string $ticketId, ?string $dedupKey) use (&$capturedDedupKey) {
-                $capturedDedupKey = $dedupKey;
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedDedupKey) {
+                $capturedDedupKey = $p->dedupKey;
             });
 
         $event = new TicketAssigned($this->makeTicket(), $this->makeUser('actor-1'), $this->makeUser('prev-1'), $this->makeUser('new-1'), 'reassigned');
@@ -155,7 +156,7 @@ class CreateInAppNotificationOnTicketAssignedTest extends TestCase
         $notif = $this->createMock(NotificationService::class);
         $notif->expects($this->once())
             ->method('notifyUser')
-            ->willReturnCallback(function (User $u) use (&$capturedUserId) {
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedUserId) {
                 $capturedUserId = $u->id;
             });
 

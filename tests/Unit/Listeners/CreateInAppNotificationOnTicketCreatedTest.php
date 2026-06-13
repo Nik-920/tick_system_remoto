@@ -5,6 +5,7 @@ namespace Tests\Unit\Listeners;
 use App\Events\TicketCreated;
 use App\Listeners\CreateInAppNotificationOnTicketCreated;
 use App\Models\Ticket;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -23,15 +24,15 @@ class CreateInAppNotificationOnTicketCreatedTest extends TestCase
         $notif = $this->createMock(NotificationService::class);
         $notif->expects($this->once())
             ->method('notifyAdmins')
-            ->with(
-                type: 'ticket_created',
-                title: $this->stringContains('Nuevo ticket'),
-                body: $this->isType('string'),
-                url: $this->isType('string'),
-                icon: '🎫',
-                ticketId: 'ticket-uuid-001',
-                dedupKey: 'ticket_created:ticket-uuid-001',
-            );
+            ->with($this->callback(function (NotificationPayload $p) {
+                return $p->type === 'ticket_created'
+                    && str_contains($p->title, 'Nuevo ticket')
+                    && is_string($p->body)
+                    && is_string($p->url)
+                    && $p->icon === '🎫'
+                    && $p->ticketId === 'ticket-uuid-001'
+                    && $p->dedupKey === 'ticket_created:ticket-uuid-001';
+            }));
 
         $listener = new CreateInAppNotificationOnTicketCreated($notif);
         $listener->handle(new TicketCreated($this->makeTicket(), 'corr-test-001'));
@@ -44,8 +45,8 @@ class CreateInAppNotificationOnTicketCreatedTest extends TestCase
         $capturedBody = null;
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyAdmins')
-            ->willReturnCallback(function (string $type, string $title, string $body) use (&$capturedBody) {
-                $capturedBody = $body;
+            ->willReturnCallback(function (NotificationPayload $p) use (&$capturedBody) {
+                $capturedBody = $p->body;
             });
 
         $ticket = $this->makeTicket(
@@ -68,8 +69,8 @@ class CreateInAppNotificationOnTicketCreatedTest extends TestCase
         $capturedBody = null;
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyAdmins')
-            ->willReturnCallback(function (string $type, string $title, string $body) use (&$capturedBody) {
-                $capturedBody = $body;
+            ->willReturnCallback(function (NotificationPayload $p) use (&$capturedBody) {
+                $capturedBody = $p->body;
             });
 
         $ticket = $this->makeTicket(title: 'Sin relaciones', locationName: null, categoryName: null);
@@ -87,8 +88,8 @@ class CreateInAppNotificationOnTicketCreatedTest extends TestCase
         $capturedTicketId = 'unset';
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyAdmins')
-            ->willReturnCallback(function (string $type, string $title, string $body, ?string $url, string $icon, ?string $ticketId) use (&$capturedTicketId) {
-                $capturedTicketId = $ticketId;
+            ->willReturnCallback(function (NotificationPayload $p) use (&$capturedTicketId) {
+                $capturedTicketId = $p->ticketId;
             });
 
         (new CreateInAppNotificationOnTicketCreated($notif))->handle(new TicketCreated($this->makeTicket()));
@@ -103,8 +104,8 @@ class CreateInAppNotificationOnTicketCreatedTest extends TestCase
         $capturedDedupKey = 'unset';
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyAdmins')
-            ->willReturnCallback(function (string $type, string $title, string $body, ?string $url, string $icon, ?string $ticketId, ?string $dedupKey) use (&$capturedDedupKey) {
-                $capturedDedupKey = $dedupKey;
+            ->willReturnCallback(function (NotificationPayload $p) use (&$capturedDedupKey) {
+                $capturedDedupKey = $p->dedupKey;
             });
 
         (new CreateInAppNotificationOnTicketCreated($notif))->handle(new TicketCreated($this->makeTicket()));

@@ -6,6 +6,7 @@ use App\Events\TicketStateChanged;
 use App\Listeners\CreateInAppNotificationOnTicketStateChanged;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
@@ -29,14 +30,16 @@ class CreateInAppNotificationOnTicketStateChangedTest extends TestCase
         $notif->expects($this->once())
             ->method('notifyUser')
             ->with(
-                user: $reporter,
-                type: 'ticket_state_changed',
-                title: $this->isType('string'),
-                body: $this->isType('string'),
-                url: $this->isType('string'),
-                icon: $this->isType('string'),
-                ticketId: 'ticket-state-001',
-                dedupKey: 'ticket_state_changed:ticket-state-001:open:in_progress',
+                $reporter,
+                $this->callback(function (NotificationPayload $p) {
+                    return $p->type === 'ticket_state_changed'
+                        && is_string($p->title)
+                        && is_string($p->body)
+                        && is_string($p->url)
+                        && is_string($p->icon)
+                        && $p->ticketId === 'ticket-state-001'
+                        && $p->dedupKey === 'ticket_state_changed:ticket-state-001:open:in_progress';
+                })
             );
 
         (new CreateInAppNotificationOnTicketStateChanged($notif))
@@ -69,8 +72,8 @@ class CreateInAppNotificationOnTicketStateChangedTest extends TestCase
         $capturedTitle = null;
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyUser')
-            ->willReturnCallback(function (User $u, string $type, string $title) use (&$capturedTitle) {
-                $capturedTitle = $title;
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedTitle) {
+                $capturedTitle = $p->title;
             });
 
         (new CreateInAppNotificationOnTicketStateChanged($notif))
@@ -119,8 +122,8 @@ class CreateInAppNotificationOnTicketStateChangedTest extends TestCase
         $capturedTicketId = 'unset';
         $notif = $this->createMock(NotificationService::class);
         $notif->method('notifyUser')
-            ->willReturnCallback(function (User $u, string $type, string $title, string $body, ?string $url, string $icon, ?string $ticketId) use (&$capturedTicketId) {
-                $capturedTicketId = $ticketId;
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedTicketId) {
+                $capturedTicketId = $p->ticketId;
             });
 
         (new CreateInAppNotificationOnTicketStateChanged($notif))

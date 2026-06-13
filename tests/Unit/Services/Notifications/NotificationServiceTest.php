@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\Notifications;
 
 use App\Models\User;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -17,7 +18,13 @@ class NotificationServiceTest extends TestCase
         $user = User::factory()->create();
 
         $service = new NotificationService;
-        $service->notifyUser($user, 'ticket', 'Ticket updated', 'Body', '/tickets/1', 'bell');
+        $service->notifyUser($user, new NotificationPayload(
+            type: 'ticket',
+            title: 'Ticket updated',
+            body: 'Body',
+            url: '/tickets/1',
+            icon: 'bell',
+        ));
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $user->id,
@@ -43,7 +50,11 @@ class NotificationServiceTest extends TestCase
         $reporter->assignRole('reporter');
 
         $service = new NotificationService;
-        $service->notifyAdmins('system', 'System alert', 'Body');
+        $service->notifyAdmins(new NotificationPayload(
+            type: 'system',
+            title: 'System alert',
+            body: 'Body',
+        ));
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $admin->id,

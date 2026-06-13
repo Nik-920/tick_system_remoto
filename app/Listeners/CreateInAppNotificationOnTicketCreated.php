@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\TicketCreated;
 use App\Listeners\Concerns\BuildsTicketCreatedNotification;
+use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -36,7 +37,7 @@ class CreateInAppNotificationOnTicketCreated implements ShouldQueue
         try {
             $n = $this->buildTicketCreatedNotification($event);
 
-            $this->notificationService->notifyAdmins(
+            $this->notificationService->notifyAdmins(new NotificationPayload(
                 type: $n['type'],
                 title: $n['title'],
                 body: $n['body'],
@@ -44,7 +45,7 @@ class CreateInAppNotificationOnTicketCreated implements ShouldQueue
                 icon: $n['icon'],
                 ticketId: $n['ticketId'],
                 dedupKey: $n['dedupKey'],
-            );
+            ));
         } catch (Throwable $e) {
             Log::error('Error creando notificación in-app en ticket creado.', [
                 'ticket_id' => $event->ticket->id,
