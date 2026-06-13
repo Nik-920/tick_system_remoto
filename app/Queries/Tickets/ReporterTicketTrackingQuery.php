@@ -8,6 +8,7 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\ViewModels\Tickets\ReporterTicketTrackingViewModel;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
@@ -29,12 +30,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ReporterTicketTrackingQuery
 {
-    /** Category name → Lucide icon (same vocabulary as the other boards). */
-    private const CATEGORY_ICONS = [
-        'hardware' => 'monitor', 'software' => 'cpu', 'seguridad' => 'shield-alert',
-        'mobiliario' => 'armchair', 'equipos' => 'projector', 'conectividad' => 'cable',
-        'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap', 'servicios' => 'droplet',
-    ];
+    use TicketBoardHelpers;
 
     /** Datetime format shown to the reporter across the tracking screen. */
     private const DISPLAY_DATETIME_FORMAT = 'd/m/Y · H:i';
@@ -92,7 +88,7 @@ final class ReporterTicketTrackingQuery
 
         return [
             'id' => (string) $this->ticket->id,
-            'ref' => $this->reference((string) $this->ticket->id),
+            'ref' => $this->boardReference((string) $this->ticket->id),
             'title' => (string) $this->ticket->title,
             'description' => trim((string) $this->ticket->description),
             'location' => $this->ticket->location?->name ?? 'Sin ubicación',
@@ -328,20 +324,6 @@ final class ReporterTicketTrackingQuery
 
     // ── Small helpers ────────────────────────────────────────────
 
-    private function displayName(?User $user): string
-    {
-        if ($user === null) {
-            return 'Sistema';
-        }
-
-        $name = trim((string) $user->name.' '.(string) ($user->last_name ?? ''));
-        if ($name !== '') {
-            return $name;
-        }
-
-        return (string) ($user->email ?? 'Usuario');
-    }
-
     private function initials(User $user): string
     {
         $name = trim((string) $user->name);
@@ -351,16 +333,6 @@ final class ReporterTicketTrackingQuery
         $initials = strtoupper($first.$second);
 
         return $initials !== '' ? $initials : 'U';
-    }
-
-    private function reference(string $id): string
-    {
-        return '#'.strtoupper(substr($id, 0, 8));
-    }
-
-    private function iconFor(?string $category): string
-    {
-        return self::CATEGORY_ICONS[strtolower(trim((string) $category))] ?? 'wrench';
     }
 
     private function stateTone(string $state): string
@@ -384,26 +356,6 @@ final class ReporterTicketTrackingQuery
             Ticket::STATE_REJECTED => 'Rechazado',
             Ticket::STATE_CANCELLED => 'Cancelado',
             default => ucfirst($state),
-        };
-    }
-
-    private function priorityTone(string $priority): string
-    {
-        return match ($priority) {
-            'critical', 'high' => 'high',
-            'low' => 'low',
-            default => 'medium',
-        };
-    }
-
-    private function priorityLabel(string $priority): string
-    {
-        return match ($priority) {
-            'critical' => 'Crítica',
-            'high' => 'Alta',
-            'medium' => 'Media',
-            'low' => 'Baja',
-            default => ucfirst($priority),
         };
     }
 }

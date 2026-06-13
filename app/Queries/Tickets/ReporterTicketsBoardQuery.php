@@ -9,8 +9,8 @@ use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\ViewModels\Tickets\ReporterTicketsBoardViewModel;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
@@ -35,6 +35,8 @@ use Illuminate\Support\Carbon;
  */
 final class ReporterTicketsBoardQuery
 {
+    use TicketBoardHelpers;
+
     /** @var list<string> */
     public const STATUSES = ['all', 'open', 'in_progress', 'resolved', 'rejected', 'cancelled', 'duplicate'];
 
@@ -61,13 +63,6 @@ final class ReporterTicketsBoardQuery
 
     /** Tickets sampled to compute the average first-response time. */
     private const AVG_POOL_LIMIT = 200;
-
-    /** Category name → Lucide icon (same vocabulary as the other boards). */
-    private const CATEGORY_ICONS = [
-        'hardware' => 'monitor', 'software' => 'cpu', 'seguridad' => 'shield-alert',
-        'mobiliario' => 'armchair', 'equipos' => 'projector', 'conectividad' => 'cable',
-        'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap', 'servicios' => 'droplet',
-    ];
 
     /**
      * @param  array<string, mixed>  $filters  search, priority, location_id, category_id, from, to, page
@@ -181,8 +176,8 @@ final class ReporterTicketsBoardQuery
             $query->where('category_id', $this->filters['category_id']);
         }
 
-        $from = $this->date((string) ($this->filters['from'] ?? ''));
-        $to = $this->date((string) ($this->filters['to'] ?? ''));
+        $from = $this->parseDate((string) ($this->filters['from'] ?? ''));
+        $to = $this->parseDate((string) ($this->filters['to'] ?? ''));
         if ($from !== null) {
             $query->where('created_at', '>=', $from->startOfDay());
         }
@@ -415,7 +410,7 @@ final class ReporterTicketsBoardQuery
 
         return [
             'id' => (string) $ticket->id,
-            'ref' => $this->reference((string) $ticket->id),
+            'ref' => $this->boardReference((string) $ticket->id),
             'title' => (string) $ticket->title,
             'location' => $ticket->location?->name ?? 'Sin ubicación',
             'category' => $ticket->category?->name ?? 'Sin categoría',
@@ -450,66 +445,10 @@ final class ReporterTicketsBoardQuery
      */
     private function pagination(int $page, int $shown, int $total): array
     {
-        $last = max(1, (int) ceil($total / self::PER_PAGE));
-        $from = $total === 0 ? 0 : ($page - 1) * self::PER_PAGE + 1;
-        $to = $total === 0 ? 0 : $from + $shown - 1;
-
-        $start = max(1, min($page - 2, $last - 4));
-        $end = min($last, $start + 4);
-
-        return [
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'current' => $page,
-            'last' => $last,
-            'pages' => array_values(range($start, $end)),
-        ];
+        return $this->buildPagination($page, $shown, $total, self::PER_PAGE);
     }
 
     // ── Small helpers ────────────────────────────────────────────
-
-    private function date(string $value): ?CarbonImmutable
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($value);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    private function formatDuration(int $minutes): string
-    {
-        $minutes = max(0, $minutes);
-        $days = intdiv($minutes, 1440);
-        $hours = intdiv($minutes % 1440, 60);
-        $rest = $minutes % 60;
-
-        if ($days > 0) {
-            return $hours > 0 ? "{$days}d {$hours}h" : "{$days}d";
-        }
-
-        if ($hours > 0) {
-            return $rest > 0 ? "{$hours}h {$rest}m" : "{$hours}h";
-        }
-
-        return "{$rest}m";
-    }
-
-    private function reference(string $id): string
-    {
-        return '#'.strtoupper(substr($id, 0, 8));
-    }
-
-    private function iconFor(?string $category): string
-    {
-        return self::CATEGORY_ICONS[strtolower(trim((string) $category))] ?? 'wrench';
-    }
 
     private function stateTone(string $state): string
     {
@@ -532,26 +471,6 @@ final class ReporterTicketsBoardQuery
             Ticket::STATE_REJECTED => 'Rechazado',
             Ticket::STATE_CANCELLED => 'Cancelado',
             default => ucfirst($state),
-        };
-    }
-
-    private function priorityTone(string $priority): string
-    {
-        return match ($priority) {
-            'critical', 'high' => 'high',
-            'low' => 'low',
-            default => 'medium',
-        };
-    }
-
-    private function priorityLabel(string $priority): string
-    {
-        return match ($priority) {
-            'critical' => 'Crítica',
-            'high' => 'Alta',
-            'medium' => 'Media',
-            'low' => 'Baja',
-            default => ucfirst($priority),
         };
     }
 

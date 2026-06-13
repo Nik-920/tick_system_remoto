@@ -9,8 +9,8 @@ use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\ViewModels\Tickets\HistoryBoardViewModel;
-use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -38,6 +38,8 @@ use Illuminate\Support\Collection;
  */
 final class HistoryBoardQuery
 {
+    use TicketBoardHelpers;
+
     /** @var list<string> */
     public const RESULTS = ['all', 'resolved', 'rejected'];
 
@@ -60,13 +62,6 @@ final class HistoryBoardQuery
 
     /** Resolved tickets sampled to compute the average resolution time. */
     private const AVG_POOL_LIMIT = 200;
-
-    /** Category name → Lucide icon (same vocabulary as the other boards). */
-    private const CATEGORY_ICONS = [
-        'hardware' => 'monitor', 'software' => 'cpu', 'seguridad' => 'shield-alert',
-        'mobiliario' => 'armchair', 'equipos' => 'projector', 'conectividad' => 'cable',
-        'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap',
-    ];
 
     /** @var array<string, CarbonInterface> ticket_id → rejection moment (latest), filled by rows(). */
     private array $rejectionTimes = [];
@@ -164,8 +159,8 @@ final class HistoryBoardQuery
      */
     private function applyPeriod(Builder $query): void
     {
-        $from = $this->date((string) ($this->filters['from'] ?? ''));
-        $to = $this->date((string) ($this->filters['to'] ?? ''));
+        $from = $this->parseDate((string) ($this->filters['from'] ?? ''));
+        $to = $this->parseDate((string) ($this->filters['to'] ?? ''));
 
         if ($from !== null) {
             $query->whereRaw(self::CLOSED_AT.' >= ?', [$from->startOfDay()->format('Y-m-d H:i:s')]);
@@ -404,8 +399,8 @@ final class HistoryBoardQuery
     private function activity(): array
     {
         $userId = $this->userId();
-        $from = $this->date((string) ($this->filters['from'] ?? ''));
-        $to = $this->date((string) ($this->filters['to'] ?? ''));
+        $from = $this->parseDate((string) ($this->filters['from'] ?? ''));
+        $to = $this->parseDate((string) ($this->filters['to'] ?? ''));
 
         return StateHistory::query()
             ->whereIn('to_state', self::HISTORY_STATES)
@@ -421,7 +416,7 @@ final class HistoryBoardQuery
                 $id = (string) $h->ticket_id;
 
                 return [
-                    'ref' => $this->reference($id),
+                    'ref' => $this->boardReference($id),
                     'id' => $id,
                     'text' => $resolved ? 'resuelto' : 'rechazado',
                     'tone' => $resolved ? 'success' : 'high',
@@ -447,7 +442,7 @@ final class HistoryBoardQuery
 
         return [
             'id' => (string) $ticket->id,
-            'ref' => $this->reference((string) $ticket->id),
+            'ref' => $this->boardReference((string) $ticket->id),
             'title' => (string) $ticket->title,
             'location' => $ticket->location?->name ?? 'Sin ubicación',
             'category' => $ticket->category?->name ?? 'Sin categoría',
@@ -477,88 +472,10 @@ final class HistoryBoardQuery
      */
     private function pagination(int $page, int $shown, int $total): array
     {
-        $last = max(1, (int) ceil($total / self::PER_PAGE));
-        $from = $total === 0 ? 0 : ($page - 1) * self::PER_PAGE + 1;
-        $to = $total === 0 ? 0 : $from + $shown - 1;
-
-        // Window of up to 5 page numbers centred on the current page.
-        $start = max(1, min($page - 2, $last - 4));
-        $end = min($last, $start + 4);
-        $pages = range($start, $end);
-
-        return [
-            'from' => $from,
-            'to' => $to,
-            'total' => $total,
-            'current' => $page,
-            'last' => $last,
-            'pages' => array_values($pages),
-        ];
+        return $this->buildPagination($page, $shown, $total, self::PER_PAGE);
     }
 
     // ── Small helpers ────────────────────────────────────────────
-
-    private function date(string $value): ?CarbonImmutable
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($value);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    private function formatDuration(int $minutes): string
-    {
-        $minutes = max(0, $minutes);
-        $days = intdiv($minutes, 1440);
-        $hours = intdiv($minutes % 1440, 60);
-        $rest = $minutes % 60;
-
-        if ($days > 0) {
-            return $hours > 0 ? "{$days}d {$hours}h" : "{$days}d";
-        }
-
-        if ($hours > 0) {
-            return $rest > 0 ? "{$hours}h {$rest}m" : "{$hours}h";
-        }
-
-        return "{$rest}m";
-    }
-
-    private function reference(string $id): string
-    {
-        return '#'.strtoupper(substr($id, 0, 8));
-    }
-
-    private function iconFor(?string $category): string
-    {
-        return self::CATEGORY_ICONS[strtolower(trim((string) $category))] ?? 'wrench';
-    }
-
-    private function priorityTone(string $priority): string
-    {
-        return match ($priority) {
-            'critical', 'high' => 'high',
-            'low' => 'low',
-            default => 'medium',
-        };
-    }
-
-    private function priorityLabel(string $priority): string
-    {
-        return match ($priority) {
-            'critical' => 'Crítica',
-            'high' => 'Alta',
-            'medium' => 'Media',
-            'low' => 'Baja',
-            default => ucfirst($priority),
-        };
-    }
 
     private function stateLabel(string $state): string
     {
@@ -567,20 +484,6 @@ final class HistoryBoardQuery
             Ticket::STATE_REJECTED => 'Rechazado',
             default => ucfirst($state),
         };
-    }
-
-    private function displayName(?User $user): string
-    {
-        if ($user === null) {
-            return 'Sistema';
-        }
-
-        $name = trim((string) $user->name.' '.(string) ($user->last_name ?? ''));
-        if ($name !== '') {
-            return $name;
-        }
-
-        return (string) ($user->email ?? 'Usuario');
     }
 
     private function userId(): string

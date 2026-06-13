@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\ViewModels\Tickets\AssignmentsBoardViewModel;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -30,6 +31,8 @@ use Illuminate\Support\Collection;
  */
 final class AssignmentsBoardQuery
 {
+    use TicketBoardHelpers;
+
     /** @var list<string> */
     public const TABS = ['active', 'waiting', 'completed'];
 
@@ -58,13 +61,6 @@ final class AssignmentsBoardQuery
 
     /** SLA-ish overdue thresholds (days) for an active ticket, by priority. */
     private const OVERDUE_DAYS = ['critical' => 1, 'high' => 1, 'medium' => 3, 'low' => 7];
-
-    /** Category name → Lucide icon (same vocabulary as the maintenance board). */
-    private const CATEGORY_ICONS = [
-        'hardware' => 'monitor', 'software' => 'cpu', 'seguridad' => 'shield-alert',
-        'mobiliario' => 'armchair', 'equipos' => 'projector', 'conectividad' => 'cable',
-        'redes' => 'cable', 'red' => 'cable', 'electricidad' => 'zap',
-    ];
 
     /** @var array<string, CarbonInterface>  ticket_id → moment it entered in_progress (latest). */
     private array $inProgressStarts = [];
@@ -336,7 +332,7 @@ final class AssignmentsBoardQuery
 
         return [
             'id' => (string) $ticket->id,
-            'ref' => $this->reference($ticket),
+            'ref' => $this->boardReference((string) $ticket->id),
             'title' => (string) $ticket->title,
             'location' => $ticket->location?->name ?? 'Sin ubicación',
             'category' => $ticket->category?->name ?? 'Sin categoría',
@@ -390,7 +386,7 @@ final class AssignmentsBoardQuery
 
         return [
             'id' => (string) $ticket->id,
-            'ref' => $this->reference($ticket),
+            'ref' => $this->boardReference((string) $ticket->id),
             'title' => (string) $ticket->title,
             'priority' => $this->priorityTone((string) $ticket->priority),
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
@@ -542,54 +538,6 @@ final class AssignmentsBoardQuery
         return $this->formatDuration((int) round($from->diffInMinutes($to)));
     }
 
-    private function formatDuration(int $minutes): string
-    {
-        $minutes = max(0, $minutes);
-        $days = intdiv($minutes, 1440);
-        $hours = intdiv($minutes % 1440, 60);
-        $rest = $minutes % 60;
-
-        if ($days > 0) {
-            return $hours > 0 ? "{$days}d {$hours}h" : "{$days}d";
-        }
-
-        if ($hours > 0) {
-            return $rest > 0 ? "{$hours}h {$rest}m" : "{$hours}h";
-        }
-
-        return "{$rest}m";
-    }
-
-    private function reference(Ticket $ticket): string
-    {
-        return '#'.strtoupper(substr((string) $ticket->id, 0, 8));
-    }
-
-    private function iconFor(?string $category): string
-    {
-        return self::CATEGORY_ICONS[strtolower(trim((string) $category))] ?? 'wrench';
-    }
-
-    private function priorityTone(string $priority): string
-    {
-        return match ($priority) {
-            'critical', 'high' => 'high',
-            'low' => 'low',
-            default => 'medium',
-        };
-    }
-
-    private function priorityLabel(string $priority): string
-    {
-        return match ($priority) {
-            'critical' => 'Crítica',
-            'high' => 'Alta',
-            'medium' => 'Media',
-            'low' => 'Baja',
-            default => ucfirst($priority),
-        };
-    }
-
     private function stateLabel(string $state): string
     {
         return match ($state) {
@@ -643,20 +591,6 @@ final class AssignmentsBoardQuery
         return (string) $ticket->state === Ticket::STATE_OPEN
             && ! $ticket->assignment_locked
             && $ticket->assignment_source === Ticket::ASSIGNMENT_SOURCE_SELF;
-    }
-
-    private function displayName(?User $user): string
-    {
-        if ($user === null) {
-            return 'Sistema';
-        }
-
-        $name = trim((string) $user->name.' '.(string) ($user->last_name ?? ''));
-        if ($name !== '') {
-            return $name;
-        }
-
-        return (string) ($user->email ?? 'Usuario');
     }
 
     private function userId(): string
