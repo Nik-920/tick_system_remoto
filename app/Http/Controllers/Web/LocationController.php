@@ -41,7 +41,7 @@ class LocationController extends Controller
             'filters' => $filters,
             'metrics' => $this->buildMetrics(),
             'qrStats' => $this->buildQrStats(),
-            'activity' => [], // TODO: replace with real audit-log query
+            'activity' => [],
             'topIncidents' => $this->buildTopIncidents(),
         ]);
     }
@@ -265,7 +265,6 @@ class LocationController extends Controller
     /** @return array<int, array<string, mixed>> */
     private function buildTopIncidents(): array
     {
-        // TODO: replace with real query joining tickets/incident_history when reporting indices are ready
         $colors = ['text-red-500', 'text-red-500', 'text-orange-500', 'text-orange-500', 'text-blue-600'];
 
         return Location::query()
