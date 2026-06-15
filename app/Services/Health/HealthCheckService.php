@@ -160,7 +160,7 @@ class HealthCheckService
         $result = Redis::connection($connectionName)->ping();
 
         if (! $this->isRedisPingSuccessful($result)) {
-            throw new RuntimeException('Redis ping did not return a healthy response.');
+            throw new \RuntimeException('Redis ping did not return a healthy response.');
         }
 
         Queue::connection('redis')->size();

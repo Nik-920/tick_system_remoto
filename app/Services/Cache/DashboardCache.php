@@ -62,7 +62,7 @@ class DashboardCache
         );
         ksort($scalar);
 
-        return substr(sha1(serialize($scalar)), 0, 16);
+        return substr(hash('xxh128', serialize($scalar)), 0, 16);
     }
 
     private function versionKeyReporter(int|string $userId): string
