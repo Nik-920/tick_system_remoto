@@ -2,11 +2,11 @@
 
 namespace App\Services\Health;
 
+use App\Exceptions\RedisHealthException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
-use App\Exceptions\RedisHealthException;
 use Throwable;
 
 class HealthCheckService
