@@ -450,8 +450,7 @@ class ReporterTicketsPageTest extends TestCase
 
         $this->actingAs($reporter)
             ->get(route('tickets.index'))
-            ->assertOk()
-            ->assertViewIs('tickets.index');
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     // ── Fixtures ─────────────────────────────────────────────────

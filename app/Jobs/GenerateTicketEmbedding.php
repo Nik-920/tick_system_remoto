@@ -22,7 +22,20 @@ class GenerateTicketEmbedding implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
+    public int $tries = 3;
+
+    public int $timeout = 120;
+
+    public function backoff(): array
+    {
+        return [30, 60];
+    }
+
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
+    {
+        $this->onQueue('ai');
+        $this->afterCommit = true;
+    }
 
     public function handle(EmbeddingService $embeddings, TicketQrLogger $logger): void
     {

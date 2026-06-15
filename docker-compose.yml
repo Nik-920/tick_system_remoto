@@ -28,11 +28,15 @@ x-app-base: &app-base
         SENTRY_ENABLE_LOGS: ${SENTRY_ENABLE_LOGS:-false}
         RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
         CACHE_STORE: redis
-        SESSION_DRIVER: redis
+        # file driver avoids Redis session cold-start issues in local Docker;
+        # switch to redis once cache/queue are confirmed stable.
+        SESSION_DRIVER: file
         QUEUE_CONNECTION: redis
+        REDIS_CLIENT: predis
         REDIS_HOST: redis
         REDIS_PORT: 6379
         REDIS_PASSWORD: ""
+        REDIS_HEALTH_REQUIRED: "false"
     volumes:
         - ./:/app
     networks:
@@ -55,7 +59,7 @@ services:
     queue:
         <<: *app-base
         container_name: infra-queue
-        command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+        command: php artisan queue:work redis --queue=ai,notifications,media,default --sleep=3 --tries=3 --timeout=180 --max-time=3600
         environment:
             APP_ENV: ${APP_ENV:-local}
             APP_DEBUG: ${APP_DEBUG:-true}
@@ -78,11 +82,13 @@ services:
             SENTRY_ENABLE_LOGS: ${SENTRY_ENABLE_LOGS:-false}
             RUN_MIGRATIONS: "false"
             CACHE_STORE: redis
-            SESSION_DRIVER: redis
+            SESSION_DRIVER: file
             QUEUE_CONNECTION: redis
+            REDIS_CLIENT: predis
             REDIS_HOST: redis
             REDIS_PORT: 6379
             REDIS_PASSWORD: ""
+            REDIS_HEALTH_REQUIRED: "false"
         depends_on:
             app:
                 condition: service_healthy
@@ -104,16 +110,21 @@ services:
         networks:
             - infra-network
         healthcheck:
-            test: [ "CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1" ]
+            # /up is Laravel's built-in health endpoint — it returns 200 without
+            # touching sessions/DB, so it never creates a circular dependency.
+            test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/up || exit 1"]
             interval: 30s
-            timeout: 30s
+            timeout: 10s
             retries: 5
             start_period: 60s
+
     redis:
         image: redis:7-alpine
         container_name: infra-redis
         restart: unless-stopped
         command: ["redis-server", "--appendonly", "yes"]
+        ports:
+            - "6379:6379"
         volumes:
             - redis_data:/data
         networks:
@@ -125,15 +136,20 @@ services:
             retries: 3
             start_period: 10s
 
+    # Grafana Alloy is opt-in: start only when GRAFANA_CLOUD_TOKEN is set and
+    # the "monitoring" profile is requested:
+    #   GRAFANA_CLOUD_TOKEN=xxx docker compose --profile monitoring up -d
     alloy:
         image: grafana/alloy:latest
         container_name: infra-alloy
         restart: unless-stopped
+        profiles:
+            - monitoring
         volumes:
             - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
         command: run /etc/alloy/config.alloy
         environment:
-            GRAFANA_CLOUD_TOKEN: ${GRAFANA_CLOUD_TOKEN}
+            GRAFANA_CLOUD_TOKEN: ${GRAFANA_CLOUD_TOKEN:-}
         depends_on:
             nginx:
                 condition: service_healthy
@@ -143,12 +159,6 @@ services:
 volumes:
     redis_data:
 
-
-
 networks:
     infra-network:
         driver: bridge
-
-
-
-

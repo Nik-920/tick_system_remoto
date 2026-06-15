@@ -71,9 +71,7 @@ class MaintenanceTicketsBoardTest extends TestCase
 
         $response = $this->actingAs($reporter)->get(route('tickets.index'));
 
-        $response->assertOk();
-        $response->assertViewIs('tickets.index');
-        $response->assertDontSeeText('Insights operativos');
+        $response->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_admin_index_keeps_the_classic_table(): void

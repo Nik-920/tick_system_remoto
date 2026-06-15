@@ -20,7 +20,15 @@ class UpdateRecurrenceHistory implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public Ticket $ticket, public string $correlationId = '') {}
+    public int $tries = 3;
+
+    public int $timeout = 60;
+
+    public function __construct(public Ticket $ticket, public string $correlationId = '')
+    {
+        $this->onQueue('default');
+        $this->afterCommit = true;
+    }
 
     public function handle(): void
     {

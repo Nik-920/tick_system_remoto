@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Queries\Tickets\ReporterTicketsBoardQuery;
+use App\Services\Cache\DashboardCache;
+use App\Support\Cache\CacheTtl;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -23,24 +25,45 @@ use Illuminate\View\View;
  * pieces left are the static reporting tip and the "Actividad reciente" panel,
  * which is shown as an honest "Próximamente" placeholder (no invented metrics or
  * ids). NO maintenance action is exposed. Middleware (auth + role:reporter) gates.
+ *
+ * Cache strategy: versioned per-user cache via DashboardCache. Only plain arrays
+ * (chips, tickets, summary) are serialised — Eloquent Collections are excluded.
+ * The version is bumped by InvalidateDashboardCacheOnTicketChanged on every
+ * TicketCreated / TicketStateChanged / TicketAssigned / TicketResolved event
+ * that belongs to this reporter. TTL: CacheTtl::DASHBOARD_REPORTER (45 s).
  */
 class ReporterDashboardController extends Controller
 {
+    public function __construct(private readonly DashboardCache $dashboardCache) {}
+
     public function __invoke(Request $request): View
     {
         /** @var User $user */
         $user = $request->user();
 
-        // One ownership-scoped query powers the recent list, the KPI counts and
-        // the insights (donut + average). No fabricated numbers reach the view.
-        $board = ReporterTicketsBoardQuery::for($user, [], 'all', 'recent');
+        // Cache only plain-array data to avoid serialising Eloquent Collections.
+        // userName, quickActions and tip are cheap / static — excluded from cache.
+        $boardData = $this->dashboardCache->rememberReporter(
+            $user->id,
+            ['surface' => 'reporter_dashboard'],
+            CacheTtl::DASHBOARD_REPORTER,
+            function () use ($user): array {
+                $board = ReporterTicketsBoardQuery::for($user, [], 'all', 'recent');
+
+                return [
+                    'chips' => $board->chips,
+                    'tickets' => $board->tickets,
+                    'summary' => $board->summary,
+                ];
+            }
+        );
 
         return view('reporter.dashboard', [
             'userName' => $user->name,
-            'kpis' => $this->kpis($board->chips),
-            'recent' => $board->tickets,
+            'kpis' => $this->kpis($boardData['chips']),
+            'recent' => $boardData['tickets'],
             'quickActions' => $this->quickActions(),
-            'summary' => $board->summary,
+            'summary' => $boardData['summary'],
             'tip' => 'Agrega fotos, detalles del problema y el lugar exacto para acelerar la atención.',
         ]);
     }

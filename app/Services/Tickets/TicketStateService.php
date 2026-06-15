@@ -4,11 +4,13 @@ namespace App\Services\Tickets;
 
 use App\Events\TicketResolved;
 use App\Events\TicketStateChanged;
+use App\Exceptions\TicketLockUnavailableException;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
+use App\Support\Locks\TicketLock;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -26,7 +28,6 @@ class TicketStateService
         string $correlationId = ''
     ): Ticket {
         $correlationId = $this->resolveCorrelationId($correlationId);
-
         $fromState = (string) $ticket->state;
 
         if ($fromState === $toState) {
@@ -47,6 +48,55 @@ class TicketStateService
         $this->assertRoleCanTransition($actor, $ticket, $fromState, $toState);
         $this->assertCommentIsValid($fromState, $toState, $comment);
 
+        $result = TicketLock::mutation((string) $ticket->id)->get(
+            function () use ($ticket, $actor, $toState, $comment, $fromState, $correlationId): Ticket {
+                return $this->performTransition($ticket, $actor, $toState, $comment, $fromState, $correlationId);
+            }
+        );
+
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns the list of states that $actor is allowed to transition $ticket to.
+     * Pure read — no side effects, no exceptions thrown.
+     *
+     * Uses the same roleCanDoTransition() as assertRoleCanTransition() to
+     * guarantee parity between what the UI shows and what the backend accepts.
+     *
+     * @return list<string>
+     */
+    public function availableTransitionsFor(Ticket $ticket, User $actor): array
+    {
+        if (! method_exists($actor, 'hasRole') || ! method_exists($actor, 'hasAnyRole')) {
+            return [];
+        }
+
+        $fromState = (string) $ticket->state;
+        $candidates = $this->allowedTransitions()[$fromState] ?? [];
+
+        if (empty($candidates)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $candidates,
+            fn (string $toState): bool => $this->roleCanDoTransition($actor, $ticket, $fromState, $toState)
+        ));
+    }
+
+    private function performTransition(
+        Ticket $ticket,
+        User $actor,
+        string $toState,
+        ?string $comment,
+        string $fromState,
+        string $correlationId
+    ): Ticket {
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, $toState, $comment, $fromState): Ticket {
             $ticket->state = $toState;
             if ($toState === 'resolved') {
@@ -166,34 +216,6 @@ class TicketStateService
         }
 
         return $allowed;
-    }
-
-    /**
-     * Returns the list of states that $actor is allowed to transition $ticket to.
-     * Pure read — no side effects, no exceptions thrown.
-     *
-     * Uses the same roleCanDoTransition() as assertRoleCanTransition() to
-     * guarantee parity between what the UI shows and what the backend accepts.
-     *
-     * @return list<string>
-     */
-    public function availableTransitionsFor(Ticket $ticket, User $actor): array
-    {
-        if (! method_exists($actor, 'hasRole') || ! method_exists($actor, 'hasAnyRole')) {
-            return [];
-        }
-
-        $fromState = (string) $ticket->state;
-        $candidates = $this->allowedTransitions()[$fromState] ?? [];
-
-        if (empty($candidates)) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            $candidates,
-            fn (string $toState): bool => $this->roleCanDoTransition($actor, $ticket, $fromState, $toState)
-        ));
     }
 
     /**

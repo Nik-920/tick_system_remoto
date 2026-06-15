@@ -118,6 +118,7 @@ class LocationController extends Controller
             'name' => $data['name'] ?? $location->name,
             'building' => $data['building'] ?? $location->building,
             'floor' => array_key_exists('floor', $data) ? $data['floor'] : $location->floor,
+            'room_code' => array_key_exists('room_code', $data) ? $data['room_code'] : $location->room_code,
         ];
 
         $similarLocations = $similarityService->findSimilar($similarityPayload, $location->id);

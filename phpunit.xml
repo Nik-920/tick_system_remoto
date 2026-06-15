@@ -10,6 +10,22 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <exclude>tests/Feature/CatalogIndexAccessParityTest.php</exclude>
+            <exclude>tests/Feature/ExampleTest.php</exclude>
+            <exclude>tests/Feature/FrontendSecretExposureTest.php</exclude>
+            <exclude>tests/Feature/HealthControllerTest.php</exclude>
+            <exclude>tests/Feature/MetricsControllerTest.php</exclude>
+            <exclude>tests/Feature/MetricsEndpointSecurityTest.php</exclude>
+            <exclude>tests/Feature/SecurityHeadersTest.php</exclude>
+        </testsuite>
+        <testsuite name="Feature-Root">
+            <file>tests/Feature/CatalogIndexAccessParityTest.php</file>
+            <file>tests/Feature/ExampleTest.php</file>
+            <file>tests/Feature/FrontendSecretExposureTest.php</file>
+            <file>tests/Feature/HealthControllerTest.php</file>
+            <file>tests/Feature/MetricsControllerTest.php</file>
+            <file>tests/Feature/MetricsEndpointSecurityTest.php</file>
+            <file>tests/Feature/SecurityHeadersTest.php</file>
         </testsuite>
     </testsuites>
     <source>

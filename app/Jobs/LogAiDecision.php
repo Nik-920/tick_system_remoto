@@ -17,6 +17,10 @@ class LogAiDecision implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries = 3;
+
+    public int $timeout = 30;
+
     /**
      * @param  array<string, mixed>  $inputData
      * @param  array<string, mixed>  $outputData
@@ -29,7 +33,9 @@ class LogAiDecision implements ShouldQueue
         public ?float $confidenceScore = null,
         public ?string $actionTaken = null,
         public string $correlationId = ''
-    ) {}
+    ) {
+        $this->onQueue('default');
+    }
 
     public function handle(): void
     {

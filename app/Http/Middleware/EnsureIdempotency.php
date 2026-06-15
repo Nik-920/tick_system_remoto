@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -133,39 +134,56 @@ class EnsureIdempotency
     private function processIdempotentRequest(Request $request, Closure $next, string $key): Response
     {
         $userId = $request->user()?->getAuthIdentifier();
-        $requestHash = $this->buildRequestHash($request, $userId !== null ? (string) $userId : null);
+        $userIdStr = $userId !== null ? (string) $userId : null;
+        $requestHash = $this->buildRequestHash($request, $userIdStr);
         $routeName = $request->route()?->getName();
         $path = '/'.ltrim($request->path(), '/');
         $method = $request->method();
 
-        $recordOrResponse = $this->acquireRecord(
-            $key,
-            $userId !== null ? (string) $userId : null,
-            $routeName,
-            $method,
-            $path,
-            $requestHash,
-            $request,
-        );
+        $lockEnabled = (bool) config('idempotency.lock_enabled', true);
+        $lock = null;
 
-        if ($recordOrResponse instanceof Response) {
-            return $recordOrResponse;
+        if ($lockEnabled) {
+            $lockTtl = (int) config('idempotency.lock_ttl', 30);
+            $lock = Cache::lock('idempotency:lock:'.$key, $lockTtl);
+
+            if (! $lock->get()) {
+                return $this->conflictResponse($request, 'Request already in progress.');
+            }
         }
-
-        $record = $recordOrResponse;
 
         try {
-            $response = $next($request);
-        } catch (Throwable $exception) {
-            $this->markFailed($record);
-            throw $exception;
+            $recordOrResponse = $this->acquireRecord(
+                $key,
+                $userIdStr,
+                $routeName,
+                $method,
+                $path,
+                $requestHash,
+                $request,
+            );
+
+            if ($recordOrResponse instanceof Response) {
+                return $recordOrResponse;
+            }
+
+            $record = $recordOrResponse;
+
+            try {
+                $response = $next($request);
+            } catch (Throwable $exception) {
+                $this->markFailed($record);
+                throw $exception;
+            }
+
+            $this->storeResponse($record, $response);
+            $response->headers->set('Idempotency-Key', $key);
+            $response->headers->set('Idempotency-Status', 'stored');
+
+            return $response;
+        } finally {
+            $lock?->release();
         }
-
-        $this->storeResponse($record, $response);
-        $response->headers->set('Idempotency-Key', $key);
-        $response->headers->set('Idempotency-Status', 'stored');
-
-        return $response;
     }
 
     private function findValidRecord(string $key): ?IdempotencyKey

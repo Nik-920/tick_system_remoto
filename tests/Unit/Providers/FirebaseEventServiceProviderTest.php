@@ -12,6 +12,7 @@ use App\Listeners\CreateInAppNotificationOnTicketCreated;
 use App\Listeners\CreateInAppNotificationOnTicketStateChanged;
 use App\Listeners\DispatchDuplicateDetectionOnTicketCreated;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
+use App\Listeners\InvalidateDashboardCacheOnTicketChanged;
 use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
 use App\Listeners\SendFcmPushOnTicketAssigned;
@@ -131,52 +132,56 @@ class FirebaseEventServiceProviderTest extends TestCase
     //    Detecta si alguien registra un segundo provider y duplica.
     // ──────────────────────────────────────────────────────────
 
-    public function test_ticket_created_has_exactly_four_listeners(): void
+    public function test_ticket_created_has_exactly_five_listeners(): void
     {
         $count = count(Event::getListeners(TicketCreated::class));
 
         $this->assertSame(
-            4,
+            5,
             $count,
-            'TicketCreated debe tener exactamente 4 listeners (Fase 4): '.
+            'TicketCreated debe tener exactamente 5 listeners: '.
             'GenerateEmbeddingOnTicketCreated, DispatchDuplicateDetectionOnTicketCreated, '.
-            'CreateInAppNotificationOnTicketCreated, SendFcmPushOnTicketCreated. '.
-            'Si hay 8, un segundo provider fue registrado y duplicó todos.'
+            'CreateInAppNotificationOnTicketCreated, SendFcmPushOnTicketCreated, '.
+            'InvalidateDashboardCacheOnTicketChanged. '.
+            'Si hay 10, un segundo provider fue registrado y duplicó todos.'
         );
     }
 
-    public function test_ticket_state_changed_has_exactly_two_listeners(): void
+    public function test_ticket_state_changed_has_exactly_three_listeners(): void
     {
         $count = count(Event::getListeners(TicketStateChanged::class));
 
         $this->assertSame(
-            2,
+            3,
             $count,
-            'TicketStateChanged debe tener exactamente 2 listeners (Fase 4): '.
-            'CreateInAppNotificationOnTicketStateChanged, SendFcmPushOnTicketStateChanged'
+            'TicketStateChanged debe tener exactamente 3 listeners: '.
+            'CreateInAppNotificationOnTicketStateChanged, SendFcmPushOnTicketStateChanged, '.
+            'InvalidateDashboardCacheOnTicketChanged'
         );
     }
 
-    public function test_ticket_resolved_has_exactly_one_listener(): void
+    public function test_ticket_resolved_has_exactly_two_listeners(): void
     {
         $count = count(Event::getListeners(TicketResolved::class));
 
         $this->assertSame(
-            1,
+            2,
             $count,
-            'TicketResolved debe tener exactamente 1 listener: UpdateRecurrenceOnTicketResolved'
+            'TicketResolved debe tener exactamente 2 listeners: '.
+            'UpdateRecurrenceOnTicketResolved, InvalidateDashboardCacheOnTicketChanged'
         );
     }
 
-    public function test_ticket_assigned_has_exactly_two_listeners(): void
+    public function test_ticket_assigned_has_exactly_three_listeners(): void
     {
         $count = count(Event::getListeners(TicketAssigned::class));
 
         $this->assertSame(
-            2,
+            3,
             $count,
-            'TicketAssigned debe tener exactamente 2 listeners (Fase 4): '.
-            'CreateInAppNotificationOnTicketAssigned, SendFcmPushOnTicketAssigned'
+            'TicketAssigned debe tener exactamente 3 listeners: '.
+            'CreateInAppNotificationOnTicketAssigned, SendFcmPushOnTicketAssigned, '.
+            'InvalidateDashboardCacheOnTicketChanged'
         );
     }
 
@@ -202,11 +207,13 @@ class FirebaseEventServiceProviderTest extends TestCase
             DispatchDuplicateDetectionOnTicketCreated::class,
             CreateInAppNotificationOnTicketCreated::class,
             SendFcmPushOnTicketCreated::class,
+            // subscriber — dashboard cache invalidation
+            InvalidateDashboardCacheOnTicketChanged::class,
         ];
 
         $registered = Event::getListeners(TicketCreated::class);
 
-        $this->assertCount(4, $registered);
+        $this->assertCount(5, $registered);
         foreach ($registered as $listener) {
             $this->assertIsCallable($listener);
         }
@@ -231,6 +238,7 @@ class FirebaseEventServiceProviderTest extends TestCase
             SendFcmPushOnTicketAssigned::class,
             LogDuplicateDetectionAudit::class,
             ReportFailedQueueJob::class,
+            InvalidateDashboardCacheOnTicketChanged::class,
         ];
 
         foreach ($allListeners as $listenerClass) {

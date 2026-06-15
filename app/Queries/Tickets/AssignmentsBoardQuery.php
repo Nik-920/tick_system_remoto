@@ -65,6 +65,9 @@ final class AssignmentsBoardQuery
     /** @var array<string, CarbonInterface>  ticket_id → moment it entered in_progress (latest). */
     private array $inProgressStarts = [];
 
+    /** @var array<string, int>|null  Cached per-state counts for the technician's own tickets. */
+    private ?array $stateCountsCache = null;
+
     /**
      * @param  array<string, mixed>  $filters  search, state, priority, location_id, category_id, sort, focus, all
      */
@@ -225,6 +228,39 @@ final class AssignmentsBoardQuery
     // ── Tabs & summary ───────────────────────────────────────────
 
     /**
+     * One GROUP BY query that returns counts for all states at once.
+     * Called by both tabs() and summary(); result is cached for the lifetime
+     * of this build() call so the 6 individual COUNT queries collapse to 1.
+     *
+     * @return array<string, int>
+     */
+    private function resolvedStateCounts(): array
+    {
+        if ($this->stateCountsCache !== null) {
+            return $this->stateCountsCache;
+        }
+
+        $this->stateCountsCache = $this->mineBase()
+            ->selectRaw('state, COUNT(*) as total')
+            ->groupBy('state')
+            ->pluck('total', 'state')
+            ->map(fn ($v): int => (int) $v)
+            ->all();
+
+        return $this->stateCountsCache;
+    }
+
+    /**
+     * @param  list<string>  $states
+     */
+    private function countStates(array $states): int
+    {
+        $counts = $this->resolvedStateCounts();
+
+        return (int) collect($states)->sum(fn (string $s): int => $counts[$s] ?? 0);
+    }
+
+    /**
      * @return list<array{key: string, label: string, count: int}>
      */
     private function tabs(): array
@@ -254,14 +290,6 @@ final class AssignmentsBoardQuery
             'overdue' => $overdue,
             'compliance' => $active > 0 ? (int) round(($active - $overdue) / $active * 100) : 100,
         ];
-    }
-
-    /**
-     * @param  list<string>  $states
-     */
-    private function countStates(array $states): int
-    {
-        return $this->mineBase()->whereIn('state', $states)->count();
     }
 
     private function overdueCount(): int

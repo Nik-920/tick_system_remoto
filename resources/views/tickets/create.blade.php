@@ -12,12 +12,15 @@
     ];
     $currentPriority = old('priority', 'medium');
     $charCount = strlen(old('description', ''));
+    $backRoute = auth()->user()?->hasRole('reporter') && ! auth()->user()?->hasAnyRole(['admin', 'super_admin', 'maintenance'])
+        ? route('reporter.tickets.index')
+        : route('tickets.index');
 @endphp
 
 <div class="rep-edit rep-tone-primary">
 
     {{-- ── Back link ── --}}
-    <a href="{{ route('tickets.index') }}" class="rep-show__back">
+    <a href="{{ $backRoute }}" class="rep-show__back">
         <x-lucide-arrow-left width="16" height="16" stroke-width="2.5" aria-hidden="true" />
         Volver al listado
     </a>
@@ -338,7 +341,7 @@
 
                     <div class="rep-edit__section-body">
                         <div class="rep-edit__form-actions">
-                            <a href="{{ route('tickets.index') }}" class="rep-edit__btn rep-edit__btn--ghost">
+                            <a href="{{ $backRoute }}" class="rep-edit__btn rep-edit__btn--ghost">
                                 Cancelar
                             </a>
                             <button type="submit"

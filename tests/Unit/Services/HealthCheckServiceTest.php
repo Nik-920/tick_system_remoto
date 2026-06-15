@@ -19,7 +19,62 @@ class HealthCheckServiceTest extends TestCase
         $this->assertSame('healthy', $result['status']);
         $this->assertSame('ok', $result['checks']['database']['status']);
         $this->assertSame('ok', $result['checks']['queue']['status']);
+        $this->assertArrayHasKey('redis', $result['checks']);
         $this->assertArrayHasKey('timestamp', $result);
+    }
+
+    public function test_check_always_includes_redis_key_in_checks(): void
+    {
+        $service = new HealthCheckService;
+
+        $result = $service->check();
+
+        $this->assertArrayHasKey('redis', $result['checks']);
+        $this->assertArrayHasKey('status', $result['checks']['redis']);
+        $this->assertArrayHasKey('latency_ms', $result['checks']['redis']);
+        $this->assertArrayHasKey('required', $result['checks']['redis']);
+    }
+
+    public function test_check_redis_optional_does_not_affect_overall_health(): void
+    {
+        config(['app.redis_health_required' => false]);
+        // Use sync driver so checkQueue() does not call Redis and interfere with
+        // this test's redis-optional behaviour assertion.
+        config(['queue.default' => 'sync']);
+
+        Redis::shouldReceive('connection')
+            ->with('default')
+            ->andReturnSelf();
+        Redis::shouldReceive('ping')
+            ->andReturn('ERR');
+
+        $service = new HealthCheckService;
+        $result = $service->check();
+
+        // Redis check fails but it is not required — overall health unchanged by redis alone.
+        $this->assertSame('failed', $result['checks']['redis']['status']);
+        $this->assertFalse($result['checks']['redis']['required']);
+        // Database and queue are still ok, so overall is healthy.
+        $this->assertSame('ok', $result['checks']['database']['status']);
+        $this->assertSame('healthy', $result['status']);
+    }
+
+    public function test_check_redis_required_makes_unhealthy_when_redis_fails(): void
+    {
+        config(['app.redis_health_required' => true]);
+
+        Redis::shouldReceive('connection')
+            ->with('default')
+            ->andReturnSelf();
+        Redis::shouldReceive('ping')
+            ->andReturn('ERR');
+
+        $service = new HealthCheckService;
+        $result = $service->check();
+
+        $this->assertSame('failed', $result['checks']['redis']['status']);
+        $this->assertTrue($result['checks']['redis']['required']);
+        $this->assertSame('unhealthy', $result['status']);
     }
 
     public function test_check_returns_unhealthy_when_database_check_fails(): void

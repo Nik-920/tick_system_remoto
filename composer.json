@@ -16,6 +16,7 @@
         "league/flysystem-aws-s3-v3": "^3.25",
         "livewire/livewire": "^4.2",
         "mallardduck/blade-lucide-icons": "*",
+        "predis/predis": "^3.5",
         "promphp/prometheus_client_php": "^2.15",
         "sentry/sentry-laravel": "^4.25",
         "simplesoftwareio/simple-qrcode": "^4.2",
@@ -86,7 +87,9 @@
             "dev-master": "12.x-dev"
         },
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "mallardduck/blade-lucide-icons"
+            ]
         }
     },
     "config": {

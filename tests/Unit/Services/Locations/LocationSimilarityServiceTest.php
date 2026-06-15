@@ -320,6 +320,8 @@ class LocationSimilarityServiceTest extends TestCase
             ]);
         }
 
+        // No room_code in payload → target room_code is empty → room_code differentiation
+        // does not apply → all candidates with matching name/building/floor are evaluated.
         $matches = $service->findSimilar([
             'name' => 'Laboratorio 8',
             'building' => 'Edificio A',
@@ -328,6 +330,85 @@ class LocationSimilarityServiceTest extends TestCase
 
         $this->assertGreaterThan(0, $matches->count());
         $this->assertLessThanOrEqual(2, $matches->count());
+    }
+
+    public function test_find_similar_returns_empty_when_room_codes_differ(): void
+    {
+        $service = new LocationSimilarityService;
+
+        $this->createLocation([
+            'name' => 'Pabellon de aulas',
+            'building' => '1',
+            'floor' => '1',
+            'room_code' => 'AUL-001',
+            'qr_token' => 'qr-aul-001',
+        ]);
+
+        $this->createLocation([
+            'name' => 'Pabellon de aulas',
+            'building' => '1',
+            'floor' => '1',
+            'room_code' => 'AUL-002',
+            'qr_token' => 'qr-aul-002',
+        ]);
+
+        // AUL-003 is a distinct physical space — different room_code must suppress the match.
+        $matches = $service->findSimilar([
+            'name' => 'Pabellon de aulas',
+            'building' => '1',
+            'floor' => '1',
+            'room_code' => 'AUL-003',
+        ]);
+
+        $this->assertCount(0, $matches);
+    }
+
+    public function test_find_similar_still_matches_when_payload_has_no_room_code(): void
+    {
+        $service = new LocationSimilarityService;
+
+        $location = $this->createLocation([
+            'name' => 'Sala de reuniones',
+            'building' => 'Administracion',
+            'floor' => '2',
+            'room_code' => 'ADM-201',
+            'qr_token' => 'qr-adm-201',
+        ]);
+
+        // Payload without room_code → target room_code is empty →
+        // differentiation is skipped → name/building/floor match triggers the warning.
+        $matches = $service->findSimilar([
+            'name' => 'Sala de reuniones',
+            'building' => 'Administracion',
+            'floor' => '2',
+        ]);
+
+        $this->assertCount(1, $matches);
+        $this->assertSame($location->id, $matches->first()?->id);
+    }
+
+    public function test_find_similar_room_code_comparison_is_case_insensitive(): void
+    {
+        $service = new LocationSimilarityService;
+
+        $this->createLocation([
+            'name' => 'Laboratorio Quimica',
+            'building' => 'Ciencias',
+            'floor' => '3',
+            'room_code' => 'CIE-301',
+            'qr_token' => 'qr-cie-301',
+        ]);
+
+        // Same room_code in lowercase → normalizeRoomCode uppercases both → treated as same.
+        // Both sides non-empty and equal → not suppressed → name match returns it.
+        $matches = $service->findSimilar([
+            'name' => 'Laboratorio Quimica',
+            'building' => 'Ciencias',
+            'floor' => '3',
+            'room_code' => 'cie-301',
+        ]);
+
+        $this->assertCount(1, $matches);
     }
 
     private function createLocation(array $overrides = []): Location

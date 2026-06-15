@@ -4,6 +4,8 @@ namespace App\Services\Notifications;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\Cache\CacheKeys;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -28,6 +30,9 @@ class NotificationService
                 'url' => $payload->url,
                 'icon' => $payload->icon,
             ]);
+
+            Cache::forget(CacheKeys::notificationsUnreadCount($user->id));
+            Cache::forget(CacheKeys::notificationsRecent($user->id));
         } catch (Throwable $e) {
             Log::error('Error guardando notificación interna.', [
                 'user_id' => $user->id,

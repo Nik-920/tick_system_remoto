@@ -28,6 +28,7 @@ class ListLocationsRequest extends FormRequest
             'floor' => ['nullable', 'string', 'max:50'],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'qr_status' => ['nullable', 'string', 'in:ready,pending,processing,failed'],
         ];
     }
 

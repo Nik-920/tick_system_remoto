@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\TicketLockUnavailableException;
 use App\Http\Middleware\EnsureCorrelationId;
 use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -7,6 +8,8 @@ use App\Http\Middleware\SecureHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Sentry\Laravel\Integration;
 use Sentry\State\Scope;
@@ -44,6 +47,14 @@ $builder = Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);
+
+        $exceptions->renderable(function (TicketLockUnavailableException $e, Request $request): JsonResponse|RedirectResponse {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage(), 'code' => 'TICKET_LOCKED'], 409);
+            }
+
+            return back()->withErrors(['ticket' => $e->getMessage()])->withInput();
+        });
 
         $exceptions->reportable(function (Throwable $throwable): void {
             if (! app()->bound('request')) {

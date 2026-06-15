@@ -24,7 +24,7 @@ class AdminModuleAccessTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->get(route('tickets.index'));
+            ->get(route('reporter.tickets.index'));
 
         $response->assertOk();
         $response->assertDontSee('Ubicaciones');
@@ -164,7 +164,7 @@ class AdminModuleAccessTest extends TestCase
         $this->assertFalse((bool) $location->is_active);
     }
 
-    public function test_admin_sees_warning_when_similar_location_exists_and_confirmation_missing(): void
+    public function test_admin_store_same_area_different_room_code_creates_without_warning(): void
     {
         Queue::fake();
 
@@ -179,6 +179,8 @@ class AdminModuleAccessTest extends TestCase
             'is_active' => true,
         ]);
 
+        // ING-2-204 is a different physical space from ING-2-203.
+        // A distinct room_code must allow creation directly without any similarity warning.
         $response = $this
             ->actingAs($user)
             ->from(route('locations.create'))
@@ -190,15 +192,13 @@ class AdminModuleAccessTest extends TestCase
                 'is_active' => '1',
             ]);
 
-        $response->assertRedirect(route('locations.create'));
-        $response->assertSessionHas('confirmation_required', true);
-        $response->assertSessionHas('similar_locations_warning');
+        $created = Location::query()->where('room_code', 'ING-2-204')->firstOrFail();
+        $response->assertRedirect(route('locations.edit', $created));
+        $response->assertSessionMissing('similar_locations_warning');
+        $response->assertSessionMissing('confirmation_required');
 
-        $this->assertDatabaseMissing('locations', [
-            'room_code' => 'ING-2-204',
-        ]);
-
-        Queue::assertNothingPushed();
+        $this->assertDatabaseHas('locations', ['room_code' => 'ING-2-204']);
+        Queue::assertPushedOn('media', GenerateLocationQrImage::class);
     }
 
     public function test_admin_can_create_similar_location_when_confirmed(): void
@@ -239,7 +239,7 @@ class AdminModuleAccessTest extends TestCase
         Queue::assertPushed(GenerateLocationQrImage::class);
     }
 
-    public function test_admin_sees_warning_when_updating_to_similar_location_without_confirmation(): void
+    public function test_admin_update_similar_name_different_room_code_updates_without_warning(): void
     {
         $user = $this->createUserWithRole('admin');
 
@@ -261,6 +261,8 @@ class AdminModuleAccessTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Renaming T-102 to the same name as T-101 is allowed because their
+        // room_codes differ — they are distinct physical spaces.
         $response = $this
             ->actingAs($user)
             ->from(route('locations.edit', $location))
@@ -273,12 +275,13 @@ class AdminModuleAccessTest extends TestCase
             ]);
 
         $response->assertRedirect(route('locations.edit', $location));
-        $response->assertSessionHas('confirmation_required', true);
-        $response->assertSessionHas('similar_locations_warning');
+        $response->assertSessionMissing('confirmation_required');
+        $response->assertSessionMissing('similar_locations_warning');
+        $response->assertSessionHas('status', 'Ubicacion actualizada correctamente.');
 
         $this->assertDatabaseHas('locations', [
             'id' => $location->id,
-            'name' => 'Laboratorio 9',
+            'name' => $existing->name,
         ]);
     }
 

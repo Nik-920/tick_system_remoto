@@ -86,7 +86,7 @@
                 </div>
 
                 @if ($attentionItems->count() > 0)
-                    <a href="{{ route('tickets.index') }}" class="reporter-attention-footer">Ver todos mis tickets</a>
+                    <a href="{{ route('reporter.tickets.index') }}" class="reporter-attention-footer">Ver todos mis tickets</a>
                 @endif
             </section>
 

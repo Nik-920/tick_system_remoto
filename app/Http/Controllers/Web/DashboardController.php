@@ -313,15 +313,24 @@ class DashboardController extends Controller
     }
 
     /**
+     * Single GROUP BY query instead of 4 individual COUNTs.
+     *
      * @return array<string, int>
      */
     private function qrStatusSummary(): array
     {
+        $rows = Location::query()
+            ->selectRaw('qr_generation_status, COUNT(*) as total')
+            ->groupBy('qr_generation_status')
+            ->pluck('total', 'qr_generation_status')
+            ->map(fn ($v): int => (int) $v)
+            ->all();
+
         return [
-            'pending' => Location::query()->where('qr_generation_status', 'pending')->count(),
-            'processing' => Location::query()->where('qr_generation_status', 'processing')->count(),
-            'failed' => Location::query()->where('qr_generation_status', 'failed')->count(),
-            'ready' => Location::query()->where('qr_generation_status', 'ready')->count(),
+            'pending' => $rows['pending'] ?? 0,
+            'processing' => $rows['processing'] ?? 0,
+            'failed' => $rows['failed'] ?? 0,
+            'ready' => $rows['ready'] ?? 0,
         ];
     }
 

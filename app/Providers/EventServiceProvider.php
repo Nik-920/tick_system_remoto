@@ -12,6 +12,7 @@ use App\Listeners\CreateInAppNotificationOnTicketCreated;
 use App\Listeners\CreateInAppNotificationOnTicketStateChanged;
 use App\Listeners\DispatchDuplicateDetectionOnTicketCreated;
 use App\Listeners\GenerateEmbeddingOnTicketCreated;
+use App\Listeners\InvalidateDashboardCacheOnTicketChanged;
 use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
 use App\Listeners\SendFcmPushOnTicketAssigned;
@@ -47,6 +48,11 @@ class EventServiceProvider extends ServiceProvider
         JobFailed::class => [
             ReportFailedQueueJob::class,
         ],
+    ];
+
+    /** @var list<class-string> */
+    protected $subscribe = [
+        InvalidateDashboardCacheOnTicketChanged::class,
     ];
 
     public function shouldDiscoverEvents(): bool

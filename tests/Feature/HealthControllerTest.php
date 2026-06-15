@@ -19,8 +19,19 @@ class HealthControllerTest extends TestCase
             'checks' => [
                 'database' => ['status', 'connection', 'latency_ms'],
                 'queue' => ['status', 'driver', 'latency_ms'],
+                'redis' => ['status', 'latency_ms', 'required'],
             ],
         ]);
+    }
+
+    public function test_health_endpoint_redis_check_is_present_when_optional(): void
+    {
+        $response = $this->getJson('/health');
+
+        $response->assertJsonPath('checks.redis.required', false);
+        // Redis may fail in test environment (no server), but since it's optional
+        // the overall status stays healthy.
+        $response->assertJsonPath('status', 'healthy');
     }
 
     public function test_health_endpoint_returns_503_when_any_check_fails(): void
@@ -43,6 +54,11 @@ class HealthControllerTest extends TestCase
                             'status' => 'ok',
                             'driver' => 'sync',
                             'latency_ms' => 0,
+                        ],
+                        'redis' => [
+                            'status' => 'ok',
+                            'latency_ms' => 0,
+                            'required' => false,
                         ],
                     ],
                 ];

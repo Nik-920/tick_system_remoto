@@ -2,11 +2,11 @@
 
 namespace App\Services\Health;
 
+use App\Exceptions\RedisHealthException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
-use RuntimeException;
 use Throwable;
 
 class HealthCheckService
@@ -17,7 +17,8 @@ class HealthCheckService
      *     timestamp: string,
      *     checks: array{
      *         database: array{status: string, connection: string, latency_ms: int, message?: string},
-     *         queue: array{status: string, driver: string, latency_ms: int, message?: string}
+     *         queue: array{status: string, driver: string, latency_ms: int, message?: string},
+     *         redis: array{status: string, latency_ms: int, required: bool, message?: string}
      *     }
      * }
      */
@@ -25,13 +26,20 @@ class HealthCheckService
     {
         $database = $this->checkDatabase();
         $queue = $this->checkQueue();
+        $redis = $this->checkRedis();
+
+        $redisRequired = (bool) config('app.redis_health_required', false);
+        $redisHealthy = $redis['status'] === 'ok' || ! $redisRequired;
 
         return [
-            'status' => $database['status'] === 'ok' && $queue['status'] === 'ok' ? 'healthy' : 'unhealthy',
+            'status' => $database['status'] === 'ok' && $queue['status'] === 'ok' && $redisHealthy
+                ? 'healthy'
+                : 'unhealthy',
             'timestamp' => now()->toIso8601String(),
             'checks' => [
                 'database' => $database,
                 'queue' => $queue,
+                'redis' => $redis,
             ],
         ];
     }
@@ -111,13 +119,48 @@ class HealthCheckService
         }
     }
 
+    /**
+     * @return array{status: string, latency_ms: int, required: bool, message?: string}
+     */
+    private function checkRedis(): array
+    {
+        $startedAt = microtime(true);
+        $required = (bool) config('app.redis_health_required', false);
+
+        try {
+            $result = Redis::connection('default')->ping();
+
+            if (! $this->isRedisPingSuccessful($result)) {
+                throw new RedisHealthException('Redis ping did not return a healthy response.');
+            }
+
+            return [
+                'status' => 'ok',
+                'latency_ms' => $this->elapsedMilliseconds($startedAt),
+                'required' => $required,
+            ];
+        } catch (Throwable $exception) {
+            Log::warning('health.check.redis.failed', [
+                'error' => $exception->getMessage(),
+                'required' => $required,
+            ]);
+
+            return [
+                'status' => 'failed',
+                'latency_ms' => $this->elapsedMilliseconds($startedAt),
+                'required' => $required,
+                'message' => 'No se pudo verificar la conexion Redis.',
+            ];
+        }
+    }
+
     private function checkRedisQueueConnection(): void
     {
         $connectionName = (string) config('queue.connections.redis.connection', 'default');
         $result = Redis::connection($connectionName)->ping();
 
         if (! $this->isRedisPingSuccessful($result)) {
-            throw new RuntimeException('Redis ping did not return a healthy response.');
+            throw new \RuntimeException('Redis ping did not return a healthy response.');
         }
 
         Queue::connection('redis')->size();

@@ -31,7 +31,7 @@ class LocationSimilarityService
 
     /**
      * @param  Collection<int, Location>  $candidates
-     * @param  array{name: string, building: string, floor: string}  $target
+     * @param  array{name: string, building: string, floor: string, room_code: string}  $target
      * @return Collection<int, Location>
      */
     private function matchCandidates(Collection $candidates, array $target, float $threshold): Collection
@@ -48,7 +48,7 @@ class LocationSimilarityService
 
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array{name: string, building: string, floor: string}  $normalized
+     * @param  array{name: string, building: string, floor: string, room_code: string}  $normalized
      * @return Collection<int, Location>
      */
     private function fetchCandidateLocations(array $payload, array $normalized, ?string $ignoreLocationId): Collection
@@ -133,7 +133,7 @@ class LocationSimilarityService
 
     /**
      * @param  array<string, mixed>  $payload
-     * @return array{name: string, building: string, floor: string}
+     * @return array{name: string, building: string, floor: string, room_code: string}
      */
     private function normalizePayload(array $payload): array
     {
@@ -141,10 +141,11 @@ class LocationSimilarityService
             'name' => $this->normalizeName($payload['name'] ?? null),
             'building' => $this->normalizeBuilding($payload['building'] ?? null),
             'floor' => $this->normalizeFloor($payload['floor'] ?? null),
+            'room_code' => $this->normalizeRoomCode($payload['room_code'] ?? null),
         ];
     }
 
-    /** @param  array{name: string, building: string, floor: string}  $normalized */
+    /** @param  array{name: string, building: string, floor: string, room_code: string}  $normalized */
     private function isSearchable(array $normalized): bool
     {
         return $normalized['name'] !== '' && $normalized['building'] !== '';
@@ -274,7 +275,7 @@ class LocationSimilarityService
     }
 
     /**
-     * @param  array{name: string, building: string, floor: string}  $target
+     * @param  array{name: string, building: string, floor: string, room_code: string}  $target
      * @return array{location: Location, score: float}|null
      */
     private function evaluateCandidate(Location $location, array $target, float $threshold): ?array
@@ -296,7 +297,7 @@ class LocationSimilarityService
     }
 
     /**
-     * @param  array{name: string, building: string, floor: string}  $target
+     * @param  array{name: string, building: string, floor: string, room_code: string}  $target
      * @return array{name: string, building: string, floor: string}|null
      */
     private function candidateMatchesContext(Location $location, array $target): ?array
@@ -311,7 +312,27 @@ class LocationSimilarityService
             && $candidate['building'] === $target['building']
             && $candidate['floor'] === $target['floor'];
 
-        return $matches ? $candidate : null;
+        if (! $matches) {
+            return null;
+        }
+
+        // Different room_code = distinct physical space — not a duplicate concern.
+        // Only suppress when both sides have a non-empty, normalised code that differs.
+        $candidateRoomCode = $this->normalizeRoomCode($location->room_code);
+        $targetRoomCode = $target['room_code'];
+
+        if ($candidateRoomCode !== '' && $targetRoomCode !== '' && $candidateRoomCode !== $targetRoomCode) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    private function normalizeRoomCode(?string $value): string
+    {
+        $trimmed = trim((string) $value);
+
+        return $trimmed === '' ? '' : mb_strtoupper($trimmed, 'UTF-8');
     }
 
     private function calculateNameSimilarity(string $candidateName, string $targetName, float $threshold): ?float

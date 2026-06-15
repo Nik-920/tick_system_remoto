@@ -37,11 +37,16 @@ class TicketController extends Controller
 {
     use DispatchesTicketCreatedAfterResponse;
 
-    public function index(ListTicketsRequest $request): View
+    public function index(ListTicketsRequest $request): View|RedirectResponse
     {
         $this->authorize('viewAny', Ticket::class);
 
         $user = $request->user();
+
+        // Reporter-only users belong on their dedicated board.
+        if ($user instanceof User && $user->hasRole('reporter') && ! $user->hasAnyRole(['admin', 'super_admin', 'maintenance'])) {
+            return redirect()->route('reporter.tickets.index');
+        }
 
         // Maintenance technicians get the operational, prioritised board;
         // reporters and admins keep the classic table below.
