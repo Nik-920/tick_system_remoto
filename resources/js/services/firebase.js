@@ -70,9 +70,7 @@ async function saveTokenToServer(token) {
         });
 
         if (res.ok) {
-            try {
-                localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
-            } catch (_) { /* storage full or restricted — not critical */ }
+            localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
         }
     } catch (error) {
         console.error('Error guardando token FCM:', error);
