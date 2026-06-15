@@ -139,11 +139,25 @@ jobs:
           - 'Feature/Api'
           - 'Feature/Auth'
           - 'Feature/Console'
+          - 'Feature/Dashboard'
+          - 'Feature/Events'
+          - 'Feature/Idempotency'
+          - 'Feature/Jobs'
+          - 'Feature/Listeners'
+          - 'Feature/Root'
+          - 'Feature/Services'
           - 'Feature/Web'
+          - 'Unit/Architecture'
+          - 'Unit/Events'
+          - 'Unit/Jobs'
           - 'Unit/Listeners'
+          - 'Unit/Logging'
           - 'Unit/Models'
+          - 'Unit/Policies'
           - 'Unit/Providers'
+          - 'Unit/Queries'
           - 'Unit/Services'
+          - 'Unit/Support'
 
     services:
       supabase-db:
@@ -156,6 +170,16 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -212,10 +236,18 @@ jobs:
 
       - name: 🧪 PHPUnit — ${{ matrix.module }}
         run: |
-          vendor/bin/phpunit \
-            tests/${{ matrix.module }} \
-            --log-junit storage/logs/junit-${{ matrix.module }}.xml \
-            --testdox
+          module="${{ matrix.module }}"
+          if [ "${module}" = "Feature/Root" ]; then
+            vendor/bin/phpunit \
+              --testsuite Feature-Root \
+              --log-junit "storage/logs/junit-Feature/Root.xml" \
+              --testdox
+          else
+            vendor/bin/phpunit \
+              "tests/${module}" \
+              --log-junit "storage/logs/junit-${module}.xml" \
+              --testdox
+          fi
 
       - name: 📊 Publicar reporte de tests — ${{ matrix.module }}
         uses: mikepenz/action-junit-report@v4

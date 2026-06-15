@@ -109,6 +109,7 @@ class LocationApiControllerTest extends TestCase
             'qr_job_id' => $jobId,
         ]);
 
+        Queue::assertPushedOn('media', GenerateLocationQrImage::class);
         Queue::assertPushed(GenerateLocationQrImage::class, function (GenerateLocationQrImage $job) use ($locationId, $jobId): bool {
             return $job->locationId === $locationId
                 && $job->jobTrackingId === $jobId
@@ -166,14 +167,14 @@ class LocationApiControllerTest extends TestCase
         $this->assertFalse($location->is_active);
     }
 
-    public function test_store_returns_conflict_when_similar_location_exists_without_confirmation(): void
+    public function test_store_same_name_building_floor_different_room_code_creates_successfully(): void
     {
         Queue::fake();
 
         $admin = $this->createUserWithRole('admin');
         Sanctum::actingAs($admin);
 
-        $existing = Location::query()->create([
+        Location::query()->create([
             'name' => 'Laboratorio 3',
             'building' => 'Ingenieria Laboratorios',
             'floor' => '1',
@@ -182,6 +183,8 @@ class LocationApiControllerTest extends TestCase
             'is_active' => true,
         ]);
 
+        // ING-2-204 is a different physical space. A distinct room_code must bypass
+        // the similarity check entirely and allow creation without confirmation.
         $payload = [
             'name' => 'Laboratorio 3',
             'building' => 'Ingenieria Laboratorios',
@@ -192,14 +195,10 @@ class LocationApiControllerTest extends TestCase
 
         $response = $this->postJson(route('api.locations.store'), $payload);
 
-        $response->assertStatus(409);
-        $response->assertJsonPath('confirmation_required', true);
-        $response->assertJsonPath('similar_locations.0.id', $existing->id);
-        $response->assertJsonPath('similar_locations.0.room_code', 'ING-2-203');
-
-        $this->assertDatabaseMissing('locations', [
-            'room_code' => 'ING-2-204',
-        ]);
+        $response->assertCreated();
+        $response->assertJsonPath('data.room_code', 'ING-2-204');
+        $this->assertDatabaseHas('locations', ['room_code' => 'ING-2-204']);
+        Queue::assertPushedOn('media', GenerateLocationQrImage::class);
     }
 
     public function test_store_allows_similar_location_when_confirmed(): void
@@ -291,7 +290,7 @@ class LocationApiControllerTest extends TestCase
         $response->assertJsonPath('data.room_code', 'A-202');
     }
 
-    public function test_store_detects_case_insensitive_duplicate(): void
+    public function test_store_case_insensitive_name_match_with_different_room_code_creates_successfully(): void
     {
         Queue::fake();
 
@@ -307,6 +306,7 @@ class LocationApiControllerTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Different room_code (A-302 vs A-301) → not a duplicate regardless of name casing.
         $payload = [
             'name' => 'LABORATORIO 3',
             'building' => 'Edificio A',
@@ -316,8 +316,30 @@ class LocationApiControllerTest extends TestCase
 
         $response = $this->postJson(route('api.locations.store'), $payload);
 
-        $response->assertStatus(409);
-        $response->assertJsonPath('confirmation_required', true);
+        $response->assertCreated();
+        $response->assertJsonPath('data.room_code', 'A-302');
+        $this->assertDatabaseHas('locations', ['room_code' => 'A-302']);
+    }
+
+    public function test_store_duplicate_room_code_with_confirm_flag_still_fails(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $this->createLocation('DUP-001', 'qr-dup-001-token');
+
+        // confirm_similar_location=true must not bypass the unique validation rule.
+        $response = $this->postJson(route('api.locations.store'), [
+            'name' => 'Otra ubicacion',
+            'building' => 'Edificio X',
+            'floor' => '1',
+            'room_code' => 'DUP-001',
+            'confirm_similar_location' => true,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['room_code']);
+        $this->assertDatabaseCount('locations', 1);
     }
 
     public function test_reporter_cannot_store_location(): void
@@ -359,8 +381,9 @@ class LocationApiControllerTest extends TestCase
         $this->assertDatabaseHas('locations', [
             'id' => $location->id,
             'room_code' => 'F-102',
-            'is_active' => 0,
         ]);
+        $location->refresh();
+        $this->assertFalse($location->is_active);
     }
 
     public function test_update_location_casts_is_active_string_zero_to_boolean_false(): void
@@ -420,12 +443,12 @@ class LocationApiControllerTest extends TestCase
         $response->assertJsonPath('data.is_active', false);
     }
 
-    public function test_update_conflicts_when_renaming_to_similar_existing_location(): void
+    public function test_update_renaming_to_similar_name_with_different_room_code_succeeds(): void
     {
         $admin = $this->createUserWithRole('admin');
         Sanctum::actingAs($admin);
 
-        $existing = Location::query()->create([
+        Location::query()->create([
             'name' => 'Laboratorio 8',
             'building' => 'Edificio T',
             'floor' => '1',
@@ -443,18 +466,35 @@ class LocationApiControllerTest extends TestCase
             'is_active' => true,
         ]);
 
+        // T-102 and T-101 are different room_codes → rename is allowed without conflict.
         $response = $this->patchJson(route('api.locations.update', $location), [
             'name' => 'Laboratorio 8',
         ]);
 
-        $response->assertStatus(409);
-        $response->assertJsonPath('confirmation_required', true);
-        $response->assertJsonPath('similar_locations.0.id', $existing->id);
-
+        $response->assertOk();
+        $response->assertJsonPath('data.name', 'Laboratorio 8');
         $this->assertDatabaseHas('locations', [
             'id' => $location->id,
-            'name' => 'Laboratorio 9',
+            'name' => 'Laboratorio 8',
         ]);
+    }
+
+    public function test_update_to_room_code_of_another_location_fails_with_validation_error(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        Sanctum::actingAs($admin);
+
+        $this->createLocation('U-101', 'qr-u-101-token');
+        $location = $this->createLocation('U-102', 'qr-u-102-token');
+
+        // Attempting to steal U-101's room_code must fail at validation (unique rule).
+        $response = $this->patchJson(route('api.locations.update', $location), [
+            'room_code' => 'U-101',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['room_code']);
+        $this->assertDatabaseHas('locations', ['id' => $location->id, 'room_code' => 'U-102']);
     }
 
     public function test_reporter_cannot_update_location(): void
@@ -507,6 +547,7 @@ class LocationApiControllerTest extends TestCase
             'qr_job_id' => $jobId,
         ]);
 
+        Queue::assertPushedOn('media', GenerateLocationQrImage::class);
         Queue::assertPushed(GenerateLocationQrImage::class, function (GenerateLocationQrImage $job) use ($location, $jobId, $correlationId): bool {
             return $job->locationId === $location->id
             && $job->jobTrackingId === $jobId

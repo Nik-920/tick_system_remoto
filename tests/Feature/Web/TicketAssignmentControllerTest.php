@@ -430,15 +430,18 @@ class TicketAssignmentControllerTest extends TestCase
 
     public function test_ticket_index_shows_assignee_column(): void
     {
-        $reporter = $this->createUserWithRole('reporter');
         $this->ensureRolesExist();
+        $admin = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
         $assignee = User::factory()->create(['name' => 'Tecnico Uno']);
         $assignee->assignRole('maintenance');
         $ticket = $this->createTicket($reporter);
         $ticket->forceFill(['assigned_to' => $assignee->id])->save();
 
+        // Reporters are redirected to their own board; use admin to view the
+        // classic tickets.index which contains the "Asignado a" column.
         $response = $this
-            ->actingAs($reporter)
+            ->actingAs($admin)
             ->get(route('tickets.index'));
 
         $response->assertOk();

@@ -3,11 +3,13 @@
 namespace App\Services\Tickets;
 
 use App\Events\TicketAssigned;
+use App\Exceptions\TicketLockUnavailableException;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Concerns\ResolvesCorrelationId;
 use App\Services\Observability\TicketQrLogger;
+use App\Support\Locks\TicketLock;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -20,125 +22,162 @@ class TicketAssignmentService
 
     public function claimByMaintenance(Ticket $ticket, User $actor): Ticket
     {
-        $correlationId = $this->resolveCorrelationId('');
+        $result = TicketLock::mutation((string) $ticket->id)->get(function () use ($ticket, $actor): Ticket {
+            $correlationId = $this->resolveCorrelationId('');
 
-        $updatedTicket = DB::transaction(function () use ($ticket, $actor): Ticket {
-            $lockedTicket = $this->lockedTicket($ticket);
+            $updatedTicket = DB::transaction(function () use ($ticket, $actor): Ticket {
+                $lockedTicket = $this->lockedTicket($ticket);
 
-            $this->assertActorIsMaintenance($actor);
-            $this->assertClaimable($lockedTicket);
+                $this->assertActorIsMaintenance($actor);
+                $this->assertClaimable($lockedTicket);
 
-            $this->updateAssignmentFields(
-                $lockedTicket,
-                $actor,
-                $actor,
-                false,
-                Ticket::ASSIGNMENT_SOURCE_SELF
-            );
+                $this->updateAssignmentFields(
+                    $lockedTicket,
+                    $actor,
+                    $actor,
+                    false,
+                    Ticket::ASSIGNMENT_SOURCE_SELF
+                );
 
-            $this->recordAssignmentHistory(
-                $lockedTicket,
-                $actor,
-                null,
-                $actor,
-                'claimed'
-            );
+                $this->recordAssignmentHistory(
+                    $lockedTicket,
+                    $actor,
+                    null,
+                    $actor,
+                    'claimed'
+                );
 
-            return $lockedTicket;
+                return $lockedTicket;
+            });
+
+            return $this->finalizeAssignment('claimed', $updatedTicket, $actor, null, $actor, $correlationId);
         });
 
-        return $this->finalizeAssignment('claimed', $updatedTicket, $actor, null, $actor, $correlationId);
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
     }
 
     public function releaseByMaintenance(Ticket $ticket, User $actor): Ticket
     {
-        $correlationId = $this->resolveCorrelationId('');
+        $result = TicketLock::mutation((string) $ticket->id)->get(function () use ($ticket, $actor): Ticket {
+            $correlationId = $this->resolveCorrelationId('');
+            $previousAssignee = null;
 
-        $previousAssignee = null;
+            $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
+                $lockedTicket = $this->lockedTicket($ticket);
 
-        $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
-            $lockedTicket = $this->lockedTicket($ticket);
+                $this->assertReleasableByMaintenance($lockedTicket, $actor);
 
-            $this->assertReleasableByMaintenance($lockedTicket, $actor);
+                $previousAssignee = $lockedTicket->assignee;
 
-            $previousAssignee = $lockedTicket->assignee;
+                $this->updateAssignmentFields(
+                    $lockedTicket,
+                    null,
+                    $actor,
+                    false,
+                    null
+                );
 
-            $this->updateAssignmentFields(
-                $lockedTicket,
-                null,
-                $actor,
-                false,
-                null
-            );
+                $this->recordAssignmentHistory(
+                    $lockedTicket,
+                    $actor,
+                    $previousAssignee,
+                    null,
+                    'released'
+                );
 
-            $this->recordAssignmentHistory(
-                $lockedTicket,
-                $actor,
-                $previousAssignee,
-                null,
-                'released'
-            );
+                return $lockedTicket;
+            });
 
-            return $lockedTicket;
+            return $this->finalizeAssignment('released', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
         });
 
-        return $this->finalizeAssignment('released', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
     }
 
     public function assignByAdmin(Ticket $ticket, User $actor, User $target): Ticket
     {
-        return $this->applyAdminAssignment($ticket, $actor, $target, 'assigned');
+        $result = TicketLock::mutation((string) $ticket->id)->get(
+            fn () => $this->applyAdminAssignment($ticket, $actor, $target, 'assigned')
+        );
+
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
     }
 
     public function reassignByAdmin(Ticket $ticket, User $actor, User $target): Ticket
     {
-        return $this->applyAdminAssignment($ticket, $actor, $target, 'reassigned');
+        $result = TicketLock::mutation((string) $ticket->id)->get(
+            fn () => $this->applyAdminAssignment($ticket, $actor, $target, 'reassigned')
+        );
+
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
     }
 
     public function unassignByAdmin(Ticket $ticket, User $actor): Ticket
     {
-        $correlationId = $this->resolveCorrelationId('');
+        $result = TicketLock::mutation((string) $ticket->id)->get(function () use ($ticket, $actor): Ticket {
+            $correlationId = $this->resolveCorrelationId('');
+            $previousAssignee = null;
 
-        $previousAssignee = null;
+            $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
+                $lockedTicket = $this->lockedTicket($ticket);
 
-        $updatedTicket = DB::transaction(function () use ($ticket, $actor, &$previousAssignee): Ticket {
-            $lockedTicket = $this->lockedTicket($ticket);
+                $this->assertActorCanManageAssignment($actor);
+                $this->assertAssignable($lockedTicket);
 
-            $this->assertActorCanManageAssignment($actor);
-            $this->assertAssignable($lockedTicket);
+                if ($lockedTicket->assigned_to === null) {
+                    throw new InvalidArgumentException('El ticket no tiene asignacion para desasignar.');
+                }
 
-            if ($lockedTicket->assigned_to === null) {
-                throw new InvalidArgumentException('El ticket no tiene asignacion para desasignar.');
-            }
+                $previousAssignee = $lockedTicket->assignee;
 
-            $previousAssignee = $lockedTicket->assignee;
+                $this->updateAssignmentFields(
+                    $lockedTicket,
+                    null,
+                    $actor,
+                    false,
+                    null
+                );
 
-            $this->updateAssignmentFields(
-                $lockedTicket,
-                null,
-                $actor,
-                false,
-                null
-            );
+                $this->recordAssignmentHistory(
+                    $lockedTicket,
+                    $actor,
+                    $previousAssignee,
+                    null,
+                    'unassigned'
+                );
 
-            $this->recordAssignmentHistory(
-                $lockedTicket,
-                $actor,
-                $previousAssignee,
-                null,
-                'unassigned'
-            );
+                return $lockedTicket;
+            });
 
-            return $lockedTicket;
+            return $this->finalizeAssignment('unassigned', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
         });
 
-        return $this->finalizeAssignment('unassigned', $updatedTicket, $actor, $previousAssignee, null, $correlationId);
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
     }
 
     private function applyAdminAssignment(Ticket $ticket, User $actor, User $target, string $action): Ticket
     {
         $correlationId = $this->resolveCorrelationId('');
-
         $previousAssignee = null;
 
         $updatedTicket = DB::transaction(function () use ($ticket, $actor, $target, $action, &$previousAssignee): Ticket {

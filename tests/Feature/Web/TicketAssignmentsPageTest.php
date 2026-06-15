@@ -303,9 +303,11 @@ class TicketAssignmentsPageTest extends TestCase
 
     public function test_classic_tickets_route_remains_untouched(): void
     {
-        $reporter = $this->userWithRole('reporter');
+        // Reporters are redirected to their own board (reporter.tickets.index);
+        // use admin to confirm the classic tickets.index route is untouched.
+        $admin = $this->userWithRole('admin');
 
-        $this->actingAs($reporter)
+        $this->actingAs($admin)
             ->get(route('tickets.index'))
             ->assertOk()
             ->assertViewIs('tickets.index');

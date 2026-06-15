@@ -28,6 +28,7 @@ use App\Services\Ai\Duplicates\Strategies\TitleOverlapStrategy;
 use App\Services\Ai\Duplicates\Strategies\VisionEvidenceStrategy;
 use App\Services\Ai\HuggingFaceEmbeddingAdapter;
 use App\Services\Firebase\FirebasePushNotificationAdapter;
+use BladeUI\Icons\Factory as BladeIconsFactory;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider;
@@ -81,10 +82,26 @@ class AppServiceProvider extends ServiceProvider
                 duplicateThreshold: (int) config('ai.dedup.score_threshold', 70),
             );
         });
+
     }
 
     public function boot(): void
     {
+        // blade-lucide-icons registers its "lucide" icon set via a callAfterResolving
+        // callback that fires when BladeUI\Icons\Factory is first resolved. In Docker,
+        // bootstrap/providers.php providers (including this one) load before package
+        // providers, so our own callAfterResolving(Factory) would fire before the lucide
+        // set is added — resulting in icons registered with no prefix. Using app->booted()
+        // defers until after all providers have registered AND booted, guaranteeing the
+        // lucide set exists when registerComponents() runs.
+        $this->app->booted(function () {
+            try {
+                $this->app->make(BladeIconsFactory::class)->registerComponents();
+            } catch (\Throwable) {
+                // Silently skip if blade-icons is not installed or not yet bound.
+            }
+        });
+
         Gate::policy(Ticket::class, TicketPolicy::class);
         Gate::policy(Location::class, LocationPolicy::class);
         Gate::policy(Category::class, CategoryPolicy::class);

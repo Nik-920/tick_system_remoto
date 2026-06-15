@@ -20,11 +20,23 @@ class GenerateLocationQrImage implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries = 3;
+
+    public int $timeout = 120;
+
+    public function backoff(): array
+    {
+        return [15, 30];
+    }
+
     public function __construct(
         public string $locationId,
         public ?string $jobTrackingId = null,
         public string $correlationId = '',
-    ) {}
+    ) {
+        $this->onQueue('media');
+        $this->afterCommit = true;
+    }
 
     public function handle(QrImageService $qrImageService, TicketQrLogger $logger): void
     {

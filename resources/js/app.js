@@ -86,7 +86,8 @@ const pageLoaders = [
     { selector: '.tickets-create-page', loader: () => import('./pages/tickets-create') },
     { selector: '.ticket-show-page', loader: () => import('./pages/tickets-show') },
     { selector: '.tickets-page',  loader: () => import('./pages/tickets') },
-    { selector: '.locations-page',loader: () => import('./pages/locations') },
+    { selector: '.locations-page',   loader: () => import('./pages/locations') },
+    { selector: '.locations-index',  loader: () => import('./pages/locations') },
     { selector: '.welcome-hero',  loader: () => import('./pages/welcome') },
 ];
 

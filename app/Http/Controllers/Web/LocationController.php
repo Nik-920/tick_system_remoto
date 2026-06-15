@@ -39,6 +39,10 @@ class LocationController extends Controller
         return view('locations.index', [
             'locations' => $locations,
             'filters' => $filters,
+            'metrics' => $this->buildMetrics(),
+            'qrStats' => $this->buildQrStats(),
+            'activity' => [], // TODO: replace with real audit-log query
+            'topIncidents' => $this->buildTopIncidents(),
         ]);
     }
 
@@ -114,6 +118,7 @@ class LocationController extends Controller
             'name' => $data['name'] ?? $location->name,
             'building' => $data['building'] ?? $location->building,
             'floor' => array_key_exists('floor', $data) ? $data['floor'] : $location->floor,
+            'room_code' => array_key_exists('room_code', $data) ? $data['room_code'] : $location->room_code,
         ];
 
         $similarLocations = $similarityService->findSimilar($similarityPayload, $location->id);
@@ -214,6 +219,70 @@ class LocationController extends Controller
                     ->orWhere('building', 'like', "%{$search}%");
             });
         }
+
+        if (! empty($filters['qr_status'])) {
+            $query->where('qr_generation_status', (string) $filters['qr_status']);
+        }
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function buildMetrics(): array
+    {
+        $total = (int) Location::query()->count();
+        $active = (int) Location::query()->withActiveState(true)->count();
+        $qrReady = (int) Location::query()->where('qr_generation_status', 'ready')->count();
+        $qrPending = (int) Location::query()->whereIn('qr_generation_status', ['pending', 'processing'])->count();
+        $qrFailed = (int) Location::query()->where('qr_generation_status', 'failed')->count();
+        $activePct = $total > 0 ? round((float) $active / (float) $total * 100.0, 1) : 0.0;
+
+        return [
+            ['label' => 'Ubicaciones', 'sub' => 'Registradas',              'value' => $total,     'icon' => 'map-pin', 'bg' => 'bg-blue-50',   'fg' => 'text-blue-600'],
+            ['label' => 'Activas',     'sub' => "{$activePct}% del total",  'value' => $active,    'icon' => 'check',   'bg' => 'bg-green-50',  'fg' => 'text-green-600'],
+            ['label' => 'QR generados', 'sub' => 'Disponibles',              'value' => $qrReady,   'icon' => 'qr',      'bg' => 'bg-blue-50',   'fg' => 'text-blue-600'],
+            ['label' => 'Pendientes',  'sub' => 'Esperando QR',             'value' => $qrPending, 'icon' => 'clock',   'bg' => 'bg-orange-50', 'fg' => 'text-orange-500'],
+            ['label' => 'Error en QR', 'sub' => 'Requieren revisión',       'value' => $qrFailed,  'icon' => 'alert',   'bg' => 'bg-red-50',    'fg' => 'text-red-500'],
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function buildQrStats(): array
+    {
+        $rawTotal = (int) Location::query()->count();
+        $total = $rawTotal > 0 ? $rawTotal : 1;
+        $ready = (int) Location::query()->where('qr_generation_status', 'ready')->count();
+        $pending = (int) Location::query()->whereIn('qr_generation_status', ['pending', 'processing'])->count();
+        $failed = (int) Location::query()->where('qr_generation_status', 'failed')->count();
+        $none = max(0, $total - $ready - $pending - $failed);
+
+        return [
+            ['label' => 'Generados',  'value' => $ready,   'pct' => round((float) $ready / (float) $total * 100.0, 1), 'color' => '#22c55e'],
+            ['label' => 'Pendientes', 'value' => $pending, 'pct' => round((float) $pending / (float) $total * 100.0, 1), 'color' => '#f97316'],
+            ['label' => 'Error',      'value' => $failed,  'pct' => round((float) $failed / (float) $total * 100.0, 1), 'color' => '#ef4444'],
+            ['label' => 'No aplica',  'value' => $none,    'pct' => round((float) $none / (float) $total * 100.0, 1), 'color' => '#d1d5db'],
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function buildTopIncidents(): array
+    {
+        // TODO: replace with real query joining tickets/incident_history when reporting indices are ready
+        $colors = ['text-red-500', 'text-red-500', 'text-orange-500', 'text-orange-500', 'text-blue-600'];
+
+        return Location::query()
+            ->whereHas('tickets')
+            ->withCount('tickets as tickets_count')
+            ->orderByDesc('tickets_count')
+            ->limit(5)
+            ->get(['id', 'name', 'room_code'])
+            ->map(static function (Location $loc, int $idx) use ($colors): array {
+                return [
+                    'code' => $loc->room_code,
+                    'name' => $loc->name,
+                    'count' => (int) $loc->tickets_count,
+                    'color' => $colors[$idx] ?? 'text-blue-600',
+                ];
+            })
+            ->all();
     }
 
     private function dispatchQrGeneration(Location $location, string $correlationId = ''): void

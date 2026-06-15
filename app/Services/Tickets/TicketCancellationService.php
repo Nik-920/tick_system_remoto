@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Tickets;
 
+use App\Exceptions\TicketLockUnavailableException;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\Locks\TicketLock;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -35,32 +37,42 @@ class TicketCancellationService
      */
     public function cancelByReporter(Ticket $ticket, User $reporter, ?string $comment = null): Ticket
     {
-        $fromState = (string) $ticket->state;
+        $result = TicketLock::mutation((string) $ticket->id)->get(
+            function () use ($ticket, $reporter, $comment): Ticket {
+                $fromState = (string) $ticket->state;
 
-        if ($fromState !== Ticket::STATE_OPEN
-            || $ticket->assigned_to !== null
-            || $ticket->assignment_locked) {
-            throw new InvalidArgumentException('La solicitud ya no puede cancelarse.');
+                if ($fromState !== Ticket::STATE_OPEN
+                    || $ticket->assigned_to !== null
+                    || $ticket->assignment_locked) {
+                    throw new InvalidArgumentException('La solicitud ya no puede cancelarse.');
+                }
+
+                $comment = trim((string) $comment);
+                if ($comment === '') {
+                    $comment = self::DEFAULT_COMMENT;
+                }
+
+                return DB::transaction(function () use ($ticket, $reporter, $fromState, $comment): Ticket {
+                    $ticket->state = Ticket::STATE_CANCELLED;
+                    $ticket->save();
+
+                    StateHistory::create([
+                        'ticket_id' => $ticket->id,
+                        'from_state' => $fromState,
+                        'to_state' => Ticket::STATE_CANCELLED,
+                        'changed_by' => $reporter->id,
+                        'comment' => $comment,
+                    ]);
+
+                    return $ticket;
+                });
+            }
+        );
+
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
         }
 
-        $comment = trim((string) $comment);
-        if ($comment === '') {
-            $comment = self::DEFAULT_COMMENT;
-        }
-
-        return DB::transaction(function () use ($ticket, $reporter, $fromState, $comment): Ticket {
-            $ticket->state = Ticket::STATE_CANCELLED;
-            $ticket->save();
-
-            StateHistory::create([
-                'ticket_id' => $ticket->id,
-                'from_state' => $fromState,
-                'to_state' => Ticket::STATE_CANCELLED,
-                'changed_by' => $reporter->id,
-                'comment' => $comment,
-            ]);
-
-            return $ticket;
-        });
+        return $result;
     }
 }

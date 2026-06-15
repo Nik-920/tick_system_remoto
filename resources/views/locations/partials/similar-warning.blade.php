@@ -29,10 +29,10 @@
                 </svg>
             </span>
             <div>
-                <p class="sim-warning__title">Ya existe una ubicación similar</p>
+                <p class="sim-warning__title">Nombre de ubicación ya registrado en esta área</p>
                 <p class="sim-warning__subtitle">
-                    Se encontró una ubicación con nombre, edificio o piso parecido.
-                    Revisa los datos antes de continuar.
+                    Existe una ubicación con el mismo nombre en el mismo edificio y piso.
+                    Verifica que el código de aula sea correcto antes de continuar.
                 </p>
             </div>
         </div>
@@ -81,7 +81,7 @@
 
         {{-- Nota de acción --}}
         <p class="sim-warning__footer-note">
-            Si esta ubicación corresponde a un espacio físico distinto, marca la confirmación y vuelve a guardar.
+            Si el código de aula es distinto y corresponde a un espacio físico diferente, marca la confirmación y vuelve a guardar.
         </p>
     </div>
 @endif

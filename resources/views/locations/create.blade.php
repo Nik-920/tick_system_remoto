@@ -27,8 +27,6 @@
                 </div>
             @endif
 
-            @include('locations.partials.similar-warning')
-
             <form method="POST" action="{{ route('locations.store') }}" class="locs-form-card">
                 @csrf
 
@@ -95,7 +93,7 @@
                         <p class="locs-field-hint">Las ubicaciones activas aparecen disponibles al crear tickets.</p>
                     </div>
 
-                    {{-- El bloque de confirmación ya está incluido en el partial de warning (antes del formulario) --}}
+                    @include('locations.partials.similar-warning')
 
                     <div class="locs-form-actions">
                         <button type="submit" class="btn-primary">Guardar ubicación</button>

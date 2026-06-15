@@ -80,6 +80,10 @@ return [
 
     'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'America/Lima'),
 
+    // Whether a Redis failure causes the /health endpoint to return 503.
+    // Set REDIS_HEALTH_REQUIRED=true in production once Redis is stable.
+    'redis_health_required' => (bool) env('REDIS_HEALTH_REQUIRED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

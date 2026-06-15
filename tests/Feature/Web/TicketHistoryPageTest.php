@@ -318,8 +318,7 @@ class TicketHistoryPageTest extends TestCase
         $reporter = $this->userWithRole('reporter');
         $this->actingAs($reporter)
             ->get(route('tickets.index'))
-            ->assertOk()
-            ->assertViewIs('tickets.index');
+            ->assertRedirect(route('reporter.tickets.index'));
 
         $maintenance = $this->userWithRole('maintenance');
         $this->actingAs($maintenance)

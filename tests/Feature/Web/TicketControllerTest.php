@@ -22,7 +22,8 @@ class TicketControllerTest extends TestCase
 
     public function test_authenticated_user_sees_logout_action_in_ticket_index(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
 
         $response = $this
             ->actingAs($user)
@@ -34,14 +35,16 @@ class TicketControllerTest extends TestCase
 
     public function test_authenticated_user_can_view_ticket_index(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
+        $reporter = $this->createUserWithRole('reporter');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
         Ticket::create([
             'title' => 'Proyector sin imagen',
             'description' => 'El proyector del aula 201 no muestra señal HDMI.',
-            'reporter_id' => $user->id,
+            'reporter_id' => $reporter->id,
             'location_id' => $location->id,
             'category_id' => $category->id,
             'state' => 'open',
@@ -59,41 +62,13 @@ class TicketControllerTest extends TestCase
 
     public function test_reporter_only_sees_own_tickets_in_index(): void
     {
+        // Reporters are redirected from /tickets to their dedicated board,
+        // where scope isolation (own tickets only) is enforced by the reporter controller.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
-        $category = $this->createCategory();
 
-        $ownTitle = 'Ticket propio reporter';
-        $otherTitle = 'Ticket ajeno reporter';
-
-        Ticket::create([
-            'title' => $ownTitle,
-            'description' => 'Descripcion del ticket propio.',
-            'reporter_id' => $reporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        Ticket::create([
-            'title' => $otherTitle,
-            'description' => 'Descripcion del ticket ajeno.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index'));
-
-        $response->assertOk();
-        $response->assertSee($ownTitle);
-        $response->assertDontSee($otherTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index'))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_reporter_cannot_see_other_reporter_ticket_via_show(): void
@@ -147,74 +122,24 @@ class TicketControllerTest extends TestCase
 
     public function test_reporter_cannot_bypass_index_filter_with_search(): void
     {
+        // Reporters are redirected to their own board before any query runs,
+        // so they can never reach the classic index regardless of query params.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
-        $category = $this->createCategory();
 
-        $secretTitle = 'TICKET_AJENO_SECRETO_123';
-
-        Ticket::create([
-            'title' => $secretTitle,
-            'description' => 'Ticket ajeno con titulo secreto.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'high',
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['search' => $secretTitle]));
-
-        $response->assertOk();
-        $response->assertDontSeeText($secretTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['search' => 'TICKET_AJENO_SECRETO_123']))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_reporter_cannot_bypass_index_filter_with_duplicates(): void
     {
+        // Reporters are redirected to their own board before any query runs,
+        // so they can never reach the classic index regardless of query params.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
-        $category = $this->createCategory();
 
-        $matchedTicket = Ticket::create([
-            'title' => 'Ticket referencia ajeno',
-            'description' => 'Ticket de referencia para el duplicado ajeno.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $duplicateTitle = 'Duplicado ajeno';
-        $duplicateTicket = Ticket::create([
-            'title' => $duplicateTitle,
-            'description' => 'Este duplicado no debe ser visible para el reporter.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        TicketEmbedding::create([
-            'ticket_id' => $duplicateTicket->id,
-            'embedding_vector' => [0.1, 0.2],
-            'description_hash' => hash('sha256', $duplicateTicket->embeddingText()),
-            'is_duplicate' => true,
-            'matched_ticket_id' => $matchedTicket->id,
-            'review_status' => null,
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['duplicates' => '1']));
-
-        $response->assertOk();
-        $response->assertDontSee($duplicateTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['duplicates' => '1']))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_authenticated_user_can_create_ticket_from_web_form(): void
@@ -427,7 +352,8 @@ class TicketControllerTest extends TestCase
 
     public function test_user_can_filter_tickets_by_location(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $locationA = $this->createLocation(['name' => 'Aula A']);
         $locationB = $this->createLocation(['name' => 'Aula B']);
         $category = $this->createCategory();
@@ -463,7 +389,8 @@ class TicketControllerTest extends TestCase
 
     public function test_user_can_filter_tickets_by_category(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $categoryA = $this->createCategory(['name' => 'Electricidad A']);
         $categoryB = $this->createCategory(['name' => 'Red B']);
@@ -499,7 +426,8 @@ class TicketControllerTest extends TestCase
 
     public function test_user_can_paginate_tickets_with_per_page_filter(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
@@ -529,7 +457,8 @@ class TicketControllerTest extends TestCase
 
     public function test_filters_are_preserved_in_pagination_links(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
@@ -811,7 +740,8 @@ class TicketControllerTest extends TestCase
 
     public function test_index_shows_duplicate_badge_for_effective_duplicate(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
@@ -853,7 +783,8 @@ class TicketControllerTest extends TestCase
 
     public function test_index_does_not_show_badge_when_review_dismissed(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
@@ -895,7 +826,8 @@ class TicketControllerTest extends TestCase
 
     public function test_index_filter_duplicates_shows_only_effective_duplicates(): void
     {
-        $user = $this->createUserWithRole('reporter');
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
         $location = $this->createLocation();
         $category = $this->createCategory();
 
@@ -1078,18 +1010,13 @@ class TicketControllerTest extends TestCase
 
     public function test_reporter_index_view_hides_assignment_and_duplicates_filters(): void
     {
+        // Reporters are redirected from the classic /tickets to their dedicated board,
+        // which inherently hides admin-only filters (assignment, duplicates, quick-filters).
         $reporter = $this->createUserWithRole('reporter');
 
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index'));
-
-        $response->assertOk();
-        $response->assertSeeText('Mis tickets');
-        $response->assertDontSeeText('<h1 class="tickets-title">Tickets</h1>', false);
-        $response->assertDontSeeText('Asignación');
-        $response->assertDontSeeText('Vista rápida:');
-        $response->assertDontSeeText('Posibles duplicados');
+        $this->actingAs($reporter)
+            ->get(route('tickets.index'))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_admin_index_view_shows_assignment_and_duplicates_filters(): void
@@ -1296,150 +1223,47 @@ class TicketControllerTest extends TestCase
 
     public function test_reporter_location_filter_does_not_leak_other_tickets(): void
     {
+        // Reporters are redirected from /tickets (with any query params) to their
+        // own board — scope isolation is enforced by the reporter board controller.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
         $locationA = $this->createLocation(['name' => 'Aula Filtro A', 'room_code' => 'F-'.Str::upper(Str::random(5))]);
-        $category = $this->createCategory();
 
-        Ticket::create([
-            'title' => 'Ticket propio en Aula A',
-            'description' => 'Ticket del reporter autenticado en la ubicacion filtrada.',
-            'reporter_id' => $reporter->id,
-            'location_id' => $locationA->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $ajenoTitle = 'TICKET_AJENO_LOCATION_SCOPE_CHECK';
-        Ticket::create([
-            'title' => $ajenoTitle,
-            'description' => 'Ticket ajeno en la misma ubicacion filtrada.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $locationA->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'high',
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['location_id' => $locationA->id]));
-
-        $response->assertOk();
-        $response->assertDontSeeText($ajenoTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['location_id' => $locationA->id]))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_reporter_category_filter_does_not_leak_other_tickets(): void
     {
+        // Reporters are redirected from /tickets (with any query params) to their
+        // own board — scope isolation is enforced by the reporter board controller.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
         $categoryA = $this->createCategory(['name' => 'CategoriaFiltroA']);
 
-        Ticket::create([
-            'title' => 'Ticket propio en categoria A',
-            'description' => 'Ticket del reporter en la categoria filtrada.',
-            'reporter_id' => $reporter->id,
-            'location_id' => $location->id,
-            'category_id' => $categoryA->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $ajenoTitle = 'TICKET_AJENO_CATEGORY_SCOPE_CHECK';
-        Ticket::create([
-            'title' => $ajenoTitle,
-            'description' => 'Ticket ajeno en la misma categoria filtrada.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $categoryA->id,
-            'state' => 'open',
-            'priority' => 'critical',
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['category_id' => $categoryA->id]));
-
-        $response->assertOk();
-        $response->assertDontSeeText($ajenoTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['category_id' => $categoryA->id]))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_reporter_date_range_filter_does_not_leak_other_tickets(): void
     {
+        // Reporters are redirected to their own board before any query runs.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
-        $category = $this->createCategory();
-
-        $ownTicket = Ticket::create([
-            'title' => 'Ticket propio dentro del rango',
-            'description' => 'Ticket del reporter dentro del rango de fechas.',
-            'reporter_id' => $reporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'low',
-        ]);
-        $ownTicket->forceFill(['created_at' => now()])->save();
-
-        $ajenoTitle = 'TICKET_AJENO_DATE_SCOPE_CHECK';
-        $ajenoTicket = Ticket::create([
-            'title' => $ajenoTitle,
-            'description' => 'Ticket ajeno dentro del mismo rango de fechas.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'high',
-        ]);
-        $ajenoTicket->forceFill(['created_at' => now()])->save();
-
         $today = now()->toDateString();
 
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['from' => $today, 'to' => $today]));
-
-        $response->assertOk();
-        $response->assertDontSeeText($ajenoTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['from' => $today, 'to' => $today]))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     public function test_reporter_assignment_all_does_not_return_foreign_tickets(): void
     {
+        // Reporters are redirected to their own board before any query runs.
         $reporter = $this->createUserWithRole('reporter');
-        $otherReporter = $this->createUserWithRole('reporter');
-        $location = $this->createLocation();
-        $category = $this->createCategory();
 
-        Ticket::create([
-            'title' => 'Ticket propio reporter',
-            'description' => 'Ticket del reporter autenticado.',
-            'reporter_id' => $reporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $ajenoTitle = 'TICKET_AJENO_ASSIGNMENT_ALL_CHECK';
-        Ticket::create([
-            'title' => $ajenoTitle,
-            'description' => 'Ticket ajeno que no debe verse aunque assignment=all.',
-            'reporter_id' => $otherReporter->id,
-            'location_id' => $location->id,
-            'category_id' => $category->id,
-            'state' => 'open',
-            'priority' => 'medium',
-        ]);
-
-        $response = $this
-            ->actingAs($reporter)
-            ->get(route('tickets.index', ['assignment' => 'all']));
-
-        $response->assertOk();
-        $response->assertDontSeeText($ajenoTitle);
+        $this->actingAs($reporter)
+            ->get(route('tickets.index', ['assignment' => 'all']))
+            ->assertRedirect(route('reporter.tickets.index'));
     }
 
     // ── Fase 0 Group B: maintenance scope no se salta con filtros adicionales ──

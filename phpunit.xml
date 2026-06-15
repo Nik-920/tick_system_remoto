@@ -11,6 +11,14 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Feature-Root">
+            <file>tests/Feature/CatalogIndexAccessParityTest.php</file>
+            <file>tests/Feature/ExampleTest.php</file>
+            <file>tests/Feature/HealthControllerTest.php</file>
+            <file>tests/Feature/MetricsControllerTest.php</file>
+            <file>tests/Feature/MetricsEndpointSecurityTest.php</file>
+            <file>tests/Feature/SecurityHeadersTest.php</file>
+        </testsuite>
     </testsuites>
     <source>
         <include>

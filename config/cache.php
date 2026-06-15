@@ -105,4 +105,19 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard Cache
+    |--------------------------------------------------------------------------
+    |
+    | Controls the progressive dashboard cache rollout. Set dashboard_enabled
+    | to false to bypass all dashboard caching without code changes (safe
+    | rollback). TTL values are in seconds and match CacheTtl constants.
+    |
+    */
+
+    'dashboard_enabled' => env('DASHBOARD_CACHE_ENABLED', true),
+
+    'dashboard_ttl_reporter' => (int) env('DASHBOARD_CACHE_TTL_REPORTER', 45),
+
 ];

@@ -17,6 +17,10 @@ class WriteAiAuditLog implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public int $tries = 3;
+
+    public int $timeout = 30;
+
     /**
      * @param  array<string, mixed>  $context
      */
@@ -26,7 +30,9 @@ class WriteAiAuditLog implements ShouldQueue
         public ?Ticket $ticket = null,
         public ?string $operationType = null,
         public string $correlationId = ''
-    ) {}
+    ) {
+        $this->onQueue('default');
+    }
 
     public function handle(TicketQrLogger $logger): void
     {
