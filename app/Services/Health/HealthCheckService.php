@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
-use RuntimeException;
+use App\Exceptions\RedisHealthException;
 use Throwable;
 
 class HealthCheckService
@@ -131,7 +131,7 @@ class HealthCheckService
             $result = Redis::connection('default')->ping();
 
             if (! $this->isRedisPingSuccessful($result)) {
-                throw new RuntimeException('Redis ping did not return a healthy response.');
+                throw new RedisHealthException('Redis ping did not return a healthy response.');
             }
 
             return [
