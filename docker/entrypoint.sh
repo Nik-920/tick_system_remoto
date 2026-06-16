@@ -13,7 +13,13 @@ fi
 
 # Generate APP_KEY if it is missing
 if grep -q "^APP_KEY=$" .env 2>/dev/null; then
-    php artisan key:generate --force
+    if [ -n "${APP_KEY:-}" ]; then
+        # APP_KEY already exists in the environment (e.g. Railway) — write it into .env
+        # so artisan/Laravel can read it without triggering key:generate errors.
+        sed -i "s|^APP_KEY=$|APP_KEY=${APP_KEY}|" .env
+    else
+        php artisan key:generate --force
+    fi
 fi
 
 # Clear stale framework caches every restart so volume-mounted changes are seen
