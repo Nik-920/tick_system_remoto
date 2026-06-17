@@ -132,11 +132,15 @@ if ($roleValue !== '') $activeFilterCount++;
                     @empty
                     <tr>
                         <td colspan="5" class="users-empty-cell">
-                            <div class="empty-state">
-                                <p class="empty-state__title">No hay usuarios para mostrar</p>
-                                <p class="empty-state__note">Prueba ajustar o limpiar los filtros.</p>
+                            <x-empty-state
+                                base-class="empty-state"
+                                title="No hay usuarios para mostrar"
+                                note="Prueba ajustar o limpiar los filtros."
+                                title-class="empty-state__title"
+                                note-class="empty-state__note"
+                            >
                                 <a href="{{ route('users.create') }}" class="btn-primary">Crear usuario</a>
-                            </div>
+                            </x-empty-state>
                         </td>
                     </tr>
                     @endforelse

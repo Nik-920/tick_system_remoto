@@ -213,7 +213,7 @@
                     <span class="rep-tech__label">Técnico asignado</span>
                     @if ($details['technician'])
                         <div class="rep-tech__card">
-                            <span class="rep-tech__avatar" aria-hidden="true">{{ $details['technician']['initials'] }}</span>
+                            <x-avatar :initials="$details['technician']['initials']" base-class="rep-tech__avatar" tone-class="" aria-hidden="true" />
                             <div>
                                 <span class="rep-tech__name">{{ $details['technician']['name'] }}</span>
                                 <span class="rep-tech__role">{{ $details['technician']['role'] }}</span>

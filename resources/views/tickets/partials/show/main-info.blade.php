@@ -5,7 +5,7 @@
         Información principal del ticket
     </h2>
 
-    @if ($canEditOperational)
+    @if ($vm->canEditOperational)
         {{-- Formulario de edición limitada: los controles distribuidos en esta
              tarjeta y en la sección de evidencias se vinculan vía form="..." --}}
         <form id="maintenance-edit-form"
@@ -15,7 +15,7 @@
               class="tickets-once-form hidden" aria-hidden="true">
             @csrf
             @method('PATCH')
-            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+            <input type="hidden" name="idempotency_key" value="{{ $vm->generateIdempotencyKey() }}">
         </form>
     @endif
 
@@ -57,7 +57,7 @@
     <div class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-5 text-sm mb-5">
         <div>
             <p class="ticket-show__label">Categoría</p>
-            @if ($canEditOperational)
+            @if ($vm->canEditOperational)
                 <select id="edit-category" name="category_id" form="maintenance-edit-form"
                         class="ticket-show__control" aria-label="Corregir categoría">
                     @foreach ($categories as $category)
@@ -76,13 +76,13 @@
         </div>
         <div>
             <p class="ticket-show__label">Prioridad</p>
-            @if ($canEditOperational)
+            @if ($vm->canEditOperational)
                 <select id="edit-priority" name="priority" form="maintenance-edit-form"
                         class="ticket-show__control" aria-label="Corregir prioridad">
                     @foreach ($priorities as $priorityOption)
                         <option value="{{ $priorityOption }}"
                             @selected(old('priority', $ticket->priority) === $priorityOption)>
-                            {{ $priorityLabels[$priorityOption] ?? ucfirst($priorityOption) }}
+                            {{ $vm->priorityLabels()[$priorityOption] ?? ucfirst($priorityOption) }}
                         </option>
                     @endforeach
                 </select>
@@ -90,25 +90,23 @@
                     <p class="ticket-show__error">{{ $message }}</p>
                 @enderror
             @else
-                <span class="{{ $priorityBadge }}">
+                <span class="{{ $vm->priorityBadge() }}">
                     <span class="ts-badge__dot" aria-hidden="true"></span>
-                    {{ $priorityLabel }}
+                    {{ $vm->priorityLabel() }}
                 </span>
             @endif
         </div>
         <div>
             <p class="ticket-show__label">Estado</p>
-            <span class="{{ $stateBadge }}">
+            <span class="{{ $vm->stateBadge() }}">
                 <span class="ts-badge__dot" aria-hidden="true"></span>
-                {{ $stateLabel }}
+                {{ $vm->stateLabel() }}
             </span>
         </div>
         <div>
             <p class="ticket-show__label">Reportado por</p>
             <div class="flex items-center gap-1.5">
-                <span class="ticket-show__avatar ticket-show__avatar--rose w-5 h-5 text-[10px]" aria-hidden="true">
-                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($ticket->reporter?->name ?? 'R', 0, 1)) }}
-                </span>
+                <x-avatar :initials="$vm->initials($ticket->reporter?->name, 1, 'R')" tone="rose" class="w-5 h-5 text-[10px]" aria-hidden="true" />
                 <span class="ticket-show__value truncate text-xs">{{ $ticket->reporter?->name ?? $ticket->reporter?->email ?? '—' }}</span>
             </div>
         </div>
@@ -120,10 +118,10 @@
 
     <div class="text-sm">
         <p class="ticket-show__label">Fecha de creación</p>
-        <p class="ticket-show__value">{{ $fmtDate($ticket->created_at) ?? '—' }}</p>
+        <p class="ticket-show__value">{{ $vm->fmtDate($ticket->created_at) ?? '—' }}</p>
     </div>
 
-    @if ($canEditOperational)
+    @if ($vm->canEditOperational)
         <div class="mt-5 pt-4 ticket-show__divider space-y-3">
             <div class="ticket-show__edit-note" role="note">
                 <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>

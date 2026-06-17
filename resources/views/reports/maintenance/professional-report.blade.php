@@ -8,7 +8,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Informe profesional de mantenimiento · {{ $period->fromDate() }} al {{ $period->toDate() }}</title>
-    @include('dashboard.partials.maintenance-professional-report-styles')
+    @include('reports.maintenance.partials.styles')
     <style>
         body { background: #eef2f6; padding: 0; }
         .preview-toolbar {
@@ -57,7 +57,7 @@
     </div>
     <div class="preview-page">
         <div class="preview-sheet">
-            @include('dashboard.partials.maintenance-professional-report-body')
+            @include('reports.maintenance.partials.body')
         </div>
     </div>
 </body>

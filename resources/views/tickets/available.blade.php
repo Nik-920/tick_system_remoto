@@ -136,15 +136,19 @@ $isMaintenance = $user && $user->hasRole('maintenance') && ! $user->hasAnyRole([
                     @empty
                         <tr>
                             <td colspan="6" class="tickets-empty-cell">
-                                <div class="empty-state">
-                                    <p class="empty-state__title">No hay tickets disponibles en este momento</p>
-                                    <p class="empty-state__note">Cuando un reporte abierto quede sin responsable, aparecerá aquí.</p>
+                                <x-empty-state
+                                    base-class="empty-state"
+                                    title="No hay tickets disponibles en este momento"
+                                    note="Cuando un reporte abierto quede sin responsable, aparecerá aquí."
+                                    title-class="empty-state__title"
+                                    note-class="empty-state__note"
+                                >
                                     @if ($isMaintenance)
                                         <a href="{{ route('tickets.index', ['assignment' => 'mine']) }}" class="btn-primary">Volver a mis tickets</a>
                                     @else
                                         <a href="{{ route('tickets.index') }}" class="btn-primary">Ver todos los tickets</a>
                                     @endif
-                                </div>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse

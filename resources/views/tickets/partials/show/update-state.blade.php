@@ -1,6 +1,6 @@
 {{-- ③ Actualizar estado --}}
 @can('updateState', $ticket)
-    @if (count($availableTransitions) > 0)
+    @if (count($vm->availableTransitions) > 0)
         <section id="update-state" class="ticket-show__card" aria-labelledby="update-state-heading">
             <h2 id="update-state-heading" class="ticket-show__title">
                 <span class="ticket-show__section-number" aria-hidden="true">3</span>
@@ -10,15 +10,15 @@
             <form method="POST" action="{{ route('tickets.update-state', $ticket) }}" class="tickets-once-form space-y-4">
                 @csrf
                 @method('PATCH')
-                <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                <input type="hidden" name="idempotency_key" value="{{ $vm->generateIdempotencyKey() }}">
 
                 <div>
                     <label for="to_state" class="ticket-show__field-label">Nuevo estado *</label>
                     <select id="to_state" name="to_state" required class="ticket-show__control sm:max-w-xs">
                         <option value="">Selecciona estado</option>
-                        @foreach ($availableTransitions as $state)
+                        @foreach ($vm->availableTransitions as $state)
                             <option value="{{ $state }}" @selected(old('to_state') === $state)>
-                                {{ $stateLabels[$state] ?? ucfirst(str_replace('_', ' ', $state)) }}
+                                {{ $vm->stateLabels()[$state] ?? ucfirst(str_replace('_', ' ', $state)) }}
                             </option>
                         @endforeach
                     </select>

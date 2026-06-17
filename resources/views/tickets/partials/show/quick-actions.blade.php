@@ -7,7 +7,7 @@
 
     <nav class="space-y-1" aria-label="Acciones disponibles">
         @can('updateState', $ticket)
-            @if ($canContinue || $canResolve)
+            @if ($vm->canContinue() || $vm->canResolve())
                 <a href="#update-state" class="ticket-show__action-link focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     Registrar avance de atención
@@ -15,7 +15,7 @@
             @endif
         @endcan
 
-        @if ($canEditOperational)
+        @if ($vm->canEditOperational)
             <a href="#evidence" class="ticket-show__action-link focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Adjuntar evidencia

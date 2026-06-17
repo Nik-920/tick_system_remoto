@@ -5,7 +5,7 @@
         Información final / cierre
     </h2>
 
-    @if (! $isClosed)
+    @if (! $vm->isClosed())
         <div class="flex items-center gap-4 ticket-show__box p-5">
             <div class="flex-shrink-0 ticket-show__faint">
                 <svg class="w-16 h-16" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 64 64" aria-hidden="true">
@@ -24,35 +24,33 @@
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
             <div>
                 <p class="ticket-show__label">Estado final</p>
-                <span class="{{ $stateBadge }}">
+                <span class="{{ $vm->stateBadge() }}">
                     <span class="ts-badge__dot" aria-hidden="true"></span>
-                    {{ $stateLabel }}
+                    {{ $vm->stateLabel() }}
                 </span>
             </div>
             <div>
                 <p class="ticket-show__label">Fecha de cierre</p>
                 <p class="ticket-show__value">
-                    {{ $fmtDate($ticket->resolved_at) ?? $fmtDate($closureEntry?->created_at) ?? '—' }}
+                    {{ $vm->fmtDate($ticket->resolved_at) ?? $vm->fmtDate($vm->closureEntry()?->created_at) ?? '—' }}
                 </p>
             </div>
             <div>
                 <p class="ticket-show__label">Cambiado por</p>
-                @if ($closureEntry?->changedBy)
+                @if ($vm->closureEntry()?->changedBy)
                     <div class="flex items-center gap-1.5">
-                        <span class="ticket-show__avatar ticket-show__avatar--success w-6 h-6 text-[10px]" aria-hidden="true">
-                            {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($closureEntry->changedBy->name ?? 'U', 0, 2)) }}
-                        </span>
-                        <span class="ticket-show__value">{{ $closureEntry->changedBy->name ?? $closureEntry->changedBy->email }}</span>
+                        <x-avatar :initials="$vm->initials($vm->closureEntry()->changedBy->name, 2, 'U')" tone="success" class="w-6 h-6 text-[10px]" aria-hidden="true" />
+                        <span class="ticket-show__value">{{ $vm->closureEntry()->changedBy->name ?? $vm->closureEntry()->changedBy->email }}</span>
                     </div>
                 @else
                     <p class="ticket-show__value">—</p>
                 @endif
             </div>
-            @if (trim((string) $closureEntry?->comment) !== '')
+            @if (trim((string) $vm->closureEntry()?->comment) !== '')
                 <div class="sm:col-span-2 lg:col-span-3">
                     <p class="ticket-show__label mb-1">Comentario de cierre</p>
                     <div class="ticket-show__closure-comment {{ $ticket->state === 'resolved' ? 'ticket-show__closure-comment--resolved' : '' }}">
-                        {{ $closureEntry->comment }}
+                        {{ $vm->closureEntry()->comment }}
                     </div>
                 </div>
             @endif

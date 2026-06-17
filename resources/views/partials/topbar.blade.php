@@ -64,9 +64,12 @@
             @auth
                 <details class="topbar-user-menu" id="topbarUserMenu">
                     <summary class="topbar-user-trigger">
-                        <div class="topbar-avatar">
-                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', auth()->user()->name)[1] ?? '', 0, 1)) }}
-                        </div>
+                        <x-avatar
+                            :name="auth()->user()->name"
+                            as="div"
+                            base-class="topbar-avatar"
+                            tone-class=""
+                        />
                         <div class="topbar-user-info">
                             <span class="topbar-user-name">{{ auth()->user()->name }}</span>
                             <span class="topbar-user-role">{{ ucfirst(auth()->user()->role ?? 'Usuario') }}</span>
@@ -76,9 +79,12 @@
 
                     <div class="topbar-dropdown">
                         <div class="topbar-dropdown-head">
-                            <div class="topbar-dropdown-avatar">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', auth()->user()->name)[1] ?? '', 0, 1)) }}
-                            </div>
+                            <x-avatar
+                                :name="auth()->user()->name"
+                                as="div"
+                                base-class="topbar-dropdown-avatar"
+                                tone-class=""
+                            />
                             <div>
                                 <p class="topbar-dropdown-name">{{ auth()->user()->name }}</p>
                                 <p class="topbar-dropdown-email">{{ auth()->user()->email }}</p>
