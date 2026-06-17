@@ -242,11 +242,11 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-      - name: 📦 Instalar dependencias PHP
-        run: composer install --prefer-dist --no-progress --no-interaction
-
       - name: ⚙️ Preparar .env desde .env.testing
         run: cp .env.testing .env
+
+      - name: 📦 Instalar dependencias PHP
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Generar APP_KEY
         run: php artisan key:generate --env=testing
