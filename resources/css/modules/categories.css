@@ -692,3 +692,18 @@
     background: var(--bg-soft);
     border-color: var(--border-default);
 }
+
+/* ==========================================================================
+   Categories / Page Layout Utilities
+   Moved from dashboard-role-shared.css — Fase C1 (2026-06-15).
+   NOTE: .categories-page has NO confirmed Blade usage as of Fase C1.
+   Kept as dead class — candidate for removal in a future cleanup phase.
+   ========================================================================== */
+@layer utilities {
+    .categories-page {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+}

@@ -7,19 +7,19 @@
 
         {{-- ===== HERO ===== --}}
         <section class="role-hero role-hero-admin panel panel-pad overflow-hidden">
-            <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="role-hero__header flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{{ $hero['badge'] }}</p>
-                    <h1 class="mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
-                    <p class="mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
-                    <p class="mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
+                    <p class="role-hero__eyebrow text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{{ $hero['badge'] }}</p>
+                    <h1 class="role-hero__title mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
+                    <p class="role-hero__subtitle mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
+                    <p class="role-hero__meta mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
                 </div>
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-right">
-                    <p class="text-xs uppercase tracking-[0.1em] font-semibold text-emerald-700">Tasa resolucion 7 dias</p>
-                    <p class="text-2xl font-black text-slate-900 mt-1">{{ $hero['resolutionRate7Days'] }}</p>
+                <div class="role-hero__metric-box rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-right">
+                    <p class="role-hero__metric-label text-xs uppercase tracking-[0.1em] font-semibold text-emerald-700">Tasa resolucion 7 dias</p>
+                    <p class="role-hero__metric-value text-2xl font-black text-slate-900 mt-1">{{ $hero['resolutionRate7Days'] }}</p>
                 </div>
             </div>
-            <div class="mt-4 flex flex-wrap items-center gap-2">
+            <div class="role-hero__actions mt-4 flex flex-wrap items-center gap-2">
                 @foreach ($quickActions as $action)
                     <a href="{{ $action['href'] }}"
                        class="{{ $action['variant'] === 'primary' ? 'btn-primary' : 'btn-secondary' }}">
@@ -67,7 +67,7 @@
         </section>
 
         {{-- ===== QR + UBICACIONES ===== --}}
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div class="role-section-grid role-section-grid--3 grid grid-cols-1 xl:grid-cols-3 gap-4">
 
             {{-- Salud QR --}}
             <section class="role-section">
@@ -126,7 +126,7 @@
         </div>
 
         {{-- ===== TABLAS ===== --}}
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="role-section-grid role-section-grid--2 grid grid-cols-1 xl:grid-cols-2 gap-4">
 
             {{-- Radar QR --}}
             <section class="role-section">

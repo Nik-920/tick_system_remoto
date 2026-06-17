@@ -1,0 +1,239 @@
+/* ==========================================================================
+   Dashboard / Role Hero
+   ========================================================================== */
+
+/* ============================= */
+/* HERO BASE                     */
+/* ============================= */
+.role-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    padding: 1.75rem 1.5rem;
+    border: 1px solid transparent;
+}
+
+/* Patrón de puntos */
+.role-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+}
+
+/* Brillo esquina */
+.role-hero::after {
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* ============================= */
+/* HERO POR ROL — GRADIENTES     */
+/* ============================= */
+
+/* ---------- ADMIN — Navy Blue (igual que login) ---------- */
+.role-hero-admin {
+    background: linear-gradient(135deg, #0f1e3d 0%, #1e3a8a 55%, #1d4ed8 100%);
+    border-color: #3b82f6;
+}
+
+.role-hero-admin p,
+.role-hero-admin h1 {
+    color: white !important;
+}
+
+.role-hero-admin .role-hero__eyebrow {
+    color: #93c5fd !important;
+}
+
+.role-hero-admin .role-hero__subtitle {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.role-hero-admin .role-hero__meta {
+    color: rgba(255, 255, 255, 0.52) !important;
+}
+
+.role-hero-admin .role-hero__title {
+    color: white !important;
+}
+
+/* Caja tasa resolución */
+.role-hero-admin .role-hero__metric-box {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.role-hero-admin .role-hero__metric-label {
+    color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.role-hero-admin .role-hero__metric-value {
+    color: white !important;
+}
+
+/* ---------- MAINTENANCE — Amber (reglas base; sin uso activo en Blade) ---------- */
+.role-hero-maintenance {
+    background: linear-gradient(135deg, #78350f 0%, #92400e 55%, #b45309 100%);
+    border-color: #d97706;
+}
+
+.role-hero-maintenance p,
+.role-hero-maintenance h1 {
+    color: white !important;
+}
+
+.role-hero-maintenance .role-hero__eyebrow {
+    color: #fcd34d !important;
+}
+
+.role-hero-maintenance .role-hero__subtitle {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.role-hero-maintenance .role-hero__meta {
+    color: rgba(255, 255, 255, 0.52) !important;
+}
+
+/* ---------- REPORTER — Cyan claro ---------- */
+.role-hero-reporter {
+    background: linear-gradient(135deg, #164e63 0%, #0e7490 55%, #0891b2 100%);
+    border-color: #22d3ee;
+}
+
+.role-hero-reporter p,
+.role-hero-reporter h1 {
+    color: white !important;
+}
+
+.role-hero-reporter .role-hero__eyebrow {
+    color: #a5f3fc !important;
+}
+
+.role-hero-reporter .role-hero__subtitle {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.role-hero-reporter .role-hero__meta {
+    color: rgba(255, 255, 255, 0.52) !important;
+}
+
+/* ============================= */
+/* BOTONES EN HERO               */
+/* ============================= */
+
+/* Botón primario blanco en todos los heroes */
+.role-hero .btn-primary {
+    background: white !important;
+    border: none !important;
+    font-weight: 700;
+}
+
+.role-hero-admin .btn-primary {
+    color: #1e3a8a !important;
+}
+
+.role-hero-admin .btn-primary:hover {
+    background: #eff6ff !important;
+}
+
+.role-hero-maintenance .btn-primary {
+    color: #78350f !important;
+}
+
+.role-hero-maintenance .btn-primary:hover {
+    background: #fffbeb !important;
+}
+
+.role-hero-reporter .btn-primary {
+    color: #164e63 !important;
+}
+
+.role-hero-reporter .btn-primary:hover {
+    background: #ecfeff !important;
+}
+
+/* Botón secundario ghost en todos los heroes */
+.role-hero .btn-secondary {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.30) !important;
+    font-weight: 600;
+}
+
+.role-hero .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* ============================= */
+/* RESPONSIVE HERO               */
+/* ============================= */
+
+/* Mobile base (< 640px) — reglas hero autocontenidas */
+@media (max-width: 639px) {
+    .role-hero {
+        padding: 1.1rem 1rem;
+    }
+
+    /* Stack hero en mobile */
+    .role-hero__header {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Caja tasa resolución: full width en mobile */
+    .role-hero__metric-box {
+        width: 100% !important;
+        text-align: left !important;
+    }
+
+    /* Título hero más pequeño */
+    .role-hero h1 {
+        font-size: 1.5rem !important;
+    }
+
+    /* Botones hero en mobile */
+    .role-hero__actions {
+        width: 100%;
+    }
+
+    .role-hero .btn-primary,
+    .role-hero .btn-secondary {
+        flex: 1;
+        text-align: center;
+        justify-content: center;
+    }
+}
+
+/* Tablet (640px – 1023px) — título hero */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .role-hero h1 {
+        font-size: 1.75rem !important;
+    }
+}
+
+/* ============================= */
+/* DARK MODE HERO                */
+/* ============================= */
+
+[data-theme="dark"] .role-hero-reporter .role-hero__metric-box {
+    background: rgba(8, 145, 178, 0.18);
+    border-color: rgba(34, 211, 238, 0.35);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+
+[data-theme="dark"] .role-hero-reporter .role-hero__metric-value {
+    color: #e2e8f0 !important;
+}

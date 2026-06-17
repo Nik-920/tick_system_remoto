@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <title>Informe profesional de mantenimiento</title>
-    @include('dashboard.partials.maintenance-professional-report-styles')
+    @include('reports.maintenance.partials.styles')
 </head>
 <body>
-    @include('dashboard.partials.maintenance-professional-report-body')
+    @include('reports.maintenance.partials.body')
 </body>
 </html>

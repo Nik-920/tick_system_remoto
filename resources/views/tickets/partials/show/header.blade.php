@@ -13,9 +13,9 @@
                     {{ $ticket->title ?? 'Sin título' }}
                 </h1>
                 <div class="mt-1 flex items-center gap-2">
-                    <span class="ticket-show__code">#{{ $ticketCode }}</span>
+                    <span class="ticket-show__code">#{{ $vm->ticketCode() }}</span>
                     <button type="button"
-                        data-copy-ticket="{{ $ticketCode }}"
+                        data-copy-ticket="{{ $vm->ticketCode() }}"
                         aria-label="Copiar código del ticket"
                         class="copy-btn ticket-show__copy-btn focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -26,12 +26,12 @@
                     </button>
                 </div>
                 <div class="mt-2 flex flex-wrap gap-2">
-                    <span class="{{ $stateBadge }}">
+                    <span class="{{ $vm->stateBadge() }}">
                         <span class="ts-badge__dot" aria-hidden="true"></span>
-                        {{ $stateLabel }}
+                        {{ $vm->stateLabel() }}
                     </span>
-                    <span class="{{ $priorityBadge }}">
-                        {{ $priorityLabel }}
+                    <span class="{{ $vm->priorityBadge() }}">
+                        {{ $vm->priorityLabel() }}
                     </span>
                 </div>
             </div>
@@ -42,7 +42,7 @@
                 <form id="delete-ticket-form" method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="inline">
                     @csrf
                     @method('DELETE')
-                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                    <input type="hidden" name="idempotency_key" value="{{ $vm->generateIdempotencyKey() }}">
                     <button type="button" class="tickets-btn-danger" data-open-delete-modal>Eliminar</button>
                 </form>
             @endcan
@@ -57,7 +57,7 @@
             </div>
             <div>
                 <p class="ticket-show__label">Fecha de creación</p>
-                <p class="ticket-show__value mt-0.5">{{ $fmtDate($ticket->created_at) ?? '—' }}</p>
+                <p class="ticket-show__value mt-0.5">{{ $vm->fmtDate($ticket->created_at) ?? '—' }}</p>
             </div>
         </div>
 
@@ -67,7 +67,7 @@
             </div>
             <div>
                 <p class="ticket-show__label">Última actualización</p>
-                <p class="ticket-show__value mt-0.5">{{ $fmtDate($ticket->updated_at) ?? '—' }}</p>
+                <p class="ticket-show__value mt-0.5">{{ $vm->fmtDate($ticket->updated_at) ?? '—' }}</p>
             </div>
         </div>
 

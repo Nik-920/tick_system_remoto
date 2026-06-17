@@ -21,16 +21,16 @@
 /* ── Per-tone palette ─────────────────────────────────────────
    Soft surface, readable foreground, solid hue. Foregrounds clear
    ≥4.5:1 on their soft surface, so colour is never the only signal. */
-.mdv2-tone-primary { --m-soft: #eff6ff; --m-fg: #1d4ed8; --m-solid: #2563eb; }
-.mdv2-tone-success { --m-soft: #dcfce7; --m-fg: #15803d; --m-solid: #16a34a; }
-.mdv2-tone-warning { --m-soft: #fff7ed; --m-fg: #9a3412; --m-solid: #f97316; }
-.mdv2-tone-amber   { --m-soft: #fef3c7; --m-fg: #92400e; --m-solid: #f59e0b; }
-.mdv2-tone-high    { --m-soft: #fee2e2; --m-fg: #b42318; --m-solid: #ef4444; }
-.mdv2-tone-purple  { --m-soft: #f3e8ff; --m-fg: #7e22ce; --m-solid: #9333ea; }
-.mdv2-tone-info    { --m-soft: #e0f2fe; --m-fg: #0369a1; --m-solid: #0891b2; }
-.mdv2-tone-low     { --m-soft: #dcfce7; --m-fg: #15803d; --m-solid: #22c55e; }
-.mdv2-tone-medium  { --m-soft: #fef3c7; --m-fg: #92400e; --m-solid: #f59e0b; }
-.mdv2-tone-neutral { --m-soft: #f1f5f9; --m-fg: #334155; --m-solid: #64748b; }
+.mdv2-tone-primary { --m-soft: var(--tone-primary-soft); --m-fg: var(--tone-primary-fg); --m-solid: var(--tone-primary-solid); }
+.mdv2-tone-success { --m-soft: var(--tone-success-soft); --m-fg: var(--tone-success-fg); --m-solid: var(--tone-success-solid); }
+.mdv2-tone-warning { --m-soft: var(--tone-warning-soft); --m-fg: var(--tone-warning-fg); --m-solid: var(--tone-warning-solid); }
+.mdv2-tone-amber   { --m-soft: var(--tone-medium-soft);  --m-fg: var(--tone-medium-fg);  --m-solid: var(--tone-medium-solid);  }
+.mdv2-tone-high    { --m-soft: var(--tone-high-soft);    --m-fg: var(--tone-high-fg);    --m-solid: var(--tone-high-solid);    }
+.mdv2-tone-purple  { --m-soft: var(--tone-purple-soft);  --m-fg: var(--tone-purple-fg);  --m-solid: var(--tone-purple-solid);  }
+.mdv2-tone-info    { --m-soft: var(--tone-info-soft);    --m-fg: var(--tone-info-fg);    --m-solid: var(--tone-info-solid);    }
+.mdv2-tone-low     { --m-soft: var(--tone-low-soft);     --m-fg: var(--tone-low-fg);     --m-solid: var(--tone-low-solid);     }
+.mdv2-tone-medium  { --m-soft: var(--tone-medium-soft);  --m-fg: var(--tone-medium-fg);  --m-solid: var(--tone-medium-solid);  }
+.mdv2-tone-neutral { --m-soft: var(--tone-neutral-soft); --m-fg: var(--tone-neutral-fg); --m-solid: var(--tone-neutral-solid); }
 
 /* ── Shared card ── */
 .mdv2-card {

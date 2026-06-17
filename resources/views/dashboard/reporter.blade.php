@@ -7,24 +7,24 @@
 
         {{-- ===== HERO ===== --}}
         <section class="role-hero role-hero-reporter panel panel-pad overflow-hidden">
-            <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="role-hero__header flex flex-wrap items-start justify-between gap-4">
                 <div class="max-w-3xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">{{ $hero['badge'] }}</p>
-                    <h1 class="mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
-                    <p class="mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
-                    <p class="mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
+                    <p class="role-hero__eyebrow text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700">{{ $hero['badge'] }}</p>
+                    <h1 class="role-hero__title mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
+                    <p class="role-hero__subtitle mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
+                    <p class="role-hero__meta mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
                 </div>
 
-                <div class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right flex flex-col items-end justify-center">
+                <div class="role-hero__metric-box rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right flex flex-col items-end justify-center">
                     <div class="flex items-center gap-2 text-cyan-700 mb-1">
                         <x-lucide-qr-code width="18" height="18" stroke-width="2" />
-                        <p class="text-xs uppercase tracking-[0.1em] font-semibold">Reporte rápido</p>
+                        <p class="role-hero__metric-label text-xs uppercase tracking-[0.1em] font-semibold">Reporte rápido</p>
                     </div>
-                    <p class="text-sm font-medium text-slate-800">Escanea el QR de la ubicación</p>
+                    <p class="role-hero__metric-value text-sm font-medium text-slate-800">Escanea el QR de la ubicación</p>
                 </div>
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center gap-2">
+            <div class="role-hero__actions mt-4 flex flex-wrap items-center gap-2">
                 @foreach ($quickActions as $action)
                     <a href="{{ $action['href'] }}"
                        class="{{ $action['variant'] === 'primary' ? 'btn-primary' : 'btn-secondary' }}">

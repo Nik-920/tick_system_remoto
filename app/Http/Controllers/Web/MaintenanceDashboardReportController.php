@@ -30,7 +30,7 @@ class MaintenanceDashboardReportController extends Controller
 {
     public function preview(DashboardDateRangeRequest $request): View
     {
-        return view('dashboard.maintenance-professional-report', [
+        return view('reports.maintenance.professional-report', [
             'vm' => $this->viewModel($request),
         ]);
     }
@@ -39,7 +39,7 @@ class MaintenanceDashboardReportController extends Controller
     {
         $viewModel = $this->viewModel($request);
 
-        $pdf = Pdf::loadView('dashboard.maintenance-professional-report-pdf', ['vm' => $viewModel])
+        $pdf = Pdf::loadView('reports.maintenance.professional-report-pdf', ['vm' => $viewModel])
             ->setPaper('a4');
 
         $filename = sprintf(

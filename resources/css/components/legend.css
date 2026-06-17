@@ -1,0 +1,74 @@
+/* ============================================================
+   COMPONENT — Donut/chart legend
+   INCIDEX
+
+   Vertical list of dot + label + value rows used alongside
+   donut charts and bar breakdowns.
+
+   Canonical class: .ui-legend
+   Legacy aliases grouped here for backward compat:
+     .mdv2-legend  (dashboard-maintenance-v2)
+     .tkv2-legend  (tickets-maintenance-v2)
+     .rep-legend   (reporter-tickets)
+
+   NOTE: loc-donut-legend (locations.css) uses a <ul> + grid
+   layout and different element names — it is kept entirely in
+   locations.css.
+
+   Per-module differences (gap, min-width) stay in each module
+   file via cascade (modules load after components in app.css).
+   ============================================================ */
+
+/* ── Legend container ── */
+.ui-legend,
+.mdv2-legend,
+.tkv2-legend,
+.rep-legend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--legend-gap, 0.4rem);
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── One legend row ── */
+.ui-legend__row,
+.mdv2-legend__row,
+.tkv2-legend__row,
+.rep-legend__row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+}
+
+/* ── Colour swatch dot ── */
+.ui-legend__dot,
+.mdv2-legend__dot,
+.tkv2-legend__dot,
+.rep-legend__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+/* ── Text label ── */
+.ui-legend__label,
+.mdv2-legend__label,
+.tkv2-legend__label,
+.rep-legend__label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* ── Numeric value (right-aligned) ── */
+.ui-legend__value,
+.mdv2-legend__value,
+.tkv2-legend__value,
+.rep-legend__value {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}

@@ -60,3 +60,16 @@
     opacity: 0.5;
     margin-bottom: 0.25rem;
 }
+
+/* ── Dash inline / table empty (Fase B: migrated from dashboard-role-shared.css) ── */
+.dash-empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 1rem 0;
+}
+
+td.dash-empty {
+    padding: 1.5rem 1.1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}

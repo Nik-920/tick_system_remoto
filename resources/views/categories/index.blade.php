@@ -135,11 +135,15 @@ return is_string($category->icon) && trim($category->icon) !== '';
                     @empty
                     <tr>
                         <td colspan="5" class="cats-empty-cell">
-                            <div class="empty-state">
-                                <p class="empty-state__title">No hay categorías para mostrar</p>
-                                <p class="empty-state__note">Prueba ajustar o limpiar filtros. Si aún no existen categorías, crea una nueva para clasificar incidencias.</p>
+                            <x-empty-state
+                                base-class="empty-state"
+                                title="No hay categorías para mostrar"
+                                note="Prueba ajustar o limpiar filtros. Si aún no existen categorías, crea una nueva para clasificar incidencias."
+                                title-class="empty-state__title"
+                                note-class="empty-state__note"
+                            >
                                 <a href="{{ route('categories.create') }}" class="btn-primary">Crear categoría</a>
-                            </div>
+                            </x-empty-state>
                         </td>
                     </tr>
                     @endforelse

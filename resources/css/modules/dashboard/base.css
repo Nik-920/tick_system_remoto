@@ -1,0 +1,41 @@
+/* ==========================================================================
+   Dashboard / Base
+   Ownership: page background + dashboard grid wrapper + responsive gap.
+
+   Extraído de dashboard-role-shared.css (Fase Cleanup / 2026-06-16).
+   Todos los submódulos del dashboard importan DESPUÉS de este archivo.
+   ========================================================================== */
+
+/* ============================= */
+/* PAGE BACKGROUND               */
+/* ============================= */
+body.app-page {
+    background: var(--bg-page);
+}
+
+/* ============================= */
+/* DASHBOARD BASE                */
+/* ============================= */
+.role-dashboard {
+    display: grid;
+    gap: 1.25rem;
+    animation: dashboardFadeIn 0.35s ease both;
+}
+
+/* ============================= */
+/* RESPONSIVE — BASE DASHBOARD   */
+/* ============================= */
+
+/* — Mobile base (< 640px) — */
+@media (max-width: 639px) {
+    .role-dashboard {
+        gap: 0.85rem;
+    }
+}
+
+/* — Tablet (640px – 1023px) — */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .role-dashboard {
+        gap: 1rem;
+    }
+}

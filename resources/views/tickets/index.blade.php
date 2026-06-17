@@ -302,11 +302,15 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
                     @empty
                     <tr>
                         <td colspan="7" class="tickets-empty-cell">
-                            <div class="empty-state">
-                                <p class="empty-state__title">No hay tickets para mostrar</p>
-                                <p class="empty-state__note">Prueba ajustar o limpiar filtros para ampliar resultados.</p>
+                            <x-empty-state
+                                base-class="empty-state"
+                                title="No hay tickets para mostrar"
+                                note="Prueba ajustar o limpiar filtros para ampliar resultados."
+                                title-class="empty-state__title"
+                                note-class="empty-state__note"
+                            >
                                 <a href="{{ route('tickets.create') }}" class="btn-primary">Crear primer ticket</a>
-                            </div>
+                            </x-empty-state>
                         </td>
                     </tr>
                     @endforelse

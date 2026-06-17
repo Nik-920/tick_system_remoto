@@ -1,0 +1,83 @@
+/* ==========================================================================
+   Dashboard / QR & Mini Status Cards
+   ========================================================================== */
+
+/* ============================= */
+/* 🃏 MINI CARDS (QR STATUS)     */
+/* ============================= */
+
+/* QR dots */
+.qr-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.dot-gray {
+    background: #94a3b8;
+}
+
+.dot-amber {
+    background: #d97706;
+}
+
+.dot-red {
+    background: #dc2626;
+}
+
+.dot-green {
+    background: #059669;
+}
+
+.dash-mini-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    transition: var(--transition);
+}
+
+.dash-mini-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: var(--shadow-sm);
+}
+
+/* !important preserved: overrides p:first-child / p:nth-child(2) legacy selectors */
+.dash-mini-label {
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: var(--text-faint, #94a3b8) !important;
+    margin-bottom: 0.3rem !important;
+}
+
+/* !important preserved: same legacy selector conflict */
+.dash-mini-val {
+    font-size: 1.75rem !important;
+    font-weight: 900 !important;
+    color: var(--text-primary) !important;
+    line-height: 1 !important;
+}
+
+.dash-mini-val--amber {
+    color: #d97706 !important;
+}
+
+.dash-mini-val--red {
+    color: #dc2626 !important;
+}
+
+.dash-mini-val--green {
+    color: #059669 !important;
+}
+
+/* ── Dark mode ── */
+[data-theme="dark"] .dash-mini-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
