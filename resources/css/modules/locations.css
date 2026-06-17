@@ -1881,19 +1881,15 @@
 }
 
 .loc-aside-card__body {
-    padding: 1rem;
+    padding: 1.25rem 1.25rem 1rem;
 }
 
 .loc-aside-card__footer {
     margin: 0;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.25rem;
     border-top: 1px solid #f1f5f9;
     font-size: 0.875rem;
     color: var(--text-muted);
-}
-
-.loc-aside-card__body {
-    padding: 1rem;
 }
 
 .loc-aside-card__empty {
@@ -1984,7 +1980,7 @@
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 0.75rem;
+    gap: 0;
 }
 
 .loc-top-list__item {
@@ -1993,6 +1989,13 @@
     justify-content: space-between;
     gap: 0.5rem;
     font-size: 0.875rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.loc-top-list__item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .loc-top-list__meta {
@@ -2218,6 +2221,7 @@
 [data-theme="dark"] .loc-activity-item__time  { color: var(--text-muted); }
 
 /* Top incidents list */
+[data-theme="dark"] .loc-top-list__item  { border-bottom-color: var(--border-light); }
 [data-theme="dark"] .loc-top-list__code  { color: var(--text-primary); }
 [data-theme="dark"] .loc-top-list__name  { color: var(--text-muted); }
 
