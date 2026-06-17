@@ -22,6 +22,7 @@ use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
 use App\Support\Tickets\DuplicateExplanationPresenter;
+use App\ViewModels\Tickets\TicketShowViewModel;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -209,13 +210,18 @@ class TicketController extends Controller
         $canEditOperational = $currentUser instanceof User
             && $currentUser->can('updateMaintenance', $ticket);
 
+        $vm = new TicketShowViewModel(
+            ticket: $ticket,
+            availableTransitions: $availableTransitions,
+            isMaintenance: $isMaintenance,
+            isAvailableForClaim: $isAvailableForClaim,
+            canEditOperational: $canEditOperational,
+        );
+
         return view('tickets.show', [
             'ticket' => $ticket,
-            'availableTransitions' => $availableTransitions,
+            'vm' => $vm,
             'maintenanceUsers' => $maintenanceUsers,
-            'isMaintenance' => $isMaintenance,
-            'isAvailableForClaim' => $isAvailableForClaim,
-            'canEditOperational' => $canEditOperational,
             'categories' => $canEditOperational
                 ? Category::query()->orderBy('name', 'asc')->get()
                 : collect(),
