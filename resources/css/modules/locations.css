@@ -1216,14 +1216,78 @@
 
 /* QR / Edit module */
 [data-theme="dark"] .locs-qr-shell,
+[data-theme="dark"] .locs-qr-section,
 [data-theme="dark"] .locs-danger-zone,
 [data-theme="dark"] .locs-edit-form-card {
     background: var(--bg-surface);
     border-color: var(--border-default);
 }
 
+/* QR grid dividers */
+[data-theme="dark"] .locs-qr-grid {
+    border-bottom-color: var(--border-light);
+}
+
 /* QR stats */
-[data-theme="dark"] .locs-qr-stat { border-color: var(--border-light); }
+[data-theme="dark"] .locs-qr-stat {
+    border-color: var(--border-light);
+}
+
+[data-theme="dark"] .locs-qr-stat:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+/* QR date value */
+[data-theme="dark"] .locs-qr-stat-val {
+    color: var(--text-primary);
+}
+
+/* QR token monospace */
+[data-theme="dark"] .locs-qr-token {
+    color: var(--text-muted) !important;
+}
+
+/* QR large blue numbers */
+[data-theme="dark"] .locs-qr-stat-val--blue {
+    color: #60a5fa;
+}
+
+/* QR error alert */
+[data-theme="dark"] .locs-qr-error {
+    background: rgba(185,28,28,0.12);
+    border-color: rgba(252,165,165,0.25);
+    color: #fca5a5;
+}
+
+/* QR actions footer */
+[data-theme="dark"] .locs-qr-actions {
+    background: var(--bg-soft);
+    border-top-color: var(--border-light);
+}
+
+/* QR action button — view */
+[data-theme="dark"] .locs-qr-btn-view {
+    background: rgba(239,246,255,0.08);
+    border-color: rgba(147,197,253,0.3);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .locs-qr-btn-view:hover {
+    background: rgba(219,234,254,0.12);
+    border-color: rgba(96,165,250,0.4);
+}
+
+/* QR action button — regenerate */
+[data-theme="dark"] .locs-qr-btn-regen {
+    background: rgba(240,253,244,0.08);
+    border-color: rgba(134,239,172,0.25);
+    color: #86efac;
+}
+
+[data-theme="dark"] .locs-qr-btn-regen:hover {
+    background: rgba(220,252,231,0.12);
+    border-color: rgba(74,222,128,0.35);
+}
 
 /* Sidebar hero */
 [data-theme="dark"] .locs-sidebar-hero-card {
