@@ -24,6 +24,7 @@ env:
 
 # ═══════════════════════════════════════════════
 # JOB 1 — LINT & CODE QUALITY
+# Corre en paralelo con frontend-build.
 # ═══════════════════════════════════════════════
 jobs:
   lint:
@@ -43,12 +44,12 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: 📦 Cache Composer
+      - name: 📦 Cache Composer (packages)
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: 📦 Instalar dependencias PHP
         run: composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader --no-scripts
@@ -58,7 +59,6 @@ jobs:
 
       - name: ✅ Laravel Pint (Code Style)
         run: vendor/bin/pint --test
-        continue-on-error: true
 
       - name: Preparar .env para PHPStan
         run: cp .env.testing .env
@@ -70,84 +70,77 @@ jobs:
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
         continue-on-error: true
 
+      - name: 🔒 Composer Security Audit (bloqueante)
+        run: composer audit
+
 # ═══════════════════════════════════════════════
-# JOB 2 — SETUP DATABASE
+# JOB 2 — FRONTEND BUILD (paralelo con lint)
+# Compila assets y publica artefacto public/build
+# para que los jobs de Feature tests lo descarguen
+# sin recompilar en cada runner.
 # ═══════════════════════════════════════════════
-  setup-db:
-    name: 🗄️ Setup Database
+  frontend-build:
+    name: 🏗️ Frontend Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: lint
-
-    services:
-      supabase-db:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testing
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: 🐘 Setup PHP ${{ env.PHP_VERSION }}
-        uses: shivammathur/setup-php@v2
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
         with:
-          php-version: ${{ env.PHP_VERSION }}
-          extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
-          coverage: none
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: 📦 Cache Composer
-        uses: actions/cache@v4
+      - name: 📦 Instalar dependencias Node
+        run: npm ci
+
+      - name: 🏗️ Build frontend
+        run: npm run build
+
+      - name: 🔎 Verificar manifest Vite
+        run: test -f public/build/manifest.json
+
+      - name: 📤 Publicar artefacto public/build
+        uses: actions/upload-artifact@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      - name: ⚙️ Preparar .env desde .env.testing
-        run: cp .env.testing .env
-
-      - name: 📦 Instalar dependencias PHP
-        run: composer install --prefer-dist --no-progress --no-interaction
-
-      - name: Generar APP_KEY
-        run: php artisan key:generate --env=testing
-
-      - name: 🗄️ Ejecutar migraciones
-        run: php artisan migrate --force
+          name: frontend-build
+          path: public/build
+          retention-days: 1
 
 # ═══════════════════════════════════════════════
 # JOB 3 — PARALLEL TESTS BY MODULE
+# Requiere lint (gates de calidad) y frontend-build
+# (artefacto para Feature tests).
 # ═══════════════════════════════════════════════
   test-modules:
     name: 🧪 Test ${{ matrix.module }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: setup-db
+    needs: [lint, frontend-build]
     strategy:
+      fail-fast: false
       matrix:
+        # Simple path-based runners — step uses: vendor/bin/phpunit "tests/${module}"
         module:
           - 'Feature/Ai'
           - 'Feature/Api'
           - 'Feature/Auth'
+          - 'Feature/Cache'
           - 'Feature/Console'
           - 'Feature/Dashboard'
           - 'Feature/Events'
+          - 'Feature/Http'
           - 'Feature/Idempotency'
           - 'Feature/Jobs'
           - 'Feature/Listeners'
+          - 'Feature/Locks'
           - 'Feature/Root'
           - 'Feature/Services'
-          - 'Feature/Web'
           - 'Unit/Architecture'
+          - 'Unit/Dashboard'
           - 'Unit/Events'
           - 'Unit/Jobs'
           - 'Unit/Listeners'
@@ -158,6 +151,53 @@ jobs:
           - 'Unit/Queries'
           - 'Unit/Services'
           - 'Unit/Support'
+          - 'Unit/ViewModels'
+        # Feature/Web is split into 4 balanced runners (~38-58 s each locally).
+        # Explicit file lists avoid --filter name-collision with other matrix runners
+        # that also contain "Ticket", "Reporter", "Maintenance" in their class names.
+        include:
+          - module: 'Feature/Web — Reporter'
+            web_files: >-
+              tests/Feature/Web/ReporterDashboardPageTest.php
+              tests/Feature/Web/ReporterDashboardRedirectTest.php
+              tests/Feature/Web/ReporterGuidePageTest.php
+              tests/Feature/Web/ReporterHistoryPageTest.php
+              tests/Feature/Web/ReporterTicketCancelPageTest.php
+              tests/Feature/Web/ReporterTicketEditPageTest.php
+              tests/Feature/Web/ReporterTicketsPageTest.php
+              tests/Feature/Web/ReporterTicketTrackingPageTest.php
+          - module: 'Feature/Web — Ticket'
+            web_files: >-
+              tests/Feature/Web/TicketAssignmentControllerTest.php
+              tests/Feature/Web/TicketAssignmentsPageTest.php
+              tests/Feature/Web/TicketAvailableViewTest.php
+              tests/Feature/Web/TicketControllerTest.php
+              tests/Feature/Web/TicketDuplicateExplanationPageTest.php
+              tests/Feature/Web/TicketHistoryPageTest.php
+          - module: 'Feature/Web — Maintenance'
+            web_files: >-
+              tests/Feature/Web/MaintenanceDashboardReportTest.php
+              tests/Feature/Web/MaintenanceDashboardV2PageTest.php
+              tests/Feature/Web/MaintenanceTicketsBoardTest.php
+              tests/Feature/Web/MaintenanceTicketUpdateTest.php
+          - module: 'Feature/Web — Admin+Location+Other'
+            web_files: >-
+              tests/Feature/Web/AdminDashboardUxTest.php
+              tests/Feature/Web/AdminModuleAccessTest.php
+              tests/Feature/Web/CategoryDeletionGuardTest.php
+              tests/Feature/Web/CategoryDeletionUxTest.php
+              tests/Feature/Web/DashboardControllerTest.php
+              tests/Feature/Web/FcmTokenControllerTest.php
+              tests/Feature/Web/IdempotencyWebTest.php
+              tests/Feature/Web/LocationFilterTest.php
+              tests/Feature/Web/LocationQrTest.php
+              tests/Feature/Web/NotificationControllerTest.php
+              tests/Feature/Web/ProfileManagementTest.php
+              tests/Feature/Web/PublicPagesRenderTest.php
+              tests/Feature/Web/QrScanControllerTest.php
+              tests/Feature/Web/SuperAdminSafetyGuardTest.php
+              tests/Feature/Web/SuperAdminUserManagementTest.php
+              tests/Feature/Web/ThemePreferenceTest.php
 
     services:
       supabase-db:
@@ -193,40 +233,20 @@ jobs:
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, pdo, pdo_pgsql, bcmath, ctype, fileinfo, openssl, tokenizer, xml, curl
-          coverage: xdebug
+          coverage: none
 
-      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Cache Composer
+      - name: 📦 Cache Composer (packages)
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      - name: ⚙️ Preparar .env desde .env.testing
-        run: cp .env.testing .env
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: 📦 Instalar dependencias PHP
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: 📦 Instalar dependencias Node (solo en Feature tests)
-        if: startsWith(matrix.module, 'Feature')
-        run: npm ci
-
-      - name: 🏗️ Build frontend (solo en Feature tests)
-        if: startsWith(matrix.module, 'Feature')
-        run: npm run build
-
-      - name: 🔎 Verificar manifest Vite (solo en Feature tests)
-        if: startsWith(matrix.module, 'Feature')
-        run: |
-          ls -la public/build
-          test -f public/build/manifest.json
+      - name: ⚙️ Preparar .env desde .env.testing
+        run: cp .env.testing .env
 
       - name: Generar APP_KEY
         run: php artisan key:generate --env=testing
@@ -234,18 +254,37 @@ jobs:
       - name: 🗄️ Ejecutar migraciones
         run: php artisan migrate --force
 
+      - name: 📥 Descargar artefacto frontend (solo Feature tests)
+        if: startsWith(matrix.module, 'Feature')
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: public/build
+
       - name: 🧪 PHPUnit — ${{ matrix.module }}
         run: |
           module="${{ matrix.module }}"
-          if [ "${module}" = "Feature/Root" ]; then
+          web_files="${{ matrix.web_files }}"
+          # Sanitise module name for the JUnit filename (replace / and spaces and —)
+          junit_name="${module//\//-}"
+          junit_name="${junit_name// /-}"
+          junit_name="${junit_name//—/-}"
+          if [ -n "${web_files}" ]; then
+            # Explicit file list — no --filter ambiguity with other matrix runners
+            # shellcheck disable=SC2086
+            vendor/bin/phpunit \
+              $web_files \
+              --log-junit "storage/logs/junit-${junit_name}.xml" \
+              --testdox
+          elif [ "${module}" = "Feature/Root" ]; then
             vendor/bin/phpunit \
               --testsuite Feature-Root \
-              --log-junit "storage/logs/junit-Feature/Root.xml" \
+              --log-junit "storage/logs/junit-Feature-Root.xml" \
               --testdox
           else
             vendor/bin/phpunit \
               "tests/${module}" \
-              --log-junit "storage/logs/junit-${module}.xml" \
+              --log-junit "storage/logs/junit-${junit_name}.xml" \
               --testdox
           fi
 
@@ -253,7 +292,7 @@ jobs:
         uses: mikepenz/action-junit-report@v4
         if: always()
         with:
-          report_paths: storage/logs/junit-${{ matrix.module }}.xml
+          report_paths: "storage/logs/junit-*.xml"
           check_name: 'Test Results — ${{ matrix.module }}'
 
 # ═══════════════════════════════════════════════
