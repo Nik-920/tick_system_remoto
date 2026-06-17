@@ -1,0 +1,146 @@
+/* ============================================================
+   COMPONENT — Kebab / dropdown menu
+   INCIDEX
+
+   A three-dot trigger button that opens a floating action menu.
+   JS wiring lives in resources/js/components/dropdown.js.
+
+   Canonical class: .ui-dropdown
+   Legacy aliases grouped here for backward compat:
+     .tkv2-kebab   (tickets-maintenance-v2)
+     .rep-kebab    (reporter-tickets)
+
+   Excluded from grouping — different sizing / hardcoded tokens:
+     .loc-row__menu / .loc-row__dropdown  (locations.css — larger
+       trigger, border-radius 0.75rem, white bg, different z-index)
+
+   Per-module differences (min-width of menu) stay in each
+   module file via cascade (modules load after components).
+   ============================================================ */
+
+/* ── Positioning root ── */
+.ui-dropdown,
+.tkv2-kebab,
+.rep-kebab {
+    position: relative;
+}
+
+/* ── Trigger button ── */
+.ui-dropdown__trigger,
+.tkv2-kebab__btn,
+.rep-kebab__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-xs);
+    border: 1px solid transparent;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ui-dropdown__trigger:hover,
+.tkv2-kebab__btn:hover,
+.rep-kebab__btn:hover {
+    background: var(--bg-soft);
+    color: var(--text-primary);
+}
+
+.ui-dropdown__trigger:focus-visible,
+.tkv2-kebab__btn:focus-visible,
+.rep-kebab__btn:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ── Floating menu panel ── */
+.ui-dropdown__menu,
+.tkv2-kebab__menu,
+.rep-kebab__menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    padding: 0.35rem;
+    z-index: 20;
+}
+
+.ui-dropdown__menu[hidden],
+.tkv2-kebab__menu[hidden],
+.rep-kebab__menu[hidden] {
+    display: none;
+}
+
+/* ── Menu item ── */
+.ui-dropdown__item,
+.tkv2-kebab__item,
+.rep-kebab__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    background: none;
+    border-radius: var(--radius-xs);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ui-dropdown__item:hover,
+.tkv2-kebab__item:hover,
+.rep-kebab__item:hover {
+    background: var(--bg-soft);
+    color: var(--text-primary);
+}
+
+/* ── Danger variant ── */
+.ui-dropdown__item--danger,
+.rep-kebab__item--danger {
+    color: var(--high-text, #b91c1c);
+}
+
+.ui-dropdown__item--danger:hover,
+.rep-kebab__item--danger:hover {
+    background: var(--high-soft, #fef2f2);
+    color: var(--high-text, #b91c1c);
+}
+
+/* ── Disabled / "coming soon" variant ── */
+.ui-dropdown__item--disabled,
+.ui-dropdown__item:disabled,
+.rep-kebab__item--soon,
+.rep-kebab__item:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ui-dropdown__item--disabled:hover,
+.ui-dropdown__item:disabled:hover,
+.rep-kebab__item--soon:hover,
+.rep-kebab__item:disabled:hover {
+    background: none;
+    color: var(--text-secondary);
+}
+
+/* ── Touch target boost on mobile ── */
+@media (max-width: 640px) {
+    .ui-dropdown__trigger,
+    .tkv2-kebab__btn,
+    .rep-kebab__btn {
+        width: 40px;
+        height: 40px;
+    }
+}

@@ -24,15 +24,15 @@
    Each tone exposes a soft surface, a readable foreground and a
    solid hue (rails, dots, fills). Foregrounds clear ≥4.5:1 on
    their soft surface, so colour is never the only signal. */
-.rep-tone-primary { --r-soft: #eff6ff; --r-fg: #1d4ed8; --r-solid: #2563eb; }
-.rep-tone-success { --r-soft: #dcfce7; --r-fg: #15803d; --r-solid: #16a34a; }
-.rep-tone-info    { --r-soft: #e0f2fe; --r-fg: #0369a1; --r-solid: #0891b2; }
-.rep-tone-warning { --r-soft: #fff7ed; --r-fg: #9a3412; --r-solid: #f97316; }
-.rep-tone-purple  { --r-soft: #f3e8ff; --r-fg: #7e22ce; --r-solid: #9333ea; }
-.rep-tone-high    { --r-soft: #fee2e2; --r-fg: #b42318; --r-solid: #ef4444; }
-.rep-tone-medium  { --r-soft: #fef3c7; --r-fg: #92400e; --r-solid: #f59e0b; }
-.rep-tone-low     { --r-soft: #dcfce7; --r-fg: #15803d; --r-solid: #22c55e; }
-.rep-tone-neutral { --r-soft: #f1f5f9; --r-fg: #334155; --r-solid: #64748b; }
+.rep-tone-primary { --r-soft: var(--tone-primary-soft); --r-fg: var(--tone-primary-fg); --r-solid: var(--tone-primary-solid); }
+.rep-tone-success { --r-soft: var(--tone-success-soft); --r-fg: var(--tone-success-fg); --r-solid: var(--tone-success-solid); }
+.rep-tone-info    { --r-soft: var(--tone-info-soft);    --r-fg: var(--tone-info-fg);    --r-solid: var(--tone-info-solid);    }
+.rep-tone-warning { --r-soft: var(--tone-warning-soft); --r-fg: var(--tone-warning-fg); --r-solid: var(--tone-warning-solid); }
+.rep-tone-purple  { --r-soft: var(--tone-purple-soft);  --r-fg: var(--tone-purple-fg);  --r-solid: var(--tone-purple-solid);  }
+.rep-tone-high    { --r-soft: var(--tone-high-soft);    --r-fg: var(--tone-high-fg);    --r-solid: var(--tone-high-solid);    }
+.rep-tone-medium  { --r-soft: var(--tone-medium-soft);  --r-fg: var(--tone-medium-fg);  --r-solid: var(--tone-medium-solid);  }
+.rep-tone-low     { --r-soft: var(--tone-low-soft);     --r-fg: var(--tone-low-fg);     --r-solid: var(--tone-low-solid);     }
+.rep-tone-neutral { --r-soft: var(--tone-neutral-soft); --r-fg: var(--tone-neutral-fg); --r-solid: var(--tone-neutral-solid); }
 
 /* ============================================================
    1. PAGE HEADER

@@ -1,4 +1,5 @@
 import './bootstrap';
+import { escapeHtml } from './utils/escape';
 import { requestPermissionAndGetToken, onForegroundMessage } from './services/firebase';
 
 // Layout module: sidebar toggle, theme, dropdowns (all authenticated pages)
@@ -55,8 +56,8 @@ function showToastNotification(title, body, url = null) {
     toast.innerHTML = `
         <div class="fcm-toast-icon">🔔</div>
         <div class="fcm-toast-content">
-            <p class="fcm-toast-title">${title}</p>
-            <p class="fcm-toast-body">${body}</p>
+            <p class="fcm-toast-title">${escapeHtml(title)}</p>
+            <p class="fcm-toast-body">${escapeHtml(body)}</p>
         </div>
         <button class="fcm-toast-close" onclick="this.parentElement.remove()">✕</button>
     `;
@@ -82,13 +83,9 @@ globalThis.showToastNotification = showToastNotification;
 
 // Carga condicional de scripts por página
 const pageLoaders = [
-    { selector: '.users-page',    loader: () => import('./pages/users') },
     { selector: '.tickets-create-page', loader: () => import('./pages/tickets-create') },
-    { selector: '.ticket-show-page', loader: () => import('./pages/tickets-show') },
-    { selector: '.tickets-page',  loader: () => import('./pages/tickets') },
-    { selector: '.locations-page',   loader: () => import('./pages/locations') },
-    { selector: '.locations-index',  loader: () => import('./pages/locations') },
-    { selector: '.welcome-hero',  loader: () => import('./pages/welcome') },
+    { selector: '.ticket-show-page',    loader: () => import('./pages/tickets-show') },
+    { selector: '.locations-index',     loader: () => import('./pages/locations') },
 ];
 
 function runPageLoaders() {

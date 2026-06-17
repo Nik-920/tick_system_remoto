@@ -21,15 +21,15 @@
    Each tone exposes a soft surface, a readable foreground and a
    solid hue (for rails, dots, progress fills). Foregrounds all
    clear ≥4.5:1 on their soft surface. */
-.tkv2-tone-primary   { --tk-soft: #eff6ff; --tk-fg: #1d4ed8; --tk-solid: #2563eb; }
-.tkv2-tone-progress  { --tk-soft: #fef3c7; --tk-fg: #92400e; --tk-solid: #f59e0b; }
-.tkv2-tone-high      { --tk-soft: #fee2e2; --tk-fg: #b42318; --tk-solid: #ef4444; }
-.tkv2-tone-medium    { --tk-soft: #fef3c7; --tk-fg: #92400e; --tk-solid: #f59e0b; }
-.tkv2-tone-low       { --tk-soft: #dcfce7; --tk-fg: #15803d; --tk-solid: #22c55e; }
-.tkv2-tone-available { --tk-soft: #dcfce7; --tk-fg: #15803d; --tk-solid: #16a34a; }
-.tkv2-tone-info      { --tk-soft: #e0f2fe; --tk-fg: #0369a1; --tk-solid: #0891b2; }
-.tkv2-tone-warning   { --tk-soft: #fff7ed; --tk-fg: #9a3412; --tk-solid: #f97316; }
-.tkv2-tone-neutral   { --tk-soft: #f1f5f9; --tk-fg: #334155; --tk-solid: #64748b; }
+.tkv2-tone-primary   { --tk-soft: var(--tone-primary-soft); --tk-fg: var(--tone-primary-fg); --tk-solid: var(--tone-primary-solid); }
+.tkv2-tone-progress  { --tk-soft: var(--tone-medium-soft);  --tk-fg: var(--tone-medium-fg);  --tk-solid: var(--tone-medium-solid);  }
+.tkv2-tone-high      { --tk-soft: var(--tone-high-soft);    --tk-fg: var(--tone-high-fg);    --tk-solid: var(--tone-high-solid);    }
+.tkv2-tone-medium    { --tk-soft: var(--tone-medium-soft);  --tk-fg: var(--tone-medium-fg);  --tk-solid: var(--tone-medium-solid);  }
+.tkv2-tone-low       { --tk-soft: var(--tone-low-soft);     --tk-fg: var(--tone-low-fg);     --tk-solid: var(--tone-low-solid);     }
+.tkv2-tone-available { --tk-soft: var(--tone-success-soft); --tk-fg: var(--tone-success-fg); --tk-solid: var(--tone-success-solid); }
+.tkv2-tone-info      { --tk-soft: var(--tone-info-soft);    --tk-fg: var(--tone-info-fg);    --tk-solid: var(--tone-info-solid);    }
+.tkv2-tone-warning   { --tk-soft: var(--tone-warning-soft); --tk-fg: var(--tone-warning-fg); --tk-solid: var(--tone-warning-solid); }
+.tkv2-tone-neutral   { --tk-soft: var(--tone-neutral-soft); --tk-fg: var(--tone-neutral-fg); --tk-solid: var(--tone-neutral-solid); }
 
 /* ============================================================
    1. PAGE HEADER

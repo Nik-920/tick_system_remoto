@@ -94,4 +94,44 @@
 
     /* ── Transición global ──────────────────────────────── */
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ── Tone palette — fuente única para .mdv2-tone-*, .tkv2-tone-*, .rep-tone-* ──
+       Cada tono expone: soft (fondo suave), fg (texto/ícono ≥4.5:1 sobre soft),
+       solid (acento, rails, dots, fills). Los módulos mapean estos tokens a sus
+       APIs internas (--m-*, --tk-*, --r-*) preservando retrocompatibilidad. */
+    --tone-primary-soft:  #eff6ff;
+    --tone-primary-fg:    #1d4ed8;
+    --tone-primary-solid: #2563eb;
+
+    --tone-high-soft:     #fee2e2;
+    --tone-high-fg:       #b42318;
+    --tone-high-solid:    #ef4444;
+
+    --tone-medium-soft:   #fef3c7;
+    --tone-medium-fg:     #92400e;
+    --tone-medium-solid:  #f59e0b;
+
+    --tone-low-soft:      #dcfce7;
+    --tone-low-fg:        #15803d;
+    --tone-low-solid:     #22c55e;
+
+    --tone-success-soft:  #dcfce7;
+    --tone-success-fg:    #15803d;
+    --tone-success-solid: #16a34a;
+
+    --tone-info-soft:     #e0f2fe;
+    --tone-info-fg:       #0369a1;
+    --tone-info-solid:    #0891b2;
+
+    --tone-warning-soft:  #fff7ed;
+    --tone-warning-fg:    #9a3412;
+    --tone-warning-solid: #f97316;
+
+    --tone-neutral-soft:  #f1f5f9;
+    --tone-neutral-fg:    #334155;
+    --tone-neutral-solid: #64748b;
+
+    --tone-purple-soft:   #f3e8ff;
+    --tone-purple-fg:     #7e22ce;
+    --tone-purple-solid:  #9333ea;
 }

@@ -1,0 +1,109 @@
+/* ============================================================
+   COMPONENT — Donut chart
+   INCIDEX
+
+   Circular conic-gradient chart with a cut-out hole and an
+   optional centre overlay (total count + caption label).
+
+   Canonical class: .ui-donut
+   Legacy aliases grouped here for backward compat:
+     .mdv2-donut  (dashboard-maintenance-v2)
+     .tkv2-donut  (tickets-maintenance-v2)
+     .rep-donut   (reporter-tickets)
+
+   NOTE: loc-donut (locations.css) has no centre hole or text
+   overlay — it is kept entirely in locations.css.
+
+   Size/hole-depth differences stay in each module file via the
+   explicit width/height/inset declarations that cascade after
+   this component (modules load after components in app.css).
+   ============================================================ */
+
+/* ── Ring container ── */
+.ui-donut,
+.mdv2-donut,
+.tkv2-donut,
+.rep-donut {
+    position: relative;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Empty/no-data state ── */
+.ui-donut--empty,
+.mdv2-donut--empty,
+.tkv2-donut--empty,
+.rep-donut--empty {
+    background: var(--bg-soft);
+}
+
+/* ── Inner hole (pseudo cut-out) ── */
+.ui-donut::after,
+.mdv2-donut::after,
+.tkv2-donut::after,
+.rep-donut::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+/* ── Centre overlay (sits above the hole) ── */
+.ui-donut__center,
+.mdv2-donut__center,
+.tkv2-donut__center,
+.rep-donut__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* ── Centre: total count ── */
+.ui-donut__total,
+.mdv2-donut__total,
+.tkv2-donut__total,
+.rep-donut__total {
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+/* ── Centre: caption (e.g. "total") ── */
+.ui-donut__caption,
+.mdv2-donut__caption,
+.tkv2-donut__caption,
+.rep-donut__caption {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+}
+
+/* ── Canonical size defaults (overridden by each module) ── */
+.ui-donut {
+    width: var(--donut-size, 96px);
+    height: var(--donut-size, 96px);
+}
+
+.ui-donut::after {
+    inset: var(--donut-hole, 15px);
+}
+
+.ui-donut__total {
+    font-size: var(--donut-total-size, 1.2rem);
+}
+
+/* ── Wrap helper (donut + legend side-by-side) ── */
+.ui-donut-wrap,
+.mdv2-donut-wrap,
+.tkv2-donut-wrap,
+.rep-donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}

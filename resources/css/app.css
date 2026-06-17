@@ -30,6 +30,10 @@
 @import './components/empty-states.css';
 @import './components/danger-zone.css';
 @import './components/pagination.css';
+@import './components/donut.css';
+@import './components/legend.css';
+@import './components/kpi-card.css';
+@import './components/dropdown.css';
 
 /* ── 5. Layout & Shell ── */
 @import './layouts/app-shell.css';
@@ -40,7 +44,13 @@
 @import './modules/welcome.css';
 
 /* ── 6. Feature Modules ── */
-@import './modules/dashboard-role-shared.css';
+@import './modules/dashboard/base.css';
+@import './modules/dashboard/hero.css';
+@import './modules/dashboard/kpi.css';
+@import './modules/dashboard/tables.css';
+@import './modules/dashboard/qr.css';
+@import './modules/dashboard/cards.css';
+@import './modules/dashboard/sections.css';
 /* Dashboard Maintenance V2 — the official maintenance dashboard (also reachable
    via the /dashboard/maintenance-v2 alias). */
 @import './modules/dashboard-maintenance-v2.css';

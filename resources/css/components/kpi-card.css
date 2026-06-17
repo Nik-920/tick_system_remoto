@@ -1,0 +1,95 @@
+/* ============================================================
+   COMPONENT — KPI card (icon + value + label, row layout)
+   INCIDEX
+
+   A surface card that pairs a toned icon square on the left
+   with a value + label text stack on the right. Used in quick-
+   summary rows across maintenance and reporter modules.
+
+   Canonical class: .ui-kpi-card
+   Legacy aliases grouped here for backward compat:
+     .tkv2-stat   (tickets-maintenance-v2)
+     .rep-kpi     (reporter-tickets / reporter-dashboard)
+
+   Excluded from grouping — different layout or hardcoded tokens:
+     .mdv2-kpi    (flex-column layout — stays in dashboard-maintenance-v2.css)
+     .loc-kpi-card (hardcoded white bg + 1rem border-radius — stays in locations.css)
+     .role-kpi-card (text-only layout — stays in dashboard-role-shared.css)
+
+   Per-module differences (icon size, gap) stay in each module
+   file — they cascade after this component in app.css.
+   ============================================================ */
+
+/* ── Card shell ── */
+.ui-kpi-card,
+.tkv2-stat,
+.rep-kpi {
+    display: flex;
+    align-items: center;
+    gap: var(--kpi-gap, 0.85rem);
+    padding: var(--kpi-padding, 1rem);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+
+.ui-kpi-card:hover,
+.tkv2-stat:hover,
+.rep-kpi:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+/* ── Icon square ── */
+.ui-kpi-card__icon,
+.tkv2-stat__icon,
+.rep-kpi__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+/* ── Main numeric value ── */
+.ui-kpi-card__value,
+.tkv2-stat__value,
+.rep-kpi__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+
+/* ── Descriptive label ── */
+.ui-kpi-card__label,
+.tkv2-stat__label,
+.rep-kpi__label {
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+/* ── Optional sub-line / note ── */
+.ui-kpi-card__meta,
+.ui-kpi-card__note {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    .ui-kpi-card,
+    .ui-kpi-card:hover,
+    .tkv2-stat,
+    .tkv2-stat:hover,
+    .rep-kpi,
+    .rep-kpi:hover {
+        transition: none;
+        transform: none;
+    }
+}

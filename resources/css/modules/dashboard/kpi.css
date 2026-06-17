@@ -1,0 +1,137 @@
+/* ==========================================================================
+   Dashboard / KPI Cards
+   .role-kpi-grid, .role-kpi-card, .kpi-icon-bg
+   Extraído de dashboard-role-shared.css — Fase C2 (2026-06-16)
+   ========================================================================== */
+
+.role-kpi-card {
+    border-radius: var(--radius);
+    padding: 1.1rem 1.1rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    animation: dashboardRise 0.3s ease both;
+    display: flex;
+    flex-direction: column;
+    min-height: 130px;
+}
+
+.role-kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.role-dashboard-admin .role-kpi-card::before {
+    background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+}
+
+.role-dashboard-maintenance .role-kpi-card::before {
+    background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.role-dashboard-reporter .role-kpi-card::before {
+    background: linear-gradient(90deg, #0891b2, #22d3ee);
+}
+
+.role-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: #cbd5e1;
+}
+
+/* Label (primer p) */
+.role-kpi-card p:first-child {
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+}
+
+/* Valor (segundo p) */
+.role-kpi-card p:nth-child(2) {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: auto;
+}
+
+/* Hint (tercer p) */
+.role-kpi-card p:last-of-type {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-top: 0.55rem;
+    padding-right: 1.8rem;
+}
+
+/* Ícono decorativo de fondo */
+.kpi-icon-bg {
+    position: absolute;
+    bottom: 0.7rem;
+    right: 0.85rem;
+    font-size: 1.5rem;
+    opacity: 0.09;
+    color: var(--text-primary);
+    pointer-events: none;
+    line-height: 1;
+}
+
+/* Animación escalonada */
+.role-kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.role-kpi-card:nth-child(2) { animation-delay: 0.10s; }
+.role-kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.role-kpi-card:nth-child(4) { animation-delay: 0.20s; }
+.role-kpi-card:nth-child(5) { animation-delay: 0.25s; }
+.role-kpi-card:nth-child(6) { animation-delay: 0.30s; }
+.role-kpi-card:nth-child(7) { animation-delay: 0.35s; }
+
+/* — Mobile (< 640px) — */
+@media (max-width: 639px) {
+    .role-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.65rem !important;
+    }
+
+    .role-kpi-card p:nth-child(2) {
+        font-size: 1.65rem;
+    }
+}
+
+/* — Tablet (640px – 1023px) — */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .role-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* — Desktop (≥ 1024px) — */
+@media (min-width: 1024px) {
+    .role-kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* Maintenance tiene 5 KPIs */
+    .role-dashboard-maintenance .role-kpi-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+[data-theme="dark"] .role-kpi-card {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .role-kpi-card:hover {
+    border-color: rgba(255,255,255,0.18);
+}

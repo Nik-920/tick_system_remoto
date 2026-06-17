@@ -615,6 +615,20 @@
 
 
 
+/* ==========================================================================
+   Users / Page Layout Utilities
+   Moved from dashboard-role-shared.css — Fase C1 (2026-06-15).
+   Selector .users-page confirmed in resources/views/users/index.blade.php.
+   ========================================================================== */
+@layer utilities {
+    .users-page {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+}
+
 /* ============================================================
    DARK MODE OVERRIDES — Users
    ============================================================ */

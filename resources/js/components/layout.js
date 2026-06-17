@@ -2,6 +2,7 @@
  * Layout Module — Sidebar toggle, theme switch, dropdowns, notificaciones
  * Loaded on every authenticated page via app.js
  */
+import { escapeHtml, safeUrl } from '../utils/escape';
 
 const logStorageError = (error) => {
     console.debug('Storage access failed', error);
@@ -244,22 +245,26 @@ function initNotifications() {
         }
 
         notifList.innerHTML = notifications.map(n => {
-        const iconGlyph = normalizeIcon(n.icon);
-        const safeTitle = stripLeadingIcon(n.title, iconGlyph);
-        return `
-        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${n.id}" role="listitem">
-            <a class="notif-item-link" href="${n.url || '#'}">
+            const iconGlyph  = normalizeIcon(n.icon);
+            const titleText  = escapeHtml(stripLeadingIcon(n.title, iconGlyph));
+            const bodyText   = escapeHtml(n.body);
+            const timeText   = escapeHtml(n.time ?? '');
+            const safeId     = escapeHtml(n.id);
+            const href       = safeUrl(n.url);
+            return `
+        <div class="notif-item ${n.read_at ? 'notif-item--read' : 'notif-item--unread'}" data-id="${safeId}" role="listitem">
+            <a class="notif-item-link" href="${href}">
                 <span class="notif-item-icon-wrap" aria-hidden="true">
                     <span class="notif-item-icon">${iconGlyph}</span>
                 </span>
                 <div class="notif-item-content">
-                    <p class="notif-item-title">${safeTitle}</p>
-                    <p class="notif-item-body">${n.body}</p>
-                    <span class="notif-item-time">${n.time || ''}</span>
+                    <p class="notif-item-title">${titleText}</p>
+                    <p class="notif-item-body">${bodyText}</p>
+                    <span class="notif-item-time">${timeText}</span>
                 </div>
             </a>
             ${n.read_at ? '<span class="notif-item-read-label">Leído</span>' : `
-            <button class="notif-item-read-btn" type="button" data-id="${n.id}" title="Marcar como leída" aria-label="Marcar notificación como leída">
+            <button class="notif-item-read-btn" type="button" data-id="${safeId}" title="Marcar como leída" aria-label="Marcar notificación como leída">
                 ✓
             </button>`}
         </div>
