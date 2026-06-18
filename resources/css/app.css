@@ -73,6 +73,8 @@
 @import './modules/reporter-dashboard.css';
 /* "Guía del reporter" — static help page (static visual phase). */
 @import './modules/reporter-guide.css';
+/* "Comunidad del campus" — reporter social feed skeleton v1. */
+@import './modules/reporter-community.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';
