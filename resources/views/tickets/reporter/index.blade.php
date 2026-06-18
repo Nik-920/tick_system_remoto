@@ -188,6 +188,11 @@
                                         {{ $t['priority_label'] }}
                                     </span>
                                 </span>
+                                @if ($t['is_duplicate'] ?? false)
+                                    <span class="rep-badge rep-badge-duplicate rep-tone-warning" title="La IA detectó un ticket similar a este reporte">
+                                        ⚠ Posible duplicado
+                                    </span>
+                                @endif
                             </div>
                         </div>
 
@@ -220,6 +225,9 @@
                                             <x-lucide-more-vertical width="18" height="18" stroke-width="2" />
                                         </button>
                                         <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
+                                            <a href="{{ route('tickets.show', $t['id']) }}" class="rep-kebab__item">
+                                                <x-lucide-file-text width="15" height="15" stroke-width="2" /> Ficha completa
+                                            </a>
                                             @if ($t['can_edit'])
                                                 <a href="{{ route('reporter.tickets.edit', $t['id']) }}" class="rep-kebab__item">
                                                     <x-lucide-edit width="15" height="15" stroke-width="2" /> Editar

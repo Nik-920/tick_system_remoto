@@ -55,6 +55,28 @@
         </div>
     @endif
 
+    @if (session('duplicate_precheck'))
+        <div class="rep-edit__alert-warning" role="alert" aria-live="assertive">
+            <x-lucide-alert-triangle width="18" height="18" stroke-width="2" aria-hidden="true" />
+            <div>
+                <p class="rep-edit__alert-title">Posible reporte relacionado</p>
+                <p>Este reporte podría estar relacionado con otro ticket similar. Revísalo antes de continuar o crea el ticket si consideras que es un caso distinto.</p>
+                <dl class="rep-edit__alert-meta">
+                    <dt>Ticket similar:</dt>
+                    <dd>{{ session('duplicate_precheck')['matchedTitle'] }}</dd>
+                    <dt>Estado:</dt>
+                    <dd>{{ session('duplicate_precheck')['matchedState'] }}</dd>
+                    <dt>Motivo:</dt>
+                    <dd>{{ session('duplicate_precheck')['reason'] }}</dd>
+                </dl>
+                <p class="rep-edit__alert-note">Al hacer clic en <strong>Crear ticket</strong> confirmarás que este es un caso distinto.</p>
+                @if (session('duplicate_precheck.hadAttachments'))
+                    <p class="rep-edit__alert-note">Si habías seleccionado evidencias, vuelve a adjuntarlas antes de continuar. Por seguridad, el navegador no conserva archivos después de mostrar esta advertencia.</p>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- ── Two-column layout ── --}}
     <div class="rep-edit__layout">
 
@@ -69,6 +91,9 @@
                   novalidate>
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                @if (session('duplicate_precheck'))
+                    <input type="hidden" name="duplicate_ack" value="1">
+                @endif
 
                 {{-- ─────────────────────────────────────────────
                      SECTION 1 — Describe la incidencia
