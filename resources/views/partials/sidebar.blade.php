@@ -100,6 +100,13 @@
                         <span class="sidebar-label">Historial</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('reporter.community') }}"
+                       class="sidebar-link {{ request()->routeIs('reporter.community') ? 'active' : '' }}">
+                        <x-lucide-users class="sidebar-icon" width="18" height="18" stroke-width="2" />
+                        <span class="sidebar-label">Comunidad</span>
+                    </a>
+                </li>
                 @endif
             </ul>
         </div>
