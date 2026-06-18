@@ -43,4 +43,55 @@
 
 </section>
 
+<script>
+(function () {
+    function initCarousels() {
+        document.querySelectorAll('[data-comm-car]').forEach(function (car) {
+            if (car.dataset.carInit) return;
+            car.dataset.carInit = '1';
+
+            var slides   = Array.from(car.querySelectorAll('[data-car-slide]'));
+            var dots     = Array.from(car.querySelectorAll('[data-car-dot]'));
+            var prevBtn  = car.querySelector('[data-car-prev]');
+            var nextBtn  = car.querySelector('[data-car-next]');
+            var current  = 0;
+            var total    = slides.length;
+
+            function show(idx) {
+                idx = ((idx % total) + total) % total;
+                slides.forEach(function (s, i) {
+                    s.classList.toggle('comm-thumb-car__slide--visible', i === idx);
+                });
+                dots.forEach(function (d, i) {
+                    d.classList.toggle('comm-thumb-car__dot--on', i === idx);
+                });
+                current = idx;
+            }
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    show(current - 1);
+                });
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    show(current + 1);
+                });
+            }
+            dots.forEach(function (d, i) {
+                d.addEventListener('click', function () { show(i); });
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCarousels);
+    } else {
+        initCarousels();
+    }
+}());
+</script>
+
 @endsection

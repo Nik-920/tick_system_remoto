@@ -3,6 +3,11 @@
      No user data (reporter/assignee) is present in $post by design.
      Social actions (Me interesa / Comentar / Guardar) are placeholders.
 ──────────────────────────────────────────────────────────── --}}
+@php
+    $carImgs  = array_values(array_filter($post['media_images'] ?? [], fn ($u) => $u !== ''));
+    $carCount = count($carImgs);
+@endphp
+
 <article class="comm-post" aria-label="Reporte público: {{ $post['title'] }}">
     <div class="comm-post__body">
 
@@ -51,7 +56,7 @@
             {{-- Location --}}
             @if ($post['location'] !== null)
                 <div class="comm-post__loc-row">
-                    <x-lucide-map-pin class="comm-post__loc-icon" width="13" height="13" stroke-width="2" />
+                    <x-lucide-map-pin class="comm-post__loc-icon" width="12" height="12" stroke-width="2" />
                     <span class="comm-post__loc-label">{{ $post['location']['room_code'] }}</span>
                     <span class="comm-post__loc-sep" aria-hidden="true">·</span>
                     <span class="comm-post__loc-label">{{ $post['location']['building'] }}</span>
@@ -86,24 +91,55 @@
 
         </div>
 
-        {{-- Thumbnail --}}
+        {{-- Thumbnail / image carousel --}}
         <div class="comm-post__media">
-            @if ($post['thumbnail_url'] !== null && str_starts_with((string) $post['thumbnail_type'], 'image'))
-                <img
-                    src="{{ $post['thumbnail_url'] }}"
-                    alt="Evidencia del reporte"
-                    class="comm-post__thumb-img"
-                    loading="lazy"
-                    width="144"
-                    height="112"
-                >
+            @if ($carCount > 0)
+                <div class="comm-thumb-car" data-comm-car>
+
+                    {{-- Slides --}}
+                    @foreach ($carImgs as $carIdx => $carUrl)
+                        <div class="comm-thumb-car__slide {{ $carIdx === 0 ? 'comm-thumb-car__slide--visible' : '' }}"
+                             data-car-slide="{{ $carIdx }}">
+                            <img
+                                src="{{ $carUrl }}"
+                                alt="Evidencia {{ $carIdx + 1 }} del reporte"
+                                class="comm-post__thumb-img"
+                                loading="{{ $carIdx === 0 ? 'eager' : 'lazy' }}"
+                                width="144"
+                                height="112"
+                            >
+                        </div>
+                    @endforeach
+
+                    {{-- Prev / Next arrows (only when >1 image) --}}
+                    @if ($carCount > 1)
+                        <button type="button"
+                                class="comm-thumb-car__arrow comm-thumb-car__arrow--prev"
+                                data-car-prev
+                                aria-label="Imagen anterior">
+                            <x-lucide-chevron-left width="12" height="12" stroke-width="2.5" />
+                        </button>
+                        <button type="button"
+                                class="comm-thumb-car__arrow comm-thumb-car__arrow--next"
+                                data-car-next
+                                aria-label="Imagen siguiente">
+                            <x-lucide-chevron-right width="12" height="12" stroke-width="2.5" />
+                        </button>
+
+                        {{-- Navigation dots --}}
+                        <div class="comm-thumb-car__dots" aria-hidden="true">
+                            @foreach ($carImgs as $carIdx => $carUrl)
+                                <span class="comm-thumb-car__dot {{ $carIdx === 0 ? 'comm-thumb-car__dot--on' : '' }}"
+                                      data-car-dot="{{ $carIdx }}"></span>
+                            @endforeach
+                        </div>
+                    @endif
+
+                </div>
             @else
                 <div class="comm-post__thumb-placeholder" aria-hidden="true">
                     <x-lucide-image width="28" height="28" stroke-width="1.5" />
                 </div>
-            @endif
-            @if ($post['media_count'] > 1)
-                <span class="comm-post__photo-count">+{{ $post['media_count'] - 1 }}</span>
             @endif
         </div>
 
