@@ -203,13 +203,19 @@ final class CommunityFeedQuery
     }
 
     /**
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool}
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>}
      */
     private function toPost(Ticket $ticket): array
     {
         $firstMedia = $ticket->media->first();
         $mediaCount = $ticket->media->count();
         $state = (string) $ticket->state;
+
+        $mediaImages = $ticket->media
+            ->filter(fn ($m) => str_starts_with((string) $m->file_type, 'image'))
+            ->values()
+            ->map(fn ($m) => (string) $m->file_url)
+            ->all();
 
         return [
             'id' => (string) $ticket->id,
@@ -240,6 +246,7 @@ final class CommunityFeedQuery
             'thumbnail_type' => $firstMedia?->file_type !== null ? (string) $firstMedia->file_type : null,
             'media_count' => $mediaCount,
             'has_media' => $mediaCount > 0,
+            'media_images' => $mediaImages,
         ];
     }
 
