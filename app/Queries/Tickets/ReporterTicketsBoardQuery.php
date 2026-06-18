@@ -91,7 +91,15 @@ final class ReporterTicketsBoardQuery
         $listTotal = $this->scopedForList()->count();
         $page = $this->currentPage($listTotal);
         $rows = $this->scopedForList()
-            ->with(['location', 'category'])
+            ->with([
+                'location',
+                'category',
+                'embedding' => function ($q): void {
+                    // Only the two columns that drive effective_duplicate; skip
+                    // embedding_vector (a potentially large JSON array).
+                    $q->select(['id', 'ticket_id', 'is_duplicate', 'review_status']);
+                },
+            ])
             ->forPage($page, self::PER_PAGE)
             ->get();
 
@@ -427,6 +435,7 @@ final class ReporterTicketsBoardQuery
             'can_edit' => $canEdit,
             'can_cancel' => $canCancel,
             'show_actions_menu' => $canEdit || $canCancel,
+            'is_duplicate' => $ticket->relationLoaded('embedding') && ($ticket->embedding?->effective_duplicate === true),
         ];
     }
 

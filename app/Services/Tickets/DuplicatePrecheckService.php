@@ -1,0 +1,134 @@
+<?php
+
+namespace App\Services\Tickets;
+
+use App\Models\Ticket;
+use App\Models\User;
+use Illuminate\Support\Str;
+
+final class DuplicatePrecheckService
+{
+    private const WINDOW_HOURS = 48;
+
+    private const OVERLAP_FLAG = 0.5;
+
+    private const OVERLAP_SOFT = 0.3;
+
+    /** @var string[] */
+    private const ACTIVE_STATES = [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS];
+
+    /** @var string[] */
+    private const STOP_WORDS = [
+        'el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'en', 'y', 'a', 'no',
+        'se', 'que', 'con', 'por', 'al', 'es', 'su', 'le', 'lo', 'si', 'o', 'e',
+        'ni', 'but', 'the', 'and', 'of', 'to', 'is', 'in', 'it', 'for',
+    ];
+
+    /**
+     * Cheap deterministic precheck — no embeddings, no AI calls.
+     *
+     * Returns a reporter-safe summary when a recently-created active ticket in the
+     * same location/category has enough title overlap with the submitted payload.
+     * Returns null if no suspicious match is found.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{matchedTitle: string, matchedState: string, reason: string}|null
+     */
+    public function check(array $payload, User $reporter): ?array
+    {
+        $title = trim((string) ($payload['title'] ?? ''));
+        $locationId = (string) ($payload['location_id'] ?? '');
+        $categoryId = (string) ($payload['category_id'] ?? '');
+
+        if ($title === '' || $locationId === '' || $categoryId === '') {
+            return null;
+        }
+
+        $candidates = Ticket::query()
+            ->whereIn('state', self::ACTIVE_STATES)
+            ->where('location_id', $locationId)
+            ->where('category_id', $categoryId)
+            ->where('created_at', '>=', now()->subHours(self::WINDOW_HOURS))
+            ->select(['id', 'title', 'state'])
+            ->latest('created_at')
+            ->limit(10)
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
+            if ($overlap >= self::OVERLAP_FLAG) {
+                return $this->buildResult(
+                    (string) $candidate->title,
+                    (string) $candidate->state,
+                    'Misma ubicación, categoría y título similar'
+                );
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
+            if ($overlap >= self::OVERLAP_SOFT) {
+                return $this->buildResult(
+                    (string) $candidate->title,
+                    (string) $candidate->state,
+                    'Misma ubicación y categoría con descripción relacionada'
+                );
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{matchedTitle: string, matchedState: string, reason: string}
+     */
+    private function buildResult(string $rawTitle, string $rawState, string $reason): array
+    {
+        return [
+            'matchedTitle' => Str::limit($rawTitle, 80),
+            'matchedState' => $this->stateLabel($rawState),
+            'reason' => $reason,
+        ];
+    }
+
+    private function jaccardOverlap(string $a, string $b): float
+    {
+        $tokensA = $this->tokenize($a);
+        $tokensB = $this->tokenize($b);
+
+        if ($tokensA === [] || $tokensB === []) {
+            return 0.0;
+        }
+
+        $intersection = array_intersect($tokensA, $tokensB);
+        $union = array_unique(array_merge($tokensA, $tokensB));
+
+        return count($intersection) / count($union);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function tokenize(string $text): array
+    {
+        $text = mb_strtolower($text);
+        $text = (string) preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
+        $tokens = preg_split('/\s+/', trim($text), -1, PREG_SPLIT_NO_EMPTY);
+        $tokens = is_array($tokens) ? $tokens : [];
+
+        return array_values(array_diff($tokens, self::STOP_WORDS));
+    }
+
+    private function stateLabel(string $state): string
+    {
+        return match ($state) {
+            Ticket::STATE_OPEN => 'Abierto',
+            Ticket::STATE_IN_PROGRESS => 'En progreso',
+            default => 'Activo',
+        };
+    }
+}
