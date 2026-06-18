@@ -320,9 +320,17 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow-xs);
     transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    /* Establish a base stacking context so z-index on the kebab menu is
+       always relative to the list, not to a sibling card's transform. */
+    z-index: 0;
 }
 
 .rep-item:hover { box-shadow: var(--shadow-md); border-color: #d4dce8; transform: translateY(-1px); }
+
+/* Lift the card above its siblings while its kebab menu is open so the
+   floating panel is never clipped by a neighbouring card's stacking context. */
+.rep-item:has(.rep-kebab__menu:not([hidden])),
+.rep-item.rep-item--menu-open { z-index: 10; }
 
 /* Status rail — paired with the text status badge so meaning never relies on colour alone. */
 .rep-item__rail {
