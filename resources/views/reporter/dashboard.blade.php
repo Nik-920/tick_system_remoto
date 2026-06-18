@@ -38,21 +38,11 @@
             <p class="rep-hero__subtitle">
                 Aquí puedes crear y dar seguimiento a todas las incidencias que has reportado.
             </p>
-            <a href="{{ route('tickets.create') }}" class="rep-hero__cta">
-                <x-lucide-plus width="17" height="17" stroke-width="2.5" />
-                Crear nuevo ticket
-            </a>
         </div>
-        <div class="rep-hero__art" aria-hidden="true">
-            <div class="rep-hero__chip">
-                <span class="rep-hero__chip-icon"><x-lucide-circle-check width="18" height="18" stroke-width="2.5" /></span>
-                <div class="rep-hero__chip-lines">
-                    <span class="rep-hero__chip-bar"></span>
-                    <span class="rep-hero__chip-bar rep-hero__chip-bar--short"></span>
-                </div>
-            </div>
-            <x-lucide-sparkles class="rep-hero__sparkle" width="22" height="22" stroke-width="2" />
-        </div>
+        <a href="{{ route('tickets.create') }}" class="rep-hero__cta">
+            <x-lucide-plus width="17" height="17" stroke-width="2.5" />
+            Crear nuevo ticket
+        </a>
     </section>
 
     {{-- ── 2. KPI STRIP ──────────────────────────────────────────── --}}
