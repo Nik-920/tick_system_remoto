@@ -210,7 +210,7 @@ class DuplicatePrecheckWebTest extends TestCase
             'idempotency_key' => (string) Str::uuid(),
         ]);
 
-        $precheck = $response->getSession()->get('duplicate_precheck');
+        $precheck = session('duplicate_precheck');
         $this->assertIsArray($precheck);
         $this->assertArrayHasKey('matchedTitle', $precheck);
         $this->assertArrayHasKey('matchedState', $precheck);
@@ -324,7 +324,7 @@ class DuplicatePrecheckWebTest extends TestCase
         $response->assertSessionHas('duplicate_precheck');
         $this->assertDatabaseCount('tickets', 1);
 
-        $precheck = $response->getSession()->get('duplicate_precheck');
+        $precheck = session('duplicate_precheck');
         $this->assertIsArray($precheck);
         $this->assertTrue($precheck['hadAttachments']);
 
@@ -362,7 +362,7 @@ class DuplicatePrecheckWebTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('duplicate_precheck');
 
-        $precheck = $response->getSession()->get('duplicate_precheck');
+        $precheck = session('duplicate_precheck');
         $this->assertIsArray($precheck);
         $this->assertFalse($precheck['hadAttachments']);
 
