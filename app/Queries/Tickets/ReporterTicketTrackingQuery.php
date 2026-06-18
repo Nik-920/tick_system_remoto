@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\Tickets\DuplicateExplanationPresenter;
 use App\ViewModels\Tickets\ReporterTicketTrackingViewModel;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
@@ -59,6 +60,7 @@ final class ReporterTicketTrackingQuery
                 'assignee',
                 'stateHistory' => fn ($q) => $q->with('changedBy')->oldest('created_at'),
                 'media' => fn ($q) => $q->latest('created_at'),
+                'embedding.matchedTicket',
             ])
             ->findOrFail($ticketId);
 
@@ -74,6 +76,7 @@ final class ReporterTicketTrackingQuery
             details: $this->details(),
             evidence: $this->evidence(),
             notice: 'Recibirás una notificación cuando el estado de tu ticket cambie.',
+            duplicate: $this->duplicateNotice(),
         );
     }
 
@@ -320,6 +323,36 @@ final class ReporterTicketTrackingQuery
             ->all();
 
         return ['count' => $media->count(), 'items' => $items];
+    }
+
+    // ── Duplicate notice (reporter-safe) ────────────────────────
+
+    /**
+     * Builds a reporter-safe payload from DuplicateExplanationPresenter.
+     * Strips the matched-ticket URL (reporter cannot navigate to another
+     * reporter's ticket) and omits technicalDetails (admin-only content).
+     *
+     * @return array{matchedTitle: string, matchedState: string, similarity: string|null, summary: string, topReasons: array<int, mixed>, warnings: array<int, mixed>, isFallback: bool}|null
+     */
+    private function duplicateNotice(): ?array
+    {
+        $explanation = DuplicateExplanationPresenter::present($this->ticket);
+
+        if (! ($explanation['visible'] ?? false)) {
+            return null;
+        }
+
+        $matched = $explanation['matchedTicket'];
+
+        return [
+            'matchedTitle' => $matched !== null ? (string) $matched['title'] : 'Ticket relacionado',
+            'matchedState' => $matched !== null ? $this->stateLabel((string) $matched['state']) : '—',
+            'similarity' => $explanation['similarity'] !== null ? number_format((float) $explanation['similarity'], 2) : null,
+            'summary' => (string) ($explanation['summary'] ?? ''),
+            'topReasons' => $explanation['topReasons'] ?? [],
+            'warnings' => $explanation['warnings'] ?? [],
+            'isFallback' => (bool) ($explanation['isFallback'] ?? false),
+        ];
     }
 
     // ── Small helpers ────────────────────────────────────────────

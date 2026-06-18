@@ -103,7 +103,10 @@
         </ol>
     </section>
 
-    {{-- ── 3. CONTENT LAYOUT: description + timeline + detail rail ── --}}
+    {{-- ── 3. DUPLICATE NOTICE (reporter-safe, shown only when flagged) ── --}}
+    @include('tickets.reporter.partials.duplicate-notice', ['duplicate' => $tracking->duplicate])
+
+    {{-- ── 4. CONTENT LAYOUT: description + timeline + detail rail ── --}}
     <div class="rep-show-layout">
 
         {{-- LEFT --}}

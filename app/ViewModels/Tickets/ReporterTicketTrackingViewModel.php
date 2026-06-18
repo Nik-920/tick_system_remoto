@@ -21,6 +21,7 @@ final class ReporterTicketTrackingViewModel
      * @param  list<array{icon: string, tone: string, title: string, at: string, actor: ?string, note: ?string, highlight: bool}>  $timeline
      * @param  array{rows: list<array{icon: string, label: string, value: string}>, technician: ?array{name: string, initials: string, role: string}}  $details
      * @param  array{count: int, items: list<array{label: string, url: ?string, is_image: bool}>}  $evidence
+     * @param  array{matchedTitle: string, matchedState: string, similarity: string|null, summary: string, topReasons: array<int, mixed>, warnings: array<int, mixed>, isFallback: bool}|null  $duplicate  Reporter-safe duplicate payload. Null when no active duplicate.
      */
     public function __construct(
         public readonly array $ticket,
@@ -29,10 +30,16 @@ final class ReporterTicketTrackingViewModel
         public readonly array $details,
         public readonly array $evidence,
         public readonly string $notice,
+        public readonly ?array $duplicate = null,
     ) {}
 
     public function hasEvidence(): bool
     {
         return $this->evidence['count'] > 0;
+    }
+
+    public function hasDuplicateNotice(): bool
+    {
+        return $this->duplicate !== null;
     }
 }

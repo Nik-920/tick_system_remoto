@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Queries\Tickets\MaintenanceBoardQuery;
 use App\Queries\Tickets\TicketIndexQuery;
 use App\Services\Storage\TicketMediaStorageService;
+use App\Services\Tickets\DuplicatePrecheckService;
 use App\Services\Tickets\TicketAssignmentService;
 use App\Services\Tickets\TicketCreationService;
 use App\Services\Tickets\TicketStateService;
@@ -27,6 +28,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -136,9 +138,22 @@ class TicketController extends Controller
         ]);
     }
 
-    public function store(StoreTicketRequest $request, TicketCreationService $creationService): RedirectResponse
+    public function store(StoreTicketRequest $request, TicketCreationService $creationService, DuplicatePrecheckService $precheckService): RedirectResponse
     {
         $this->authorize('create', Ticket::class);
+
+        if (! $request->boolean('duplicate_ack')) {
+            $precheck = $precheckService->check($request->validated(), $request->user());
+
+            if ($precheck !== null) {
+                $precheck['hadAttachments'] = $this->requestHasTicketMedia($request);
+
+                return redirect()
+                    ->back()
+                    ->withInput($request->except(['media_files']))
+                    ->with('duplicate_precheck', $precheck);
+            }
+        }
 
         $correlationId = (string) $request->attributes->get('correlation_id', '');
         if ($correlationId === '') {
@@ -554,5 +569,20 @@ class TicketController extends Controller
                 $q->effectiveDuplicates();
             });
         }
+    }
+
+    private function requestHasTicketMedia(Request $request): bool
+    {
+        $files = $request->file('media_files', []);
+
+        if ($files instanceof UploadedFile) {
+            return true;
+        }
+
+        if (is_array($files)) {
+            return collect($files)->filter()->isNotEmpty();
+        }
+
+        return false;
     }
 }

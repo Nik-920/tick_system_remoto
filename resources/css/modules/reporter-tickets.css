@@ -444,6 +444,7 @@
 
 .rep-prio { background: var(--r-soft); color: var(--r-fg); }
 .rep-prio .rep-badge__dot { background: var(--r-solid); }
+.rep-badge-duplicate { background: var(--r-soft); color: var(--r-fg); border-color: var(--r-solid); border-style: dashed; }
 
 /* ============================================================
    6. ROW BUTTONS + KEBAB
