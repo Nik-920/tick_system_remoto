@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\QrScanController;
+use App\Http\Controllers\Web\ReporterCommunityController;
 use App\Http\Controllers\Web\ReporterDashboardController;
 use App\Http\Controllers\Web\ReporterGuideController;
 use App\Http\Controllers\Web\ReporterTicketController;
@@ -119,6 +120,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reporter/guide', ReporterGuideController::class)
         ->middleware('role:reporter')
         ->name('reporter.guide');
+
+    // "Comunidad del campus" — reporter-only social feed (skeleton v1).
+    // Phase 1: static shimmer skeleton, no live data. Future phases will
+    // connect CommunityFeedQuery + reactions/saves/comments.
+    Route::get('/reporter/community', ReporterCommunityController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.community');
 
     // "Mis tickets" — reporter-only board + per-ticket tracking (static visual
     // phase, no live data yet). Parallel to the classic /tickets list, which
