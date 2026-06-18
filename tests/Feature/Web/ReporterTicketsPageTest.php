@@ -163,6 +163,48 @@ class ReporterTicketsPageTest extends TestCase
         $response->assertDontSeeText('Posible duplicado ajeno');
     }
 
+    public function test_duplicate_badge_appears_in_card_when_ticket_is_flagged(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $mine = $this->ticketFor($me, 'open', 'Mi ticket posible duplicado');
+        $this->markDuplicate($mine);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Posible duplicado');
+        $this->assertTrue($response->viewData('board')->tickets[0]['is_duplicate']);
+    }
+
+    public function test_duplicate_badge_not_shown_for_non_duplicate_ticket(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $this->ticketFor($me, 'open', 'Ticket normal sin señal IA');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $this->assertFalse($response->viewData('board')->tickets[0]['is_duplicate']);
+    }
+
+    public function test_duplicate_badge_not_shown_for_dismissed_duplicate(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $mine = $this->ticketFor($me, 'open', 'Duplicado humano descartado');
+        TicketEmbedding::create([
+            'ticket_id' => $mine->id,
+            'embedding_vector' => [0.1, 0.2, 0.3],
+            'description_hash' => Str::uuid()->toString(),
+            'is_duplicate' => true,
+            'review_status' => TicketEmbedding::REVIEW_DISMISSED,
+        ]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.index'));
+
+        $response->assertOk();
+        $this->assertFalse($response->viewData('board')->tickets[0]['is_duplicate']);
+    }
+
     public function test_pagination_caps_at_five_and_counts_my_tickets(): void
     {
         $me = $this->userWithRole('reporter');

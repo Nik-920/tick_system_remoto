@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
 use App\ViewModels\Tickets\ReporterTicketTrackingViewModel;
@@ -227,6 +228,84 @@ class ReporterTicketTrackingPageTest extends TestCase
         $this->actingAs($me)->get(route('reporter.tickets.show', (string) Str::uuid()))->assertNotFound();
     }
 
+    public function test_duplicate_notice_shown_when_ticket_has_active_embedding(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Reporte con posible duplicado');
+        $matched = $this->ticketFor($other, 'open', 'Ticket similar preexistente');
+        $this->embedding($ticket, $matched);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertSeeText('Posible duplicado detectado por IA');
+        $response->assertSeeText('Ticket similar preexistente');
+        $response->assertSeeText('Ticket similar');
+        $response->assertSeeText('Similitud detectada');
+        $tracking = $response->viewData('tracking');
+        $this->assertTrue($tracking->hasDuplicateNotice());
+    }
+
+    public function test_duplicate_notice_not_shown_without_embedding(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Ticket sin señal IA');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Posible duplicado detectado por IA');
+        $this->assertFalse($response->viewData('tracking')->hasDuplicateNotice());
+    }
+
+    public function test_duplicate_notice_not_shown_when_dismissed(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Duplicado revisado y descartado');
+        $matched = $this->ticketFor($other, 'open', 'El similar descartado');
+        $this->embedding($ticket, $matched, ['review_status' => TicketEmbedding::REVIEW_DISMISSED]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Posible duplicado detectado por IA');
+        $this->assertFalse($response->viewData('tracking')->hasDuplicateNotice());
+    }
+
+    public function test_duplicate_notice_does_not_expose_matched_ticket_admin_url(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Mi reporte con duplicado');
+        $matched = $this->ticketFor($other, 'open', 'El similar ajeno');
+        $this->embedding($ticket, $matched);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        // The duplicate notice must NOT render a direct link to the matched ticket.
+        $response->assertDontSee(route('tickets.show', $matched->id), false);
+    }
+
+    public function test_duplicate_notice_does_not_expose_technical_details(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Reporte con embedding completo');
+        $matched = $this->ticketFor($other, 'open', 'Similar con strategy results');
+        $this->embedding($ticket, $matched);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        // Admin-only fields must never reach the reporter view.
+        $response->assertDontSeeText('Detalles técnicos');
+        $response->assertDontSee('Score IA', false);
+        $response->assertDontSee('technicalDetails', false);
+    }
+
     public function test_board_route_remains_intact(): void
     {
         $me = $this->userWithRole('reporter');
@@ -332,6 +411,31 @@ class ReporterTicketTrackingPageTest extends TestCase
             'file_type' => $type,
             'uploaded_by' => $uploader->id,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function embedding(Ticket $ticket, Ticket $matched, array $overrides = []): TicketEmbedding
+    {
+        return TicketEmbedding::create(array_merge([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [0.1, 0.2, 0.3],
+            'description_hash' => hash('sha256', (string) $ticket->id),
+            'is_duplicate' => true,
+            'matched_ticket_id' => $matched->id,
+            'similarity_score' => 0.95,
+            'strategy_results' => [
+                [
+                    'strategy' => 'embedding_similarity',
+                    'points' => 40,
+                    'reason' => 'High semantic similarity',
+                    'metadata' => ['similarity' => 0.95],
+                    'blocksDuplicate' => false,
+                    'suggestsRecurrence' => false,
+                ],
+            ],
+        ], $overrides));
     }
 
     private function location(string $code = 'LAB-1', string $name = 'Laboratorio 1'): Location
