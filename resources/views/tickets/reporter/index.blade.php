@@ -234,15 +234,14 @@
                                                 </a>
                                             @endif
                                             @if ($t['can_cancel'])
-                                                <form method="POST" action="{{ route('reporter.tickets.cancel', $t['id']) }}"
-                                                      onsubmit="return confirm('¿Cancelar esta solicitud? Esta acción no se puede deshacer.');">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
-                                                    <button type="submit" class="rep-kebab__item rep-kebab__item--danger">
-                                                        <x-lucide-x width="15" height="15" stroke-width="2" /> Cancelar solicitud
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="rep-kebab__item rep-kebab__item--danger"
+                                                        data-cancel-trigger
+                                                        data-cancel-action="{{ route('reporter.tickets.cancel', $t['id']) }}"
+                                                        data-cancel-title="{{ e($t['title']) }}"
+                                                        data-cancel-code="{{ e($t['code'] ?? '') }}"
+                                                        data-idempotency="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                                                    <x-lucide-x width="15" height="15" stroke-width="2" /> Cancelar solicitud
+                                                </button>
                                             @endif
                                         </div>
                                     </div>
@@ -416,6 +415,61 @@
 </div>
 
 {{-- ============================================================
+   Cancel-confirmation modal (replaces native browser confirm)
+   ============================================================ --}}
+<div id="rep-cancel-modal" class="rep-modal" role="dialog" aria-modal="true"
+     aria-labelledby="rep-cancel-modal-title" aria-describedby="rep-cancel-modal-desc" hidden>
+    <div class="rep-modal__backdrop" id="rep-cancel-backdrop"></div>
+    <div class="rep-modal__dialog">
+        <div class="rep-modal__icon-wrap">
+            <div class="rep-modal__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+            </div>
+        </div>
+        <div class="rep-modal__body">
+            <h2 class="rep-modal__title" id="rep-cancel-modal-title">¿Retirar esta solicitud?</h2>
+            <p class="rep-modal__code" id="rep-cancel-modal-code"></p>
+            <p class="rep-modal__desc" id="rep-cancel-modal-desc">
+                Esta acción no puede deshacerse. El ticket quedará marcado como
+                <strong>cancelado</strong> y no podrá reabrirse.
+            </p>
+            <div class="rep-modal__warning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                ¿Seguro que deseas continuar?
+            </div>
+        </div>
+        <form id="rep-cancel-form" method="POST">
+            @csrf
+            @method('PATCH')
+            <input type="hidden" name="idempotency_key" id="rep-cancel-idempotency">
+            <div class="rep-modal__actions">
+                <button type="button" class="rep-modal__btn rep-modal__btn--ghost" id="rep-cancel-dismiss">
+                    Mantener ticket
+                </button>
+                <button type="submit" class="rep-modal__btn rep-modal__btn--danger" id="rep-cancel-confirm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Sí, cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ============================================================
    Progressive JS — kebab menus only. Search, chips, filters and
    pagination all work server-side without JS (form + <details> + links).
    ============================================================ --}}
@@ -423,6 +477,7 @@
 (function () {
     'use strict';
 
+    /* ── Kebab menus ─────────────────────────────────────────── */
     var kebabs = Array.prototype.slice.call(document.querySelectorAll('[data-rep-kebab]'));
     function closeAll(except) {
         kebabs.forEach(function (k) {
@@ -453,7 +508,77 @@
         });
     });
     document.addEventListener('click', function () { closeAll(null); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAll(null); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAll(null); cancelModal.close(); } });
+
+    /* ── Cancel confirmation modal ───────────────────────────── */
+    var cancelModal = (function () {
+        var modal   = document.getElementById('rep-cancel-modal');
+        var form    = document.getElementById('rep-cancel-form');
+        var codeEl  = document.getElementById('rep-cancel-modal-code');
+        var idem    = document.getElementById('rep-cancel-idempotency');
+        var dismiss = document.getElementById('rep-cancel-dismiss');
+        var backdrop = document.getElementById('rep-cancel-backdrop');
+        var prevFocus = null;
+
+        function open(trigger) {
+            form.action   = trigger.dataset.cancelAction;
+            idem.value    = trigger.dataset.idempotency;
+            codeEl.textContent = trigger.dataset.cancelCode
+                ? 'Ticket ' + trigger.dataset.cancelCode
+                : '';
+            prevFocus = document.activeElement;
+            modal.hidden = false;
+            modal.classList.remove('rep-modal--leaving');
+            modal.classList.add('rep-modal--visible');
+            document.body.classList.add('rep-modal-open');
+            /* focus first interactive element */
+            dismiss.focus();
+        }
+
+        function close() {
+            if (modal.hidden) { return; }
+            modal.classList.add('rep-modal--leaving');
+            modal.classList.remove('rep-modal--visible');
+            setTimeout(function () {
+                modal.hidden = true;
+                modal.classList.remove('rep-modal--leaving');
+                document.body.classList.remove('rep-modal-open');
+                if (prevFocus) { prevFocus.focus(); }
+            }, 220);
+        }
+
+        if (dismiss)  { dismiss.addEventListener('click', close); }
+        if (backdrop) { backdrop.addEventListener('click', close); }
+
+        /* trap focus inside modal */
+        if (modal) {
+            modal.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { close(); return; }
+                if (e.key !== 'Tab') { return; }
+                var focusable = Array.prototype.slice.call(
+                    modal.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])')
+                ).filter(function (el) { return !el.disabled && !el.hidden; });
+                if (!focusable.length) { return; }
+                var first = focusable[0], last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault(); last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault(); first.focus();
+                }
+            });
+        }
+
+        /* wire all cancel triggers */
+        document.querySelectorAll('[data-cancel-trigger]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                closeAll(null);
+                open(btn);
+            });
+        });
+
+        return { open: open, close: close };
+    }());
 })();
 </script>
 @endsection
