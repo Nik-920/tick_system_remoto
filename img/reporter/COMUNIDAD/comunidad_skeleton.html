@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunidad del Campus — Skeleton</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* ── Shimmer base ─────────────────────────────── */
+        @keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position:  600px 0; }
+        }
+
+        .sk {
+            background: linear-gradient(
+                90deg,
+                #dde3ee 25%,
+                #edf1f7 50%,
+                #dde3ee 75%
+            );
+            background-size: 1200px 100%;
+            animation: shimmer 1.6s ease-in-out infinite;
+            border-radius: 6px;
+        }
+
+        /* Variante oscura para el hero (sobre fondo azul) */
+        .sk-light {
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.15) 25%,
+                rgba(255,255,255,0.32) 50%,
+                rgba(255,255,255,0.15) 75%
+            );
+            background-size: 1200px 100%;
+            animation: shimmer 1.6s ease-in-out infinite;
+            border-radius: 6px;
+        }
+
+        body { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ══════════════════════════════════════════════════
+             HERO BANNER
+        ══════════════════════════════════════════════════ -->
+        <div class="relative rounded-2xl overflow-hidden mb-6"
+             style="background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #38bdf8 100%); padding: 2.25rem 2rem;">
+            <div class="flex items-start justify-between gap-6">
+
+                <!-- Left: texts -->
+                <div class="flex flex-col gap-3">
+                    <!-- Eyebrow: COMUNIDAD DEL CAMPUS -->
+                    <div class="sk-light h-3 w-44 rounded-sm"></div>
+                    <!-- Big title: Comunidad -->
+                    <div class="sk-light h-10 w-52 rounded-md"></div>
+                    <!-- Description line 1 -->
+                    <div class="sk-light h-3.5 w-80 rounded-sm"></div>
+                    <!-- Description line 2 -->
+                    <div class="sk-light h-3.5 w-64 rounded-sm"></div>
+                </div>
+
+                <!-- Right: buttons -->
+                <div class="flex flex-col gap-3 mt-1 flex-shrink-0">
+                    <!-- Explorar reportes button -->
+                    <div class="sk-light h-11 w-44 rounded-2xl"></div>
+                    <!-- Crear ticket button -->
+                    <div class="sk-light h-11 w-44 rounded-2xl"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             NAVIGATION TABS
+        ══════════════════════════════════════════════════ -->
+        <div class="flex items-center gap-7 border-b border-slate-200 mb-5">
+            <!-- "Para ti" — active tab with underline hint -->
+            <div class="pb-3 flex flex-col items-center gap-1.5">
+                <div class="sk h-3.5 w-12"></div>
+                <div class="bg-blue-600 h-0.5 w-12 rounded-full opacity-30"></div>
+            </div>
+            <div class="pb-3"><div class="sk h-3.5 w-32"></div></div>
+            <div class="pb-3"><div class="sk h-3.5 w-24"></div></div>
+            <div class="pb-3"><div class="sk h-3.5 w-12"></div></div>
+            <div class="pb-3"><div class="sk h-3.5 w-24"></div></div>
+            <div class="pb-3"><div class="sk h-3.5 w-20"></div></div>
+            <!-- Siguiendo + badge Próximamente -->
+            <div class="pb-3 flex items-center gap-2">
+                <div class="sk h-3.5 w-20"></div>
+                <div class="sk h-5 w-24 rounded-full opacity-50"></div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             SEARCH BAR
+        ══════════════════════════════════════════════════ -->
+        <div class="flex items-center gap-3 mb-4">
+            <div class="sk flex-1 h-11 rounded-xl"></div>
+            <div class="sk h-11 w-11 rounded-xl flex-shrink-0"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             FILTER CHIPS
+        ══════════════════════════════════════════════════ -->
+        <div class="flex flex-wrap gap-2 mb-7">
+            <!-- Edificio dropdown chip -->
+            <div class="sk h-9 w-36 rounded-full"></div>
+            <!-- Últimas 24h (active chip — slightly different look) -->
+            <div class="bg-blue-600/20 h-9 w-28 rounded-full sk opacity-60"></div>
+            <!-- Category chips -->
+            <div class="sk h-9 w-32 rounded-full"></div>
+            <div class="sk h-9 w-28 rounded-full"></div>
+            <div class="sk h-9 w-24 rounded-full"></div>
+            <div class="sk h-9 w-16 rounded-full"></div>
+            <div class="sk h-9 w-24 rounded-full"></div>
+            <div class="sk h-9 w-28 rounded-full"></div>
+            <div class="sk h-9 w-24 rounded-full"></div>
+            <div class="sk h-9 w-24 rounded-full"></div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             MAIN LAYOUT: Sidebar + Feed
+        ══════════════════════════════════════════════════ -->
+        <div class="flex gap-6 items-start">
+
+            <!-- ─────────────────────────────────────────
+                 LEFT SIDEBAR
+            ───────────────────────────────────────── -->
+            <aside class="flex-shrink-0 w-64 flex flex-col gap-4">
+
+                <!-- Atajos card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <!-- "Atajos" heading -->
+                    <div class="sk h-4 w-16 mb-5"></div>
+
+                    <!-- Shortcut rows × 5 -->
+                    <div class="flex flex-col gap-4">
+                        <!-- Row 1 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="sk h-3.5 flex-1 max-w-[8.5rem]"></div>
+                            <div class="sk h-3.5 w-3 rounded ml-auto"></div>
+                        </div>
+                        <!-- Row 2 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="sk h-3.5 flex-1 max-w-[7.5rem]"></div>
+                            <div class="sk h-3.5 w-3 rounded ml-auto"></div>
+                        </div>
+                        <!-- Row 3 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="sk h-3.5 flex-1 max-w-[9rem]"></div>
+                            <div class="sk h-3.5 w-3 rounded ml-auto"></div>
+                        </div>
+                        <!-- Row 4 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="sk h-3.5 flex-1 max-w-[8rem]"></div>
+                            <div class="sk h-3.5 w-3 rounded ml-auto"></div>
+                        </div>
+                        <!-- Row 5 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="sk h-3.5 flex-1 max-w-[9.5rem]"></div>
+                            <div class="sk h-3.5 w-3 rounded ml-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ubicaciones seguidas card -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <!-- Heading + "Ver todas" -->
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="sk h-4 w-36"></div>
+                        <div class="sk h-3.5 w-14"></div>
+                    </div>
+
+                    <div class="flex flex-col gap-4">
+                        <!-- Location 1 (with star) -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="flex flex-col gap-1.5 flex-1">
+                                <div class="sk h-3.5 w-16"></div>
+                                <div class="sk h-3 w-28"></div>
+                            </div>
+                            <!-- Star icon placeholder -->
+                            <div class="sk w-5 h-5 rounded flex-shrink-0"></div>
+                        </div>
+                        <!-- Location 2 -->
+                        <div class="flex items-center gap-3">
+                            <div class="sk w-9 h-9 rounded-xl flex-shrink-0"></div>
+                            <div class="flex flex-col gap-1.5 flex-1">
+                                <div class="sk h-3.5 w-20"></div>
+                                <div class="sk h-3 w-24"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- ─────────────────────────────────────────
+                 MAIN FEED — Report cards
+            ───────────────────────────────────────── -->
+            <main class="flex-1 flex flex-col gap-4 min-w-0">
+
+                <!-- ── CARD 1 — Computadoras ── -->
+                <article class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex gap-4">
+
+                        <!-- Category icon block -->
+                        <div class="flex-shrink-0 flex flex-col items-center gap-2 w-[4.5rem]">
+                            <div class="sk w-16 h-16 rounded-2xl"></div>
+                            <div class="sk h-3 w-20"></div>
+                        </div>
+
+                        <!-- Main content -->
+                        <div class="flex-1 flex flex-col gap-2.5 min-w-0">
+                            <!-- Meta: "Reporte público · Hace 20 min" -->
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3 w-24"></div>
+                                <div class="sk h-2 w-2 rounded-full"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                            <!-- Title + status badges -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="sk h-6 w-56"></div>
+                                <div class="sk h-6 w-16 rounded-full"></div>
+                                <div class="sk h-6 w-12 rounded-full"></div>
+                            </div>
+                            <!-- Description -->
+                            <div class="sk h-3.5 w-3/4"></div>
+                            <!-- Location row -->
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3.5 w-3.5 rounded-sm"></div>
+                                <div class="sk h-3 w-16"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-10"></div>
+                            </div>
+                            <!-- Tag badge -->
+                            <div class="sk h-6 w-24 rounded-full"></div>
+                            <!-- Alert box: "Si tienes examen..." -->
+                            <div class="sk h-10 w-full rounded-xl"></div>
+                            <!-- Reportes similares / Comentarios -->
+                            <div class="flex items-center gap-4">
+                                <div class="sk h-3 w-6 rounded-sm"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-20 ml-1"></div>
+                                <div class="sk h-3 w-6 rounded-sm ml-1"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail image -->
+                        <div class="flex-shrink-0 self-start">
+                            <div class="sk w-36 h-28 rounded-xl"></div>
+                            <!-- Photo count badge -->
+                            <div class="sk h-5 w-10 rounded-md mt-1.5 ml-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action bar -->
+                    <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100">
+                        <!-- Me interesa -->
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-16"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <!-- Comentar -->
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <!-- Guardar -->
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <!-- More -->
+                        <div class="ml-auto sk h-4 w-4 rounded-sm"></div>
+                    </div>
+                </article>
+
+                <!-- ── CARD 2 — Objetos encontrados / Mochila ── -->
+                <article class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex gap-4">
+
+                        <div class="flex-shrink-0 flex flex-col items-center gap-2 w-[4.5rem]">
+                            <div class="sk w-16 h-16 rounded-2xl"></div>
+                            <div class="sk h-3 w-24"></div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col gap-2.5 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3 w-24"></div>
+                                <div class="sk h-2 w-2 rounded-full"></div>
+                                <div class="sk h-3 w-16"></div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="sk h-6 w-64"></div>
+                                <div class="sk h-6 w-16 rounded-full"></div>
+                                <div class="sk h-6 w-14 rounded-full"></div>
+                            </div>
+                            <div class="sk h-3.5 w-2/3"></div>
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3.5 w-3.5 rounded-sm"></div>
+                                <div class="sk h-3 w-20"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-10"></div>
+                            </div>
+                            <!-- Tag badge (Objeto encontrado) -->
+                            <div class="sk h-6 w-32 rounded-full"></div>
+                            <div class="flex items-center gap-4">
+                                <div class="sk h-3 w-6 rounded-sm"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-20 ml-1"></div>
+                                <div class="sk h-3 w-6 rounded-sm ml-1"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail with "Ver ubicación" overlay -->
+                        <div class="flex-shrink-0 self-start relative">
+                            <div class="sk w-36 h-28 rounded-xl"></div>
+                            <!-- "Ver ubicación" button overlay -->
+                            <div class="sk absolute top-2 right-2 h-6 w-24 rounded-lg opacity-80"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100">
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-16"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="ml-auto sk h-4 w-4 rounded-sm"></div>
+                    </div>
+                </article>
+
+                <!-- ── CARD 3 — Proyectores ── -->
+                <article class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex gap-4">
+
+                        <div class="flex-shrink-0 flex flex-col items-center gap-2 w-[4.5rem]">
+                            <div class="sk w-16 h-16 rounded-2xl"></div>
+                            <div class="sk h-3 w-20"></div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col gap-2.5 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3 w-24"></div>
+                                <div class="sk h-2 w-2 rounded-full"></div>
+                                <div class="sk h-3 w-18"></div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="sk h-6 w-72"></div>
+                                <div class="sk h-6 w-16 rounded-full"></div>
+                                <div class="sk h-6 w-14 rounded-full"></div>
+                            </div>
+                            <div class="sk h-3.5 w-3/4"></div>
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3.5 w-3.5 rounded-sm"></div>
+                                <div class="sk h-3 w-20"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-32"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-10"></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="sk h-3 w-6 rounded-sm"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-20 ml-1"></div>
+                                <div class="sk h-3 w-6 rounded-sm ml-1"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex-shrink-0 self-start">
+                            <div class="sk w-36 h-28 rounded-xl"></div>
+                            <div class="sk h-5 w-10 rounded-md mt-1.5 ml-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100">
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-16"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="ml-auto sk h-4 w-4 rounded-sm"></div>
+                    </div>
+                </article>
+
+                <!-- ── CARD 4 — Red ── -->
+                <article class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div class="flex gap-4">
+
+                        <div class="flex-shrink-0 flex flex-col items-center gap-2 w-[4.5rem]">
+                            <div class="sk w-16 h-16 rounded-2xl"></div>
+                            <div class="sk h-3 w-10"></div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col gap-2.5 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3 w-24"></div>
+                                <div class="sk h-2 w-2 rounded-full"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="sk h-6 w-60"></div>
+                                <div class="sk h-6 w-16 rounded-full"></div>
+                                <div class="sk h-6 w-12 rounded-full"></div>
+                            </div>
+                            <div class="sk h-3.5 w-3/4"></div>
+                            <div class="flex items-center gap-2">
+                                <div class="sk h-3.5 w-3.5 rounded-sm"></div>
+                                <div class="sk h-3 w-16"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-2 rounded-sm opacity-30"></div>
+                                <div class="sk h-3 w-10"></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="sk h-3 w-6 rounded-sm"></div>
+                                <div class="sk h-3 w-28"></div>
+                                <div class="sk h-3 w-20 ml-1"></div>
+                                <div class="sk h-3 w-6 rounded-sm ml-1"></div>
+                                <div class="sk h-3 w-20"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex-shrink-0 self-start">
+                            <div class="sk w-36 h-28 rounded-xl"></div>
+                            <div class="sk h-5 w-10 rounded-md mt-1.5 ml-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100">
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-16"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="sk h-4 w-4 rounded-sm"></div>
+                            <div class="sk h-3 w-14"></div>
+                            <div class="sk h-3 w-20 ml-0.5"></div>
+                        </div>
+                        <div class="ml-auto sk h-4 w-4 rounded-sm"></div>
+                    </div>
+                </article>
+
+            </main>
+            <!-- ── END FEED ── -->
+
+        </div>
+        <!-- ── END MAIN LAYOUT ── -->
+
+    </div>
+</body>
+</html>
