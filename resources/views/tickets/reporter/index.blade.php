@@ -423,8 +423,14 @@
             var btn = k.querySelector('[data-rep-kebab-btn]');
             if (menu) { menu.hidden = true; }
             if (btn) { btn.setAttribute('aria-expanded', 'false'); }
+            setItemOpen(k, false);
         });
     }
+    function setItemOpen(kebab, open) {
+        var item = kebab.closest('.rep-item');
+        if (item) { item.classList.toggle('rep-item--menu-open', open); }
+    }
+
     kebabs.forEach(function (kebab) {
         var btn = kebab.querySelector('[data-rep-kebab-btn]');
         var menu = kebab.querySelector('[data-rep-kebab-menu]');
@@ -435,6 +441,7 @@
             closeAll(kebab);
             menu.hidden = open;
             btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+            setItemOpen(kebab, !open);
         });
     });
     document.addEventListener('click', function () { closeAll(null); });
