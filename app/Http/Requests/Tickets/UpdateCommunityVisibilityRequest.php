@@ -26,7 +26,7 @@ class UpdateCommunityVisibilityRequest extends FormRequest
     {
         return [
             'reason.required' => 'El motivo es obligatorio para ocultar el ticket de Comunidad.',
-            'reason.max'      => 'El motivo no puede superar los 255 caracteres.',
+            'reason.max' => 'El motivo no puede superar los 255 caracteres.',
         ];
     }
 }
