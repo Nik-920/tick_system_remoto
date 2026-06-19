@@ -60,11 +60,6 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force
 fi
 
-# Tell running queue workers to restart gracefully after a redeploy
-if [ "${RESTART_QUEUE_WORKERS:-false}" = "true" ]; then
-    php artisan queue:restart || true
-fi
-
 # ─── Process selection ───────────────────────────────────────────────────────
 # • CMD = "php-fpm" (Dockerfile default / Railway standalone):
 #   Start PHP-FPM as a background daemon, then hand PID-1 to Nginx so that
@@ -73,6 +68,12 @@ fi
 #   exec the CMD directly so it becomes PID-1 and receives signals correctly.
 case "${1:-}" in
     php-fpm)
+        # Signal any running queue workers to restart gracefully after redeploy.
+        # Only done here (main app mode) — the worker service must NOT send this
+        # signal to itself or it will exit immediately after starting.
+        if [ "${RESTART_QUEUE_WORKERS:-false}" = "true" ]; then
+            php artisan queue:restart || true
+        fi
         php-fpm -D
         sleep 1
         exec nginx -g "daemon off;"
