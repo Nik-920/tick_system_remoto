@@ -50,6 +50,7 @@ class TicketCreationService
                 'category_id' => (string) $payload['category_id'],
                 'state' => 'open',
                 'priority' => (string) ($payload['priority'] ?? 'medium'),
+                'community_visible' => isset($payload['community_visible']) ? (bool) $payload['community_visible'] : true,
             ]);
 
             StateHistory::create([

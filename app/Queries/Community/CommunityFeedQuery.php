@@ -23,12 +23,10 @@ use Illuminate\Support\Str;
  * - Eager loading uses explicit column lists; user relations are not loaded.
  * - Returned ViewModel contains pre-mapped arrays, not raw Eloquent models.
  *
- * V1 visibility rule (no community_visible column yet):
- * - state IN (open, in_progress, resolved) → public.
- * - cancelled / rejected → hidden.
- *
- * Debt: future phase must introduce community_posts or community_visible
- * before enabling reactions / saves / comments.
+ * Visibility rule (community_visible column):
+ * - community_visible=true AND state IN (open, in_progress, resolved) → public.
+ * - community_visible=false → hidden regardless of state.
+ * - cancelled / rejected → hidden regardless of community_visible.
  */
 final class CommunityFeedQuery
 {
@@ -92,6 +90,7 @@ final class CommunityFeedQuery
     private function baseQuery(array $filters): Builder
     {
         $query = Ticket::query()
+            ->where('community_visible', true)
             ->whereIn('state', self::PUBLIC_STATES)
             ->orderByDesc('updated_at');
 
@@ -293,6 +292,7 @@ final class CommunityFeedQuery
         return Location::query()
             ->select(['locations.id', 'locations.name', 'locations.building', 'locations.room_code'])
             ->join('tickets', 'locations.id', '=', 'tickets.location_id')
+            ->where('tickets.community_visible', true)
             ->whereIn('tickets.state', self::PUBLIC_STATES)
             ->groupBy('locations.id', 'locations.name', 'locations.building', 'locations.room_code')
             ->orderByDesc(DB::raw('COUNT(tickets.id)'))
@@ -313,12 +313,14 @@ final class CommunityFeedQuery
     private function quickSummary(): array
     {
         $counts = Ticket::query()
+            ->where('community_visible', true)
             ->whereIn('state', self::PUBLIC_STATES)
             ->selectRaw('state, COUNT(*) as cnt')
             ->groupBy('state')
             ->pluck('cnt', 'state');
 
         $locationCount = Ticket::query()
+            ->where('community_visible', true)
             ->whereIn('state', [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS])
             ->distinct()
             ->count('location_id');
@@ -338,6 +340,7 @@ final class CommunityFeedQuery
         return Category::query()
             ->select(['categories.id', 'categories.name', 'categories.icon'])
             ->join('tickets', 'categories.id', '=', 'tickets.category_id')
+            ->where('tickets.community_visible', true)
             ->whereIn('tickets.state', self::PUBLIC_STATES)
             ->groupBy('categories.id', 'categories.name', 'categories.icon')
             ->orderByDesc(DB::raw('COUNT(tickets.id)'))
