@@ -100,6 +100,8 @@ COPY . .
 COPY --from=node-builder /app/public/build ./public/build
 
 RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
     && chown -R www-data:www-data /app /var/log/nginx /var/lib/nginx /run \
     && chmod -R 775 /app/storage /app/bootstrap/cache /var/log/nginx /var/lib/nginx /run
 
