@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\ReporterDashboardController;
 use App\Http\Controllers\Web\ReporterGuideController;
 use App\Http\Controllers\Web\ReporterTicketController;
 use App\Http\Controllers\Web\TicketAssignmentsController;
+use App\Http\Controllers\Web\TicketCommunityVisibilityController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\TicketHistoryController;
 use App\Http\Controllers\Web\UserController;
@@ -233,6 +234,15 @@ Route::middleware('auth')->group(function (): void {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->middleware(['idempotency', 'throttle:mutations'])
             ->name('categories.destroy');
+
+        // Community visibility moderation: hide / restore a ticket from the
+        // reporter community feed. Does NOT alter the ticket's operational state.
+        Route::patch('/tickets/{ticket}/community/hide', [TicketCommunityVisibilityController::class, 'hide'])
+            ->middleware(['throttle:mutations'])
+            ->name('tickets.community.hide');
+        Route::patch('/tickets/{ticket}/community/restore', [TicketCommunityVisibilityController::class, 'restore'])
+            ->middleware(['throttle:mutations'])
+            ->name('tickets.community.restore');
     });
 
     Route::middleware('role:super_admin')->group(function (): void {
