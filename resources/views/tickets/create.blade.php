@@ -365,25 +365,53 @@
                     </div>
 
                     <div class="rep-edit__section-body">
-                        <div class="rep-edit__field">
+                        @if ($selectedCategory?->locksCommunityVisibility())
+                            {{-- Categoría sensible: visibilidad forzada por política --}}
                             <input type="hidden" name="community_visible" value="0">
-                            <label class="rep-edit__checkbox-label" for="community-visible-toggle">
-                                <input id="community-visible-toggle"
-                                       type="checkbox"
-                                       name="community_visible"
-                                       value="1"
-                                       class="rep-edit__checkbox"
-                                       @checked((string) old('community_visible', '1') === '1')>
-                                <span>Mostrar este reporte en Comunidad</span>
-                            </label>
-                            <p class="rep-edit__field-hint">
-                                Otros reporters podrán ver el título, categoría, ubicación, estado y evidencias del reporte.
-                                No se mostrará tu nombre, correo ni teléfono.
-                            </p>
-                            <p class="rep-edit__field-hint">
-                                Si desactivas esta opción, el ticket seguirá siendo atendido normalmente, pero no aparecerá en Comunidad.
-                            </p>
-                        </div>
+                            <div class="rep-edit__field">
+                                <div class="rep-edit__checkbox-label rep-edit__checkbox-label--disabled" aria-disabled="true">
+                                    <input id="community-visible-toggle"
+                                           type="checkbox"
+                                           name="community_visible_display"
+                                           class="rep-edit__checkbox"
+                                           disabled
+                                           aria-describedby="community-locked-hint">
+                                    <span>Mostrar este reporte en Comunidad</span>
+                                </div>
+                                <p id="community-locked-hint" class="rep-edit__field-hint">
+                                    @if ($selectedCategory->community_visibility_help)
+                                        {{ $selectedCategory->community_visibility_help }}
+                                    @else
+                                        Esta categoría se mantiene privada por defecto y no puede publicarse en Comunidad.
+                                    @endif
+                                </p>
+                            </div>
+                        @else
+                            <div class="rep-edit__field">
+                                <input type="hidden" name="community_visible" value="0">
+                                <label class="rep-edit__checkbox-label" for="community-visible-toggle">
+                                    <input id="community-visible-toggle"
+                                           type="checkbox"
+                                           name="community_visible"
+                                           value="1"
+                                           class="rep-edit__checkbox"
+                                           @checked(
+                                               (string) old(
+                                                   'community_visible',
+                                                   $selectedCategory?->defaultCommunityVisible() === false ? '0' : '1'
+                                               ) === '1'
+                                           )>
+                                    <span>Mostrar este reporte en Comunidad</span>
+                                </label>
+                                <p class="rep-edit__field-hint">
+                                    Otros reporters podrán ver el título, categoría, ubicación, estado y evidencias del reporte.
+                                    No se mostrará tu nombre, correo ni teléfono.
+                                </p>
+                                <p class="rep-edit__field-hint">
+                                    Algunas categorías sensibles se mantienen privadas automáticamente para proteger la información del reporte.
+                                </p>
+                            </div>
+                        @endif
                     </div>
                 </section>
 
