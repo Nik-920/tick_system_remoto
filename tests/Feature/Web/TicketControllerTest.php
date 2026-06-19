@@ -1394,4 +1394,83 @@ class TicketControllerTest extends TestCase
         // Reporter NO ve el formulario de cambio de estado
         $response->assertDontSeeText('Actualizar estado');
     }
+
+    // ── Community visibility on create ──────────────────────────────────────
+
+    public function test_create_form_shows_community_visibility_option(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+
+        $this->actingAs($reporter)
+            ->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('Visibilidad en Comunidad', false)
+            ->assertSee('Mostrar este reporte en Comunidad', false)
+            ->assertSee('No se mostrará tu nombre, correo ni teléfono', false);
+    }
+
+    public function test_ticket_is_public_by_default_when_community_visible_not_sent(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket sin campo visible',
+            'description' => 'Descripcion larga para pasar validacion minima de longitud en el test.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket sin campo visible',
+            'community_visible' => true,
+        ]);
+    }
+
+    public function test_reporter_can_create_private_ticket_with_community_visible_false(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket privado de comunidad',
+            'description' => 'Este ticket no debe aparecer en la comunidad segun preferencia del reporter.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+            'community_visible' => '0',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket privado de comunidad',
+            'community_visible' => false,
+        ]);
+    }
+
+    public function test_reporter_can_create_public_ticket_with_community_visible_true(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket publico de comunidad',
+            'description' => 'Este ticket debe aparecer en la comunidad segun preferencia del reporter.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket publico de comunidad',
+            'community_visible' => true,
+        ]);
+    }
 }

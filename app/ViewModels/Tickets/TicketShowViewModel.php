@@ -393,6 +393,25 @@ final class TicketShowViewModel
             && in_array($matched->state, ['open', 'in_progress'], true);
     }
 
+    // ─── Community visibility ─────────────────────────────────────────────────
+
+    public function isCommunityVisible(): bool
+    {
+        return (bool) $this->ticket->community_visible;
+    }
+
+    public function communityHiddenAtLabel(): ?string
+    {
+        return $this->fmtDate($this->ticket->community_hidden_at);
+    }
+
+    public function communityVisibilityReason(): ?string
+    {
+        $reason = $this->ticket->community_visibility_reason;
+
+        return ($reason !== null && $reason !== '') ? $reason : null;
+    }
+
     // ─── Navigation ──────────────────────────────────────────────────────────
 
     public function backUrl(): string

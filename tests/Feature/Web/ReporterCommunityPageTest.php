@@ -176,6 +176,100 @@ class ReporterCommunityPageTest extends TestCase
             ->assertSee('Resuelto', false);
     }
 
+    // ── Visibility rules: community_visible flag ─────────────────────────────
+
+    public function test_ticket_with_community_visible_false_does_not_appear_in_feed(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        Ticket::create([
+            'title' => 'Ticket oculto de comunidad ZZZZ111',
+            'description' => 'Este ticket no debe aparecer en el feed.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'high',
+            'community_visible' => false,
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Ticket oculto de comunidad ZZZZ111', false);
+    }
+
+    public function test_ticket_with_community_visible_true_appears_in_feed(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        Ticket::create([
+            'title' => 'Ticket visible en comunidad ZZZZ222',
+            'description' => 'Este ticket sí debe aparecer en el feed.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
+            'community_visible' => true,
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertSee('Ticket visible en comunidad ZZZZ222', false);
+    }
+
+    public function test_cancelled_ticket_with_community_visible_true_does_not_appear(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        Ticket::create([
+            'title' => 'Ticket cancelado visible ZZZZ333',
+            'description' => 'Cancelado aunque community_visible sea true.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_CANCELLED,
+            'priority' => 'low',
+            'community_visible' => true,
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Ticket cancelado visible ZZZZ333', false);
+    }
+
+    public function test_rejected_ticket_with_community_visible_true_does_not_appear(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        Ticket::create([
+            'title' => 'Ticket rechazado visible ZZZZ444',
+            'description' => 'Rechazado aunque community_visible sea true.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_REJECTED,
+            'priority' => 'low',
+            'community_visible' => true,
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Ticket rechazado visible ZZZZ444', false);
+    }
+
     // ── Visibility rules: hidden states ─────────────────────────────────────
 
     public function test_cancelled_tickets_do_not_appear_in_feed(): void
@@ -558,6 +652,97 @@ class ReporterCommunityPageTest extends TestCase
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    // ── Community visibility on create ──────────────────────────────────────
+
+    public function test_ticket_created_with_community_visible_false_does_not_appear_in_feed(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Reporte privado desde formulario crear ZZZZP1',
+            'description' => 'El reporter decidio no publicar este ticket en Comunidad al crearlo.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+            'community_visible' => '0',
+            'idempotency_key' => (string) Str::uuid(),
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Reporte privado desde formulario crear ZZZZP1', false);
+    }
+
+    public function test_ticket_created_with_community_visible_true_appears_in_feed(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Reporte publico desde formulario crear ZZZZP2',
+            'description' => 'El reporter decidio publicar este ticket en Comunidad al crearlo.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertSee('Reporte publico desde formulario crear ZZZZP2', false);
+    }
+
+    public function test_duplicate_precheck_preserves_community_visible_false_on_redirect(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        Ticket::create([
+            'title' => 'Filtro de agua averiado en sala principal',
+            'description' => 'El filtro no funciona desde hace dos dias.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
+        ]);
+
+        // First submit triggers duplicate precheck; community_visible=0 should survive in old input.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Filtro de agua averiado en sala principal hoy',
+            'description' => 'El filtro sigue sin funcionar desde ayer segun inspection.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '0',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('duplicate_precheck');
+
+        // Second submit acknowledges the duplicate and creates the ticket as private.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Filtro de agua averiado en sala principal hoy',
+            'description' => 'El filtro sigue sin funcionar desde ayer segun inspection.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '0',
+            'duplicate_ack' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Filtro de agua averiado en sala principal hoy',
+            'community_visible' => false,
+        ]);
+    }
 
     private function createUserWithRole(string $role): User
     {

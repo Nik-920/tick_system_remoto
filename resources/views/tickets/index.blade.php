@@ -250,6 +250,14 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
                     <tr>
                         <td class="tickets-td-title">
                             {{ $ticket->title }}
+                            {{-- Community visibility badge (admin/super_admin only) --}}
+                            @if (! $isReporterOnly && ! $isMaintenance)
+                                @if ($ticket->community_visible)
+                                    <span class="ticket-badge ticket-badge--resolved" title="Visible en Comunidad" style="font-size:0.72rem; margin-left:0.3rem;">Comunidad: Visible</span>
+                                @else
+                                    <span class="ticket-badge ticket-badge--closed" title="Oculto en Comunidad" style="font-size:0.72rem; margin-left:0.3rem;">Comunidad: Oculto</span>
+                                @endif
+                            @endif
                             {{-- Duplicate badge --}}
                             @if ($effectiveDup)
                                 @if ($reviewStatus === 'confirmed')

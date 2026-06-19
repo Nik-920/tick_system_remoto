@@ -353,11 +353,46 @@
                 </section>
 
                 {{-- ─────────────────────────────────────────────
-                     SECTION 4 — Confirmación
+                     SECTION 4 — Visibilidad en Comunidad
+                     ───────────────────────────────────────────── --}}
+                <section class="rep-edit__section" aria-labelledby="section-community-visibility">
+                    <div class="rep-edit__section-head">
+                        <span class="rep-edit__step-badge" aria-hidden="true">4</span>
+                        <div>
+                            <h2 id="section-community-visibility" class="rep-edit__section-title">Visibilidad en Comunidad</h2>
+                            <p class="rep-edit__section-subtitle">Decide si este reporte aparece en la pestaña Comunidad.</p>
+                        </div>
+                    </div>
+
+                    <div class="rep-edit__section-body">
+                        <div class="rep-edit__field">
+                            <input type="hidden" name="community_visible" value="0">
+                            <label class="rep-edit__checkbox-label" for="community-visible-toggle">
+                                <input id="community-visible-toggle"
+                                       type="checkbox"
+                                       name="community_visible"
+                                       value="1"
+                                       class="rep-edit__checkbox"
+                                       @checked((string) old('community_visible', '1') === '1')>
+                                <span>Mostrar este reporte en Comunidad</span>
+                            </label>
+                            <p class="rep-edit__field-hint">
+                                Otros reporters podrán ver el título, categoría, ubicación, estado y evidencias del reporte.
+                                No se mostrará tu nombre, correo ni teléfono.
+                            </p>
+                            <p class="rep-edit__field-hint">
+                                Si desactivas esta opción, el ticket seguirá siendo atendido normalmente, pero no aparecerá en Comunidad.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                {{-- ─────────────────────────────────────────────
+                     SECTION 5 — Confirmación
                      ───────────────────────────────────────────── --}}
                 <section class="rep-edit__section rep-edit__section--actions" aria-labelledby="section-confirm">
                     <div class="rep-edit__section-head">
-                        <span class="rep-edit__step-badge" aria-hidden="true">4</span>
+                        <span class="rep-edit__step-badge" aria-hidden="true">5</span>
                         <div>
                             <h2 id="section-confirm" class="rep-edit__section-title">Confirmación</h2>
                             <p class="rep-edit__section-subtitle">Revisa los datos antes de enviar el ticket al equipo de mantenimiento.</p>

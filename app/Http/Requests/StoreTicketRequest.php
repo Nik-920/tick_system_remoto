@@ -64,6 +64,7 @@ class StoreTicketRequest extends FormRequest
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
+            'community_visible' => ['nullable', 'boolean'],
             'media_files' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_FILES],
             'media_files.*' => [
                 'file',

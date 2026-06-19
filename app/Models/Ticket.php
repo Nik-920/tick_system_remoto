@@ -75,6 +75,7 @@ class Ticket extends Model
         'assigned_at',
         'assignment_locked',
         'assignment_source',
+        'community_visible',
         'location_id',
         'category_id',
         'state',
@@ -94,6 +95,8 @@ class Ticket extends Model
         return [
             'assigned_at' => 'datetime',
             'assignment_locked' => 'boolean',
+            'community_visible' => 'boolean',
+            'community_hidden_at' => 'datetime',
             'resolved_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -213,6 +216,13 @@ class Ticket extends Model
     public function scopeOpenOrInProgress(Builder $query): Builder
     {
         return $query->whereIn('state', [self::STATE_OPEN, self::STATE_IN_PROGRESS]);
+    }
+
+    public function scopeVisibleInCommunity(Builder $query): Builder
+    {
+        return $query
+            ->where('community_visible', true)
+            ->whereIn('state', [self::STATE_OPEN, self::STATE_IN_PROGRESS, self::STATE_RESOLVED]);
     }
 
     public function scopeUnassigned(Builder $query): Builder

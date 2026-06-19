@@ -165,6 +165,13 @@ class TicketPolicy
         return $this->canUnassignTicket($user);
     }
 
+    public function moderateCommunityVisibility(User $user, Ticket $ticket): bool
+    {
+        unset($ticket);
+
+        return $this->hasAnyRole($user, ['admin', 'super_admin']);
+    }
+
     private function canDeleteTicket(User $user): bool
     {
         return $this->hasAnyRole($user, ['admin', 'super_admin']);
