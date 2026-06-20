@@ -69,7 +69,7 @@
     margin-bottom: 1.5rem;
     padding: 2.25rem 2.25rem 2rem;
     border-radius: var(--radius);
-    background: linear-gradient(135deg, #1338b0 0%, #2563eb 55%, #0ea5e9 100%);
+    background: linear-gradient(135deg, #1338b0 0%, var(--tone-primary-solid) 55%, var(--color-info) 100%);
     box-shadow: 0 8px 36px rgba(29, 78, 216, 0.34), 0 1px 0 rgba(255,255,255,0.10) inset;
 }
 
@@ -321,8 +321,8 @@
     height: 2.25rem;
     border-radius: 0.75rem;
     flex-shrink: 0;
-    background: var(--bg-muted, #f3f4f6);
-    color: var(--text-secondary, #374151);
+    background: var(--bg-soft);
+    color: var(--text-secondary);
 }
 
 .comm-shortcut__label         { height: 0.875rem; flex: 1; }
@@ -372,8 +372,8 @@
     height: 2.25rem;
     border-radius: 0.75rem;
     flex-shrink: 0;
-    background: var(--bg-muted, #f3f4f6);
-    color: var(--text-secondary, #374151);
+    background: var(--bg-soft);
+    color: var(--text-secondary);
 }
 
 .comm-location__meta {
@@ -448,8 +448,8 @@
     width: 3.25rem;
     height: 3.25rem;
     border-radius: 1rem;
-    background: var(--bg-muted, #f3f4f6);
-    color: var(--text-secondary, #374151);
+    background: var(--bg-soft);
+    color: var(--text-secondary);
 }
 
 .comm-post__category-label        { height: 0.75rem; }
@@ -886,14 +886,14 @@
 
 .comm-chip-link--clear {
     border-color: rgba(220, 38, 38, 0.28);
-    color: #dc2626;
-    background: #fff8f8;
+    color: var(--color-danger);
+    background: var(--color-danger-light);
 }
 
 .comm-chip-link--clear:hover {
-    background: #fee2e2;
-    border-color: #dc2626;
-    color: #b91c1c;
+    background: var(--tone-high-soft);
+    border-color: var(--color-danger);
+    color: var(--tone-high-fg);
 }
 
 .comm-chip-select {
@@ -945,50 +945,50 @@
 }
 
 .comm-badge--open {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--tone-primary-soft);
+    color: var(--color-primary-hover);
     box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.18);
 }
 
 .comm-badge--progress {
-    background: #fef9c3;
-    color: #854d0e;
+    background: var(--tone-medium-soft);
+    color: var(--tone-medium-fg);
     box-shadow: inset 0 0 0 1px rgba(133, 77, 14, 0.16);
 }
 
 .comm-badge--resolved {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--tone-low-soft);
+    color: var(--tone-low-fg);
     box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.16);
 }
 
 .comm-badge--neutral {
-    background: var(--bg-soft, #f8fafc);
-    color: var(--text-muted, #64748b);
-    box-shadow: inset 0 0 0 1px var(--border-default, #e2e8f0);
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border-default);
 }
 
 .comm-badge--priority-high {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--tone-high-soft);
+    color: var(--tone-high-fg);
     box-shadow: inset 0 0 0 1px rgba(153, 27, 27, 0.16);
 }
 
 .comm-badge--priority-medium {
-    background: #ffedd5;
-    color: #9a3412;
+    background: var(--tone-warning-soft);
+    color: var(--tone-warning-fg);
     box-shadow: inset 0 0 0 1px rgba(154, 52, 18, 0.16);
 }
 
 .comm-badge--priority-low {
-    background: #f0fdf4;
-    color: #166534;
+    background: var(--tone-low-soft);
+    color: var(--tone-low-fg);
     box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.12);
 }
 
 .comm-badge--priority-critical {
-    background: #fef2f2;
-    color: #7f1d1d;
+    background: var(--color-danger-light);
+    color: var(--tone-high-fg);
     box-shadow: inset 0 0 0 1px rgba(127, 29, 29, 0.18);
 }
 
@@ -1016,20 +1016,20 @@
 }
 
 .comm-tag--recent {
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
     border: 1px solid rgba(29, 78, 216, 0.18);
 }
 
 .comm-tag--media {
-    background: #f3e8ff;
-    color: #7e22ce;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple-fg);
     border: 1px solid rgba(126, 34, 206, 0.18);
 }
 
 .comm-tag--resolved {
-    background: #dcfce7;
-    color: #15803d;
+    background: var(--tone-low-soft);
+    color: var(--tone-low-fg);
     border: 1px solid rgba(21, 128, 61, 0.18);
 }
 
@@ -1222,13 +1222,13 @@
 }
 
 .comm-action-btn--saved.comm-action-btn--active {
-    color: #f59e0b;
+    color: var(--tone-medium-solid);
     background: rgba(245, 158, 11, 0.09);
 }
 
 .comm-action-btn--saved.comm-action-btn--active:hover {
     background: rgba(245, 158, 11, 0.16);
-    color: #d97706;
+    color: var(--color-warning);
 }
 
 /* Aggregate count badge */
