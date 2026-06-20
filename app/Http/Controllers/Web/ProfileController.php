@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Requests\UpdateUserAvatarRequest;
 use App\Models\User;
+use App\Services\Community\CommunityNotificationPreferenceService;
 use App\Services\Storage\UserAvatarStorageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function edit(): View
+    public function edit(CommunityNotificationPreferenceService $preferenceService): View
     {
         $user = auth()->user();
 
@@ -22,6 +23,7 @@ class ProfileController extends Controller
 
         return view('profile.edit', [
             'profileUser' => $user,
+            'communityPreferences' => $preferenceService->applicablePreferencesFor($user),
         ]);
     }
 

@@ -52,12 +52,16 @@ final class CommunityFeedQuery
 
     private const PERIODS = ['24h', '7d', '30d'];
 
+    /** @var list<string> */
+    private const ALLOWED_SORTS = ['recent', 'active', 'discussed', 'supported'];
+
     /**
      * @param  array<string, mixed>  $filters
      */
     public function forReporter(User $viewer, array $filters): CommunityFeedViewModel
     {
-        $base = $this->baseQuery($filters, $viewer);
+        $normalized = $this->normalizeFilters($filters);
+        $base = $this->baseQuery($normalized, $viewer);
 
         $paginator = $base
             ->with([
@@ -94,9 +98,11 @@ final class CommunityFeedQuery
             );
         }
 
+        $currentSort = $normalized['sort'];
+
         return new CommunityFeedViewModel(
             posts: $posts,
-            filters: $this->normalizeFilters($filters),
+            filters: $normalized,
             paginator: $paginator,
             shortcuts: $this->shortcuts(),
             activeLocations: $this->activeLocations(),
@@ -104,6 +110,8 @@ final class CommunityFeedQuery
             hotCategories: $this->hotCategories(),
             buildings: $this->buildings(),
             categories: $this->categoriesForFilter(),
+            currentSort: $currentSort,
+            sortOptions: $this->buildSortOptions($normalized),
         );
     }
 
@@ -330,8 +338,7 @@ final class CommunityFeedQuery
     {
         $query = Ticket::query()
             ->whereRaw('"community_visible" IS TRUE')
-            ->whereIn('state', self::PUBLIC_STATES)
-            ->orderByDesc('updated_at');
+            ->whereIn('state', self::PUBLIC_STATES);
 
         $this->applySearch($query, $filters);
         $this->applyCategory($query, $filters);
@@ -341,6 +348,7 @@ final class CommunityFeedQuery
         $this->applyHasMedia($query, $filters);
         $this->applyPeriod($query, $filters);
         $this->applySaved($query, $filters, $viewer);
+        $this->applySort($query, $filters);
 
         return $query;
     }
@@ -538,6 +546,8 @@ final class CommunityFeedQuery
      */
     private function normalizeFilters(array $filters): array
     {
+        $sort = trim((string) ($filters['sort'] ?? ''));
+
         return [
             'q' => trim((string) ($filters['q'] ?? '')),
             'category' => trim((string) ($filters['category'] ?? '')),
@@ -549,6 +559,7 @@ final class CommunityFeedQuery
                 ? trim((string) ($filters['period'] ?? ''))
                 : '',
             'saved' => ($filters['saved'] ?? '') === '1' ? '1' : '',
+            'sort' => in_array($sort, self::ALLOWED_SORTS, true) ? $sort : 'recent',
         ];
     }
 
@@ -668,6 +679,113 @@ final class CommunityFeedQuery
                 'icon' => (string) $c->icon,
             ])
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applySort(Builder $query, array $filters): void
+    {
+        $sort = (string) ($filters['sort'] ?? 'recent');
+
+        match ($sort) {
+            'active' => $this->orderByActive($query),
+            'discussed' => $this->orderByDiscussed($query),
+            'supported' => $this->orderBySupported($query),
+            default => $query->orderByDesc('updated_at'),
+        };
+    }
+
+    private function orderByActive(Builder $query): void
+    {
+        $query->orderByRaw(
+            '(
+                (SELECT COUNT(*) FROM community_reactions
+                    WHERE community_reactions.ticket_id = tickets.id AND community_reactions.type = ?) * 3 +
+                (SELECT COUNT(*) FROM community_reactions
+                    WHERE community_reactions.ticket_id = tickets.id AND community_reactions.type = ?) * 4 +
+                (SELECT COUNT(*) FROM community_reactions
+                    WHERE community_reactions.ticket_id = tickets.id AND community_reactions.type = ?) * 1 +
+                (SELECT COUNT(*) FROM community_saves
+                    WHERE community_saves.ticket_id = tickets.id) * 3 +
+                (SELECT COUNT(*) FROM community_comments
+                    WHERE community_comments.ticket_id = tickets.id AND community_comments.status = ?) * 5 -
+                (SELECT COUNT(*) FROM community_reports
+                    WHERE community_reports.ticket_id = tickets.id
+                    AND community_reports.comment_id IS NULL
+                    AND community_reports.status = ?) * 4
+            ) DESC',
+            [
+                CommunityReaction::TYPE_INTERESTED,
+                CommunityReaction::TYPE_ALSO_HAPPENS,
+                CommunityReaction::TYPE_SEEN,
+                CommunityComment::STATUS_VISIBLE,
+                CommunityReport::STATUS_PENDING,
+            ]
+        )->orderByDesc('updated_at');
+    }
+
+    private function orderByDiscussed(Builder $query): void
+    {
+        $query->orderByRaw(
+            '(SELECT COUNT(*) FROM community_comments
+                WHERE community_comments.ticket_id = tickets.id
+                AND community_comments.status = ?) DESC',
+            [CommunityComment::STATUS_VISIBLE]
+        )->orderByDesc('updated_at');
+    }
+
+    private function orderBySupported(Builder $query): void
+    {
+        $query->orderByRaw(
+            '(
+                (SELECT COUNT(*) FROM community_reactions
+                    WHERE community_reactions.ticket_id = tickets.id AND community_reactions.type = ?) +
+                (SELECT COUNT(*) FROM community_reactions
+                    WHERE community_reactions.ticket_id = tickets.id AND community_reactions.type = ?) +
+                (SELECT COUNT(*) FROM community_saves
+                    WHERE community_saves.ticket_id = tickets.id)
+            ) DESC',
+            [
+                CommunityReaction::TYPE_INTERESTED,
+                CommunityReaction::TYPE_ALSO_HAPPENS,
+            ]
+        )->orderByDesc('updated_at');
+    }
+
+    /**
+     * Build pre-computed sort option arrays for the ViewModel (URLs include current filters).
+     *
+     * @param  array<string, string>  $filters  normalized filters
+     * @return list<array{key: string, label: string, url: string, active: bool}>
+     */
+    private function buildSortOptions(array $filters): array
+    {
+        $currentSort = $filters['sort'];
+        $base = route('reporter.community');
+
+        $params = array_filter(
+            array_diff_key($filters, ['sort' => '']),
+            fn (string $v) => $v !== ''
+        );
+
+        $options = [
+            ['key' => 'recent', 'label' => 'Recientes'],
+            ['key' => 'active', 'label' => 'Activos'],
+            ['key' => 'discussed', 'label' => 'Comentados'],
+            ['key' => 'supported', 'label' => 'Apoyados'],
+        ];
+
+        return array_map(function (array $option) use ($base, $params, $currentSort): array {
+            $queryParams = array_merge($params, ['sort' => $option['key']]);
+
+            return [
+                'key' => $option['key'],
+                'label' => $option['label'],
+                'url' => $base.'?'.http_build_query($queryParams),
+                'active' => $option['key'] === $currentSort,
+            ];
+        }, $options);
     }
 
     private function stateLabel(string $state): string

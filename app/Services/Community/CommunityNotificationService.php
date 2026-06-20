@@ -14,7 +14,10 @@ use Throwable;
 
 class CommunityNotificationService
 {
-    public function __construct(private readonly NotificationService $notifications) {}
+    public function __construct(
+        private readonly NotificationService $notifications,
+        private readonly CommunityNotificationPreferenceService $preferences,
+    ) {}
 
     public function notifyAdminsOfReport(CommunityReport $report): void
     {
@@ -23,6 +26,10 @@ class CommunityNotificationService
             $admins = User::role(['admin', 'super_admin'])->get();
 
             foreach ($admins as $admin) {
+                if (! $this->preferences->enabled($admin, 'community.report.created')) {
+                    continue;
+                }
+
                 $this->notifications->notifyUser($admin, new NotificationPayload(
                     type: 'community.report.created',
                     title: 'Nuevo reporte en Comunidad',
@@ -59,6 +66,10 @@ class CommunityNotificationService
                 default => 'Un reporte que enviaste en Comunidad fue revisado por el equipo.',
             };
 
+            if (! $this->preferences->enabled($reporter, 'community.report.reviewed')) {
+                return;
+            }
+
             $this->notifications->notifyUser($reporter, new NotificationPayload(
                 type: 'community.report.reviewed',
                 title: 'Tu reporte fue revisado',
@@ -90,6 +101,10 @@ class CommunityNotificationService
 
             $reporter = User::query()->find($ticket->reporter_id);
             if ($reporter === null) {
+                return;
+            }
+
+            if (! $this->preferences->enabled($reporter, 'community.comment.created')) {
                 return;
             }
 

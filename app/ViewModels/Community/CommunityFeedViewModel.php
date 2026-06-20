@@ -23,6 +23,7 @@ final class CommunityFeedViewModel
      * @param  list<array{name: string, icon: string, url: string}>  $hotCategories
      * @param  list<string>  $buildings
      * @param  list<array{id: string, name: string, icon: string}>  $categories
+     * @param  list<array{key: string, label: string, url: string, active: bool}>  $sortOptions
      */
     public function __construct(
         public readonly array $posts,
@@ -34,15 +35,23 @@ final class CommunityFeedViewModel
         public readonly array $hotCategories,
         public readonly array $buildings,
         public readonly array $categories,
+        public readonly string $currentSort,
+        public readonly array $sortOptions,
     ) {}
 
     public function hasActiveFilters(): bool
     {
-        return array_filter($this->filters, fn (string $v) => $v !== '') !== [];
+        return array_filter(
+            array_diff_key($this->filters, ['sort' => '']),
+            fn (string $v) => $v !== ''
+        ) !== [];
     }
 
     public function activeFilterCount(): int
     {
-        return count(array_filter($this->filters, fn (string $v) => $v !== ''));
+        return count(array_filter(
+            array_diff_key($this->filters, ['sort' => '']),
+            fn (string $v) => $v !== ''
+        ));
     }
 }
