@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\ReviewCommunityReportRequest;
 use App\Models\CommunityReport;
+use App\Services\Community\CommunityNotificationService;
 use Illuminate\Http\RedirectResponse;
 
 class AdminCommunityReportController extends Controller
 {
+    public function __construct(private readonly CommunityNotificationService $communityNotifications) {}
+
     /**
      * PATCH /admin/community/reports/{report}
      * Admin/SuperAdmin marks a community report as resolved or dismissed.
@@ -26,6 +29,8 @@ class AdminCommunityReportController extends Controller
             'reviewed_at' => now(),
             'resolution_note' => $request->validated('resolution_note'),
         ]);
+
+        $this->communityNotifications->notifyReporterOfReportReview($report);
 
         return redirect()->back()
             ->with('status', 'Reporte actualizado correctamente.');

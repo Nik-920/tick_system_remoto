@@ -8,10 +8,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\StoreCommunityCommentRequest;
 use App\Models\CommunityComment;
 use App\Models\Ticket;
+use App\Services\Community\CommunityNotificationService;
 use Illuminate\Http\RedirectResponse;
 
 class CommunityCommentController extends Controller
 {
+    public function __construct(private readonly CommunityNotificationService $communityNotifications) {}
+
     /**
      * POST /reporter/community/tickets/{ticket}/comments
      * Reporter adds a comment to a community-visible ticket.
@@ -27,12 +30,14 @@ class CommunityCommentController extends Controller
             404
         );
 
-        CommunityComment::create([
+        $comment = CommunityComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => $request->user()?->id,
             'body' => $request->validated('body'),
             'status' => CommunityComment::STATUS_VISIBLE,
         ]);
+
+        $this->communityNotifications->notifyTicketReporterOfComment($comment);
 
         return redirect()->back()
             ->withFragment('ticket-'.$ticket->id)

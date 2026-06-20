@@ -9,10 +9,13 @@ use App\Http\Requests\Community\StoreCommunityCommentReportRequest;
 use App\Models\CommunityComment;
 use App\Models\CommunityReport;
 use App\Models\Ticket;
+use App\Services\Community\CommunityNotificationService;
 use Illuminate\Http\RedirectResponse;
 
 class CommunityCommentReportController extends Controller
 {
+    public function __construct(private readonly CommunityNotificationService $communityNotifications) {}
+
     /**
      * POST /reporter/community/comments/{comment}/reports
      * Reporter reports a visible community comment for moderation review.
@@ -50,7 +53,7 @@ class CommunityCommentReportController extends Controller
                 ->with('warning', 'Ya tienes un reporte pendiente para este comentario.');
         }
 
-        CommunityReport::create([
+        $report = CommunityReport::create([
             'ticket_id' => $ticket->id,
             'comment_id' => $comment->id,
             'reported_by' => $userId,
@@ -58,6 +61,8 @@ class CommunityCommentReportController extends Controller
             'note' => $request->validated('note'),
             'status' => CommunityReport::STATUS_PENDING,
         ]);
+
+        $this->communityNotifications->notifyAdminsOfReport($report);
 
         return redirect()->back()
             ->withFragment('ticket-'.$ticket->id)
