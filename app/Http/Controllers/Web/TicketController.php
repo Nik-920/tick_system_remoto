@@ -215,6 +215,7 @@ class TicketController extends Controller
             'embedding.matchedTicket',
             'embedding.reviewer',
             'communityModerationLogs' => fn ($q) => $q->with('performedBy')->latest('created_at'),
+            'communityCommentEditLogs' => fn ($q) => $q->with('editedBy')->latest('created_at'),
         ]);
 
         $availableTransitions = $currentUser instanceof User

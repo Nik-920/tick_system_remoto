@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ViewModels\Tickets;
 
+use App\Models\CommunityCommentEditLog;
 use App\Models\CommunityModerationLog;
 use App\Models\StateHistory;
 use App\Models\Ticket;
@@ -433,6 +434,19 @@ final class TicketShowViewModel
             CommunityModerationLog::ACTION_RESTORED => 'Restaurado',
             default => ucfirst($action),
         };
+    }
+
+    // ─── Community comment edit history (audit, admin-only) ───────────────────
+
+    /** @return Collection<int, CommunityCommentEditLog> */
+    public function communityCommentEditLogs(): Collection
+    {
+        return $this->ticket->communityCommentEditLogs->take(5);
+    }
+
+    public function hasCommunityCommentEditLogs(): bool
+    {
+        return $this->ticket->communityCommentEditLogs->isNotEmpty();
     }
 
     // ─── Navigation ──────────────────────────────────────────────────────────

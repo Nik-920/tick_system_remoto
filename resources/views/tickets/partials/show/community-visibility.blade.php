@@ -110,5 +110,35 @@
             <p class="ticket-show__value--soft text-sm">Sin historial de moderación comunitaria.</p>
         @endif
     </div>
+
+    {{-- Historial de ediciones de comentarios (últimas 5, append-only audit) --}}
+    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <h3 class="ticket-show__label mb-2">Historial de ediciones de comentarios</h3>
+        @if ($vm->hasCommunityCommentEditLogs())
+            <ul class="space-y-3">
+                @foreach ($vm->communityCommentEditLogs() as $editLog)
+                    <li class="ticket-show__value--soft text-sm leading-snug">
+                        <div>
+                            <span class="font-medium">Comentario editado</span>
+                            @if ($editLog->editedBy)
+                                por {{ $editLog->editedBy->name }}
+                            @endif
+                            &middot; {{ $vm->fmtDate($editLog->created_at) }}
+                        </div>
+                        <div class="mt-1">
+                            <span class="ticket-show__label">Antes:</span>
+                            <span>{{ $editLog->previous_body }}</span>
+                        </div>
+                        <div>
+                            <span class="ticket-show__label">Después:</span>
+                            <span>{{ $editLog->new_body }}</span>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <p class="ticket-show__value--soft text-sm">Sin ediciones de comentarios registradas.</p>
+        @endif
+    </div>
 </section>
 @endcan

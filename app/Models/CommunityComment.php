@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -25,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Ticket $ticket
  * @property-read User|null $user
  * @property-read User|null $hiddenBy
+ * @property-read Collection<int, CommunityCommentEditLog> $editLogs
  */
 class CommunityComment extends Model
 {
@@ -101,5 +104,11 @@ class CommunityComment extends Model
     public function hiddenBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'hidden_by');
+    }
+
+    /** @return HasMany<CommunityCommentEditLog, $this> */
+    public function editLogs(): HasMany
+    {
+        return $this->hasMany(CommunityCommentEditLog::class, 'comment_id');
     }
 }

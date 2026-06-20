@@ -8,9 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\StoreCommunityCommentRequest;
 use App\Http\Requests\Community\UpdateCommunityCommentRequest;
 use App\Models\CommunityComment;
+use App\Models\CommunityCommentEditLog;
 use App\Models\Ticket;
 use App\Services\Community\CommunityNotificationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 class CommunityCommentController extends Controller
 {
@@ -67,10 +69,32 @@ class CommunityCommentController extends Controller
             404
         );
 
-        $comment->forceFill([
-            'body' => $request->validated('body'),
-            'edited_at' => now(),
-        ])->save();
+        $previousBody = $comment->body;
+        $newBody = $request->validated('body');
+
+        // No-op: identical content (ignoring surrounding whitespace) does not
+        // touch edited_at nor create an audit log.
+        if (trim((string) $newBody) === trim((string) $previousBody)) {
+            return redirect()->back()
+                ->withFragment('ticket-'.$comment->ticket_id)
+                ->with('status', 'No hay cambios en tu comentario.');
+        }
+
+        DB::transaction(function () use ($comment, $newBody, $previousBody, $request): void {
+            $comment->forceFill([
+                'body' => $newBody,
+                'edited_at' => now(),
+            ])->save();
+
+            CommunityCommentEditLog::create([
+                'comment_id' => $comment->id,
+                'ticket_id' => $comment->ticket_id,
+                'edited_by' => $request->user()?->id,
+                'previous_body' => $previousBody,
+                'new_body' => $newBody,
+                'metadata' => ['source' => 'community_comment_controller'],
+            ]);
+        });
 
         return redirect()->back()
             ->withFragment('ticket-'.$comment->ticket_id)
