@@ -154,6 +154,11 @@ Route::middleware('auth')->group(function (): void {
                 ->name('reporter.community.comments.store');
         });
 
+    // Community v5: comment edit — reporter updates own visible comment.
+    Route::middleware(['role:reporter', 'throttle:mutations'])
+        ->patch('/reporter/community/comments/{comment}', [CommunityCommentController::class, 'update'])
+        ->name('reporter.community.comments.update');
+
     // Community v3: comment delete — comment-scoped (not ticket-scoped).
     Route::middleware(['role:reporter', 'throttle:mutations'])
         ->delete('/reporter/community/comments/{comment}', [CommunityCommentController::class, 'destroy'])

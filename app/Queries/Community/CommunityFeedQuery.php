@@ -186,7 +186,7 @@ final class CommunityFeedQuery
      * @param  list<string>  $ticketIds
      * @return array{
      *   0: array<string, int>,
-     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>>
+     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>>
      * }
      */
     private function batchCommentData(array $ticketIds, string $viewerId): array
@@ -210,7 +210,7 @@ final class CommunityFeedQuery
         $allVisible = CommunityComment::query()
             ->whereIn('ticket_id', $ticketIds)
             ->where('status', CommunityComment::STATUS_VISIBLE)
-            ->select(['id', 'ticket_id', 'user_id', 'body', 'created_at'])
+            ->select(['id', 'ticket_id', 'user_id', 'body', 'edited_at', 'created_at'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -258,6 +258,7 @@ final class CommunityFeedQuery
                 'created_ago' => $comment->created_at?->diffForHumans() ?? '',
                 'owned_by_viewer' => (string) $comment->user_id === $viewerId,
                 'viewer_report_pending' => isset($viewerPendingCommentReportSet[$cid]),
+                'edited' => $comment->edited_at !== null,
             ];
         }
 
@@ -401,8 +402,8 @@ final class CommunityFeedQuery
     /**
      * @param  array<string, int>  $reactionCounts  {type => count}
      * @param  list<string>  $userReactionTypes  types the viewer has active
-     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>  $latestComments
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>}}
+     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>  $latestComments
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>}}
      */
     private function toPost(
         Ticket $ticket,

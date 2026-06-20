@@ -20,11 +20,43 @@
                         <span class="comm-comment__author">
                             {{ $comment['owned_by_viewer'] ? 'Tú' : 'Reporter de la comunidad' }}
                         </span>
+                        @if ($comment['edited'])
+                            <span class="comm-comment__edited-badge">Editado</span>
+                        @endif
                         <span class="comm-comment__time">{{ $comment['created_ago'] }}</span>
                     </div>
                     <p class="comm-comment__body">{{ $comment['body'] }}</p>
                     <div class="comm-comment__actions">
                         @if ($comment['owned_by_viewer'])
+                            {{-- Edit form (no JS — details/summary toggle) --}}
+                            <details class="comm-comment-edit">
+                                <summary class="comm-comment-edit__toggle">
+                                    <x-lucide-pencil width="12" height="12" stroke-width="2" />
+                                    Editar
+                                </summary>
+                                <div class="comm-comment-edit__form-wrap">
+                                    <form method="POST"
+                                          action="{{ route('reporter.community.comments.update', $comment['id']) }}"
+                                          class="comm-comment-edit__form">
+                                        @csrf
+                                        @method('PATCH')
+                                        <textarea name="body"
+                                                  maxlength="500"
+                                                  minlength="2"
+                                                  rows="2"
+                                                  required
+                                                  class="comm-comment-edit__textarea"
+                                                  aria-label="Editar comentario">{{ $comment['body'] }}</textarea>
+                                        <div class="comm-comment-edit__actions-row">
+                                            <button type="submit" class="comm-comment-edit__submit">
+                                                Guardar cambios
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+
+                            {{-- Delete form --}}
                             <form method="POST"
                                   action="{{ route('reporter.community.comments.destroy', $comment['id']) }}"
                                   class="comm-comment__delete-form">

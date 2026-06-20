@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $ticket_id
  * @property string|null $user_id
  * @property string $body
+ * @property Carbon|null $edited_at
  * @property string $status
  * @property string|null $hidden_by
  * @property Carbon|null $hidden_at
@@ -51,9 +52,15 @@ class CommunityComment extends Model
     protected function casts(): array
     {
         return [
+            'edited_at' => 'datetime',
             'hidden_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
+    }
+
+    public function wasEdited(): bool
+    {
+        return $this->edited_at !== null;
     }
 
     /** @return list<string> */

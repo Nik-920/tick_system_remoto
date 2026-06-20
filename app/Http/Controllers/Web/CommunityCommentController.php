@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\StoreCommunityCommentRequest;
+use App\Http\Requests\Community\UpdateCommunityCommentRequest;
 use App\Models\CommunityComment;
 use App\Models\Ticket;
 use App\Services\Community\CommunityNotificationService;
@@ -42,6 +43,38 @@ class CommunityCommentController extends Controller
         return redirect()->back()
             ->withFragment('ticket-'.$ticket->id)
             ->with('status', 'Tu comentario fue publicado.');
+    }
+
+    /**
+     * PATCH /reporter/community/comments/{comment}
+     * Reporter edits their own visible comment on a still-visible ticket.
+     */
+    public function update(UpdateCommunityCommentRequest $request, CommunityComment $comment): RedirectResponse
+    {
+        $userId = (string) $request->user()?->id;
+
+        abort_unless((string) $comment->user_id === $userId, 403);
+
+        abort_unless($comment->isVisible(), 404);
+
+        $ticket = $comment->ticket;
+        abort_unless(
+            $ticket->community_visible && in_array($ticket->state, [
+                Ticket::STATE_OPEN,
+                Ticket::STATE_IN_PROGRESS,
+                Ticket::STATE_RESOLVED,
+            ], true),
+            404
+        );
+
+        $comment->forceFill([
+            'body' => $request->validated('body'),
+            'edited_at' => now(),
+        ])->save();
+
+        return redirect()->back()
+            ->withFragment('ticket-'.$comment->ticket_id)
+            ->with('status', 'Tu comentario fue actualizado.');
     }
 
     /**
