@@ -1,17 +1,25 @@
 /* ============================================================
    COMPONENTS: Buttons
+   INCIDEX
    Shared button styles for consistent, accessible actions.
+
+   FASE B — API vigente: .c-btn + .c-btn--* (sistema nuevo).
+   Las clases legacy .btn-primary / .btn-secondary / .btn-danger
+   quedan como aliases deprecados que delegan al sistema nuevo.
+   Hex hardcodeados reemplazados por tokens semánticos.
+   Dark mode overrides centralizados en themes/dark.css.
    ============================================================ */
 
+/* ── Base button ── */
 .c-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
     padding: 0.55rem 1rem;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: var(--text-base);
     text-decoration: none;
     border: 1px solid var(--border-default);
     cursor: pointer;
@@ -23,11 +31,84 @@
 }
 
 .c-btn:focus-visible {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
 }
 
-/* Legacy button classes used across views */
+/* ── Variants ── */
+.c-btn--primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.c-btn--primary:hover {
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.c-btn--primary:active {
+    transform: translateY(0);
+}
+
+.c-btn--ghost {
+    background: var(--bg-soft);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.c-btn--ghost:hover {
+    background: var(--bg-input);
+    border-color: var(--text-faint);
+}
+
+.c-btn--success {
+    background: var(--tone-success-soft);
+    border-color: var(--color-success-muted);
+    color: var(--tone-success-fg);
+}
+
+.c-btn--success:hover {
+    background: var(--color-success-light);
+    border-color: var(--color-success-muted);
+}
+
+.c-btn--danger {
+    background: var(--color-danger-light);
+    border-color: var(--color-danger-muted);
+    color: var(--color-danger);
+}
+
+.c-btn--danger:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    transform: translateY(-1px);
+}
+
+.c-btn--danger:active {
+    transform: translateY(0);
+}
+
+/* ── Size modifiers ── */
+.c-btn--sm {
+    padding: 0.4rem 0.75rem;
+    font-size: var(--text-sm);
+}
+
+/* ── Shape modifiers ── */
+.c-btn--pill {
+    border-radius: var(--radius-full);
+}
+
+/* ============================================================
+   LEGACY — @deprecated aliases
+   Mantienen retrocompatibilidad con Blade templates existentes.
+   Migrar a .c-btn--* cuando se toque cada vista.
+   ============================================================ */
+
+/* @deprecated — usar .c-btn.c-btn--primary */
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -36,18 +117,18 @@
     padding: 0.55rem 1.1rem;
     border-radius: var(--radius-sm);
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     transition: var(--transition);
     text-decoration: none;
     border: 1px solid transparent;
     cursor: pointer;
     letter-spacing: -0.01em;
-    background: #1d4ed8;
+    background: var(--color-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #1e40af;
+    background: var(--color-primary-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
@@ -56,6 +137,7 @@
     transform: translateY(0);
 }
 
+/* @deprecated — usar .c-btn (base) o .c-btn--ghost */
 .btn-secondary {
     display: inline-flex;
     align-items: center;
@@ -64,18 +146,18 @@
     padding: 0.5rem 1rem;
     border-radius: var(--radius-sm);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     transition: var(--transition);
     text-decoration: none;
     cursor: pointer;
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: var(--tone-neutral-soft);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
 }
 
 .btn-secondary:hover {
-    background: #e2e8f0;
-    color: #1e293b;
+    background: var(--border-default);
+    color: var(--text-primary);
     transform: translateY(-1px);
 }
 
@@ -83,6 +165,7 @@
     transform: translateY(0);
 }
 
+/* @deprecated — usar .c-btn.c-btn--danger */
 .btn-danger {
     display: inline-flex;
     align-items: center;
@@ -91,13 +174,13 @@
     padding: 0.5rem 1rem;
     border-radius: var(--radius-sm);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     transition: var(--transition);
     text-decoration: none;
     cursor: pointer;
-    background: #fff1f2;
+    background: var(--color-danger-light);
     color: #e11d48;
-    border: 1px solid #fecdd3;
+    border: 1px solid var(--color-danger-muted);
 }
 
 .btn-danger:hover {
@@ -111,113 +194,6 @@
     transform: translateY(0);
 }
 
-.c-btn--sm {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
-}
-
-.c-btn--pill {
-    border-radius: 999px;
-}
-
-.c-btn--ghost {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #0f172a;
-}
-
-.c-btn--ghost:hover {
-    background: #e2e8f0;
-    border-color: #94a3b8;
-}
-
-.c-btn--primary {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-    color: #ffffff;
-}
-
-.c-btn--primary:hover {
-    background: #1e40af;
-    border-color: #1e40af;
-}
-
-.c-btn--success {
-    background: #ecfdf3;
-    border-color: #a7f3d0;
-    color: #065f46;
-}
-
-.c-btn--success:hover {
-    background: #d1fae5;
-    border-color: #6ee7b7;
-}
-
-.c-btn--danger {
-    background: #fff1f2;
-    border-color: #fecdd3;
-    color: #b91c1c;
-}
-
-.c-btn--danger:hover {
-    background: #ffe4e6;
-    border-color: #fda4af;
-}
-
-[data-theme="dark"] .c-btn {
-    background: var(--bg-soft);
-    border-color: var(--border-default);
-    color: var(--text-primary);
-}
-
-[data-theme="dark"] .c-btn--ghost {
-    background: rgba(255,255,255,0.05);
-    border-color: var(--border-default);
-    color: var(--text-secondary);
-}
-
-[data-theme="dark"] .c-btn--ghost:hover {
-    background: rgba(255,255,255,0.1);
-}
-
-[data-theme="dark"] .c-btn--success {
-    background: rgba(16,185,129,0.15);
-    border-color: rgba(16,185,129,0.25);
-    color: #6ee7b7;
-}
-
-[data-theme="dark"] .c-btn--success:hover {
-    background: rgba(16,185,129,0.22);
-}
-
-[data-theme="dark"] .c-btn--danger {
-    background: rgba(239,68,68,0.15);
-    border-color: rgba(239,68,68,0.25);
-    color: #fca5a5;
-}
-
-[data-theme="dark"] .c-btn--danger:hover {
-    background: rgba(239,68,68,0.22);
-}
-
-[data-theme="dark"] .btn-secondary {
-    background: rgba(255,255,255,0.06);
-    border-color: var(--border-default);
-    color: var(--text-secondary);
-}
-
-[data-theme="dark"] .btn-secondary:hover {
-    background: rgba(255,255,255,0.1);
-    color: var(--text-primary);
-}
-
-[data-theme="dark"] .btn-danger {
-    background: rgba(239,68,68,0.14);
-    border-color: rgba(239,68,68,0.3);
-    color: #fca5a5;
-}
-
-[data-theme="dark"] .btn-danger:hover {
-    background: rgba(239,68,68,0.22);
-    color: #fecaca;
-}
+/* ============================================================
+   Dark mode overrides → centralizados en themes/dark.css (Fase B)
+   ============================================================ */
