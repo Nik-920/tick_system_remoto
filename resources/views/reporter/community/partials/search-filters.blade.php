@@ -1,7 +1,7 @@
-{{-- ── SEARCH BAR + FILTER CHIPS (REAL) ──────────────────────────
+{{-- ── SEARCH BAR + SORT BAR + FILTER CHIPS (REAL) ─────────────────
      GET form — all filters are surfaced as query string params.
      Buildings come from $feed->buildings (distinct from DB).
-     Chips link to common filter combos.
+     Sort options come from $feed->sortOptions (pre-built URLs).
 ──────────────────────────────────────────────────────────── --}}
 
 {{-- Search form --}}
@@ -23,6 +23,9 @@
     @if ($feed->filters['period'] !== '')
         <input type="hidden" name="period" value="{{ $feed->filters['period'] }}">
     @endif
+    @if ($feed->currentSort !== 'recent')
+        <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
+    @endif
 
     <input
         type="search"
@@ -37,6 +40,18 @@
         <x-lucide-search width="16" height="16" stroke-width="2" />
     </button>
 </form>
+
+{{-- Sort bar --}}
+<nav class="comm-sort-bar" aria-label="Ordenar feed">
+    <span class="comm-sort-bar__label">Ordenar:</span>
+    @foreach ($feed->sortOptions as $opt)
+        <a
+            href="{{ $opt['url'] }}"
+            class="comm-sort-chip {{ $opt['active'] ? 'comm-sort-chip--active' : '' }}"
+            aria-current="{{ $opt['active'] ? 'true' : 'false' }}"
+        >{{ $opt['label'] }}</a>
+    @endforeach
+</nav>
 
 {{-- Filter chips row --}}
 <div class="comm-filters" aria-label="Filtros rápidos">
@@ -59,6 +74,9 @@
                 @endif
                 @if ($feed->filters['period'] !== '')
                     <input type="hidden" name="period" value="{{ $feed->filters['period'] }}">
+                @endif
+                @if ($feed->currentSort !== 'recent')
+                    <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
                 @endif
                 <select
                     name="building"
