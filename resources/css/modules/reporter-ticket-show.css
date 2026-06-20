@@ -160,9 +160,9 @@
     z-index: 0;
 }
 .rep-step.is-done::before,
-.rep-step.is-current::before { background: #16a34a; }
-.rep-step.is-rejected::before { background: #ef4444; }
-.rep-step.is-cancelled::before { background: #94a3b8; }
+.rep-step.is-current::before { background: var(--tone-success-solid); }
+.rep-step.is-rejected::before { background: var(--tone-high-solid); }
+.rep-step.is-cancelled::before { background: var(--tone-neutral-solid); }
 
 .rep-step__node {
     position: relative;
@@ -179,7 +179,7 @@
     flex-shrink: 0;
 }
 
-.rep-step.is-done .rep-step__node { background: #16a34a; color: #ffffff; border-color: #16a34a; }
+.rep-step.is-done .rep-step__node { background: var(--tone-success-solid); color: #ffffff; border-color: var(--tone-success-solid); }
 .rep-step.is-current .rep-step__node {
     background: var(--r-solid);
     color: #ffffff;
@@ -188,8 +188,8 @@
     animation: rep-step-pulse 2s ease-in-out infinite;
 }
 .rep-step.is-todo .rep-step__node { background: var(--bg-soft); color: var(--text-faint); border-color: var(--border-default); }
-.rep-step.is-rejected .rep-step__node { background: #ef4444; color: #ffffff; border-color: #ef4444; }
-.rep-step.is-cancelled .rep-step__node { background: #64748b; color: #ffffff; border-color: #64748b; }
+.rep-step.is-rejected .rep-step__node { background: var(--tone-high-solid); color: #ffffff; border-color: var(--tone-high-solid); }
+.rep-step.is-cancelled .rep-step__node { background: var(--tone-neutral-solid); color: #ffffff; border-color: var(--tone-neutral-solid); }
 
 @keyframes rep-step-pulse {
     0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--r-solid) 22%, transparent); }
@@ -205,12 +205,12 @@
 
 .rep-step.is-done .rep-step__label { color: var(--text-secondary); }
 .rep-step.is-current .rep-step__label { color: var(--color-primary); }
-.rep-step.is-done .rep-step__state { color: #15803d; }
+.rep-step.is-done .rep-step__state { color: var(--tone-low-fg); }
 .rep-step.is-current .rep-step__state { color: var(--color-primary); }
-.rep-step.is-rejected .rep-step__label { color: #b42318; }
-.rep-step.is-rejected .rep-step__state { color: #b42318; }
+.rep-step.is-rejected .rep-step__label { color: var(--tone-high-fg); }
+.rep-step.is-rejected .rep-step__state { color: var(--tone-high-fg); }
 .rep-step.is-cancelled .rep-step__label { color: var(--text-secondary); }
-.rep-step.is-cancelled .rep-step__state { color: #475569; }
+.rep-step.is-cancelled .rep-step__state { color: var(--text-secondary); }
 .rep-step.is-cancelled .rep-step__at { color: var(--text-muted); }
 
 /* ============================================================
@@ -616,21 +616,21 @@
 }
 
 .rep-edit__alert-error {
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-    color: #b91c1c;
+    background: var(--color-danger-light);
+    border: 1px solid var(--color-danger-muted);
+    color: var(--color-danger);
 }
 
 .rep-edit__alert-success {
-    background: #f0fdf4;
+    background: var(--tone-success-soft);
     border: 1px solid #86efac;
-    color: #15803d;
+    color: var(--tone-success-fg);
 }
 
 .rep-edit__alert-warning {
-    background: #fffbeb;
+    background: var(--tone-medium-soft);
     border: 1px solid #fde68a;
-    color: #92400e;
+    color: var(--tone-medium-fg);
 }
 
 .rep-edit__alert-meta {
@@ -858,7 +858,7 @@
     margin: 0;
     font-size: 0.78rem;
     font-weight: 600;
-    color: #dc2626;
+    color: var(--color-danger);
 }
 
 /* ── Checkbox (Toggle Switch) ── */
@@ -1230,7 +1230,7 @@
     line-height: 1.4;
 }
 
-.rep-edit__tips-list svg { color: #16a34a; flex-shrink: 0; margin-top: 0.1rem; }
+.rep-edit__tips-list svg { color: var(--tone-success-solid); flex-shrink: 0; margin-top: 0.1rem; }
 
 /* ── Responsive ── */
 @media (max-width: 1023px) {
@@ -1325,10 +1325,10 @@
    ============================================================ */
 
 .rep-dup-notice {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--tone-medium-solid);
 }
 
-.rep-dup-notice .rep-panel__title svg { color: #d97706; }
+.rep-dup-notice .rep-panel__title svg { color: var(--color-warning); }
 
 .rep-dup-notice__intro {
     margin: 0 0 0.85rem;

@@ -22,15 +22,15 @@
    Each tone exposes a soft surface, a readable foreground and a
    solid hue (rails, dots, fills). Foregrounds clear ≥4.5:1 on
    their soft surface, so colour is never the only signal. */
-.hist-tone-primary { --h-soft: #eff6ff; --h-fg: #1d4ed8; --h-solid: #2563eb; }
-.hist-tone-success { --h-soft: #dcfce7; --h-fg: #15803d; --h-solid: #16a34a; }
-.hist-tone-info    { --h-soft: #e0f2fe; --h-fg: #0369a1; --h-solid: #0891b2; }
-.hist-tone-warning { --h-soft: #fff7ed; --h-fg: #9a3412; --h-solid: #f97316; }
-.hist-tone-purple  { --h-soft: #f3e8ff; --h-fg: #7e22ce; --h-solid: #9333ea; }
-.hist-tone-high    { --h-soft: #fee2e2; --h-fg: #b42318; --h-solid: #ef4444; }
-.hist-tone-medium  { --h-soft: #fef3c7; --h-fg: #92400e; --h-solid: #f59e0b; }
-.hist-tone-low     { --h-soft: #dcfce7; --h-fg: #15803d; --h-solid: #22c55e; }
-.hist-tone-neutral { --h-soft: #f1f5f9; --h-fg: #334155; --h-solid: #64748b; }
+.hist-tone-primary { --h-soft: var(--tone-primary-soft);  --h-fg: var(--tone-primary-fg);  --h-solid: var(--tone-primary-solid);  }
+.hist-tone-success { --h-soft: var(--tone-success-soft);  --h-fg: var(--tone-success-fg);  --h-solid: var(--tone-success-solid);  }
+.hist-tone-info    { --h-soft: var(--tone-info-soft);     --h-fg: var(--tone-info-fg);     --h-solid: var(--tone-info-solid);     }
+.hist-tone-warning { --h-soft: var(--tone-warning-soft);  --h-fg: var(--tone-warning-fg);  --h-solid: var(--tone-warning-solid);  }
+.hist-tone-purple  { --h-soft: var(--tone-purple-soft);   --h-fg: var(--tone-purple-fg);   --h-solid: var(--tone-purple-solid);   }
+.hist-tone-high    { --h-soft: var(--tone-high-soft);     --h-fg: var(--tone-high-fg);     --h-solid: var(--tone-high-solid);     }
+.hist-tone-medium  { --h-soft: var(--tone-medium-soft);   --h-fg: var(--tone-medium-fg);   --h-solid: var(--tone-medium-solid);  }
+.hist-tone-low     { --h-soft: var(--tone-low-soft);      --h-fg: var(--tone-low-fg);      --h-solid: var(--tone-low-solid);      }
+.hist-tone-neutral { --h-soft: var(--tone-neutral-soft);  --h-fg: var(--tone-neutral-fg);  --h-solid: var(--tone-neutral-solid);  }
 
 /* ============================================================
    1. PAGE HEADER
@@ -499,10 +499,10 @@
 
 .hist-badge__dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
 
-.hist-status--resolved  { background: #dcfce7; color: #15803d; border-color: #86efac; }
-.hist-status--closed    { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
-.hist-status--rejected  { background: #fee2e2; color: #b42318; border-color: #fca5a5; }
-.hist-status--cancelled { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.hist-status--resolved  { background: var(--tone-low-soft);     color: var(--tone-low-fg);     border-color: #86efac; }
+.hist-status--closed    { background: var(--tone-info-soft);     color: var(--tone-info-fg);    border-color: #7dd3fc; }
+.hist-status--rejected  { background: var(--tone-high-soft);     color: var(--tone-high-fg);    border-color: var(--color-danger-muted); }
+.hist-status--cancelled { background: var(--tone-neutral-soft);  color: var(--text-secondary);  border-color: #cbd5e1; }
 
 .hist-prio { background: var(--h-soft); color: var(--h-fg); }
 .hist-prio .hist-badge__dot { background: var(--h-solid); }
@@ -748,8 +748,8 @@
     font-size: 0.74rem;
     font-weight: 800;
 }
-.hist-trend--down { background: #dcfce7; color: #15803d; }
-.hist-trend--up { background: #fee2e2; color: #b42318; }
+.hist-trend--down { background: var(--tone-low-soft);  color: var(--tone-low-fg);  }
+.hist-trend--up   { background: var(--tone-high-soft); color: var(--tone-high-fg); }
 
 .hist-trend__note { display: block; margin-top: 0.4rem; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
 

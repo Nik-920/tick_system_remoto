@@ -22,14 +22,14 @@
    Each tone exposes a soft surface, a readable foreground and a
    solid hue (rails, dots, fills). Foregrounds clear ≥4.5:1 on
    their soft surface, so colour is never the only signal. */
-.asg-tone-primary   { --asg-soft: #eff6ff; --asg-fg: #1d4ed8; --asg-solid: #2563eb; }
-.asg-tone-progress  { --asg-soft: #fef3c7; --asg-fg: #92400e; --asg-solid: #f59e0b; }
-.asg-tone-medium    { --asg-soft: #fef3c7; --asg-fg: #92400e; --asg-solid: #f59e0b; }
-.asg-tone-high      { --asg-soft: #fee2e2; --asg-fg: #b42318; --asg-solid: #ef4444; }
-.asg-tone-low       { --asg-soft: #dcfce7; --asg-fg: #15803d; --asg-solid: #22c55e; }
-.asg-tone-available { --asg-soft: #dcfce7; --asg-fg: #15803d; --asg-solid: #16a34a; }
-.asg-tone-info      { --asg-soft: #e0f2fe; --asg-fg: #0369a1; --asg-solid: #0891b2; }
-.asg-tone-neutral   { --asg-soft: #f1f5f9; --asg-fg: #334155; --asg-solid: #64748b; }
+.asg-tone-primary   { --asg-soft: var(--tone-primary-soft);  --asg-fg: var(--tone-primary-fg);  --asg-solid: var(--tone-primary-solid);  }
+.asg-tone-progress  { --asg-soft: var(--tone-medium-soft);   --asg-fg: var(--tone-medium-fg);   --asg-solid: var(--tone-medium-solid);   }
+.asg-tone-medium    { --asg-soft: var(--tone-medium-soft);   --asg-fg: var(--tone-medium-fg);   --asg-solid: var(--tone-medium-solid);   }
+.asg-tone-high      { --asg-soft: var(--tone-high-soft);     --asg-fg: var(--tone-high-fg);     --asg-solid: var(--tone-high-solid);     }
+.asg-tone-low       { --asg-soft: var(--tone-low-soft);      --asg-fg: var(--tone-low-fg);      --asg-solid: var(--tone-low-solid);      }
+.asg-tone-available { --asg-soft: var(--tone-success-soft);  --asg-fg: var(--tone-success-fg);  --asg-solid: var(--tone-success-solid);  }
+.asg-tone-info      { --asg-soft: var(--tone-info-soft);     --asg-fg: var(--tone-info-fg);     --asg-solid: var(--tone-info-solid);     }
+.asg-tone-neutral   { --asg-soft: var(--tone-neutral-soft);  --asg-fg: var(--tone-neutral-fg);  --asg-solid: var(--tone-neutral-solid);  }
 
 /* ============================================================
    1. PAGE HEADER
@@ -605,10 +605,10 @@
 }
 
 /* State */
-.asg-state--open        { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
-.asg-state--in_progress { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-.asg-state--resolved    { background: #dcfce7; color: #15803d; border-color: #86efac; }
-.asg-state--rejected    { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.asg-state--open        { background: var(--tone-info-soft);    color: var(--tone-info-fg);    border-color: #7dd3fc; }
+.asg-state--in_progress { background: var(--tone-medium-soft);  color: var(--tone-medium-fg);  border-color: #fcd34d; }
+.asg-state--resolved    { background: var(--tone-low-soft);     color: var(--tone-low-fg);     border-color: #86efac; }
+.asg-state--rejected    { background: var(--tone-neutral-soft); color: var(--text-secondary);  border-color: #cbd5e1; }
 
 .asg-state__note {
     font-size: 0.72rem;
@@ -645,12 +645,12 @@
     align-items: center;
     gap: 0.3rem;
     padding: 0.18rem 0.55rem;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     font-size: 0.7rem;
     font-weight: 700;
     background: var(--color-danger-light);
-    color: #b42318;
-    border: 1px solid #fca5a5;
+    color: var(--tone-high-fg);
+    border: 1px solid var(--color-danger-muted);
     white-space: nowrap;
 }
 
@@ -1010,11 +1010,11 @@
 /* Step status states */
 .asg-step--done .asg-step__marker {
     background: var(--color-success-light);
-    border-color: #6ee7b7;
-    color: #15803d;
+    border-color: var(--color-success-muted);
+    color: var(--tone-success-fg);
 }
-.asg-step--done .asg-step__line { background: #6ee7b7; }
-.asg-step--done .asg-step__state { color: #15803d; }
+.asg-step--done .asg-step__line { background: var(--color-success-muted); }
+.asg-step--done .asg-step__state { color: var(--tone-success-fg); }
 
 .asg-step--current .asg-step__marker {
     background: var(--color-primary);
