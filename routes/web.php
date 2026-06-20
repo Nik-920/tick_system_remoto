@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\CommunityCommentController;
 use App\Http\Controllers\Web\CommunityCommentReportController;
 use App\Http\Controllers\Web\CommunityModerationQueueController;
+use App\Http\Controllers\Web\CommunityNotificationPreferenceController;
 use App\Http\Controllers\Web\CommunityReactionController;
 use App\Http\Controllers\Web\CommunityReportController;
 use App\Http\Controllers\Web\CommunitySaveController;
@@ -109,6 +110,9 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])
         ->middleware('throttle:mutations')
         ->name('profile.delete-avatar');
+    Route::patch('/profile/community-notifications', [CommunityNotificationPreferenceController::class, 'update'])
+        ->middleware('throttle:mutations')
+        ->name('profile.community-notifications.update');
 
     Route::get('/scan/{token}', [QrScanController::class, 'show'])
         ->middleware('throttle:20,1')
