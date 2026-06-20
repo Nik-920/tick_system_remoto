@@ -35,6 +35,9 @@ class UpdateCategoryRequest extends FormRequest
             'icon' => ['sometimes', 'nullable', 'string', 'max:255'],
             'icon_file' => ['sometimes', 'nullable', 'file', 'image', 'max:2048'],
             'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'community_default_visible' => ['sometimes', 'nullable', 'boolean'],
+            'community_visibility_locked' => ['sometimes', 'nullable', 'boolean'],
+            'community_visibility_help' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 

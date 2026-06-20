@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ViewModels\Tickets;
 
+use App\Models\CommunityModerationLog;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\TicketEmbedding;
@@ -410,6 +411,28 @@ final class TicketShowViewModel
         $reason = $this->ticket->community_visibility_reason;
 
         return ($reason !== null && $reason !== '') ? $reason : null;
+    }
+
+    // ─── Community moderation history ────────────────────────────────────────
+
+    /** @return Collection<int, CommunityModerationLog> */
+    public function communityModerationLogs(): Collection
+    {
+        return $this->ticket->communityModerationLogs->take(5);
+    }
+
+    public function hasCommunityModerationLogs(): bool
+    {
+        return $this->ticket->communityModerationLogs->isNotEmpty();
+    }
+
+    public function communityLogActionLabel(string $action): string
+    {
+        return match ($action) {
+            CommunityModerationLog::ACTION_HIDDEN => 'Ocultado',
+            CommunityModerationLog::ACTION_RESTORED => 'Restaurado',
+            default => ucfirst($action),
+        };
     }
 
     // ─── Navigation ──────────────────────────────────────────────────────────

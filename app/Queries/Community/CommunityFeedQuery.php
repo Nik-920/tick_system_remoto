@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Queries\Community;
 
 use App\Models\Category;
+use App\Models\CommunityComment;
+use App\Models\CommunityReaction;
+use App\Models\CommunityReport;
+use App\Models\CommunitySave;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
@@ -22,6 +26,7 @@ use Illuminate\Support\Str;
  *   and assigned_by are never loaded.
  * - Eager loading uses explicit column lists; user relations are not loaded.
  * - Returned ViewModel contains pre-mapped arrays, not raw Eloquent models.
+ * - Reaction/save counts are aggregate only; no user identity is exposed.
  *
  * Visibility rule (community_visible column):
  * - community_visible=true AND state IN (open, in_progress, resolved) → public.
@@ -52,7 +57,7 @@ final class CommunityFeedQuery
      */
     public function forReporter(User $viewer, array $filters): CommunityFeedViewModel
     {
-        $base = $this->baseQuery($filters);
+        $base = $this->baseQuery($filters, $viewer);
 
         $paginator = $base
             ->with([
@@ -65,9 +70,28 @@ final class CommunityFeedQuery
             ->paginate(self::PER_PAGE, ['id', 'title', 'description', 'location_id', 'category_id', 'state', 'priority', 'resolved_at', 'created_at', 'updated_at'], 'page')
             ->withQueryString();
 
+        /** @var list<string> $ticketIds */
+        $ticketIds = collect($paginator->items())->pluck('id')->all();
+
+        [$reactionCountsMap, $userReactionTypesMap, $userSavesSet, $saveCountsMap, $viewerPendingReportSet] =
+            $this->batchSocialData($ticketIds, $viewer->id);
+
+        [$commentCountsMap, $latestCommentsMap] =
+            $this->batchCommentData($ticketIds, $viewer->id);
+
         $posts = [];
         foreach ($paginator->items() as $ticket) {
-            $posts[] = $this->toPost($ticket);
+            $tid = (string) $ticket->id;
+            $posts[] = $this->toPost(
+                $ticket,
+                $reactionCountsMap[$tid] ?? [],
+                $userReactionTypesMap[$tid] ?? [],
+                isset($userSavesSet[$tid]),
+                (int) ($saveCountsMap[$tid] ?? 0),
+                isset($viewerPendingReportSet[$tid]),
+                (int) ($commentCountsMap[$tid] ?? 0),
+                $latestCommentsMap[$tid] ?? [],
+            );
         }
 
         return new CommunityFeedViewModel(
@@ -84,13 +108,170 @@ final class CommunityFeedQuery
     }
 
     /**
+     * Batch-load reaction counts, current-user reaction types, save flags,
+     * save counts, and pending report flags for a page of ticket IDs — no N+1 queries.
+     *
+     * @param  list<string>  $ticketIds
+     * @return array{
+     *   0: array<string, array<string, int>>,
+     *   1: array<string, list<string>>,
+     *   2: array<string, true>,
+     *   3: array<string, int>,
+     *   4: array<string, true>
+     * }
+     */
+    private function batchSocialData(array $ticketIds, string $viewerId): array
+    {
+        if ($ticketIds === []) {
+            return [[], [], [], [], []];
+        }
+
+        // Aggregate counts: {ticket_id => {type => count}}
+        $reactionCountsMap = CommunityReaction::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->selectRaw('ticket_id, type, COUNT(*) as cnt')
+            ->groupBy('ticket_id', 'type')
+            ->get()
+            ->groupBy('ticket_id')
+            ->map(fn ($rows) => $rows->pluck('cnt', 'type')->map(fn ($c) => (int) $c)->all())
+            ->all();
+
+        // Current viewer's reaction types per ticket: {ticket_id => [type, ...]}
+        $userReactionTypesMap = CommunityReaction::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->where('user_id', $viewerId)
+            ->select(['ticket_id', 'type'])
+            ->get()
+            ->groupBy('ticket_id')
+            ->map(fn ($rows) => $rows->pluck('type')->all())
+            ->all();
+
+        // Current viewer's saved tickets: {ticket_id => true}
+        $savedIds = CommunitySave::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->where('user_id', $viewerId)
+            ->pluck('ticket_id')
+            ->all();
+        /** @var array<string, true> $userSavesSet */
+        $userSavesSet = array_fill_keys($savedIds, true);
+
+        // Aggregate save counts per ticket: {ticket_id => count}
+        $saveCountsMap = CommunitySave::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->selectRaw('ticket_id, COUNT(*) as cnt')
+            ->groupBy('ticket_id')
+            ->pluck('cnt', 'ticket_id')
+            ->map(fn ($c) => (int) $c)
+            ->all();
+
+        // Current viewer's pending reports: {ticket_id => true}
+        $pendingReportIds = CommunityReport::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->where('reported_by', $viewerId)
+            ->where('status', CommunityReport::STATUS_PENDING)
+            ->pluck('ticket_id')
+            ->all();
+        /** @var array<string, true> $viewerPendingReportSet */
+        $viewerPendingReportSet = array_fill_keys($pendingReportIds, true);
+
+        return [$reactionCountsMap, $userReactionTypesMap, $userSavesSet, $saveCountsMap, $viewerPendingReportSet];
+    }
+
+    /**
+     * Batch-load comment counts and latest 2 visible comments per ticket.
+     * Also batch-loads viewer's pending comment reports (no N+1).
+     * Only user_id (for viewer ownership check) and safe fields are selected.
+     * No user names, emails, or PII are loaded.
+     *
+     * @param  list<string>  $ticketIds
+     * @return array{
+     *   0: array<string, int>,
+     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>>
+     * }
+     */
+    private function batchCommentData(array $ticketIds, string $viewerId): array
+    {
+        if ($ticketIds === []) {
+            return [[], []];
+        }
+
+        // Aggregate visible comment counts per ticket
+        $commentCountsMap = CommunityComment::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->where('status', CommunityComment::STATUS_VISIBLE)
+            ->selectRaw('ticket_id, COUNT(*) as cnt')
+            ->groupBy('ticket_id')
+            ->pluck('cnt', 'ticket_id')
+            ->map(fn ($c) => (int) $c)
+            ->all();
+
+        // Latest 2 visible comments per ticket via rank window function fallback:
+        // fetch all visible comments ordered newest-first, then group in PHP.
+        $allVisible = CommunityComment::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->where('status', CommunityComment::STATUS_VISIBLE)
+            ->select(['id', 'ticket_id', 'user_id', 'body', 'created_at'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // First pass: collect comment IDs that will appear in the feed (latest 2 per ticket)
+        // so we can batch-query pending reports for exactly those IDs — zero N+1.
+        $seenCountPerTicket = [];
+        /** @var list<string> $visibleCommentIds */
+        $visibleCommentIds = [];
+        foreach ($allVisible as $comment) {
+            $tid = (string) $comment->ticket_id;
+            $seenCountPerTicket[$tid] = ($seenCountPerTicket[$tid] ?? 0) + 1;
+            if ($seenCountPerTicket[$tid] <= 2) {
+                $visibleCommentIds[] = (string) $comment->id;
+            }
+        }
+
+        // Batch viewer's pending comment reports for the shown comment IDs only
+        /** @var array<string, true> $viewerPendingCommentReportSet */
+        $viewerPendingCommentReportSet = [];
+        if ($visibleCommentIds !== []) {
+            $pendingCommentIds = CommunityReport::query()
+                ->whereNotNull('comment_id')
+                ->whereIn('comment_id', $visibleCommentIds)
+                ->where('reported_by', $viewerId)
+                ->where('status', CommunityReport::STATUS_PENDING)
+                ->pluck('comment_id')
+                ->all();
+            $viewerPendingCommentReportSet = array_fill_keys($pendingCommentIds, true);
+        }
+
+        /** @var array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>> $latestCommentsMap */
+        $latestCommentsMap = [];
+        foreach ($allVisible as $comment) {
+            $tid = (string) $comment->ticket_id;
+            if (! isset($latestCommentsMap[$tid])) {
+                $latestCommentsMap[$tid] = [];
+            }
+            if (count($latestCommentsMap[$tid]) >= 2) {
+                continue;
+            }
+            $cid = (string) $comment->id;
+            $latestCommentsMap[$tid][] = [
+                'id' => $cid,
+                'body' => (string) $comment->body,
+                'created_ago' => $comment->created_at?->diffForHumans() ?? '',
+                'owned_by_viewer' => (string) $comment->user_id === $viewerId,
+                'viewer_report_pending' => isset($viewerPendingCommentReportSet[$cid]),
+            ];
+        }
+
+        return [$commentCountsMap, $latestCommentsMap];
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      * @return Builder<Ticket>
      */
-    private function baseQuery(array $filters): Builder
+    private function baseQuery(array $filters, User $viewer): Builder
     {
         $query = Ticket::query()
-            ->where('community_visible', true)
+            ->whereRaw('"community_visible" IS TRUE')
             ->whereIn('state', self::PUBLIC_STATES)
             ->orderByDesc('updated_at');
 
@@ -101,6 +282,7 @@ final class CommunityFeedQuery
         $this->applyPriority($query, $filters);
         $this->applyHasMedia($query, $filters);
         $this->applyPeriod($query, $filters);
+        $this->applySaved($query, $filters, $viewer);
 
         return $query;
     }
@@ -202,10 +384,36 @@ final class CommunityFeedQuery
     }
 
     /**
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>}
+     * "Guardados" filter: only tickets the viewer has saved, still visible.
+     *
+     * @param  Builder<Ticket>  $query
+     * @param  array<string, mixed>  $filters
      */
-    private function toPost(Ticket $ticket): array
+    private function applySaved(Builder $query, array $filters, User $viewer): void
     {
+        if (($filters['saved'] ?? '') !== '1') {
+            return;
+        }
+
+        $query->whereHas('communitySaves', fn ($q) => $q->where('user_id', $viewer->id));
+    }
+
+    /**
+     * @param  array<string, int>  $reactionCounts  {type => count}
+     * @param  list<string>  $userReactionTypes  types the viewer has active
+     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>  $latestComments
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool}>}}
+     */
+    private function toPost(
+        Ticket $ticket,
+        array $reactionCounts,
+        array $userReactionTypes,
+        bool $isSaved,
+        int $savesCount,
+        bool $viewerReportPending = false,
+        int $commentCount = 0,
+        array $latestComments = [],
+    ): array {
         $firstMedia = $ticket->media->first();
         $mediaCount = $ticket->media->count();
         $state = (string) $ticket->state;
@@ -215,6 +423,12 @@ final class CommunityFeedQuery
             ->values()
             ->map(fn ($m) => (string) $m->file_url)
             ->all();
+
+        $counts = [
+            CommunityReaction::TYPE_INTERESTED => (int) ($reactionCounts[CommunityReaction::TYPE_INTERESTED] ?? 0),
+            CommunityReaction::TYPE_ALSO_HAPPENS => (int) ($reactionCounts[CommunityReaction::TYPE_ALSO_HAPPENS] ?? 0),
+            CommunityReaction::TYPE_SEEN => (int) ($reactionCounts[CommunityReaction::TYPE_SEEN] ?? 0),
+        ];
 
         return [
             'id' => (string) $ticket->id,
@@ -246,6 +460,17 @@ final class CommunityFeedQuery
             'media_count' => $mediaCount,
             'has_media' => $mediaCount > 0,
             'media_images' => $mediaImages,
+            'reactions' => [
+                'counts' => $counts,
+                'user_types' => array_values($userReactionTypes),
+            ],
+            'saved' => $isSaved,
+            'saves_count' => $savesCount,
+            'viewer_report_pending' => $viewerReportPending,
+            'comments' => [
+                'count' => $commentCount,
+                'items' => array_values($latestComments),
+            ],
         ];
     }
 
@@ -265,6 +490,7 @@ final class CommunityFeedQuery
             'period' => in_array(trim((string) ($filters['period'] ?? '')), self::PERIODS, true)
                 ? trim((string) ($filters['period'] ?? ''))
                 : '',
+            'saved' => ($filters['saved'] ?? '') === '1' ? '1' : '',
         ];
     }
 
@@ -292,7 +518,7 @@ final class CommunityFeedQuery
         return Location::query()
             ->select(['locations.id', 'locations.name', 'locations.building', 'locations.room_code'])
             ->join('tickets', 'locations.id', '=', 'tickets.location_id')
-            ->where('tickets.community_visible', true)
+            ->whereRaw('"tickets"."community_visible" IS TRUE')
             ->whereIn('tickets.state', self::PUBLIC_STATES)
             ->groupBy('locations.id', 'locations.name', 'locations.building', 'locations.room_code')
             ->orderByDesc(DB::raw('COUNT(tickets.id)'))
@@ -313,14 +539,14 @@ final class CommunityFeedQuery
     private function quickSummary(): array
     {
         $counts = Ticket::query()
-            ->where('community_visible', true)
+            ->whereRaw('"community_visible" IS TRUE')
             ->whereIn('state', self::PUBLIC_STATES)
             ->selectRaw('state, COUNT(*) as cnt')
             ->groupBy('state')
             ->pluck('cnt', 'state');
 
         $locationCount = Ticket::query()
-            ->where('community_visible', true)
+            ->whereRaw('"community_visible" IS TRUE')
             ->whereIn('state', [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS])
             ->distinct()
             ->count('location_id');
@@ -340,7 +566,7 @@ final class CommunityFeedQuery
         return Category::query()
             ->select(['categories.id', 'categories.name', 'categories.icon'])
             ->join('tickets', 'categories.id', '=', 'tickets.category_id')
-            ->where('tickets.community_visible', true)
+            ->whereRaw('"tickets"."community_visible" IS TRUE')
             ->whereIn('tickets.state', self::PUBLIC_STATES)
             ->groupBy('categories.id', 'categories.name', 'categories.icon')
             ->orderByDesc(DB::raw('COUNT(tickets.id)'))

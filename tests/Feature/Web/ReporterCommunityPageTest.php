@@ -619,9 +619,9 @@ class ReporterCommunityPageTest extends TestCase
             ->assertSee('Sin reportes públicos', false);
     }
 
-    // ── Social placeholders ──────────────────────────────────────────────────
+    // ── Social actions (Community v2) ────────────────────────────────────────
 
-    public function test_social_actions_are_disabled_placeholders(): void
+    public function test_social_action_buttons_are_functional(): void
     {
         $reporter = $this->createUserWithRole('reporter');
         $location = $this->makeLocation();
@@ -642,13 +642,15 @@ class ReporterCommunityPageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Me interesa', false)
-            ->assertSee('Comentar', false)
+            ->assertSee('También me pasa', false)
+            ->assertSee('Lo vi', false)
             ->assertSee('Guardar', false);
 
-        $this->assertStringContainsString(
-            'comm-action-btn--disabled',
-            $response->getContent(),
-        );
+        $html = $response->getContent();
+        $this->assertStringContainsString('comm-action-btn', $html);
+        $this->assertStringNotContainsString('comm-action-btn--disabled', $html);
+        $this->assertStringContainsString('Marcar como Me interesa', $html);
+        $this->assertStringContainsString('Guardar reporte', $html);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

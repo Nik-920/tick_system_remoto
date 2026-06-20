@@ -58,7 +58,17 @@
         @endif
     </a>
 
-    {{-- Próximamente: Siguiendo (v2 follows) --}}
+    {{-- Guardados (v2 saves) --}}
+    <a href="{{ route('reporter.community') }}?saved=1"
+       class="comm-tab {{ ($feed->filters['saved'] ?? '') === '1' ? 'comm-tab--active' : '' }}"
+       aria-label="Tus guardados">
+        <span class="comm-tab__label-text">Guardados</span>
+        @if (($feed->filters['saved'] ?? '') === '1')
+            <span class="comm-tab__indicator" aria-hidden="true"></span>
+        @endif
+    </a>
+
+    {{-- Próximamente: Siguiendo (v3 follows) --}}
     <span class="comm-tab comm-tab--with-badge comm-tab--disabled" aria-disabled="true" title="Disponible próximamente">
         <span class="comm-tab__label-text">Siguiendo</span>
         <span class="comm-tab__badge-real">Próximamente</span>

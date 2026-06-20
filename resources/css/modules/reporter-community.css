@@ -1210,6 +1210,45 @@
     padding: 0.125rem 0.4375rem;
 }
 
+/* Active reaction state */
+.comm-action-btn--active {
+    color: var(--color-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.07);
+}
+
+.comm-action-btn--active:hover {
+    background: rgba(37, 99, 235, 0.13);
+    color: var(--color-primary, #2563eb);
+}
+
+.comm-action-btn--saved.comm-action-btn--active {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.09);
+}
+
+.comm-action-btn--saved.comm-action-btn--active:hover {
+    background: rgba(245, 158, 11, 0.16);
+    color: #d97706;
+}
+
+/* Aggregate count badge */
+.comm-action-btn__count {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    min-width: 1.125rem;
+    text-align: center;
+    background: var(--bg-soft, #f1f5f9);
+    border: 1px solid var(--border-default, #e2e8f0);
+    border-radius: 9999px;
+    padding: 0 0.3125rem;
+    line-height: 1.4;
+}
+
+.comm-action-btn--active .comm-action-btn__count {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.2);
+}
+
 /* ============================================================
    17. REAL CONTENT — Sidebar
    ============================================================ */
@@ -1364,6 +1403,36 @@
     font-size: 0.6875rem;
     color: var(--text-muted, #64748b);
     display: block;
+}
+
+/* Saves link in sidebar */
+.comm-saves-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    text-decoration: none;
+    color: var(--text-secondary, #334155);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.4375rem 0.5rem;
+    margin: 0 -0.5rem;
+    width: calc(100% + 1rem);
+    border-radius: var(--radius-xs);
+    transition: background 0.14s, color 0.14s;
+}
+
+.comm-saves-link:hover {
+    background: var(--color-primary-light, #eff6ff);
+    color: var(--color-primary, #1d4ed8);
+}
+
+.comm-saves-link--active {
+    color: var(--color-primary, #2563eb);
+    font-weight: 600;
+}
+
+.comm-saves-link__text {
+    flex: 1;
 }
 
 /* ============================================================
@@ -1813,6 +1882,45 @@
     background: rgba(255,255,255,0.07);
 }
 
+[data-theme="dark"] .comm-action-btn--active {
+    color: #93c5fd;
+    background: rgba(37, 99, 235, 0.18);
+}
+
+[data-theme="dark"] .comm-action-btn--active:hover {
+    background: rgba(37, 99, 235, 0.28);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .comm-action-btn--saved.comm-action-btn--active {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.18);
+}
+
+[data-theme="dark"] .comm-action-btn--saved.comm-action-btn--active:hover {
+    background: rgba(245, 158, 11, 0.28);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .comm-action-btn__count {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+}
+
+[data-theme="dark"] .comm-action-btn--active .comm-action-btn__count {
+    background: rgba(37, 99, 235, 0.22);
+    border-color: rgba(93, 147, 253, 0.3);
+}
+
+[data-theme="dark"] .comm-saves-link:hover {
+    background: rgba(37, 99, 235, 0.12);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .comm-saves-link--active {
+    color: #93c5fd;
+}
+
 [data-theme="dark"] .comm-thumb-car__arrow {
     background: rgba(15, 23, 42, 0.88);
     border-color: rgba(255,255,255,0.14);
@@ -1974,3 +2082,378 @@
         text-align: right;
     }
 }
+
+/* ============================================================
+   13. REPORT ACTION (Community v2.5)
+   ============================================================ */
+
+/* "Reportar" details toggle */
+.comm-report-details {
+    position: relative;
+}
+
+.comm-report-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: transparent;
+    color: var(--color-text-soft, #64748b);
+    font-size: var(--text-xs, 0.75rem);
+    cursor: pointer;
+    list-style: none;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.comm-report-summary::marker,
+.comm-report-summary::-webkit-details-marker {
+    display: none;
+    content: "";
+}
+
+.comm-report-summary:hover {
+    color: var(--color-warning, #d97706);
+    border-color: var(--color-warning, #d97706);
+}
+
+/* Expanded form panel */
+.comm-report-form-wrap {
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 20;
+    min-width: 260px;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    padding: 0.75rem;
+}
+
+.comm-report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.comm-report-select,
+.comm-report-textarea {
+    width: 100%;
+    font-size: var(--text-xs, 0.75rem);
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 0.375rem;
+    background: var(--color-bg, #f8fafc);
+    color: var(--color-text, #1e293b);
+}
+
+.comm-report-textarea {
+    resize: vertical;
+    min-height: 3.5rem;
+}
+
+.comm-report-btn {
+    align-self: flex-end;
+    padding: 0.3rem 0.75rem;
+    font-size: var(--text-xs, 0.75rem);
+    border-radius: 0.375rem;
+    border: none;
+    background: var(--color-warning, #d97706);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.comm-report-btn:hover {
+    background: var(--color-warning-dark, #b45309);
+}
+
+/* "Reporte enviado" state — muted indicator, not a button */
+.comm-action-btn--reported {
+    opacity: 0.6;
+    pointer-events: none;
+    color: var(--color-warning, #d97706);
+    border-color: var(--color-warning, #d97706);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .comm-report-form-wrap {
+    background: var(--color-surface-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+}
+
+[data-theme="dark"] .comm-report-select,
+[data-theme="dark"] .comm-report-textarea {
+    background: var(--color-bg-dark, #0f172a);
+    border-color: var(--color-border-dark, #334155);
+    color: var(--color-text-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .comm-report-summary {
+    border-color: var(--color-border-dark, #334155);
+    color: var(--color-text-soft-dark, #94a3b8);
+}
+
+[data-theme="dark"] .comm-report-summary:hover,
+[data-theme="dark"] .comm-report-details[open] .comm-report-summary {
+    background: rgba(255,255,255,0.07);
+    color: #fbbf24;
+    border-color: #fbbf24;
+}
+
+/* ============================================================
+   COMMUNITY v3 — COMMENTS
+   ============================================================ */
+
+/* Toggle: <details> wrapper around the comments section */
+.comm-post__comments-toggle {
+    padding: 0 16px;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.comm-comments-details {
+    width: 100%;
+}
+
+.comm-comments-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-text-soft, #64748b);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.comm-comments-summary::-webkit-details-marker { display: none; }
+
+.comm-comments-summary:hover {
+    color: var(--color-text, #1e293b);
+}
+
+.comm-comments-summary__label {
+    flex: 1;
+}
+
+.comm-comments-summary__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--color-primary-soft, #eff6ff);
+    color: var(--color-primary, #3b82f6);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.comm-comments-details__body {
+    padding-bottom: 12px;
+}
+
+/* Comments section */
+.comm-comments {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Comment list */
+.comm-comments__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Single comment */
+.comm-comment {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--color-surface-soft, #f8fafc);
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.comm-comment__header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.comm-comment__author {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-text, #1e293b);
+}
+
+.comm-comment__time {
+    font-size: 0.70rem;
+    color: var(--color-text-soft, #94a3b8);
+    margin-left: auto;
+}
+
+.comm-comment__body {
+    font-size: 0.80rem;
+    color: var(--color-text, #334155);
+    line-height: 1.5;
+    margin: 0;
+    word-break: break-word;
+}
+
+.comm-comment__delete-form {
+    margin-top: 4px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.comm-comment__delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    font-size: 0.70rem;
+    color: var(--color-danger-soft, #ef4444);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.comm-comment__delete-btn:hover {
+    background: var(--color-danger-bg, #fef2f2);
+}
+
+/* "More comments" hint */
+.comm-comments__more-hint {
+    font-size: 0.72rem;
+    color: var(--color-text-soft, #94a3b8);
+    margin: 0;
+    padding-left: 4px;
+}
+
+/* Empty state */
+.comm-comments__empty {
+    font-size: 0.78rem;
+    color: var(--color-text-soft, #94a3b8);
+    font-style: italic;
+    margin: 0;
+    padding: 4px 0;
+}
+
+/* Comment form */
+.comm-comments__form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.comm-comments__form-label {
+    font-size: 0.72rem;
+    color: var(--color-text-soft, #94a3b8);
+}
+
+.comm-comments__form-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.comm-comments__textarea {
+    flex: 1;
+    resize: vertical;
+    padding: 7px 10px;
+    font-size: 0.80rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px;
+    background: var(--color-bg, #fff);
+    color: var(--color-text, #1e293b);
+    line-height: 1.4;
+    min-height: 40px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+
+.comm-comments__textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #3b82f6);
+}
+
+.comm-comments__submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #fff;
+    background: var(--color-primary, #3b82f6);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.comm-comments__submit-btn:hover {
+    background: var(--color-primary-dark, #2563eb);
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .comm-post__comments-toggle {
+    border-top-color: var(--color-border-dark, #334155);
+}
+
+[data-theme="dark"] .comm-comments-summary {
+    color: var(--color-text-soft-dark, #94a3b8);
+}
+
+[data-theme="dark"] .comm-comments-summary:hover {
+    color: var(--color-text-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .comm-comments-summary__count {
+    background: var(--color-primary-soft-dark, #1e3a5f);
+    color: var(--color-primary-light, #93c5fd);
+}
+
+[data-theme="dark"] .comm-comment {
+    background: var(--color-surface-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+}
+
+[data-theme="dark"] .comm-comment__author {
+    color: var(--color-text-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .comm-comment__body {
+    color: var(--color-text-dark, #cbd5e1);
+}
+
+[data-theme="dark"] .comm-comments__textarea {
+    background: var(--color-bg-dark, #0f172a);
+    border-color: var(--color-border-dark, #334155);
+    color: var(--color-text-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .comm-comments__textarea:focus {
+    border-color: var(--color-primary, #3b82f6);
+}
+
+[data-theme="dark"] .comm-comments__form-label {
+    color: var(--color-text-soft-dark, #64748b);
+}
+

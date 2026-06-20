@@ -5,7 +5,15 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Web\AdminCommunityCommentController;
+use App\Http\Controllers\Web\AdminCommunityReportController;
 use App\Http\Controllers\Web\CategoryController;
+use App\Http\Controllers\Web\CommunityCommentController;
+use App\Http\Controllers\Web\CommunityCommentReportController;
+use App\Http\Controllers\Web\CommunityModerationQueueController;
+use App\Http\Controllers\Web\CommunityReactionController;
+use App\Http\Controllers\Web\CommunityReportController;
+use App\Http\Controllers\Web\CommunitySaveController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\FcmTokenController;
 use App\Http\Controllers\Web\LocationController;
@@ -122,12 +130,39 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('role:reporter')
         ->name('reporter.guide');
 
-    // "Comunidad del campus" — reporter-only social feed (skeleton v1).
-    // Phase 1: static shimmer skeleton, no live data. Future phases will
-    // connect CommunityFeedQuery + reactions/saves/comments.
+    // "Comunidad del campus" — reporter-only social feed (v2: reactions + saves).
     Route::get('/reporter/community', ReporterCommunityController::class)
         ->middleware('role:reporter')
         ->name('reporter.community');
+
+    // Community v2: reactions and saves — reporter-only mutation endpoints.
+    // Visibility check is enforced inside each controller (404 if not visible).
+    Route::middleware(['role:reporter', 'throttle:mutations'])
+        ->prefix('reporter/community/tickets/{ticket}')
+        ->group(function (): void {
+            Route::post('/reactions', [CommunityReactionController::class, 'store'])
+                ->name('reporter.community.reactions.store');
+            Route::delete('/reactions/{type}', [CommunityReactionController::class, 'destroy'])
+                ->name('reporter.community.reactions.destroy');
+            Route::post('/save', [CommunitySaveController::class, 'store'])
+                ->name('reporter.community.saves.store');
+            Route::delete('/save', [CommunitySaveController::class, 'destroy'])
+                ->name('reporter.community.saves.destroy');
+            Route::post('/reports', [CommunityReportController::class, 'store'])
+                ->name('reporter.community.reports.store');
+            Route::post('/comments', [CommunityCommentController::class, 'store'])
+                ->name('reporter.community.comments.store');
+        });
+
+    // Community v3: comment delete — comment-scoped (not ticket-scoped).
+    Route::middleware(['role:reporter', 'throttle:mutations'])
+        ->delete('/reporter/community/comments/{comment}', [CommunityCommentController::class, 'destroy'])
+        ->name('reporter.community.comments.destroy');
+
+    // Community v4: comment reports — reporter flags a specific visible comment.
+    Route::middleware(['role:reporter', 'throttle:mutations'])
+        ->post('/reporter/community/comments/{comment}/reports', [CommunityCommentReportController::class, 'store'])
+        ->name('reporter.community.comment-reports.store');
 
     // "Mis tickets" — reporter-only board + per-ticket tracking (static visual
     // phase, no live data yet). Parallel to the classic /tickets list, which
@@ -243,6 +278,25 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/tickets/{ticket}/community/restore', [TicketCommunityVisibilityController::class, 'restore'])
             ->middleware(['throttle:mutations'])
             ->name('tickets.community.restore');
+
+        // Community moderation queue — central admin panel to review, hide and
+        // restore tickets from the reporter community feed in bulk.
+        Route::get('/admin/community/moderation', CommunityModerationQueueController::class)
+            ->name('admin.community.moderation');
+
+        // Community reports review — admin marks a user-submitted report as
+        // resolved or dismissed. Does NOT auto-hide the ticket.
+        Route::patch('/admin/community/reports/{report}', [AdminCommunityReportController::class, 'review'])
+            ->middleware(['throttle:mutations'])
+            ->name('admin.community.reports.review');
+
+        // Community v3: admin hide/restore individual comments.
+        Route::patch('/admin/community/comments/{comment}/hide', [AdminCommunityCommentController::class, 'hide'])
+            ->middleware(['throttle:mutations'])
+            ->name('admin.community.comments.hide');
+        Route::patch('/admin/community/comments/{comment}/restore', [AdminCommunityCommentController::class, 'restore'])
+            ->middleware(['throttle:mutations'])
+            ->name('admin.community.comments.restore');
     });
 
     Route::middleware('role:super_admin')->group(function (): void {

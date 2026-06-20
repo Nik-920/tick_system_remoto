@@ -24,14 +24,24 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property Carbon|null $assigned_at
  * @property bool $assignment_locked
  * @property string|null $assignment_source
+ * @property bool $community_visible
+ * @property Carbon|null $community_hidden_at
+ * @property string|null $community_hidden_by
+ * @property string|null $community_visibility_reason
  * @property-read Location|null $location
  * @property-read Category|null $category
  * @property-read User|null $reporter
  * @property-read User|null $assignee
  * @property-read User|null $assignedBy
+ * @property-read User|null $communityHiddenBy
  * @property-read TicketEmbedding|null $embedding
  * @property-read Collection<int, StateHistory> $stateHistory
  * @property-read Collection<int, TicketMedia> $media
+ * @property-read Collection<int, CommunityModerationLog> $communityModerationLogs
+ * @property-read Collection<int, CommunityReaction> $communityReactions
+ * @property-read Collection<int, CommunitySave> $communitySaves
+ * @property-read Collection<int, CommunityReport> $communityReports
+ * @property-read Collection<int, CommunityComment> $communityComments
  */
 class Ticket extends Model
 {
@@ -135,6 +145,11 @@ class Ticket extends Model
         return $this->belongsTo(User::class, 'assigned_by');
     }
 
+    public function communityHiddenBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'community_hidden_by');
+    }
+
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'location_id');
@@ -163,6 +178,31 @@ class Ticket extends Model
     public function stateHistory(): HasMany
     {
         return $this->hasMany(StateHistory::class, 'ticket_id');
+    }
+
+    public function communityModerationLogs(): HasMany
+    {
+        return $this->hasMany(CommunityModerationLog::class, 'ticket_id');
+    }
+
+    public function communityReactions(): HasMany
+    {
+        return $this->hasMany(CommunityReaction::class, 'ticket_id');
+    }
+
+    public function communitySaves(): HasMany
+    {
+        return $this->hasMany(CommunitySave::class, 'ticket_id');
+    }
+
+    public function communityReports(): HasMany
+    {
+        return $this->hasMany(CommunityReport::class, 'ticket_id');
+    }
+
+    public function communityComments(): HasMany
+    {
+        return $this->hasMany(CommunityComment::class, 'ticket_id');
     }
 
     public function scopeAvailableForClaim(Builder $query): Builder
@@ -221,7 +261,7 @@ class Ticket extends Model
     public function scopeVisibleInCommunity(Builder $query): Builder
     {
         return $query
-            ->where('community_visible', true)
+            ->whereRaw('"community_visible" IS TRUE')
             ->whereIn('state', [self::STATE_OPEN, self::STATE_IN_PROGRESS, self::STATE_RESOLVED]);
     }
 

@@ -150,6 +150,13 @@
                         <span class="sidebar-label">Categorías</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('admin.community.moderation') }}"
+                       class="sidebar-link {{ request()->routeIs('admin.community.*') ? 'active' : '' }}">
+                        <x-lucide-shield-check class="sidebar-icon" width="18" height="18" stroke-width="2" />
+                        <span class="sidebar-label">Moderación</span>
+                    </a>
+                </li>
                 @endcan
             </ul>
         </div>

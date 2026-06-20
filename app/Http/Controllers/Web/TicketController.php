@@ -214,6 +214,7 @@ class TicketController extends Controller
             'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
+            'communityModerationLogs' => fn ($q) => $q->with('performedBy')->latest('created_at'),
         ]);
 
         $availableTransitions = $currentUser instanceof User

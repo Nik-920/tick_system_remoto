@@ -3,6 +3,7 @@
 namespace Tests\Feature\Web;
 
 use App\Models\Category;
+use App\Models\CommunityModerationLog;
 use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
@@ -294,6 +295,153 @@ class TicketCommunityVisibilityTest extends TestCase
             ->assertDontSee('Visibilidad en Comunidad', false)
             ->assertDontSee('Ocultar de Comunidad', false)
             ->assertDontSee('Restaurar en Comunidad', false);
+    }
+
+    // ── F. Audit log ─────────────────────────────────────────────────────────
+
+    public function test_hide_creates_community_moderation_log(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket();
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.hide', $ticket), ['reason' => 'Evidencia no apta']);
+
+        $this->assertDatabaseHas('community_moderation_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => CommunityModerationLog::ACTION_HIDDEN,
+            'reason' => 'Evidencia no apta',
+            'performed_by' => $admin->id,
+        ]);
+
+        $log = CommunityModerationLog::where('ticket_id', $ticket->id)->first();
+        $this->assertNotNull($log);
+        $this->assertTrue((bool) $log->previous_visible);
+        $this->assertFalse((bool) $log->new_visible);
+    }
+
+    public function test_restore_creates_community_moderation_log(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeHiddenTicket(reason: 'Solicitud del reporter', hiddenBy: $admin);
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.restore', $ticket));
+
+        $log = CommunityModerationLog::where('ticket_id', $ticket->id)
+            ->where('action', CommunityModerationLog::ACTION_RESTORED)
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertFalse((bool) $log->previous_visible);
+        $this->assertTrue((bool) $log->new_visible);
+        $this->assertSame($admin->id, $log->performed_by);
+    }
+
+    public function test_restore_log_captures_previous_reason(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeHiddenTicket(reason: 'Motivo original de ocultamiento', hiddenBy: $admin);
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.restore', $ticket));
+
+        $log = CommunityModerationLog::where('ticket_id', $ticket->id)
+            ->where('action', CommunityModerationLog::ACTION_RESTORED)
+            ->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame('Motivo original de ocultamiento', $log->previous_reason);
+    }
+
+    public function test_hide_and_restore_both_create_separate_logs(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket();
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.hide', $ticket), ['reason' => 'Primera moderación']);
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.restore', $ticket));
+
+        $this->assertDatabaseCount('community_moderation_logs', 2);
+
+        $this->assertDatabaseHas('community_moderation_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => CommunityModerationLog::ACTION_HIDDEN,
+        ]);
+
+        $this->assertDatabaseHas('community_moderation_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => CommunityModerationLog::ACTION_RESTORED,
+        ]);
+    }
+
+    public function test_restore_does_not_erase_log_created_by_hide(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket();
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.hide', $ticket), ['reason' => 'Razón persistente']);
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.restore', $ticket));
+
+        // The hide log must still exist even after restore.
+        $this->assertDatabaseHas('community_moderation_logs', [
+            'ticket_id' => $ticket->id,
+            'action' => CommunityModerationLog::ACTION_HIDDEN,
+            'reason' => 'Razón persistente',
+        ]);
+    }
+
+    public function test_admin_sees_moderation_history_in_ticket_show(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket();
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.hide', $ticket), ['reason' => 'Historial visible admin']);
+
+        $this->actingAs($admin)
+            ->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Historial de moderación', false)
+            ->assertSee('Ocultado', false)
+            ->assertSee('Historial visible admin', false);
+    }
+
+    public function test_admin_sees_no_history_message_when_no_logs_exist(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket();
+
+        $this->actingAs($admin)
+            ->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Sin historial de moderación comunitaria', false);
+    }
+
+    public function test_reporter_community_feed_does_not_expose_moderation_reason(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $admin = $this->createUserWithRole('admin');
+        $ticket = $this->makeVisibleTicket($reporter, 'Ticket feed no-leak TEST');
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.hide', $ticket), ['reason' => 'Razón confidencial NOLEAK']);
+
+        $this->actingAs($admin)
+            ->patch(route('tickets.community.restore', $ticket));
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Razón confidencial NOLEAK', false)
+            ->assertDontSee('Historial de moderación', false)
+            ->assertDontSee('community_moderation_logs', false);
     }
 
     // ── E. Validation ─────────────────────────────────────────────────────────

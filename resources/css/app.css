@@ -75,6 +75,8 @@
 @import './modules/reporter-guide.css';
 /* "Comunidad del campus" — reporter social feed skeleton v1. */
 @import './modules/reporter-community.css';
+/* Community Moderation Queue — admin-only panel for managing community visibility. */
+@import './modules/community-moderation.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';

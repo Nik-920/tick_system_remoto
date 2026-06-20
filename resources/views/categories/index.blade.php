@@ -80,6 +80,7 @@ return is_string($category->icon) && trim($category->icon) !== '';
                         <th>Icono</th>
                         <th>Incidencias</th>
                         <th>Tickets</th>
+                        <th>Comunidad</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -109,6 +110,15 @@ return is_string($category->icon) && trim($category->icon) !== '';
                             </span>
                         </td>
                         <td>
+                            @if ($category->community_visibility_locked)
+                                <span class="cats-community-badge cats-community-badge--locked">Bloqueado</span>
+                            @elseif ($category->community_default_visible)
+                                <span class="cats-community-badge cats-community-badge--public">Público</span>
+                            @else
+                                <span class="cats-community-badge cats-community-badge--private">Privado</span>
+                            @endif
+                        </td>
+                        <td>
                             <div class="cats-actions">
                                 <a href="{{ route('categories.edit', $category) }}" class="cats-btn-edit">
                                     Editar
@@ -134,7 +144,7 @@ return is_string($category->icon) && trim($category->icon) !== '';
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="cats-empty-cell">
+                        <td colspan="6" class="cats-empty-cell">
                             <x-empty-state
                                 base-class="empty-state"
                                 title="No hay categorías para mostrar"

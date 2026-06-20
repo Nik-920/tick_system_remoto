@@ -87,5 +87,28 @@
             </button>
         </form>
     @endif
+
+    {{-- Historial de moderación (últimas 5 acciones) --}}
+    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <h3 class="ticket-show__label mb-2">Historial de moderación</h3>
+        @if ($vm->hasCommunityModerationLogs())
+            <ul class="space-y-2">
+                @foreach ($vm->communityModerationLogs() as $log)
+                    <li class="ticket-show__value--soft text-sm leading-snug">
+                        <span class="font-medium">{{ $vm->communityLogActionLabel($log->action) }}</span>
+                        @if ($log->performedBy)
+                            por {{ $log->performedBy->name }}
+                        @endif
+                        &middot; {{ $vm->fmtDate($log->created_at) }}
+                        @if ($log->reason)
+                            &middot; <em>{{ $log->reason }}</em>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <p class="ticket-show__value--soft text-sm">Sin historial de moderación comunitaria.</p>
+        @endif
+    </div>
 </section>
 @endcan

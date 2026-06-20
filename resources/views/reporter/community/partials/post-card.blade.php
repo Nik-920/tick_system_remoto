@@ -1,14 +1,15 @@
 {{-- ── REAL POST CARD ──────────────────────────────────────────────
      Receives $post (array from CommunityFeedQuery::toPost).
      No user data (reporter/assignee) is present in $post by design.
-     Social actions (Me interesa / Comentar / Guardar) are placeholders.
+     Social actions: Me interesa / También me pasa / Lo vi / Guardar.
+     No JS required — toggle via POST/DELETE forms.
 ──────────────────────────────────────────────────────────── --}}
 @php
     $carImgs  = array_values(array_filter($post['media_images'] ?? [], fn ($u) => $u !== ''));
     $carCount = count($carImgs);
 @endphp
 
-<article class="comm-post" aria-label="Reporte público: {{ $post['title'] }}">
+<article class="comm-post" id="ticket-{{ $post['id'] }}" aria-label="Reporte público: {{ $post['title'] }}">
     <div class="comm-post__body">
 
         {{-- Category icon + label --}}
@@ -145,20 +146,189 @@
 
     </div>
 
-    {{-- Action bar — social actions placeholder until v2 --}}
+    {{-- ── COMMENTS (Community v3) — count badge + latest + form ─── --}}
+    <div class="comm-post__comments-toggle">
+        <details class="comm-comments-details">
+            <summary class="comm-comments-summary" aria-label="Ver comentarios">
+                <x-lucide-message-circle width="14" height="14" stroke-width="2" />
+                <span class="comm-comments-summary__label">
+                    Comentarios
+                </span>
+                @if ($post['comments']['count'] > 0)
+                    <span class="comm-comments-summary__count">{{ $post['comments']['count'] }}</span>
+                @endif
+            </summary>
+            <div class="comm-comments-details__body">
+                @include('reporter.community.partials.comments', ['post' => $post])
+            </div>
+        </details>
+    </div>
+
+    {{-- ── ACTION BAR — reactions + save (Community v2) ──────────── --}}
     <div class="comm-post__actions">
-        <button type="button" class="comm-action-btn comm-action-btn--disabled" disabled aria-label="Me interesa — Próximamente" title="Próximamente">
-            <x-lucide-heart width="15" height="15" stroke-width="2" />
-            <span class="comm-action-btn__label">Me interesa</span>
-        </button>
-        <button type="button" class="comm-action-btn comm-action-btn--disabled" disabled aria-label="Comentar — Próximamente" title="Próximamente">
-            <x-lucide-message-circle width="15" height="15" stroke-width="2" />
-            <span class="comm-action-btn__label">Comentar</span>
-        </button>
-        <button type="button" class="comm-action-btn comm-action-btn--disabled" disabled aria-label="Guardar — Próximamente" title="Próximamente">
-            <x-lucide-bookmark width="15" height="15" stroke-width="2" />
-            <span class="comm-action-btn__label">Guardar</span>
-        </button>
+
+        {{-- Me interesa --}}
+        @if (in_array('interested', $post['reactions']['user_types']))
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.destroy', [$post['id'], 'interested']) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="comm-action-btn comm-action-btn--active comm-action-btn--interested"
+                        aria-label="Quitar reacción Me interesa">
+                    <x-lucide-heart width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Me interesa</span>
+                    @if ($post['reactions']['counts']['interested'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['interested'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @else
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.store', $post['id']) }}">
+                @csrf
+                <input type="hidden" name="type" value="interested">
+                <button type="submit"
+                        class="comm-action-btn"
+                        aria-label="Marcar como Me interesa">
+                    <x-lucide-heart width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Me interesa</span>
+                    @if ($post['reactions']['counts']['interested'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['interested'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @endif
+
+        {{-- También me pasa --}}
+        @if (in_array('also_happens', $post['reactions']['user_types']))
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.destroy', [$post['id'], 'also_happens']) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="comm-action-btn comm-action-btn--active comm-action-btn--also"
+                        aria-label="Quitar reacción También me pasa">
+                    <x-lucide-users width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">También me pasa</span>
+                    @if ($post['reactions']['counts']['also_happens'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['also_happens'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @else
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.store', $post['id']) }}">
+                @csrf
+                <input type="hidden" name="type" value="also_happens">
+                <button type="submit"
+                        class="comm-action-btn"
+                        aria-label="Marcar como También me pasa">
+                    <x-lucide-users width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">También me pasa</span>
+                    @if ($post['reactions']['counts']['also_happens'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['also_happens'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @endif
+
+        {{-- Lo vi --}}
+        @if (in_array('seen', $post['reactions']['user_types']))
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.destroy', [$post['id'], 'seen']) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="comm-action-btn comm-action-btn--active comm-action-btn--seen"
+                        aria-label="Quitar reacción Lo vi">
+                    <x-lucide-eye width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Lo vi</span>
+                    @if ($post['reactions']['counts']['seen'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['seen'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @else
+            <form method="POST"
+                  action="{{ route('reporter.community.reactions.store', $post['id']) }}">
+                @csrf
+                <input type="hidden" name="type" value="seen">
+                <button type="submit"
+                        class="comm-action-btn"
+                        aria-label="Marcar como Lo vi">
+                    <x-lucide-eye width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Lo vi</span>
+                    @if ($post['reactions']['counts']['seen'] > 0)
+                        <span class="comm-action-btn__count">{{ $post['reactions']['counts']['seen'] }}</span>
+                    @endif
+                </button>
+            </form>
+        @endif
+
+        {{-- Guardar --}}
+        @if ($post['saved'])
+            <form method="POST"
+                  action="{{ route('reporter.community.saves.destroy', $post['id']) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="comm-action-btn comm-action-btn--active comm-action-btn--saved"
+                        aria-label="Quitar de guardados">
+                    <x-lucide-bookmark width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Guardado</span>
+                </button>
+            </form>
+        @else
+            <form method="POST"
+                  action="{{ route('reporter.community.saves.store', $post['id']) }}">
+                @csrf
+                <button type="submit"
+                        class="comm-action-btn"
+                        aria-label="Guardar reporte">
+                    <x-lucide-bookmark width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Guardar</span>
+                </button>
+            </form>
+        @endif
+
+        {{-- Reportar publicación --}}
+        @if ($post['viewer_report_pending'])
+            <span class="comm-action-btn comm-action-btn--reported" aria-label="Reporte enviado">
+                <x-lucide-flag width="15" height="15" stroke-width="2" />
+                <span class="comm-action-btn__label">Reporte enviado</span>
+            </span>
+        @else
+            <details class="comm-report-details">
+                <summary class="comm-report-summary" aria-label="Reportar publicación">
+                    <x-lucide-flag width="15" height="15" stroke-width="2" />
+                    <span class="comm-action-btn__label">Reportar</span>
+                </summary>
+                <div class="comm-report-form-wrap">
+                    <form method="POST"
+                          action="{{ route('reporter.community.reports.store', $post['id']) }}"
+                          class="comm-report-form">
+                        @csrf
+                        <select name="reason" required class="comm-report-select" aria-label="Motivo del reporte">
+                            <option value="" disabled selected>Selecciona un motivo...</option>
+                            <option value="sensitive_info">Información sensible</option>
+                            <option value="inappropriate_evidence">Evidencia no apta</option>
+                            <option value="incorrect_info">Contenido incorrecto</option>
+                            <option value="duplicate_or_confusing">Duplicado o confuso</option>
+                            <option value="other">Otro motivo</option>
+                        </select>
+                        <textarea name="note"
+                                  maxlength="500"
+                                  rows="2"
+                                  placeholder="Detalle adicional (opcional)"
+                                  class="comm-report-textarea"
+                                  aria-label="Detalle adicional"></textarea>
+                        <button type="submit" class="comm-report-btn">Enviar reporte</button>
+                    </form>
+                </div>
+            </details>
+        @endif
+
         <span class="comm-action-btn__ref">{{ $post['ref'] }}</span>
     </div>
 </article>
