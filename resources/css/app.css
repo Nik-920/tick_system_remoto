@@ -42,11 +42,13 @@
 /* Fase C — nuevos componentes extraídos del cluster de tickets */
 @import './components/table-action.css';
 @import './components/dropzone.css';
+
+/* ── 6. Feature Modules — Shell globals (topbar, auth, onboarding) ── */
 @import './modules/notifications.css';
 @import './modules/auth.css';
 @import './modules/welcome.css';
 
-/* ── 6. Feature Modules ── */
+/* ── 6b. Feature Modules — Dashboard ── */
 @import './modules/dashboard/base.css';
 @import './modules/dashboard/hero.css';
 @import './modules/dashboard/kpi.css';
