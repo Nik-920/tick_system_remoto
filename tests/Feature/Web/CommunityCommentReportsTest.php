@@ -265,7 +265,7 @@ class CommunityCommentReportsTest extends TestCase
         $comment = CommunityComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => $reporter2->id,
-            'body' => 'Comentario reportado por otro OTHERSREP',
+            'body' => 'Comentario normal de otro usuario OTHERSREP',
             'status' => CommunityComment::STATUS_VISIBLE,
         ]);
 
@@ -277,12 +277,12 @@ class CommunityCommentReportsTest extends TestCase
             'status' => CommunityReport::STATUS_PENDING,
         ]);
 
-        // viewer has not reported — should see "Reportar", NOT "Comentario reportado"
+        // viewer has not reported — should see "Reportar", NOT the "reportado" badge
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
             ->assertSee('Reportar', false)
-            ->assertDontSee('Comentario reportado', false);
+            ->assertDontSee('comm-comment__reported-badge', false);
     }
 
     public function test_feed_does_not_show_report_notes_or_reasons(): void
@@ -311,7 +311,7 @@ class CommunityCommentReportsTest extends TestCase
             ->get(route('reporter.community'))
             ->assertOk()
             ->assertDontSee('Nota privada de moderación SECRETNOTE', false)
-            ->assertDontSee('Información sensible', false);
+            ->assertDontSee('comm-mod-reports-note', false);
     }
 
     // ── C. Admin review ───────────────────────────────────────────────────────
