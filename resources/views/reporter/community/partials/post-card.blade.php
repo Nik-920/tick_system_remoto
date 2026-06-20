@@ -7,13 +7,24 @@
 @php
     $carImgs  = array_values(array_filter($post['media_images'] ?? [], fn ($u) => $u !== ''));
     $carCount = count($carImgs);
+
+    // Deterministic pastel palette per category (same color for the same category).
+    $commCatName     = $post['category']['name'] ?? 'General';
+    $commCatPalettes = ['blue', 'red', 'green', 'amber', 'purple', 'teal', 'indigo', 'rose'];
+    $commCatColor    = $commCatPalettes[crc32($commCatName) % count($commCatPalettes)];
+
+    // State + priority badge iconography.
+    $commStateIcons = ['open' => 'circle-dot', 'progress' => 'loader', 'resolved' => 'circle-check', 'neutral' => 'circle'];
+    $commPrioIcons  = ['high' => 'arrow-up', 'medium' => 'minus', 'low' => 'arrow-down'];
+    $commStateIcon  = $commStateIcons[$post['state_tone']] ?? 'circle';
+    $commPrioIcon   = $commPrioIcons[$post['priority_tone']] ?? 'minus';
 @endphp
 
-<article class="comm-post" id="ticket-{{ $post['id'] }}" aria-label="Reporte público: {{ $post['title'] }}">
+<article class="comm-post comm-post--{{ $post['state_tone'] }}" id="ticket-{{ $post['id'] }}" aria-label="Reporte público: {{ $post['title'] }}">
     <div class="comm-post__body">
 
         {{-- Category icon + label --}}
-        <div class="comm-post__category">
+        <div class="comm-post__category comm-post__category--{{ $commCatColor }}">
             @if ($post['category'] !== null)
                 <span class="comm-post__category-icon" aria-hidden="true">
                     <x-dynamic-component
@@ -45,8 +56,14 @@
             {{-- Title + state + priority badges --}}
             <div class="comm-post__title-row">
                 <h3 class="comm-post__title-text">{{ $post['title'] }}</h3>
-                <span class="comm-badge comm-badge--state comm-badge--{{ $post['state_tone'] }}">{{ $post['state_label'] }}</span>
-                <span class="comm-badge comm-badge--priority comm-badge--priority-{{ $post['priority_tone'] }}">{{ $post['priority_label'] }}</span>
+                <span class="comm-badge comm-badge--state comm-badge--{{ $post['state_tone'] }}">
+                    <x-dynamic-component :component="'lucide-'.$commStateIcon" class="comm-badge__icon" width="11" height="11" stroke-width="2.5" />
+                    {{ $post['state_label'] }}
+                </span>
+                <span class="comm-badge comm-badge--priority comm-badge--priority-{{ $post['priority_tone'] }}">
+                    <x-dynamic-component :component="'lucide-'.$commPrioIcon" class="comm-badge__icon" width="11" height="11" stroke-width="2.5" />
+                    {{ $post['priority_label'] }}
+                </span>
             </div>
 
             {{-- Description summary --}}
@@ -57,13 +74,21 @@
             {{-- Location --}}
             @if ($post['location'] !== null)
                 <div class="comm-post__loc-row">
-                    <x-lucide-map-pin class="comm-post__loc-icon" width="12" height="12" stroke-width="2" />
-                    <span class="comm-post__loc-label">{{ $post['location']['room_code'] }}</span>
-                    <span class="comm-post__loc-sep" aria-hidden="true">·</span>
-                    <span class="comm-post__loc-label">{{ $post['location']['building'] }}</span>
+                    <span class="comm-post__loc-pill">
+                        <x-lucide-map-pin class="comm-post__loc-icon" width="12" height="12" stroke-width="2" />
+                        <span class="comm-post__loc-label">{{ $post['location']['room_code'] }}</span>
+                    </span>
+                    @if ($post['location']['building'] !== '')
+                        <span class="comm-post__loc-pill">
+                            <x-lucide-building-2 class="comm-post__loc-icon" width="12" height="12" stroke-width="2" />
+                            <span class="comm-post__loc-label">{{ $post['location']['building'] }}</span>
+                        </span>
+                    @endif
                     @if ($post['location']['floor'] !== '')
-                        <span class="comm-post__loc-sep" aria-hidden="true">·</span>
-                        <span class="comm-post__loc-label">Piso {{ $post['location']['floor'] }}</span>
+                        <span class="comm-post__loc-pill">
+                            <x-lucide-layers class="comm-post__loc-icon" width="12" height="12" stroke-width="2" />
+                            <span class="comm-post__loc-label">Piso {{ $post['location']['floor'] }}</span>
+                        </span>
                     @endif
                 </div>
             @endif
@@ -300,7 +325,7 @@
             </span>
         @else
             <details class="comm-report-details">
-                <summary class="comm-report-summary" aria-label="Reportar publicación">
+                <summary class="comm-report-summary comm-report-summary--accent" aria-label="Reportar publicación">
                     <x-lucide-flag width="15" height="15" stroke-width="2" />
                     <span class="comm-action-btn__label">Reportar</span>
                 </summary>
@@ -329,6 +354,9 @@
             </details>
         @endif
 
-        <span class="comm-action-btn__ref">{{ $post['ref'] }}</span>
+        <span class="comm-action-btn__ref">
+            <span class="comm-action-btn__ref-text">{{ $post['ref'] }}</span>
+            <x-lucide-copy class="comm-action-btn__ref-icon" width="11" height="11" stroke-width="2" aria-hidden="true" />
+        </span>
     </div>
 </article>
