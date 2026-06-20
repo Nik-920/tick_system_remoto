@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property string $id
  * @property string $ticket_id
+ * @property string|null $parent_id
  * @property string|null $user_id
  * @property string $body
  * @property Carbon|null $edited_at
@@ -25,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Ticket $ticket
+ * @property-read CommunityComment|null $parent
+ * @property-read Collection<int, CommunityComment> $replies
  * @property-read User|null $user
  * @property-read User|null $hiddenBy
  * @property-read Collection<int, CommunityCommentEditLog> $editLogs
@@ -42,6 +45,7 @@ class CommunityComment extends Model
     /** @var list<string> */
     protected $fillable = [
         'ticket_id',
+        'parent_id',
         'user_id',
         'body',
         'status',
@@ -91,9 +95,40 @@ class CommunityComment extends Model
         return $this->status === self::STATUS_DELETED;
     }
 
+    public function isReply(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    public function isRootComment(): bool
+    {
+        return $this->parent_id === null;
+    }
+
+    /**
+     * A comment can receive a reply only when it is a visible root comment.
+     * This is what caps reply nesting at a single level.
+     */
+    public function canReceiveReply(): bool
+    {
+        return $this->isRootComment() && $this->isVisible();
+    }
+
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class, 'ticket_id');
+    }
+
+    /** @return BelongsTo<CommunityComment, $this> */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    /** @return HasMany<CommunityComment, $this> */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 
     public function user(): BelongsTo

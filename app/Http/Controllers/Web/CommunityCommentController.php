@@ -21,6 +21,10 @@ class CommunityCommentController extends Controller
     /**
      * POST /reporter/community/tickets/{ticket}/comments
      * Reporter adds a comment to a community-visible ticket.
+     *
+     * When parent_id is present the comment is stored as a one-level reply.
+     * Replies to a non-matching, hidden/deleted, or already-nested parent are
+     * rejected with 404 so moderation state is never revealed.
      */
     public function store(StoreCommunityCommentRequest $request, Ticket $ticket): RedirectResponse
     {
@@ -33,8 +37,11 @@ class CommunityCommentController extends Controller
             404
         );
 
+        $parentId = $this->resolveParentId($request->validated('parent_id'), $ticket);
+
         $comment = CommunityComment::create([
             'ticket_id' => $ticket->id,
+            'parent_id' => $parentId,
             'user_id' => $request->user()?->id,
             'body' => $request->validated('body'),
             'status' => CommunityComment::STATUS_VISIBLE,
@@ -44,7 +51,33 @@ class CommunityCommentController extends Controller
 
         return redirect()->back()
             ->withFragment('ticket-'.$ticket->id)
-            ->with('status', 'Tu comentario fue publicado.');
+            ->with('status', $parentId === null
+                ? 'Tu comentario fue publicado.'
+                : 'Tu respuesta fue publicada.');
+    }
+
+    /**
+     * Validate an optional reply target. Returns the parent id when the reply
+     * is allowed, null for a root comment, and aborts 404 otherwise so hidden,
+     * deleted, cross-ticket or already-nested parents are indistinguishable.
+     */
+    private function resolveParentId(?string $parentId, Ticket $ticket): ?string
+    {
+        if ($parentId === null) {
+            return null;
+        }
+
+        /** @var CommunityComment|null $parent */
+        $parent = CommunityComment::query()->find($parentId);
+
+        abort_unless(
+            $parent !== null
+                && (string) $parent->ticket_id === (string) $ticket->id
+                && $parent->canReceiveReply(),
+            404
+        );
+
+        return $parent->id;
     }
 
     /**

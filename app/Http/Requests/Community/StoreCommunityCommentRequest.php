@@ -18,6 +18,10 @@ class StoreCommunityCommentRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'min:2', 'max:500'],
+            // Optional reply target. Existence is checked here; ownership,
+            // ticket match, visibility and depth are enforced in the
+            // controller so invalid parents 404 instead of leaking 422 detail.
+            'parent_id' => ['nullable', 'uuid', 'exists:community_comments,id'],
         ];
     }
 

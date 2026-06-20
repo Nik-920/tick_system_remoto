@@ -5,113 +5,65 @@
      - Generic author label: "Reporter de la comunidad" / "Tú".
      - Comment body escaped with {{ }} — no raw HTML.
      - Hidden/deleted comments never reach this partial (filtered in query).
+     - Replies are one level deep only; hidden/deleted parents hide their replies.
      - Report reason/note/reporter never shown in reporter feed.
      - No @php blocks.
 ──────────────────────────────────────────────────────────────────── --}}
 
 <section class="comm-comments" aria-label="Comentarios de la comunidad">
 
-    {{-- ── Existing visible comments ── --}}
+    {{-- ── Existing visible root comments (each with up to 2 replies) ── --}}
     @if (count($post['comments']['items']) > 0)
         <ul class="comm-comments__list" aria-label="Comentarios recientes">
             @foreach ($post['comments']['items'] as $comment)
                 <li class="comm-comment">
-                    <div class="comm-comment__header">
-                        <span class="comm-comment__author">
-                            {{ $comment['owned_by_viewer'] ? 'Tú' : 'Reporter de la comunidad' }}
-                        </span>
-                        @if ($comment['edited'])
-                            <span class="comm-comment__edited-badge">Editado</span>
-                        @endif
-                        <span class="comm-comment__time">{{ $comment['created_ago'] }}</span>
-                    </div>
-                    <p class="comm-comment__body">{{ $comment['body'] }}</p>
-                    <div class="comm-comment__actions">
-                        @if ($comment['owned_by_viewer'])
-                            {{-- Edit form (no JS — details/summary toggle) --}}
-                            <details class="comm-comment-edit">
-                                <summary class="comm-comment-edit__toggle">
-                                    <x-lucide-pencil width="12" height="12" stroke-width="2" />
-                                    Editar
-                                </summary>
-                                <div class="comm-comment-edit__form-wrap">
-                                    <form method="POST"
-                                          action="{{ route('reporter.community.comments.update', $comment['id']) }}"
-                                          class="comm-comment-edit__form">
-                                        @csrf
-                                        @method('PATCH')
-                                        <textarea name="body"
-                                                  maxlength="500"
-                                                  minlength="2"
-                                                  rows="2"
-                                                  required
-                                                  class="comm-comment-edit__textarea"
-                                                  aria-label="Editar comentario">{{ $comment['body'] }}</textarea>
-                                        <div class="comm-comment-edit__actions-row">
-                                            <button type="submit" class="comm-comment-edit__submit">
-                                                Guardar cambios
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </details>
+                    @include('reporter.community.partials.comment-item', ['comment' => $comment])
 
-                            {{-- Delete form --}}
+                    {{-- ── Replies (one level) ── --}}
+                    @if (count($comment['replies']) > 0)
+                        <ul class="comm-comment__replies" aria-label="Respuestas">
+                            @foreach ($comment['replies'] as $reply)
+                                <li class="comm-comment comm-comment--reply">
+                                    @include('reporter.community.partials.comment-item', ['comment' => $reply])
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if ($comment['reply_count'] > count($comment['replies']))
+                        <p class="comm-comments__more-hint comm-comments__more-hint--replies">
+                            + {{ $comment['reply_count'] - count($comment['replies']) }}
+                            respuesta{{ ($comment['reply_count'] - count($comment['replies'])) !== 1 ? 's' : '' }} más
+                        </p>
+                    @endif
+
+                    {{-- ── Reply form (root comments only — caps nesting at 1) ── --}}
+                    <details class="comm-reply-form">
+                        <summary class="comm-reply-form__toggle">
+                            <x-lucide-corner-down-right width="12" height="12" stroke-width="2" />
+                            Responder
+                        </summary>
+                        <div class="comm-reply-form__wrap">
                             <form method="POST"
-                                  action="{{ route('reporter.community.comments.destroy', $comment['id']) }}"
-                                  class="comm-comment__delete-form">
+                                  action="{{ route('reporter.community.comments.store', $post['id']) }}"
+                                  class="comm-reply-form__form">
                                 @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="comm-comment__delete-btn"
-                                        aria-label="Eliminar mi comentario">
-                                    <x-lucide-trash-2 width="12" height="12" stroke-width="2" />
-                                    Eliminar
+                                <input type="hidden" name="parent_id" value="{{ $comment['id'] }}">
+                                <textarea name="body"
+                                          rows="2"
+                                          maxlength="500"
+                                          minlength="2"
+                                          required
+                                          placeholder="Responde con contexto útil. No compartas datos personales."
+                                          class="comm-reply-form__textarea"
+                                          aria-label="Escribe una respuesta"></textarea>
+                                <button type="submit" class="comm-reply-form__submit">
+                                    <x-lucide-send width="12" height="12" stroke-width="2" />
+                                    Responder
                                 </button>
                             </form>
-                        @else
-                            @if ($comment['viewer_report_pending'])
-                                <span class="comm-comment__reported-badge">
-                                    <x-lucide-flag width="12" height="12" stroke-width="2" />
-                                    Comentario reportado
-                                </span>
-                            @else
-                                <details class="comm-comment-report">
-                                    <summary class="comm-comment-report__toggle">
-                                        <x-lucide-flag width="12" height="12" stroke-width="2" />
-                                        Reportar
-                                    </summary>
-                                    <div class="comm-comment-report__form-wrap">
-                                        <form method="POST"
-                                              action="{{ route('reporter.community.comment-reports.store', $comment['id']) }}"
-                                              class="comm-comment-report__form">
-                                            @csrf
-                                            <select name="reason"
-                                                    required
-                                                    class="comm-comment-report__select"
-                                                    aria-label="Motivo del reporte">
-                                                <option value="" disabled selected>Selecciona motivo...</option>
-                                                <option value="sensitive_info">Información sensible</option>
-                                                <option value="inappropriate_evidence">Contenido no apto</option>
-                                                <option value="incorrect_info">Contenido incorrecto</option>
-                                                <option value="duplicate_or_confusing">Duplicado o confuso</option>
-                                                <option value="other">Otro motivo</option>
-                                            </select>
-                                            <textarea name="note"
-                                                      maxlength="500"
-                                                      rows="2"
-                                                      placeholder="Detalles adicionales (opcional)"
-                                                      class="comm-comment-report__note"
-                                                      aria-label="Nota adicional (opcional)"></textarea>
-                                            <button type="submit" class="comm-comment-report__submit">
-                                                Enviar reporte
-                                            </button>
-                                        </form>
-                                    </div>
-                                </details>
-                            @endif
-                        @endif
-                    </div>
+                        </div>
+                    </details>
                 </li>
             @endforeach
         </ul>
