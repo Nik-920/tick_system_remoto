@@ -23,6 +23,8 @@
 
     @include('reporter.community.partials.search-filters')
 
+    @include('reporter.community.partials.filter-panel')
+
     <div class="comm-layout">
 
         @include('reporter.community.partials.sidebar')
@@ -44,6 +46,39 @@
 </section>
 
 <script>
+/* ── Filter panel toggle ── */
+(function () {
+    var btn      = document.getElementById('comm-filter-btn');
+    var panel    = document.getElementById('comm-filter-panel');
+    var backdrop = document.getElementById('comm-filter-backdrop');
+    var closeBtn = document.getElementById('comm-filter-close');
+
+    function openPanel() {
+        if (!panel) return;
+        panel.classList.add('comm-filter-panel--open');
+        panel.setAttribute('aria-hidden', 'false');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePanel() {
+        if (!panel) return;
+        panel.classList.remove('comm-filter-panel--open');
+        panel.setAttribute('aria-hidden', 'true');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    if (btn)      btn.addEventListener('click', openPanel);
+    if (backdrop) backdrop.addEventListener('click', closePanel);
+    if (closeBtn) closeBtn.addEventListener('click', closePanel);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePanel();
+    });
+}());
+
+/* ── Image carousel ── */
 (function () {
     function initCarousels() {
         document.querySelectorAll('[data-comm-car]').forEach(function (car) {

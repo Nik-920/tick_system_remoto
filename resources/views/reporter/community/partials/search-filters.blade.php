@@ -1,140 +1,154 @@
-{{-- ── SEARCH BAR + SORT BAR + FILTER CHIPS (REAL) ─────────────────
-     GET form — all filters are surfaced as query string params.
-     Buildings come from $feed->buildings (distinct from DB).
-     Sort options come from $feed->sortOptions (pre-built URLs).
-──────────────────────────────────────────────────────────── --}}
+{{-- ── CONTROLS: Search · Sort · Filter trigger · Active-filter summary ──────
+     Filtros avanzados centralizados: el botón "Filtros" abre el panel/drawer
+     (filter-panel.blade.php) vía JS. Sort conserva links directos GET.
+     Los hidden inputs preservan los filtros del panel cuando el usuario busca.
+──────────────────────────────────────────────────────────────────────────── --}}
 
-{{-- Search form --}}
-<form method="GET" action="{{ route('reporter.community') }}" class="comm-search" role="search">
+@php
+$panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'period'])
+    ->filter(fn ($k) => ($feed->filters[$k] ?? '') !== '')
+    ->count();
+@endphp
 
-    {{-- Preserve all other active filters when searching --}}
-    @if ($feed->filters['category'] !== '')
-        <input type="hidden" name="category" value="{{ $feed->filters['category'] }}">
-    @endif
-    @if ($feed->filters['building'] !== '')
-        <input type="hidden" name="building" value="{{ $feed->filters['building'] }}">
-    @endif
-    @if ($feed->filters['state'] !== '')
-        <input type="hidden" name="state" value="{{ $feed->filters['state'] }}">
-    @endif
-    @if ($feed->filters['has_media'] !== '')
-        <input type="hidden" name="has_media" value="{{ $feed->filters['has_media'] }}">
-    @endif
-    @if ($feed->filters['period'] !== '')
-        <input type="hidden" name="period" value="{{ $feed->filters['period'] }}">
-    @endif
-    @if ($feed->currentSort !== 'recent')
-        <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
-    @endif
+<div class="comm-controls">
 
-    <input
-        type="search"
-        name="q"
-        class="comm-search__input"
-        placeholder="Buscar reportes, aulas, laboratorios…"
-        value="{{ $feed->filters['q'] }}"
-        autocomplete="off"
-        aria-label="Buscar en la comunidad"
-    >
-    <button type="submit" class="comm-search__submit" aria-label="Buscar">
-        <x-lucide-search width="16" height="16" stroke-width="2" />
-    </button>
-</form>
+    {{-- Row: search bar + filter trigger button --}}
+    <div class="comm-controls__row">
 
-{{-- Sort bar --}}
-<nav class="comm-sort-bar" aria-label="Ordenar feed">
-    <span class="comm-sort-bar__label">Ordenar:</span>
-    @foreach ($feed->sortOptions as $opt)
-        <a
-            href="{{ $opt['url'] }}"
-            class="comm-sort-chip {{ $opt['active'] ? 'comm-sort-chip--active' : '' }}"
-            aria-current="{{ $opt['active'] ? 'true' : 'false' }}"
-        >{{ $opt['label'] }}</a>
-    @endforeach
-</nav>
+        {{-- Search form — preserves active panel filters when submitting --}}
+        <form method="GET" action="{{ route('reporter.community') }}" class="comm-search" role="search">
 
-{{-- Filter chips row --}}
-<div class="comm-filters" aria-label="Filtros rápidos">
+            @if ($feed->filters['category'] !== '')
+                <input type="hidden" name="category" value="{{ $feed->filters['category'] }}">
+            @endif
+            @if ($feed->filters['building'] !== '')
+                <input type="hidden" name="building" value="{{ $feed->filters['building'] }}">
+            @endif
+            @if ($feed->filters['state'] !== '')
+                <input type="hidden" name="state" value="{{ $feed->filters['state'] }}">
+            @endif
+            @if ($feed->filters['has_media'] !== '')
+                <input type="hidden" name="has_media" value="{{ $feed->filters['has_media'] }}">
+            @endif
+            @if ($feed->filters['period'] !== '')
+                <input type="hidden" name="period" value="{{ $feed->filters['period'] }}">
+            @endif
+            @if ($feed->currentSort !== 'recent')
+                <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
+            @endif
 
-    {{-- Building dropdown --}}
-    @if (count($feed->buildings) > 0)
-        <div class="comm-filter-dropdown">
-            <form method="GET" action="{{ route('reporter.community') }}" id="comm-building-form">
-                @if ($feed->filters['q'] !== '')
-                    <input type="hidden" name="q" value="{{ $feed->filters['q'] }}">
-                @endif
-                @if ($feed->filters['category'] !== '')
-                    <input type="hidden" name="category" value="{{ $feed->filters['category'] }}">
-                @endif
-                @if ($feed->filters['state'] !== '')
-                    <input type="hidden" name="state" value="{{ $feed->filters['state'] }}">
-                @endif
-                @if ($feed->filters['has_media'] !== '')
-                    <input type="hidden" name="has_media" value="{{ $feed->filters['has_media'] }}">
-                @endif
-                @if ($feed->filters['period'] !== '')
-                    <input type="hidden" name="period" value="{{ $feed->filters['period'] }}">
-                @endif
-                @if ($feed->currentSort !== 'recent')
-                    <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
-                @endif
-                <select
-                    name="building"
-                    class="comm-chip-select {{ $feed->filters['building'] !== '' ? 'comm-chip-select--active' : '' }}"
-                    onchange="this.form.submit()"
-                    aria-label="Filtrar por edificio"
-                >
-                    <option value="">Edificio</option>
-                    @foreach ($feed->buildings as $building)
-                        <option
-                            value="{{ $building }}"
-                            {{ $feed->filters['building'] === $building ? 'selected' : '' }}
-                        >{{ $building }}</option>
-                    @endforeach
-                </select>
-            </form>
-        </div>
-    @endif
+            <input
+                type="search"
+                name="q"
+                class="comm-search__input"
+                placeholder="Buscar reportes, aulas, laboratorios…"
+                value="{{ $feed->filters['q'] }}"
+                autocomplete="off"
+                aria-label="Buscar en la comunidad"
+            >
+            <button type="submit" class="comm-search__submit" aria-label="Buscar">
+                <x-lucide-search width="16" height="16" stroke-width="2" />
+            </button>
+        </form>
 
-    {{-- Chip: Últimas 24h --}}
-    <a
-        href="{{ $feed->filters['period'] === '24h' ? route('reporter.community') : route('reporter.community').'?period=24h' }}"
-        class="comm-chip-link {{ $feed->filters['period'] === '24h' ? 'comm-chip-link--active' : '' }}"
-    >Últimas 24h</a>
+        {{-- Filter trigger — opens the advanced panel --}}
+        <button
+            type="button"
+            class="comm-filter-trigger {{ $panelFilterCount > 0 ? 'comm-filter-trigger--active' : '' }}"
+            id="comm-filter-btn"
+            aria-expanded="false"
+            aria-controls="comm-filter-panel"
+            aria-label="Abrir filtros avanzados"
+        >
+            <x-lucide-sliders-horizontal width="15" height="15" stroke-width="2" />
+            <span class="comm-filter-trigger__label">Filtros</span>
+            @if ($panelFilterCount > 0)
+                <span class="comm-filter-badge" aria-label="{{ $panelFilterCount }} filtros activos">{{ $panelFilterCount }}</span>
+            @endif
+        </button>
+    </div>
 
-    {{-- Chip: Con evidencia --}}
-    <a
-        href="{{ $feed->filters['has_media'] === '1' ? route('reporter.community') : route('reporter.community').'?has_media=1' }}"
-        class="comm-chip-link {{ $feed->filters['has_media'] === '1' ? 'comm-chip-link--active' : '' }}"
-    >Con evidencia</a>
+    {{-- Sort bar --}}
+    <nav class="comm-sort-bar" aria-label="Ordenar feed">
+        <span class="comm-sort-bar__label">Ordenar:</span>
+        @foreach ($feed->sortOptions as $opt)
+            <a
+                href="{{ $opt['url'] }}"
+                class="comm-sort-chip {{ $opt['active'] ? 'comm-sort-chip--active' : '' }}"
+                aria-current="{{ $opt['active'] ? 'true' : 'false' }}"
+            >{{ $opt['label'] }}</a>
+        @endforeach
+    </nav>
 
-    {{-- Chip: En progreso --}}
-    <a
-        href="{{ $feed->filters['state'] === 'in_progress' ? route('reporter.community') : route('reporter.community').'?state=in_progress' }}"
-        class="comm-chip-link {{ $feed->filters['state'] === 'in_progress' ? 'comm-chip-link--active' : '' }}"
-    >En progreso</a>
-
-    {{-- Chip: Resueltos --}}
-    <a
-        href="{{ $feed->filters['state'] === 'resolved' ? route('reporter.community') : route('reporter.community').'?state=resolved' }}"
-        class="comm-chip-link {{ $feed->filters['state'] === 'resolved' ? 'comm-chip-link--active' : '' }}"
-    >Resueltos</a>
-
-    {{-- Category chips from DB --}}
-    @foreach ($feed->categories as $cat)
-        <a
-            href="{{ $feed->filters['category'] === $cat['id'] ? route('reporter.community') : route('reporter.community').'?category='.urlencode($cat['id']) }}"
-            class="comm-chip-link {{ $feed->filters['category'] === $cat['id'] ? 'comm-chip-link--active' : '' }}"
-            title="{{ $cat['name'] }}"
-        >{{ $cat['name'] }}</a>
-    @endforeach
-
-    {{-- Clear filters --}}
+    {{-- Active filters summary — shown when any filter is active --}}
     @if ($feed->hasActiveFilters())
-        <a href="{{ route('reporter.community') }}" class="comm-chip-link comm-chip-link--clear">
-            <x-lucide-x width="12" height="12" stroke-width="2.5" />
-            Limpiar
-        </a>
+        <div class="comm-active-filters" aria-label="Filtros activos">
+
+            @if ($feed->filters['q'] !== '')
+                <span class="comm-active-chip">
+                    <x-lucide-search width="11" height="11" stroke-width="2.5" />
+                    "{{ mb_strlen($feed->filters['q']) > 22 ? mb_substr($feed->filters['q'], 0, 22).'…' : $feed->filters['q'] }}"
+                </span>
+            @endif
+
+            @if ($feed->filters['state'] !== '')
+                <span class="comm-active-chip">
+                    {{ match($feed->filters['state']) {
+                        'open'        => 'Abierto',
+                        'in_progress' => 'En progreso',
+                        'resolved'    => 'Resuelto',
+                        default       => $feed->filters['state'],
+                    } }}
+                </span>
+            @endif
+
+            @if ($feed->filters['period'] !== '')
+                <span class="comm-active-chip">
+                    {{ match($feed->filters['period']) {
+                        '24h' => 'Últimas 24h',
+                        '7d'  => 'Última semana',
+                        '30d' => 'Último mes',
+                        default => $feed->filters['period'],
+                    } }}
+                </span>
+            @endif
+
+            @if ($feed->filters['has_media'] === '1')
+                <span class="comm-active-chip">Con evidencia</span>
+            @endif
+
+            @if ($feed->filters['building'] !== '')
+                <span class="comm-active-chip">{{ $feed->filters['building'] }}</span>
+            @endif
+
+            @if ($feed->filters['category'] !== '')
+                @php $activeCat = collect($feed->categories)->firstWhere('id', $feed->filters['category']); @endphp
+                @if ($activeCat)
+                    <span class="comm-active-chip">{{ $activeCat['name'] }}</span>
+                @endif
+            @endif
+
+            @if (($feed->filters['priority'] ?? '') !== '')
+                <span class="comm-active-chip">
+                    {{ match($feed->filters['priority']) {
+                        'critical' => 'Crítico',
+                        'high'     => 'Alta prioridad',
+                        'medium'   => 'Media prioridad',
+                        'low'      => 'Baja prioridad',
+                        default    => $feed->filters['priority'],
+                    } }}
+                </span>
+            @endif
+
+            <a
+                href="{{ route('reporter.community') }}"
+                class="comm-active-chip comm-active-chip--clear"
+                aria-label="Limpiar todos los filtros"
+            >
+                <x-lucide-x width="11" height="11" stroke-width="2.5" />
+                Limpiar
+            </a>
+        </div>
     @endif
 
 </div>
