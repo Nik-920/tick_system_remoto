@@ -347,11 +347,20 @@
                         <div class="rep-edit__dropzone" id="create-dropzone">
                             <label for="media_files" class="rep-edit__dropzone-label">
                                 <div class="rep-edit__dropzone-icon" aria-hidden="true">
-                                    <x-lucide-cloud-upload width="32" height="32" stroke-width="1.5" />
+                                    <x-lucide-cloud-upload width="36" height="36" stroke-width="1.5" />
                                 </div>
-                                <p class="rep-edit__dropzone-text">
-                                    <span class="rep-edit__dropzone-link">Arrastra archivos aquí o haz clic para seleccionarlos</span>
-                                </p>
+                                <div class="rep-edit__dropzone-actions">
+                                    <span class="rep-edit__dropzone-btn rep-edit__dropzone-btn--primary">
+                                        Arrastra archivos aquí o haz clic para seleccionarlos
+                                    </span>
+                                    <button type="button"
+                                            class="rep-edit__dropzone-btn rep-edit__dropzone-btn--secondary"
+                                            id="create-camera-btn"
+                                            aria-label="Tomar foto con la cámara">
+                                        <x-lucide-camera width="15" height="15" stroke-width="2.5" aria-hidden="true" />
+                                        Tomar con la Cámara
+                                    </button>
+                                </div>
                                 <p class="rep-edit__dropzone-hint">Imágenes, PDF, documentos y video · Máx. 10 MB c/u · Hasta 5 archivos</p>
                                 <input id="media_files"
                                        type="file"
@@ -361,13 +370,24 @@
                                        class="rep-edit__file-input"
                                        aria-describedby="create-media-err"
                                        aria-label="Adjuntar archivos de evidencia">
+                                <input id="media_camera"
+                                       type="file"
+                                       name="media_files[]"
+                                       accept="image/*"
+                                       capture="environment"
+                                       class="rep-edit__file-input"
+                                       aria-label="Tomar foto con la cámara">
                             </label>
 
-                            {{-- Preview --}}
+                            {{-- 5-slot preview strip --}}
                             <div id="create-media-preview"
-                                 class="rep-edit__preview-grid"
+                                 class="rep-edit__slots"
                                  aria-live="polite"
-                                 aria-label="Vista previa de archivos seleccionados"></div>
+                                 aria-label="Vista previa de archivos seleccionados">
+                                @for ($i = 0; $i < 5; $i++)
+                                    <div class="rep-edit__slot" data-slot="{{ $i }}" aria-hidden="true">+</div>
+                                @endfor
+                            </div>
                         </div>
 
                         @error('media_files')
@@ -613,14 +633,45 @@
         });
     }
 
-    // ── Image/file preview ──
+    // ── File upload: 5-slot preview strip ──
     var fileInput   = document.getElementById('media_files');
-    var previewArea = document.getElementById('create-media-preview');
+    var cameraInput = document.getElementById('media_camera');
+    var cameraBtn   = document.getElementById('create-camera-btn');
+    var slotsEl     = document.getElementById('create-media-preview');
     var dropzone    = document.getElementById('create-dropzone');
     var summaryAtt  = document.getElementById('summary-attachments');
+    var MAX_FILES   = 5;
 
-    if (fileInput && previewArea) {
-        fileInput.addEventListener('change', renderPreviews);
+    // Files accumulator (DataTransfer trick to merge picks)
+    var dt = new DataTransfer();
+
+    // Camera detection: hide button on devices that report no video input (e.g. desktop without webcam).
+    // enumerateDevices() resolves without a permission prompt on all major browsers;
+    // it returns device kinds even before the user grants camera access.
+    if (cameraBtn && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices().then(function (devices) {
+            var hasCamera = devices.some(function (d) { return d.kind === 'videoinput'; });
+            if (!hasCamera) { cameraBtn.style.display = 'none'; }
+        }).catch(function () { /* keep visible on error — user may still have a camera */ });
+    }
+
+    if (cameraBtn && cameraInput) {
+        cameraBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            cameraInput.click();
+        });
+        cameraInput.addEventListener('change', function () {
+            mergeFiles(Array.from(cameraInput.files || []));
+            cameraInput.value = '';
+        });
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            mergeFiles(Array.from(fileInput.files || []));
+            fileInput.value = '';
+        });
     }
 
     if (dropzone) {
@@ -634,63 +685,101 @@
         dropzone.addEventListener('drop', function (e) {
             e.preventDefault();
             dropzone.classList.remove('is-drag-over');
-            if (fileInput && e.dataTransfer) {
-                fileInput.files = e.dataTransfer.files;
-                renderPreviews();
+            if (e.dataTransfer) {
+                mergeFiles(Array.from(e.dataTransfer.files));
             }
         });
     }
 
-    function renderPreviews() {
-        if (!fileInput || !previewArea) return;
-        previewArea.innerHTML = '';
-        var files = Array.from(fileInput.files || []);
+    function mergeFiles(newFiles) {
+        newFiles.forEach(function (f) {
+            if (dt.files.length < MAX_FILES) { dt.items.add(f); }
+        });
+        syncInput();
+        renderSlots();
+    }
 
-        // Update sidebar summary
+    function removeFile(index) {
+        var current = Array.from(dt.files);
+        dt = new DataTransfer();
+        current.forEach(function (f, i) { if (i !== index) { dt.items.add(f); } });
+        syncInput();
+        renderSlots();
+    }
+
+    function syncInput() {
+        if (fileInput) { fileInput.files = dt.files; }
         if (summaryAtt) {
-            if (files.length === 0) {
+            var n = dt.files.length;
+            if (n === 0) {
                 summaryAtt.textContent = 'Sin adjuntos';
                 summaryAtt.className = 'rep-edit__summary-val--empty';
             } else {
-                summaryAtt.textContent = files.length + (files.length === 1 ? ' archivo' : ' archivos');
+                summaryAtt.textContent = n + (n === 1 ? ' archivo' : ' archivos');
                 summaryAtt.className = '';
             }
         }
+        // Disable inputs when all slots are filled so the user can't exceed MAX_FILES
+        var full = dt.files.length >= MAX_FILES;
+        if (cameraBtn) {
+            cameraBtn.disabled = full;
+            cameraBtn.setAttribute('aria-disabled', String(full));
+        }
+        if (fileInput) { fileInput.disabled = full; }
+    }
 
-        files.forEach(function (file) {
-            var wrap = document.createElement('div');
-            wrap.className = 'rep-edit__preview-item';
+    function renderSlots() {
+        if (!slotsEl) return;
+        var slots = slotsEl.querySelectorAll('[data-slot]');
+        var files = Array.from(dt.files);
 
-            if (file.type.startsWith('image/')) {
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    var img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.alt = file.name;
-                    img.className = 'rep-edit__preview-img';
+        slots.forEach(function (slot, i) {
+            slot.innerHTML = '';
+            slot.className = 'rep-edit__slot';
 
-                    var name = document.createElement('span');
-                    name.className = 'rep-edit__preview-name';
-                    name.textContent = file.name.length > 18 ? file.name.slice(0, 15) + '…' : file.name;
+            if (i < files.length) {
+                var f = files[i];
+                slot.classList.add('rep-edit__slot--filled');
 
-                    wrap.appendChild(img);
-                    wrap.appendChild(name);
-                    previewArea.appendChild(wrap);
-                };
-                reader.readAsDataURL(file);
+                if (f.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = (function (s) { return function (ev) {
+                        var img = document.createElement('img');
+                        img.src = ev.target.result;
+                        img.alt = f.name;
+                        img.className = 'rep-edit__slot-img';
+                        s.appendChild(img);
+                    }; })(slot);
+                    reader.readAsDataURL(f);
+                } else {
+                    var icon = document.createElement('span');
+                    icon.className = 'rep-edit__slot-file-icon';
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.textContent = '📄';
+                    slot.appendChild(icon);
+                }
+
+                var nameEl = document.createElement('span');
+                nameEl.className = 'rep-edit__slot-name';
+                nameEl.textContent = f.name.length > 16 ? f.name.slice(0, 13) + '…' : f.name;
+                slot.appendChild(nameEl);
+
+                var rmBtn = document.createElement('button');
+                rmBtn.type = 'button';
+                rmBtn.className = 'rep-edit__slot-remove';
+                rmBtn.setAttribute('aria-label', 'Eliminar ' + f.name);
+                rmBtn.textContent = '×';
+                (function (idx) {
+                    rmBtn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeFile(idx);
+                    });
+                })(i);
+                slot.appendChild(rmBtn);
             } else {
-                var icon = document.createElement('div');
-                icon.className = 'rep-edit__preview-file-icon';
-                icon.setAttribute('aria-hidden', 'true');
-                icon.textContent = '📄';
-
-                var name = document.createElement('span');
-                name.className = 'rep-edit__preview-name';
-                name.textContent = file.name.length > 18 ? file.name.slice(0, 15) + '…' : file.name;
-
-                wrap.appendChild(icon);
-                wrap.appendChild(name);
-                previewArea.appendChild(wrap);
+                slot.textContent = '+';
+                slot.setAttribute('aria-hidden', 'true');
             }
         });
     }
