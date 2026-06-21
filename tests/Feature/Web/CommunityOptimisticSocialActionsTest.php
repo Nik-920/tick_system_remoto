@@ -38,7 +38,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_store_with_json_accept_returns_json_ok(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->postJson(
@@ -52,13 +52,13 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_store_json_returns_active_true_and_real_count(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $other    = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $other = $this->createUserWithRole('reporter');
+        $ticket = $this->makeVisibleTicket($reporter);
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $other->id,
-            'type'      => 'interested',
+            'user_id' => $other->id,
+            'type' => 'interested',
         ]);
 
         $response = $this->actingAs($reporter)
@@ -79,12 +79,12 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_destroy_json_returns_active_false_and_real_count(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => 'interested',
+            'user_id' => $reporter->id,
+            'type' => 'interested',
         ]);
 
         $response = $this->actingAs($reporter)
@@ -104,7 +104,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_json_response_includes_all_counts(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $response = $this->actingAs($reporter)
             ->postJson(
@@ -126,7 +126,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_save_store_json_returns_active_true_and_real_count(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $response = $this->actingAs($reporter)
             ->postJson(route('reporter.community.saves.store', $ticket))
@@ -143,11 +143,11 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_save_destroy_json_returns_active_false_and_real_count(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         CommunitySave::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
+            'user_id' => $reporter->id,
         ]);
 
         $response = $this->actingAs($reporter)
@@ -165,7 +165,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_duplicate_reaction_store_json_is_idempotent(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->postJson(
@@ -190,7 +190,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_duplicate_save_store_json_is_idempotent(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->postJson(route('reporter.community.saves.store', $ticket));
@@ -211,7 +211,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_hidden_ticket_json_mutation_returns_404(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeHiddenTicket($reporter);
+        $ticket = $this->makeHiddenTicket($reporter);
 
         $this->actingAs($reporter)
             ->postJson(
@@ -224,7 +224,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_cancelled_ticket_json_reaction_returns_404(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter, state: Ticket::STATE_CANCELLED);
+        $ticket = $this->makeVisibleTicket($reporter, state: Ticket::STATE_CANCELLED);
 
         $this->actingAs($reporter)
             ->postJson(
@@ -237,7 +237,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_rejected_ticket_json_save_returns_404(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter, state: Ticket::STATE_REJECTED);
+        $ticket = $this->makeVisibleTicket($reporter, state: Ticket::STATE_REJECTED);
 
         $this->actingAs($reporter)
             ->postJson(route('reporter.community.saves.store', $ticket))
@@ -249,7 +249,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_invalid_reaction_type_returns_json_validation_error(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->postJson(
@@ -265,16 +265,16 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_store_json_does_not_expose_pii(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $secret   = User::factory()->create([
-            'name'  => 'SecretPersonOPT',
+        $secret = User::factory()->create([
+            'name' => 'SecretPersonOPT',
             'email' => 'secret-opt@test.test',
         ]);
         $ticket = $this->makeVisibleTicket($reporter);
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $secret->id,
-            'type'      => 'interested',
+            'user_id' => $secret->id,
+            'type' => 'interested',
         ]);
 
         $response = $this->actingAs($reporter)
@@ -296,7 +296,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_save_store_json_does_not_expose_pii(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $response = $this->actingAs($reporter)
             ->postJson(route('reporter.community.saves.store', $ticket))
@@ -315,7 +315,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_store_without_json_accept_redirects_back(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->post(
@@ -328,12 +328,12 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_reaction_destroy_without_json_accept_redirects_back(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => 'seen',
+            'user_id' => $reporter->id,
+            'type' => 'seen',
         ]);
 
         $this->actingAs($reporter)
@@ -344,7 +344,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_save_store_without_json_accept_redirects_back(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         $this->actingAs($reporter)
             ->post(route('reporter.community.saves.store', $ticket))
@@ -354,7 +354,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_save_destroy_without_json_accept_redirects_back(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter);
+        $ticket = $this->makeVisibleTicket($reporter);
 
         CommunitySave::create(['ticket_id' => $ticket->id, 'user_id' => $reporter->id]);
 
@@ -401,12 +401,12 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_feed_renders_aria_pressed_true_for_active_reaction(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $ticket   = $this->makeVisibleTicket($reporter, 'Ticket OPT active aria ARPA');
+        $ticket = $this->makeVisibleTicket($reporter, 'Ticket OPT active aria ARPA');
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => 'interested',
+            'user_id' => $reporter->id,
+            'type' => 'interested',
         ]);
 
         $this->actingAs($reporter)
@@ -471,7 +471,7 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_saved_filter_still_works_after_optimistic_changes(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $saved    = $this->makeVisibleTicket($reporter, 'Ticket guardado OPT SVOPT');
+        $saved = $this->makeVisibleTicket($reporter, 'Ticket guardado OPT SVOPT');
         $notSaved = $this->makeVisibleTicket($reporter, 'Ticket libre OPT NSVOPT');
 
         CommunitySave::create(['ticket_id' => $saved->id, 'user_id' => $reporter->id]);
@@ -486,16 +486,16 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     public function test_counts_in_feed_are_aggregate_only_and_do_not_expose_who_reacted(): void
     {
         $reporter = $this->createUserWithRole('reporter');
-        $secret   = User::factory()->create([
-            'name'  => 'ReactorHiddenOPT',
+        $secret = User::factory()->create([
+            'name' => 'ReactorHiddenOPT',
             'email' => 'reactor-hidden-opt@test.test',
         ]);
         $ticket = $this->makeVisibleTicket($reporter, 'Ticket aggregate OPT AGGOPT');
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $secret->id,
-            'type'      => 'interested',
+            'user_id' => $secret->id,
+            'type' => 'interested',
         ]);
 
         $this->actingAs($reporter)
@@ -515,13 +515,13 @@ class CommunityOptimisticSocialActionsTest extends TestCase
         $reporter ??= $this->createUserWithRole('reporter');
 
         return Ticket::create([
-            'title'             => $title,
-            'description'       => 'Descripción para test optimistic social.',
-            'reporter_id'       => $reporter->id,
-            'location_id'       => $this->makeLocation()->id,
-            'category_id'       => $this->makeCategory()->id,
-            'state'             => $state,
-            'priority'          => 'medium',
+            'title' => $title,
+            'description' => 'Descripción para test optimistic social.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $this->makeLocation()->id,
+            'category_id' => $this->makeCategory()->id,
+            'state' => $state,
+            'priority' => 'medium',
             'community_visible' => true,
         ]);
     }
@@ -531,20 +531,20 @@ class CommunityOptimisticSocialActionsTest extends TestCase
         $reporter ??= $this->createUserWithRole('reporter');
 
         $ticket = Ticket::create([
-            'title'             => 'Ticket oculto OPT TEST',
-            'description'       => 'Ticket no visible en comunidad.',
-            'reporter_id'       => $reporter->id,
-            'location_id'       => $this->makeLocation()->id,
-            'category_id'       => $this->makeCategory()->id,
-            'state'             => Ticket::STATE_OPEN,
-            'priority'          => 'medium',
+            'title' => 'Ticket oculto OPT TEST',
+            'description' => 'Ticket no visible en comunidad.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $this->makeLocation()->id,
+            'category_id' => $this->makeCategory()->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
             'community_visible' => false,
         ]);
 
         $ticket->forceFill([
-            'community_hidden_at'          => now(),
-            'community_hidden_by'          => $reporter->id,
-            'community_visibility_reason'  => 'Test ocultamiento OPT',
+            'community_hidden_at' => now(),
+            'community_hidden_by' => $reporter->id,
+            'community_visibility_reason' => 'Test ocultamiento OPT',
         ])->save();
 
         return $ticket;
@@ -570,11 +570,11 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     private function makeLocation(): Location
     {
         return Location::create([
-            'name'      => 'Sala OPT Test',
-            'building'  => 'Edificio OPT',
-            'floor'     => '1',
+            'name' => 'Sala OPT Test',
+            'building' => 'Edificio OPT',
+            'floor' => '1',
             'room_code' => 'OPT-'.Str::upper(Str::random(6)),
-            'qr_token'  => 'qr-opt-'.Str::lower(Str::random(10)),
+            'qr_token' => 'qr-opt-'.Str::lower(Str::random(10)),
             'is_active' => true,
         ]);
     }
@@ -582,8 +582,8 @@ class CommunityOptimisticSocialActionsTest extends TestCase
     private function makeCategory(): Category
     {
         return Category::create([
-            'name'        => 'CatOPT-'.Str::lower(Str::random(5)),
-            'icon'        => 'wrench',
+            'name' => 'CatOPT-'.Str::lower(Str::random(5)),
+            'icon' => 'wrench',
             'description' => 'Categoría para tests optimistic',
         ]);
     }
