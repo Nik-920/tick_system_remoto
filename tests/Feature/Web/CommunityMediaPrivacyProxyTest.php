@@ -151,9 +151,10 @@ class CommunityMediaPrivacyProxyTest extends TestCase
         $reporter = $this->createUserWithRole('reporter');
         $media = $this->makeVisibleMedia($reporter, path: 'ticket-evidence/ctype/img.jpg', fileType: 'image/png');
 
+        // Thumbnails are always served as JPEG regardless of the original file type.
         $this->actingAs($reporter)
             ->get(route('reporter.community.media.thumbnail', $media->id))
-            ->assertHeader('Content-Type', 'image/png');
+            ->assertHeader('Content-Type', 'image/jpeg');
     }
 
     public function test_response_has_nosniff_header(): void
@@ -362,6 +363,7 @@ class CommunityMediaPrivacyProxyTest extends TestCase
     /**
      * Creates a TicketMedia backed by a real file on the fake public disk.
      * If $path is provided, the file is put there and the file_url is local.
+     * Uses a minimal valid JPEG so the thumbnail service can process the file.
      */
     private function makeVisibleMedia(
         ?User $reporter = null,
@@ -372,7 +374,7 @@ class CommunityMediaPrivacyProxyTest extends TestCase
         $ticket = $this->makeTicket($reporter);
 
         if ($path !== null) {
-            Storage::disk('public')->put($path, 'FAKEIMAGEBYTES');
+            Storage::disk('public')->put($path, $this->minimalJpeg());
             $fileUrl = Storage::disk('public')->url($path);
         } else {
             $fileUrl = 'https://demo.incidex.test/evidencias/placeholder.jpg';
@@ -388,7 +390,7 @@ class CommunityMediaPrivacyProxyTest extends TestCase
 
     private function makeMediaForTicket(Ticket $ticket, User $uploader, string $path): TicketMedia
     {
-        Storage::disk('public')->put($path, 'FAKEIMAGEBYTES');
+        Storage::disk('public')->put($path, $this->minimalJpeg());
 
         return TicketMedia::create([
             'ticket_id' => $ticket->id,
@@ -396,6 +398,20 @@ class CommunityMediaPrivacyProxyTest extends TestCase
             'file_type' => 'image',
             'uploaded_by' => $uploader->id,
         ]);
+    }
+
+    private function minimalJpeg(): string
+    {
+        $im = imagecreatetruecolor(4, 4);
+        $white = imagecolorallocate($im, 255, 255, 255);
+        if ($white !== false) {
+            imagefill($im, 0, 0, $white);
+        }
+        ob_start();
+        imagejpeg($im, null, 80);
+        imagedestroy($im);
+
+        return (string) ob_get_clean();
     }
 
     private function makeTicket(
