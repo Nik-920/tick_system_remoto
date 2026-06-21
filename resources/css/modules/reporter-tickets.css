@@ -1051,10 +1051,466 @@ body.rep-modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .rep-item,
     .rep-item:hover,
-    .rep-advanced__chevron,
     .rep-link:hover { transition: none; transform: none; }
 
     .rep-modal__backdrop,
     .rep-modal__dialog { transition: none; }
     .rep-modal__icon   { animation: none; }
+
+    .rep-filter-modal__backdrop,
+    .rep-filter-modal__drawer { transition: none; }
+}
+
+/* ============================================================
+   13. FILTER TRIGGER BUTTON
+   ============================================================ */
+.rep-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 44px;
+    padding: 0 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.rep-filter-trigger:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.rep-filter-trigger--active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.rep-filter-trigger:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.rep-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ============================================================
+   14. ADVANCED FILTER MODAL (DRAWER / MODAL)
+   Mobile  (<640px): bottom-sheet (slides up from bottom)
+   Desktop (≥640px): centered modal (fade + scale)
+   ============================================================ */
+.rep-filter-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.rep-filter-modal--open {
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.rep-filter-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.46);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.rep-filter-modal--open .rep-filter-modal__backdrop {
+    opacity: 1;
+}
+
+.rep-filter-modal__drawer {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page, #fff);
+    border-radius: 1rem 1rem 0 0;
+    box-shadow: 0 -4px 32px rgba(15, 23, 42, 0.18);
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.34, 1.1, 0.64, 1);
+    overflow: hidden;
+}
+
+.rep-filter-modal--open .rep-filter-modal__drawer {
+    transform: translateY(0);
+}
+
+@media (min-width: 640px) {
+    .rep-filter-modal {
+        align-items: center;
+        padding: 1rem;
+    }
+
+    .rep-filter-modal__drawer {
+        border-radius: var(--radius-lg, 0.875rem);
+        max-height: 80vh;
+        box-shadow: 0 8px 40px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0,0,0,0.05);
+        transform: scale(0.96);
+        opacity: 0;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .rep-filter-modal--open .rep-filter-modal__drawer {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ── Header ── */
+.rep-filter-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.875rem;
+    border-bottom: 1px solid var(--border-default, #e2e8f0);
+    flex-shrink: 0;
+}
+
+.rep-filter-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary, #0f172a);
+}
+
+.rep-filter-modal__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+}
+
+.rep-filter-modal__close:hover { background: var(--bg-soft); color: var(--text-primary); }
+.rep-filter-modal__close:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ── Scrollable form ── */
+.rep-filter-modal__form {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.25rem 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Footer ── */
+.rep-filter-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--border-default, #e2e8f0);
+    flex-shrink: 0;
+    background: var(--bg-page, #fff);
+}
+
+/* ── Section ── */
+.rep-fm-section {
+    border: none;
+    margin: 0;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+.rep-fm-section--last { border-bottom: none; }
+
+.rep-fm-section__label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.625rem;
+    padding: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ── Radio chip options ── */
+.rep-fm-opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.rep-fm-opts::-webkit-scrollbar { display: none; }
+
+.rep-fm-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-default, #e2e8f0);
+    background: var(--bg-surface, #fff);
+    color: var(--text-secondary, #475569);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.rep-fm-opt input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.rep-fm-opt:hover {
+    border-color: var(--color-primary-muted, #93c5fd);
+    color: var(--color-primary, #2563eb);
+}
+
+.rep-fm-opt:has(input:checked),
+.rep-fm-opt--on {
+    background: var(--color-primary-light, #eff6ff);
+    border-color: var(--color-primary, #2563eb);
+    color: var(--color-primary, #2563eb);
+    font-weight: 600;
+}
+
+.rep-fm-opt:focus-within {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.rep-fm-opt__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.125rem;
+    padding: 0 0.25rem;
+    border-radius: 9999px;
+    background: rgba(0,0,0,0.07);
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.rep-fm-opt--on .rep-fm-opt__count {
+    background: rgba(37, 99, 235, 0.14);
+}
+
+/* ── Select / date inputs ── */
+.rep-fm-select {
+    width: 100%;
+    height: 40px;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-default, #e2e8f0);
+    background: var(--bg-input, #fff);
+    color: var(--text-primary, #0f172a);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rep-fm-select:focus {
+    outline: none;
+    border-color: var(--color-primary-muted, #93c5fd);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.rep-fm-select:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ── Date row ── */
+.rep-fm-date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.rep-fm-date-field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.rep-fm-date-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ── Footer buttons ── */
+.rep-fm-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.625rem;
+    border-radius: var(--radius-xs);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s, color 0.12s;
+}
+
+.rep-fm-clear:hover { color: var(--text-primary); background: var(--bg-soft); }
+.rep-fm-clear:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.rep-fm-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 40px;
+    padding: 0 1.25rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.8375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+.rep-fm-apply:hover { background: var(--color-primary-hover, #1d4ed8); }
+.rep-fm-apply:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ── Bar label: truncate long descriptive location names ── */
+.rep-bar__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    max-width: 65%;
+}
+
+/* ============================================================
+   15. DARK MODE — FILTER MODAL
+   ============================================================ */
+[data-theme="dark"] .rep-filter-trigger {
+    border-color: rgba(148,163,184,0.2);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+}
+[data-theme="dark"] .rep-filter-trigger:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+[data-theme="dark"] .rep-filter-trigger--active {
+    border-color: var(--color-primary);
+    background: rgba(37,99,235,0.12);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .rep-filter-modal__drawer {
+    background: var(--bg-card, #1e293b);
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.45);
+}
+
+[data-theme="dark"] .rep-filter-modal__header {
+    border-bottom-color: rgba(148,163,184,0.12);
+}
+
+[data-theme="dark"] .rep-filter-modal__title { color: #f1f5f9; }
+
+[data-theme="dark"] .rep-filter-modal__close {
+    color: #94a3b8;
+}
+[data-theme="dark"] .rep-filter-modal__close:hover {
+    background: rgba(148,163,184,0.1);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .rep-filter-modal__footer {
+    border-top-color: rgba(148,163,184,0.12);
+    background: var(--bg-card, #1e293b);
+}
+
+[data-theme="dark"] .rep-fm-section { border-bottom-color: rgba(148,163,184,0.08); }
+
+[data-theme="dark"] .rep-fm-section__label { color: #64748b; }
+
+[data-theme="dark"] .rep-fm-opt {
+    border-color: rgba(148,163,184,0.18);
+    background: rgba(148,163,184,0.05);
+    color: #94a3b8;
+}
+[data-theme="dark"] .rep-fm-opt:hover {
+    border-color: #60a5fa;
+    color: #60a5fa;
+}
+[data-theme="dark"] .rep-fm-opt:has(input:checked),
+[data-theme="dark"] .rep-fm-opt--on {
+    background: rgba(37,99,235,0.18);
+    border-color: #60a5fa;
+    color: #93c5fd;
+}
+[data-theme="dark"] .rep-fm-opt__count { background: rgba(255,255,255,0.1); }
+[data-theme="dark"] .rep-fm-opt--on .rep-fm-opt__count { background: rgba(96,165,250,0.18); }
+
+[data-theme="dark"] .rep-fm-select {
+    background: var(--bg-input, #1e293b);
+    border-color: rgba(148,163,184,0.2);
+    color: #e2e8f0;
+}
+[data-theme="dark"] .rep-fm-select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.2);
+}
+
+[data-theme="dark"] .rep-fm-date-label { color: #64748b; }
+
+[data-theme="dark"] .rep-fm-clear { color: #64748b; }
+[data-theme="dark"] .rep-fm-clear:hover { color: #e2e8f0; background: rgba(148,163,184,0.1); }
+
+@media (min-width: 640px) {
+    [data-theme="dark"] .rep-filter-modal__drawer {
+        box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    }
 }

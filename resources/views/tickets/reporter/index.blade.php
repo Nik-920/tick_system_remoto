@@ -7,17 +7,11 @@
     /** @var \App\ViewModels\Tickets\ReporterTicketsBoardViewModel $board */
     $f = $board->filters;
     $searchValue = (string) ($f['search'] ?? '');
-    $priorityValue = (string) ($f['priority'] ?? '');
-    $locationValue = (string) ($f['location_id'] ?? '');
-    $categoryValue = (string) ($f['category_id'] ?? '');
-    $fromValue = (string) ($f['from'] ?? '');
-    $toValue = (string) ($f['to'] ?? '');
+    $sortOptions  = $board->sortOptions();
 
     // Querystring carried when switching the status chip (drop volatile keys).
     $chipBase = collect(request()->query())->except(['status', 'page'])->all();
     $pageBase = collect(request()->query())->except(['page'])->all();
-
-    $sortOptions = ['recent' => 'Más recientes', 'oldest' => 'Más antiguos', 'priority' => 'Prioridad'];
 
     // Build the donut conic-gradient from cumulative ring percentages.
     $donutStops = collect($board->summary['donut'])
@@ -26,7 +20,8 @@
     $donutAria = collect($board->summary['donut'])
         ->map(fn ($s) => "{$s['label']} {$s['count']} ({$s['percent']}%)")
         ->implode(', ');
-    $hasDonut = $board->summary['total'] > 0;
+    $hasDonut    = $board->summary['total'] > 0;
+    $filterCount = $board->activeFiltersCount();
 @endphp
 
 <div class="rep-page">
@@ -71,64 +66,21 @@
                        aria-label="Buscar por título, ID, descripción">
             </div>
 
-            {{-- Native <details> = collapsible advanced filters that work without JS. --}}
-            <details class="rep-advanced" @if ($board->hasOtherFilters()) open @endif>
-                <summary class="rep-advanced__toggle">
-                    <x-lucide-filter width="16" height="16" stroke-width="2" />
-                    Filtros
-                    <x-lucide-chevron-down class="rep-advanced__chevron" width="15" height="15" stroke-width="2.5" />
-                </summary>
-                <div class="rep-advanced__panel">
-                    <div class="rep-field">
-                        <label for="rep-f-priority" class="rep-field__label">Prioridad</label>
-                        <select id="rep-f-priority" name="priority" class="rep-control">
-                            <option value="">Todas</option>
-                            <option value="high" @selected($priorityValue === 'high')>Alta</option>
-                            <option value="medium" @selected($priorityValue === 'medium')>Media</option>
-                            <option value="low" @selected($priorityValue === 'low')>Baja</option>
-                            <option value="critical" @selected($priorityValue === 'critical')>Crítica</option>
-                        </select>
-                    </div>
-                    <div class="rep-field">
-                        <label for="rep-f-lab" class="rep-field__label">Laboratorio</label>
-                        <select id="rep-f-lab" name="location_id" class="rep-control">
-                            <option value="">Todos</option>
-                            @foreach ($board->locations as $location)
-                                <option value="{{ $location->id }}" @selected($locationValue === (string) $location->id)>{{ $location->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="rep-field">
-                        <label for="rep-f-category" class="rep-field__label">Categoría</label>
-                        <select id="rep-f-category" name="category_id" class="rep-control">
-                            <option value="">Todas</option>
-                            @foreach ($board->categories as $category)
-                                <option value="{{ $category->id }}" @selected($categoryValue === (string) $category->id)>{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="rep-field">
-                        <label for="rep-f-sort" class="rep-field__label">Ordenar por</label>
-                        <select id="rep-f-sort" name="sort" class="rep-control">
-                            @foreach ($sortOptions as $value => $label)
-                                <option value="{{ $value }}" @selected($board->sort === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="rep-field">
-                        <label for="rep-f-from" class="rep-field__label">Desde</label>
-                        <input id="rep-f-from" type="date" name="from" value="{{ $fromValue }}" class="rep-control">
-                    </div>
-                    <div class="rep-field">
-                        <label for="rep-f-to" class="rep-field__label">Hasta</label>
-                        <input id="rep-f-to" type="date" name="to" value="{{ $toValue }}" class="rep-control">
-                    </div>
-                    <div class="rep-advanced__actions">
-                        <a href="{{ route('reporter.tickets.index') }}" class="rep-advanced__clear">Limpiar</a>
-                        <button type="submit" class="rep-btn-outline rep-advanced__apply">Aplicar filtros</button>
-                    </div>
-                </div>
-            </details>
+            {{-- Advanced filters trigger — opens the filter modal via JS. --}}
+            <button
+                type="button"
+                class="rep-filter-trigger {{ $filterCount > 0 ? 'rep-filter-trigger--active' : '' }}"
+                id="rep-filter-btn"
+                aria-expanded="false"
+                aria-controls="rep-filter-modal"
+                aria-label="Abrir filtros avanzados"
+            >
+                <x-lucide-sliders-horizontal width="15" height="15" stroke-width="2" />
+                <span>Filtros</span>
+                @if ($filterCount > 0)
+                    <span class="rep-filter-badge" aria-label="{{ $filterCount }} filtros activos">{{ $filterCount }}</span>
+                @endif
+            </button>
         </div>
 
         {{-- Quick chips: server-side links (preserve the rest of the query). --}}
@@ -383,7 +335,7 @@
                         @foreach ($board->labs['items'] as $lab)
                             <div>
                                 <div class="rep-bar__head">
-                                    <span class="rep-bar__label">{{ $lab['name'] }}</span>
+                                    <span class="rep-bar__label" title="{{ $lab['label'] }}">{{ $lab['label'] }}</span>
                                     <span class="rep-bar__value">{{ $lab['count'] }}</span>
                                 </div>
                                 <div class="rep-bar__track">
@@ -413,6 +365,11 @@
         </aside>
     </div>
 </div>
+
+{{-- ============================================================
+   Advanced filters modal
+   ============================================================ --}}
+@include('tickets.reporter.partials.advanced-filters-modal')
 
 {{-- ============================================================
    Cancel-confirmation modal (replaces native browser confirm)
@@ -470,12 +427,67 @@
 </div>
 
 {{-- ============================================================
-   Progressive JS — kebab menus only. Search, chips, filters and
-   pagination all work server-side without JS (form + <details> + links).
+   Progressive JS — filter modal + kebab menus + cancel confirm.
+   Search, chips, and pagination work server-side without JS.
    ============================================================ --}}
 <script>
 (function () {
     'use strict';
+
+    /* ── Advanced filter modal ──────────────────────────────── */
+    var filterBtn      = document.getElementById('rep-filter-btn');
+    var filterModal    = document.getElementById('rep-filter-modal');
+    var filterBackdrop = document.getElementById('rep-filter-backdrop');
+    var filterClose    = document.getElementById('rep-filter-close');
+    var filterPrevFocus = null;
+
+    function openFilter() {
+        if (!filterModal) { return; }
+        filterPrevFocus = document.activeElement;
+        filterModal.classList.add('rep-filter-modal--open');
+        filterModal.setAttribute('aria-hidden', 'false');
+        if (filterBtn) { filterBtn.setAttribute('aria-expanded', 'true'); }
+        document.body.style.overflow = 'hidden';
+        if (filterClose) { filterClose.focus(); }
+    }
+
+    function closeFilter() {
+        if (!filterModal) { return; }
+        filterModal.classList.remove('rep-filter-modal--open');
+        filterModal.setAttribute('aria-hidden', 'true');
+        if (filterBtn) { filterBtn.setAttribute('aria-expanded', 'false'); }
+        document.body.style.overflow = '';
+        if (filterPrevFocus) { filterPrevFocus.focus(); }
+    }
+
+    if (filterBtn)      { filterBtn.addEventListener('click', openFilter); }
+    if (filterBackdrop) { filterBackdrop.addEventListener('click', closeFilter); }
+    if (filterClose)    { filterClose.addEventListener('click', closeFilter); }
+
+    if (filterModal) {
+        filterModal.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeFilter(); return; }
+            if (e.key !== 'Tab') { return; }
+            var focusable = Array.prototype.slice.call(
+                filterModal.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])')
+            ).filter(function (el) { return !el.disabled && !el.hidden; });
+            if (!focusable.length) { return; }
+            var first = focusable[0], last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
+        });
+
+        filterModal.querySelectorAll('.rep-fm-opts .rep-fm-opt input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                radio.closest('.rep-fm-opts').querySelectorAll('.rep-fm-opt').forEach(function (opt) {
+                    opt.classList.toggle('rep-fm-opt--on', opt.querySelector('input[type="radio"]') === radio);
+                });
+            });
+        });
+    }
 
     /* ── Kebab menus ─────────────────────────────────────────── */
     var kebabs = Array.prototype.slice.call(document.querySelectorAll('[data-rep-kebab]'));
@@ -508,7 +520,7 @@
         });
     });
     document.addEventListener('click', function () { closeAll(null); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAll(null); cancelModal.close(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAll(null); cancelModal.close(); closeFilter(); } });
 
     /* ── Cancel confirmation modal ───────────────────────────── */
     var cancelModal = (function () {
