@@ -81,6 +81,13 @@ function showToastNotification(title, body, url = null) {
 
 globalThis.showToastNotification = showToastNotification;
 
+// Community social actions: optimistic UI for reactions + saves.
+if (document.querySelector('[data-community-social-form]')) {
+    import('./community-social-actions')
+        .then((mod) => mod.init?.())
+        .catch((err) => console.error('Error loading community-social-actions', err));
+}
+
 // Carga condicional de scripts por página
 const pageLoaders = [
     { selector: '.tickets-create-page', loader: () => import('./pages/tickets-create') },

@@ -79,4 +79,16 @@
         </div>
     @endif
 
+
+    {{-- ── TUS GUARDADOS ──────────────────────────────────────────── --}}
+    <div class="comm-sidebar-card">
+        <h3 class="comm-sidebar-card__title">Tus guardados</h3>
+        <a href="{{ route('reporter.community') }}?saved=1"
+           class="comm-saves-link {{ ($feed->filters['saved'] ?? '') === '1' ? 'comm-saves-link--active' : '' }}">
+            <x-lucide-bookmark width="14" height="14" stroke-width="2" />
+            <span class="comm-saves-link__text">Ver tickets guardados</span>
+            <x-lucide-chevron-right class="comm-shortcut__arrow-icon" width="13" height="13" stroke-width="2" />
+        </a>
+    </div>
+
 </aside>

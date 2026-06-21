@@ -575,9 +575,9 @@
 }
 
 .tkv2-assign--available {
-    background: #ecfdf5;
-    color: #047857;
-    border-color: #a7f3d0;
+    background: var(--tone-success-soft);
+    color: var(--tone-success-fg);
+    border-color: var(--color-success-muted);
 }
 
 .tkv2-assign__note {
@@ -593,11 +593,11 @@
     align-items: center;
     gap: 0.3rem;
     padding: 0.18rem 0.55rem;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     font-size: 0.7rem;
     font-weight: 700;
     background: var(--color-warning-light);
-    color: #9a3412;
+    color: var(--tone-warning-fg);
     border: 1px solid #fed7aa;
     white-space: nowrap;
 }
@@ -636,11 +636,11 @@
 .tkv2-btn--ghost:hover { background: #e2e8f0; color: var(--text-primary); }
 
 .tkv2-btn--success {
-    background: #ecfdf5;
-    color: #047857;
-    border-color: #a7f3d0;
+    background: var(--tone-success-soft);
+    color: var(--tone-success-fg);
+    border-color: var(--color-success-muted);
 }
-.tkv2-btn--success:hover { background: #d1fae5; border-color: #6ee7b7; }
+.tkv2-btn--success:hover { background: var(--color-success-light); border-color: var(--color-success-muted); }
 
 /* ── Kebab menu ── */
 .tkv2-kebab { position: relative; }
@@ -896,10 +896,10 @@
     flex-shrink: 0;
 }
 
-.tkv2-state__dot--open { background: #2563eb; }
-.tkv2-state__dot--progress { background: #f59e0b; }
-.tkv2-state__dot--resolved { background: #22c55e; }
-.tkv2-state__dot--rejected { background: #94a3b8; }
+.tkv2-state__dot--open { background: var(--tone-primary-solid); }
+.tkv2-state__dot--progress { background: var(--tone-medium-solid); }
+.tkv2-state__dot--resolved { background: var(--tone-low-solid); }
+.tkv2-state__dot--rejected { background: var(--tone-neutral-solid); }
 
 .tkv2-state__value { font-size: 1rem; font-weight: 800; color: var(--text-primary); line-height: 1; }
 .tkv2-state__label { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
@@ -956,15 +956,15 @@
     margin-top: 0.25rem;
     font-size: 0.74rem;
     font-weight: 700;
-    color: #92400e;
+    color: var(--tone-medium-fg);
 }
 
 .tkv2-avg__status::before {
     content: "";
     width: 6px;
     height: 6px;
-    border-radius: 999px;
-    background: #f59e0b;
+    border-radius: var(--radius-full);
+    background: var(--tone-medium-solid);
 }
 
 /* ============================================================

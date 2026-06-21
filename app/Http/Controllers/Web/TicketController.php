@@ -96,11 +96,19 @@ class TicketController extends Controller
             }
         }
 
+        $categories = Category::query()->orderBy('name', 'asc')->get();
+
+        $oldCategoryId = (string) $request->old('category_id', '');
+        $selectedCategory = $oldCategoryId !== ''
+            ? $categories->firstWhere('id', $oldCategoryId)
+            : null;
+
         return view('tickets.create', [
             'locations' => Location::query()->active()->orderBy('name', 'asc')->get(),
-            'categories' => Category::query()->orderBy('name', 'asc')->get(),
+            'categories' => $categories,
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'selectedLocationId' => $selectedLocationId,
+            'selectedCategory' => $selectedCategory,
         ]);
     }
 
@@ -206,6 +214,8 @@ class TicketController extends Controller
             'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
             'embedding.reviewer',
+            'communityModerationLogs' => fn ($q) => $q->with('performedBy')->latest('created_at'),
+            'communityCommentEditLogs' => fn ($q) => $q->with('editedBy')->latest('created_at'),
         ]);
 
         $availableTransitions = $currentUser instanceof User

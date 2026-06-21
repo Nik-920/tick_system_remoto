@@ -70,6 +70,15 @@ jobs:
           fi
           echo "✅ Rollback exitoso — versión anterior restaurada"
 
+      - name: 🗑️ Prune community thumbnails
+        if: success()
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway run \
+            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            php artisan community:thumbnails:prune --older-than=30 --limit=1000 --prune-hidden
+
       - name: 📋 Resumen
         if: always()
         run: |

@@ -6,14 +6,56 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Queries\Community\CommunityDigestQuery;
 use App\Services\Ai\HuggingFaceService;
 use App\Services\Auth\SupabaseRoleSyncService;
+use App\Services\Community\CommunityDigestService;
+use App\Services\Community\CommunityThumbnailPruner;
 use App\Services\Storage\DomainStorageService;
 use App\Services\Storage\SanitizedFileName;
 use App\Services\Storage\SupabaseStorageClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
+
+Artisan::command(
+    'community:digest {--period=weekly : Digest period (only "weekly" is supported)} {--dry-run : Show what would be sent without creating notifications} {--limit=5 : Top N tickets to consider for digest relevance}',
+    function (CommunityDigestService $digestService, CommunityDigestQuery $digestQuery): int {
+        $period = (string) $this->option('period');
+        $dryRun = (bool) $this->option('dry-run');
+        $limit = max(1, (int) $this->option('limit'));
+
+        if ($period !== 'weekly') {
+            $this->error("Periodo '{$period}' no soportado. Solo se admite: weekly.");
+
+            return Command::FAILURE;
+        }
+
+        $from = now()->subDays(7)->startOfDay();
+        $to = now()->endOfDay();
+        $tickets = $digestQuery->topActiveTickets($from, $to, $limit);
+
+        if ($tickets->isEmpty()) {
+            $this->line('No community activity found for digest period.');
+
+            return Command::SUCCESS;
+        }
+
+        $recipients = $digestService->recipients();
+
+        if ($dryRun) {
+            $this->info("Community weekly digest [DRY RUN]: {$tickets->count()} tickets destacados, {$recipients->count()} recipients potenciales — no se crearon notificaciones.");
+
+            return Command::SUCCESS;
+        }
+
+        $created = $digestService->sendWeeklyDigest();
+
+        $this->info("Community weekly digest: {$tickets->count()} tickets destacados, {$recipients->count()} recipients, {$created} notifications created.");
+
+        return Command::SUCCESS;
+    }
+)->purpose('Send weekly community digest notifications to reporters');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -347,3 +389,43 @@ Artisan::command(
             : 'Migracion de URLs de storage finalizada.');
     }
 )->purpose('Migrate legacy media URLs to canonical Supabase public URLs and backfill objects');
+
+Artisan::command(
+    'community:thumbnails:prune
+        {--dry-run : Show what would be deleted without deleting}
+        {--older-than=30 : Delete stale thumbnail files older than N days}
+        {--limit=1000 : Maximum number of files to delete}
+        {--prune-hidden : Delete thumbnails for media whose tickets are no longer public in Community}',
+    function (CommunityThumbnailPruner $pruner): int {
+        $options = [
+            'dry_run' => (bool) $this->option('dry-run'),
+            'older_than' => max(0, (int) $this->option('older-than')),
+            'limit' => max(1, (int) $this->option('limit')),
+            'prune_hidden' => (bool) $this->option('prune-hidden'),
+        ];
+
+        try {
+            $stats = $pruner->prune($options);
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $label = $stats['dry_run'] ? 'Community thumbnails prune dry-run' : 'Community thumbnails pruned';
+        $deletedLabel = $stats['dry_run'] ? 'Would delete' : 'Deleted';
+
+        $this->info($label);
+        $this->table(['Metric', 'Count'], [
+            ['Scanned', $stats['scanned']],
+            [$deletedLabel, $stats['deleted']],
+            ['Skipped', $stats['skipped']],
+            ['Orphans', $stats['orphans']],
+            ['Hidden/non-public', $stats['hidden']],
+            ['Stale', $stats['stale']],
+            ['Limit', $options['limit']],
+        ]);
+
+        return Command::SUCCESS;
+    }
+)->purpose('Prune stale and orphaned community thumbnail cache files');

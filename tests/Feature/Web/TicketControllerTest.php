@@ -1473,4 +1473,142 @@ class TicketControllerTest extends TestCase
             'community_visible' => true,
         ]);
     }
+
+    // ── Category community visibility defaults ────────────────────────────────
+
+    public function test_create_form_shows_sensitive_category_hint(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+
+        $this->actingAs($reporter)
+            ->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('Algunas categorías sensibles se mantienen privadas automáticamente', false);
+    }
+
+    public function test_ticket_default_follows_category_community_default_visible_false(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory([
+            'community_default_visible' => false,
+            'community_visibility_locked' => false,
+        ]);
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket sin campo visible categoria privada',
+            'description' => 'La categoria tiene default privado y no se envio community_visible.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket sin campo visible categoria privada',
+            'community_visible' => false,
+        ]);
+    }
+
+    public function test_reporter_can_override_default_private_category_to_public(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory([
+            'community_default_visible' => false,
+            'community_visibility_locked' => false,
+        ]);
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket privado por default pero reporter activa',
+            'description' => 'La categoria tiene default privado pero el reporter puede sobrescribir.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket privado por default pero reporter activa',
+            'community_visible' => true,
+        ]);
+    }
+
+    public function test_locked_private_category_ignores_community_visible_true_in_request(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory([
+            'community_default_visible' => false,
+            'community_visibility_locked' => true,
+        ]);
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket categoria bloqueada privada intento publico',
+            'description' => 'El request intenta forzar community_visible=1 pero la categoria lo bloquea.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'high',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket categoria bloqueada privada intento publico',
+            'community_visible' => false,
+        ]);
+    }
+
+    public function test_locked_public_category_ignores_community_visible_false_in_request(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory([
+            'community_default_visible' => true,
+            'community_visibility_locked' => true,
+        ]);
+
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Ticket categoria bloqueada publica intento privado',
+            'description' => 'El request intenta forzar community_visible=0 pero la categoria lo bloquea como publico.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '0',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Ticket categoria bloqueada publica intento privado',
+            'community_visible' => true,
+        ]);
+    }
+
+    public function test_create_form_shows_locked_message_when_old_category_is_locked(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation();
+        $category = $this->createCategory([
+            'community_default_visible' => false,
+            'community_visibility_locked' => true,
+        ]);
+
+        // Trigger a validation error so old input (including locked category) is flashed back.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => '',
+            'description' => '',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect();
+
+        // The GET create page, with old category_id flashed, should show the locked message.
+        $this->actingAs($reporter)
+            ->withSession(['_old_input' => ['category_id' => $category->id]])
+            ->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('no puede publicarse en Comunidad', false);
+    }
 }

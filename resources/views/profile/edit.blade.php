@@ -157,6 +157,8 @@
                 </div>
             </form>
 
+            @include('profile.partials.community-notifications', ['communityPreferences' => $communityPreferences])
+
         </div>
 
         {{-- ===== SIDEBAR ===== --}}

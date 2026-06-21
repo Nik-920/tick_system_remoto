@@ -7,8 +7,11 @@
    El script en app.blade.php aplica el atributo antes del
    primer render para evitar FOUC.
 
-   Antes estos overrides vivían dentro de app-layout.css.
-   Ahora están aquí como única fuente de verdad del tema dark.
+   FASE B — Centralización:
+   - Añadidos overrides de --color-*, --tone-*, --focus-ring-*
+     (antes faltaban; los colores semánticos quedaban en light).
+   - Dark mode de badges migrado desde components/badges.css.
+   - Dark mode de buttons migrado desde components/buttons.css.
    ============================================================ */
 
 [data-theme="dark"] {
@@ -29,6 +32,68 @@
     /* ── Bordes ─────────────────────────────────────────── */
     --border-default: rgba(255, 255, 255, 0.10);
     --border-light:   rgba(255, 255, 255, 0.05);
+
+    /* ── Focus ring ─────────────────────────────────────── */
+    --focus-ring-color:  #60a5fa;
+    --focus-ring-offset: 2px;
+
+    /* ── Color primario ─────────────────────────────────── */
+    --color-primary:       #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-primary-light: rgba(59, 130, 246, 0.12);
+    --color-primary-muted: #1d4ed8;
+
+    /* ── Color éxito ─────────────────────────────────────── */
+    --color-success:       #10b981;
+    --color-success-light: rgba(16, 185, 129, 0.12);
+    --color-success-muted: rgba(16, 185, 129, 0.30);
+
+    /* ── Color advertencia ──────────────────────────────── */
+    --color-warning:       #f59e0b;
+    --color-warning-light: rgba(245, 158, 11, 0.12);
+    --color-warning-muted: rgba(245, 158, 11, 0.30);
+
+    /* ── Color peligro ──────────────────────────────────── */
+    --color-danger:       #ef4444;
+    --color-danger-light: rgba(239, 68, 68, 0.12);
+    --color-danger-muted: rgba(239, 68, 68, 0.25);
+
+    /* ── Tone palette — dark overrides ──────────────────── */
+    --tone-primary-soft:  rgba(59,  130, 246, 0.12);
+    --tone-primary-fg:    #93c5fd;
+    --tone-primary-solid: #3b82f6;
+
+    --tone-high-soft:     rgba(239, 68,  68,  0.12);
+    --tone-high-fg:       #fca5a5;
+    --tone-high-solid:    #ef4444;
+
+    --tone-medium-soft:   rgba(245, 158, 11,  0.12);
+    --tone-medium-fg:     #fbbf24;
+    --tone-medium-solid:  #f59e0b;
+
+    --tone-low-soft:      rgba(34,  197, 94,  0.12);
+    --tone-low-fg:        #4ade80;
+    --tone-low-solid:     #22c55e;
+
+    --tone-success-soft:  rgba(16,  185, 129, 0.12);
+    --tone-success-fg:    #6ee7b7;
+    --tone-success-solid: #10b981;
+
+    --tone-info-soft:     rgba(8,   145, 178, 0.12);
+    --tone-info-fg:       #67e8f9;
+    --tone-info-solid:    #0891b2;
+
+    --tone-warning-soft:  rgba(249, 115, 22,  0.12);
+    --tone-warning-fg:    #fdba74;
+    --tone-warning-solid: #f97316;
+
+    --tone-neutral-soft:  rgba(241, 245, 249, 0.08);
+    --tone-neutral-fg:    #94a3b8;
+    --tone-neutral-solid: #64748b;
+
+    --tone-purple-soft:   rgba(147, 51,  234, 0.12);
+    --tone-purple-fg:     #d8b4fe;
+    --tone-purple-solid:  #9333ea;
 
     /* ── Sidebar (dark) ─────────────────────────────────── */
     --sidebar-bg:            #1a2332;
@@ -51,5 +116,62 @@
 /* ── Body base en dark ─────────────────────────────────── */
 [data-theme="dark"] body {
     background: var(--bg-page);
+    color: var(--text-primary);
+}
+
+/* ============================================================
+   DARK OVERRIDES — Components
+   Migrados desde badges.css y buttons.css (Fase B).
+   Con --tone-* ahora en el bloque :root arriba, la mayoría
+   de los colores de badges/buttons se resuelven solos via
+   tokens. Solo quedan overrides que necesitan tratamiento
+   especial (borders con opacidad fija, etc.).
+   ============================================================ */
+
+/* ── Badges: role borders (opacidades fijas, no tokenizables) ── */
+[data-theme="dark"] .users-role-badge--admin {
+    border-color: rgba(253, 230, 138, 0.20);
+}
+
+[data-theme="dark"] .users-role-badge--maintenance,
+[data-theme="dark"] .users-role-badge--maintenance_staff {
+    border-color: rgba(253, 186, 116, 0.20);
+}
+
+[data-theme="dark"] .users-role-badge--reporter {
+    border-color: rgba(147, 197, 253, 0.20);
+}
+
+[data-theme="dark"] .users-role-badge--superadmin {
+    border-color: rgba(216, 180, 254, 0.20);
+}
+
+/* ── Buttons: .c-btn base ── */
+[data-theme="dark"] .c-btn {
+    background: var(--bg-soft);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+/* ── Buttons: ghost ── */
+[data-theme="dark"] .c-btn--ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .c-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.10);
+}
+
+/* ── Buttons: legacy dark overrides ── */
+[data-theme="dark"] .btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.10);
     color: var(--text-primary);
 }

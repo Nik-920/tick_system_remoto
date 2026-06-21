@@ -366,9 +366,9 @@ final class ReporterTicketsBoardQuery
     }
 
     /**
-     * Tickets grouped by lab (own only). No N+1: one grouped count + one names.
+     * Tickets grouped by lab (own only). No N+1: one grouped count + one lookup.
      *
-     * @return array{peak: int, items: list<array{name: string, count: int}>}
+     * @return array{peak: int, items: list<array{name: string, label: string, count: int}>}
      */
     private function labs(): array
     {
@@ -384,15 +384,22 @@ final class ReporterTicketsBoardQuery
             return ['peak' => 0, 'items' => []];
         }
 
-        $names = Location::query()
+        $locations = Location::query()
             ->whereIn('id', $counts->keys()->all())
-            ->pluck('name', 'id');
+            ->get(['id', 'name', 'building', 'room_code']);
+
+        $locationMap = $locations->keyBy('id');
 
         $items = $counts
-            ->map(fn ($total, $locationId): array => [
-                'name' => (string) $names->get((string) $locationId, 'Ubicación eliminada'),
-                'count' => (int) $total,
-            ])
+            ->map(function ($total, $locationId) use ($locationMap): array {
+                $loc = $locationMap->get((string) $locationId);
+
+                return [
+                    'name' => $loc ? (string) $loc->name : 'Ubicación eliminada',
+                    'label' => $loc ? $loc->getDisplayLabel() : 'Ubicación eliminada',
+                    'count' => (int) $total,
+                ];
+            })
             ->values()
             ->all();
 

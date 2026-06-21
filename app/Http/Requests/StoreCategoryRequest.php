@@ -28,6 +28,9 @@ class StoreCategoryRequest extends FormRequest
             'icon' => ['nullable', 'string', 'max:255'],
             'icon_file' => ['nullable', 'file', 'image', 'max:2048'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'community_default_visible' => ['nullable', 'boolean'],
+            'community_visibility_locked' => ['nullable', 'boolean'],
+            'community_visibility_help' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

@@ -1,0 +1,57 @@
+name: 🗑️ Community Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run only (no deletions)'
+        type: boolean
+        default: true
+      older_than:
+        description: 'Delete files older than N days'
+        type: number
+        default: 30
+      limit:
+        description: 'Maximum number of files to delete'
+        type: number
+        default: 1000
+      prune_hidden:
+        description: 'Also delete thumbnails for hidden/cancelled/rejected tickets'
+        type: boolean
+        default: true
+
+jobs:
+  prune-thumbnails:
+    name: 🗑️ Prune community thumbnails
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚂 Instalar Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: 🗑️ Prune community thumbnails
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          ARGS="--older-than=${{ inputs.older_than }} --limit=${{ inputs.limit }}"
+
+          if [ "${{ inputs.prune_hidden }}" = "true" ]; then
+            ARGS="$ARGS --prune-hidden"
+          fi
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+
+          railway run \
+            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            php artisan community:thumbnails:prune $ARGS
+
+      - name: 📋 Resumen
+        if: always()
+        run: |
+          echo "## 🗑️ Community Maintenance Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Older than:** ${{ inputs.older_than }} days" >> $GITHUB_STEP_SUMMARY
+          echo "**Limit:** ${{ inputs.limit }} files" >> $GITHUB_STEP_SUMMARY
+          echo "**Prune hidden:** ${{ inputs.prune_hidden }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Hora:** $(date)" >> $GITHUB_STEP_SUMMARY

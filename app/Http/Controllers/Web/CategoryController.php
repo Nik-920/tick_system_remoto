@@ -57,6 +57,9 @@ class CategoryController extends Controller
                 'name' => $data['name'],
                 'icon' => $data['icon'] ?? null,
                 'description' => $data['description'] ?? null,
+                'community_default_visible' => isset($data['community_default_visible']) ? (bool) $data['community_default_visible'] : true,
+                'community_visibility_locked' => isset($data['community_visibility_locked']) ? (bool) $data['community_visibility_locked'] : false,
+                'community_visibility_help' => $data['community_visibility_help'] ?? null,
             ]);
 
             if ($iconFile instanceof UploadedFile) {

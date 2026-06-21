@@ -15,6 +15,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property string $icon
  * @property string|null $description
+ * @property bool $community_default_visible
+ * @property bool $community_visibility_locked
+ * @property string|null $community_visibility_help
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -28,6 +31,9 @@ class Category extends Model
         'name',
         'icon',
         'description',
+        'community_default_visible',
+        'community_visibility_locked',
+        'community_visibility_help',
     ];
 
     /** @var string */
@@ -40,9 +46,34 @@ class Category extends Model
     protected function casts(): array
     {
         return [
+            'community_default_visible' => 'boolean',
+            'community_visibility_locked' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    public function defaultCommunityVisible(): bool
+    {
+        return (bool) $this->community_default_visible;
+    }
+
+    public function locksCommunityVisibility(): bool
+    {
+        return (bool) $this->community_visibility_locked;
+    }
+
+    /**
+     * Resolves the final community_visible value for a new ticket in this category.
+     * If the category locks visibility, the reporter's requested value is ignored.
+     */
+    public function resolveCommunityVisibility(?bool $requested): bool
+    {
+        if ($this->locksCommunityVisibility()) {
+            return $this->defaultCommunityVisible();
+        }
+
+        return $requested ?? $this->defaultCommunityVisible();
     }
 
     public function tickets(): HasMany

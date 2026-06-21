@@ -619,9 +619,9 @@ class ReporterCommunityPageTest extends TestCase
             ->assertSee('Sin reportes públicos', false);
     }
 
-    // ── Social placeholders ──────────────────────────────────────────────────
+    // ── Social actions (Community v2) ────────────────────────────────────────
 
-    public function test_social_actions_are_disabled_placeholders(): void
+    public function test_social_action_buttons_are_functional(): void
     {
         $reporter = $this->createUserWithRole('reporter');
         $location = $this->makeLocation();
@@ -642,13 +642,15 @@ class ReporterCommunityPageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Me interesa', false)
-            ->assertSee('Comentar', false)
+            ->assertSee('También me pasa', false)
+            ->assertSee('Lo vi', false)
             ->assertSee('Guardar', false);
 
-        $this->assertStringContainsString(
-            'comm-action-btn--disabled',
-            $response->getContent(),
-        );
+        $html = $response->getContent();
+        $this->assertStringContainsString('comm-action-btn', $html);
+        $this->assertStringNotContainsString('comm-action-btn--disabled', $html);
+        $this->assertStringContainsString('Marcar como Me interesa', $html);
+        $this->assertStringContainsString('Guardar reporte', $html);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -740,6 +742,88 @@ class ReporterCommunityPageTest extends TestCase
 
         $this->assertDatabaseHas('tickets', [
             'title' => 'Filtro de agua averiado en sala principal hoy',
+            'community_visible' => false,
+        ]);
+    }
+
+    // ── Category community visibility defaults ────────────────────────────────
+
+    public function test_ticket_with_locked_private_category_does_not_appear_in_community_feed(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = Category::create([
+            'name' => 'Cat-locked-private-'.Str::lower(Str::random(4)),
+            'icon' => 'lock',
+            'description' => 'Categoria sensible para test',
+            'community_default_visible' => false,
+            'community_visibility_locked' => true,
+        ]);
+
+        // Even if the request tries to set community_visible=1, backend must force false.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Reporte categoria sensible bloqueada ZZZZLK1',
+            'description' => 'La categoria esta bloqueada privada y no debe aparecer en el feed.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'low',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ]);
+
+        $this->actingAs($reporter)
+            ->get(route('reporter.community'))
+            ->assertOk()
+            ->assertDontSee('Reporte categoria sensible bloqueada ZZZZLK1', false);
+    }
+
+    public function test_duplicate_precheck_with_locked_category_still_creates_private_ticket_on_ack(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->makeLocation();
+        $category = Category::create([
+            'name' => 'Cat-locked-precheck-'.Str::lower(Str::random(4)),
+            'icon' => 'lock',
+            'description' => 'Categoria sensible para precheck test',
+            'community_default_visible' => false,
+            'community_visibility_locked' => true,
+        ]);
+
+        Ticket::create([
+            'title' => 'Incidente sensible existente sala principal',
+            'description' => 'Ya existe un reporte de este tipo.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
+        ]);
+
+        // First submit triggers duplicate precheck.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Incidente sensible existente sala principal nuevo',
+            'description' => 'Mismo tipo de incidente en la misma sala segun el sistema.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('duplicate_precheck');
+
+        // Second submit with ack: backend must still force private because category is locked.
+        $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Incidente sensible existente sala principal nuevo',
+            'description' => 'Mismo tipo de incidente en la misma sala segun el sistema.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'community_visible' => '1',
+            'duplicate_ack' => '1',
+            'idempotency_key' => (string) Str::uuid(),
+        ])->assertRedirect()->assertSessionHas('status');
+
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Incidente sensible existente sala principal nuevo',
             'community_visible' => false,
         ]);
     }

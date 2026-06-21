@@ -16,7 +16,12 @@
 @import './utilities/base.css';
 @import './utilities/animations.css';
 
-/* ── 4. Componentes reutilizables ── */
+/* ── 4. Layout & Shell — antes de components (orden ITCSS correcto) ── */
+@import './layouts/app-shell.css';
+@import './layouts/sidebar.css';
+@import './layouts/topbar.css';
+
+/* ── 5. Componentes reutilizables ── */
 @import './components/buttons.css';
 @import './components/panel.css';
 @import './components/alerts.css';
@@ -34,16 +39,16 @@
 @import './components/legend.css';
 @import './components/kpi-card.css';
 @import './components/dropdown.css';
+/* Fase C — nuevos componentes extraídos del cluster de tickets */
+@import './components/table-action.css';
+@import './components/dropzone.css';
 
-/* ── 5. Layout & Shell ── */
-@import './layouts/app-shell.css';
-@import './layouts/sidebar.css';
-@import './layouts/topbar.css';
+/* ── 6. Feature Modules — Shell globals (topbar, auth, onboarding) ── */
 @import './modules/notifications.css';
 @import './modules/auth.css';
 @import './modules/welcome.css';
 
-/* ── 6. Feature Modules ── */
+/* ── 6b. Feature Modules — Dashboard ── */
 @import './modules/dashboard/base.css';
 @import './modules/dashboard/hero.css';
 @import './modules/dashboard/kpi.css';
@@ -75,6 +80,8 @@
 @import './modules/reporter-guide.css';
 /* "Comunidad del campus" — reporter social feed skeleton v1. */
 @import './modules/reporter-community.css';
+/* Community Moderation Queue — admin-only panel for managing community visibility. */
+@import './modules/community-moderation.css';
 @import './modules/users.css';
 @import './modules/profile.css';
 @import './modules/categories.css';

@@ -2,6 +2,7 @@
 
 namespace App\Services\Tickets;
 
+use App\Models\Category;
 use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
@@ -41,7 +42,11 @@ class TicketCreationService
     ): array {
         $correlationId = $this->resolveCorrelationId($correlationId);
 
-        $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles): Ticket {
+        $category = Category::findOrFail((string) $payload['category_id']);
+        $requestedVisible = isset($payload['community_visible']) ? (bool) $payload['community_visible'] : null;
+        $communityVisible = $category->resolveCommunityVisibility($requestedVisible);
+
+        $ticket = DB::transaction(function () use ($reporter, $payload, $mediaFiles, $communityVisible): Ticket {
             $ticket = Ticket::create([
                 'title' => (string) $payload['title'],
                 'description' => (string) $payload['description'],
@@ -50,7 +55,7 @@ class TicketCreationService
                 'category_id' => (string) $payload['category_id'],
                 'state' => 'open',
                 'priority' => (string) ($payload['priority'] ?? 'medium'),
-                'community_visible' => isset($payload['community_visible']) ? (bool) $payload['community_visible'] : true,
+                'community_visible' => $communityVisible,
             ]);
 
             StateHistory::create([

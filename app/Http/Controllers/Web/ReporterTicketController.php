@@ -53,7 +53,7 @@ class ReporterTicketController extends Controller
 
         $board = ReporterTicketsBoardQuery::for($user, $this->filters($request), $status, $sort);
 
-        return view('tickets.reporter.index', ['board' => $board]);
+        return view('tickets.reporter.index', ['board' => $board, 'userName' => $user->name]);
     }
 
     /**
