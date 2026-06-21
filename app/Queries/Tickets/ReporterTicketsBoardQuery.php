@@ -467,6 +467,8 @@ final class ReporterTicketsBoardQuery
             'viewer_reacted' => $viewerReacted,
             'reaction_store_url' => route('reporter.community.reactions.store', $ticket->id),
             'reaction_destroy_url' => route('reporter.community.reactions.destroy', ['ticket' => $ticket->id, 'type' => CommunityReaction::TYPE_INTERESTED]),
+            'comments_url' => route('reporter.tickets.comments.index', $ticket->id),
+            'comments_store_url' => route('reporter.tickets.comments.store', $ticket->id),
         ];
     }
 

@@ -88,6 +88,13 @@ if (document.querySelector('[data-community-social-form]')) {
         .catch((err) => console.error('Error loading community-social-actions', err));
 }
 
+// Reporter tickets comments modal.
+if (document.querySelector('[data-reporter-ticket-comments-trigger]')) {
+    import('./reporter-ticket-comments-modal')
+        .then((mod) => mod.init?.())
+        .catch((err) => console.error('Error loading reporter-ticket-comments-modal', err));
+}
+
 // Community media fallback: hide broken img and show placeholder on error.
 if (document.querySelector('[data-community-media-img]')) {
     import('./community-media-fallback')

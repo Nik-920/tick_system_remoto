@@ -28,6 +28,7 @@ use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\ReporterCommunityController;
 use App\Http\Controllers\Web\ReporterDashboardController;
 use App\Http\Controllers\Web\ReporterGuideController;
+use App\Http\Controllers\Web\ReporterTicketCommentController;
 use App\Http\Controllers\Web\ReporterTicketController;
 use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketCommunityVisibilityController;
@@ -207,6 +208,10 @@ Route::middleware('auth')->group(function (): void {
             Route::patch('/{ticket}/cancel', [ReporterTicketController::class, 'cancel'])
                 ->middleware($ticketMutationMiddleware)
                 ->name('cancel');
+            // Comments modal JSON endpoints — registered before /{ticket} (show) so the
+            // literal segment /comments is not captured as a ticket id.
+            Route::get('/{ticket}/comments', [ReporterTicketCommentController::class, 'index'])->name('comments.index');
+            Route::post('/{ticket}/comments', [ReporterTicketCommentController::class, 'store'])->name('comments.store');
             Route::get('/{ticket}', [ReporterTicketController::class, 'show'])->name('show');
         });
 
