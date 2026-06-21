@@ -10,8 +10,27 @@
         'high'     => ['label' => 'Alta',    'desc' => 'Bloquea una actividad clave',   'tone' => 'high',   'icon' => 'alert-circle'],
         'critical' => ['label' => 'Crítica', 'desc' => 'Riesgo o servicio detenido',    'tone' => 'high',   'icon' => 'alert-triangle'],
     ];
+    $descriptionTemplate = implode("\n", [
+        '¿Qué ocurre?',
+        '...',
+        '',
+        '¿Cuándo ocurre o desde cuándo empezó?',
+        '...',
+        '',
+        '¿A quién o qué actividad afecta?',
+        '...',
+        '',
+        '¿Cómo se reproduce o en qué momento pasa?',
+        '...',
+        '',
+        '¿Qué se intentó antes de reportarlo?',
+        '...',
+        '',
+        'Mensaje de error o evidencia relevante:',
+        '...',
+    ]);
     $currentPriority = old('priority', 'medium');
-    $charCount = strlen(old('description', ''));
+    $charCount = strlen(old('description', $descriptionTemplate));
     $backRoute = auth()->user()?->hasRole('reporter') && ! auth()->user()?->hasAnyRole(['admin', 'super_admin', 'maintenance'])
         ? route('reporter.tickets.index')
         : route('tickets.index');
@@ -19,19 +38,22 @@
 
 <div class="rep-edit rep-tone-primary">
 
-    {{-- ── Back link ── --}}
-    <a href="{{ $backRoute }}" class="rep-show__back">
-        <x-lucide-arrow-left width="16" height="16" stroke-width="2.5" aria-hidden="true" />
-        Volver al listado
-    </a>
-
-    {{-- ── Page header ── --}}
-    <div class="rep-edit__page-head">
-        <div class="rep-edit__page-head-text">
-            <h1 class="rep-edit__page-title">Nuevo Ticket</h1>
-            <p class="rep-edit__page-subtitle">Registra una nueva incidencia para su seguimiento operativo.</p>
+    {{-- ── Welcome Hero ── --}}
+    <section class="rep-hero">
+        <div class="rep-hero__content">
+            <p class="rep-hero__eyebrow">Nuevo Ticket</p>
+            <h1 class="rep-hero__title">Registra una incidencia 📋</h1>
+            <p class="rep-hero__subtitle">
+                Registra una nueva incidencia para su seguimiento operativo.
+            </p>
         </div>
-    </div>
+        <div class="rep-hero__actions">
+            <a href="{{ $backRoute }}" class="rep-hero__cta rep-hero__cta--outline">
+                <x-lucide-arrow-left width="16" height="16" stroke-width="2.5" />
+                Volver al listado
+            </a>
+        </div>
+    </section>
 
     {{-- ── Validation errors banner ── --}}
     @if ($errors->any())
@@ -139,12 +161,22 @@
 
                         {{-- Description --}}
                         <div class="rep-edit__field">
-                            <label for="create-description" class="rep-edit__label">
-                                Descripción detallada
-                                <span class="rep-edit__required" aria-hidden="true">*</span>
-                            </label>
+                            <div class="ticket-description-field__header">
+                                <label for="create-description" class="rep-edit__label">
+                                    Descripción detallada
+                                    <span class="rep-edit__required" aria-hidden="true">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    class="ticket-description-template-clear"
+                                    data-description-template-clear
+                                    aria-controls="create-description"
+                                >
+                                    Borrar guía
+                                </button>
+                            </div>
                             <p id="create-description-hint" class="rep-edit__field-hint">
-                                Incluye qué ocurrió, cuándo, dónde y si afecta a más personas.
+                                Describe el síntoma, cuándo ocurre, a quién afecta y qué se intentó.
                             </p>
                             <div class="rep-edit__textarea-wrap">
                                 <textarea id="create-description"
@@ -153,9 +185,10 @@
                                           required
                                           minlength="20"
                                           maxlength="2000"
-                                          placeholder="Describe la incidencia con el mayor detalle posible."
+                                          data-description-template
+                                          data-description-template-default="{{ e($descriptionTemplate) }}"
                                           class="rep-edit__textarea @error('description') rep-edit__input--error @enderror"
-                                          aria-describedby="create-description-hint create-description-err create-description-count">{{ old('description') }}</textarea>
+                                          aria-describedby="create-description-hint create-description-err create-description-count">{{ old('description', $descriptionTemplate) }}</textarea>
                                 <p id="create-description-count" class="rep-edit__char-count" aria-live="polite">
                                     <span id="create-count-val">{{ $charCount }}</span>/2000
                                 </p>
@@ -710,6 +743,32 @@
 
     attachSummarySelect('create-location', 'summary-location');
     attachSummarySelect('create-category', 'summary-category');
+
+    // ── Borrar guía ──
+    var clearBtn = document.querySelector('[data-description-template-clear]');
+    if (clearBtn) {
+        var taId = clearBtn.getAttribute('aria-controls');
+        var ta   = document.getElementById(taId);
+        var ctr  = document.getElementById('create-count-val');
+        if (ta) {
+            clearBtn.addEventListener('click', function () {
+                if (ta.value === '') {
+                    ta.focus();
+                    return;
+                }
+                var defaultTpl = ta.dataset.descriptionTemplateDefault || '';
+                if (ta.value !== defaultTpl) {
+                    if (!window.confirm('La descripción tiene cambios. ¿Quieres borrarla?')) {
+                        return;
+                    }
+                }
+                ta.value = '';
+                if (ctr) { ctr.textContent = '0'; }
+                ta.dispatchEvent(new Event('input', { bubbles: true }));
+                ta.focus();
+            });
+        }
+    }
 })();
 </script>
 @endsection
