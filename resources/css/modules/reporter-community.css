@@ -1364,6 +1364,31 @@
     border-color: rgba(37, 99, 235, 0.2);
 }
 
+/* Empty count badge — hide when text is empty (JS-controlled) */
+.comm-action-btn__count:empty {
+    display: none;
+}
+
+/* Optimistic UI: in-flight state */
+.comm-action-btn--loading {
+    opacity: 0.65;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Optimistic UI: server-error flash */
+.comm-action-btn--error {
+    outline: 2px solid var(--color-danger, #dc2626);
+    outline-offset: 2px;
+    animation: comm-btn-error-flash 0.25s ease;
+}
+
+@keyframes comm-btn-error-flash {
+    0%   { outline-color: transparent; }
+    50%  { outline-color: var(--color-danger, #dc2626); }
+    100% { outline-color: var(--color-danger, #dc2626); }
+}
+
 /* ============================================================
    17. REAL CONTENT — Sidebar
    ============================================================ */
@@ -2028,6 +2053,10 @@
 [data-theme="dark"] .comm-action-btn--active .comm-action-btn__count {
     background: rgba(37, 99, 235, 0.22);
     border-color: rgba(93, 147, 253, 0.3);
+}
+
+[data-theme="dark"] .comm-action-btn--error {
+    outline-color: #f87171;
 }
 
 [data-theme="dark"] .comm-saves-link:hover {
