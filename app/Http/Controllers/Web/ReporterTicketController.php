@@ -10,17 +10,16 @@ use App\Http\Requests\Reporter\UpdateReporterTicketRequest;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
-use App\Models\TicketMedia;
 use App\Models\User;
 use App\Queries\Tickets\ReporterTicketHistoryQuery;
 use App\Queries\Tickets\ReporterTicketsBoardQuery;
 use App\Queries\Tickets\ReporterTicketTrackingQuery;
+use App\Services\Storage\TicketMediaStorageService;
 use App\Services\Tickets\TicketCancellationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -125,13 +124,13 @@ class ReporterTicketController extends Controller
      * Persist the reporter's edit. Same resolution + authorization gate as edit().
      *
      * Safe text fields (title, description, location_id, category_id, priority)
-     * are updated. Any newly uploaded images (new_images[]) are stored to
-     * 'public' disk under 'ticket-evidence/{ticket_id}/' and a TicketMedia record
-     * is created for each. Existing evidence is NEVER deleted — this endpoint is
-     * additive only. Both the model update and the media inserts happen inside a
-     * single DB transaction so a partial failure rolls back cleanly.
+     * are updated. Any newly uploaded images (new_images[]) are stored via
+     * TicketMediaStorageService (Supabase) and a TicketMedia record is created for
+     * each. Existing evidence is NEVER deleted — this endpoint is additive only.
+     * The model update runs inside a DB transaction; the media uploads happen
+     * outside (Supabase calls cannot be rolled back transactionally).
      */
-    public function update(UpdateReporterTicketRequest $request, string $ticket): RedirectResponse
+    public function update(UpdateReporterTicketRequest $request, string $ticket, TicketMediaStorageService $mediaStorage): RedirectResponse
     {
         $model = $this->resolveOwnTicket($request, $ticket);
 
@@ -142,42 +141,25 @@ class ReporterTicketController extends Controller
 
         $validated = $request->validated();
 
-        // Separate the file uploads from the scalar fields before passing to update().
-        /** @var array<int, UploadedFile>|null $newImages */
+        /** @var array<int, mixed>|null $newImages */
         $newImages = $validated['new_images'] ?? null;
         unset($validated['new_images']);
 
-        DB::transaction(function () use ($model, $validated, $newImages, $user): void {
-            // 1. Update safe scalar fields.
+        DB::transaction(static function () use ($model, $validated): void {
             $model->update($validated);
-
-            // 2. Store new images (additive — existing media is never touched).
-            if (! empty($newImages)) {
-                foreach ($newImages as $file) {
-                    if (! $file instanceof UploadedFile || ! $file->isValid()) {
-                        continue;
-                    }
-
-                    // Store to 'public' disk; path: ticket-evidence/{ticket_id}/{uuid}.{ext}
-                    $path = $file->storeAs(
-                        'ticket-evidence/'.$model->id,
-                        Str::uuid().'.'.$file->extension(),
-                        'public',
-                    );
-
-                    if ($path === false || $path === null) {
-                        continue;
-                    }
-
-                    TicketMedia::create([
-                        'ticket_id' => $model->id,
-                        'file_url' => Storage::disk('public')->url((string) $path),
-                        'file_type' => $file->getMimeType() ?? 'application/octet-stream',
-                        'uploaded_by' => $user->id,
-                    ]);
-                }
-            }
         });
+
+        if (! empty($newImages)) {
+            /** @var array<int, UploadedFile> $validFiles */
+            $validFiles = array_values(array_filter(
+                $newImages,
+                static fn (mixed $f): bool => $f instanceof UploadedFile && $f->isValid(),
+            ));
+
+            if ($validFiles !== []) {
+                $mediaStorage->storeManyForTicket($model, $user, $validFiles);
+            }
+        }
 
         return redirect()
             ->route('reporter.tickets.show', $model->id)

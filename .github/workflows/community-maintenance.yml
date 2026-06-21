@@ -25,10 +25,24 @@ jobs:
     name: 🗑️ Prune community thumbnails
     runs-on: ubuntu-latest
     steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐘 Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, redis
+          coverage: none
+
+      - name: 📦 Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
       - name: 🚂 Instalar Railway CLI
         run: npm install -g @railway/cli
 
       - name: 🗑️ Prune community thumbnails
+        continue-on-error: true
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
@@ -44,6 +58,7 @@ jobs:
 
           railway run \
             --service ${{ secrets.RAILWAY_SERVICE_ID }} \
+            -- \
             php artisan community:thumbnails:prune $ARGS
 
       - name: 📋 Resumen
