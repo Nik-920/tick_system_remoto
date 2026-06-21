@@ -58,11 +58,11 @@ class CommunityDigestNotificationsTest extends TestCase
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => CommunityReaction::TYPE_INTERESTED,
+            'user_id' => $reporter->id,
+            'type' => CommunityReaction::TYPE_INTERESTED,
         ]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now());
 
         $this->assertTrue($results->isEmpty());
@@ -77,11 +77,11 @@ class CommunityDigestNotificationsTest extends TestCase
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => CommunityReaction::TYPE_INTERESTED,
+            'user_id' => $reporter->id,
+            'type' => CommunityReaction::TYPE_INTERESTED,
         ]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now());
 
         $this->assertTrue($results->isEmpty());
@@ -96,11 +96,11 @@ class CommunityDigestNotificationsTest extends TestCase
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reporter->id,
-            'type'      => CommunityReaction::TYPE_INTERESTED,
+            'user_id' => $reporter->id,
+            'type' => CommunityReaction::TYPE_INTERESTED,
         ]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now());
 
         $this->assertTrue($results->isEmpty());
@@ -108,18 +108,18 @@ class CommunityDigestNotificationsTest extends TestCase
 
     public function test_tickets_with_more_weekly_reactions_rank_higher(): void
     {
-        $owner   = $this->makeReporter();
+        $owner = $this->makeReporter();
         $reactor = $this->makeNonReporter();
         $reactor2 = $this->makeNonReporter();
 
         $active = $this->makeTicket($owner, 'Ticket muy apoyado DIGESTACT');
-        $quiet  = $this->makeTicket($owner, 'Ticket tranquilo DIGESTQUIET');
+        $quiet = $this->makeTicket($owner, 'Ticket tranquilo DIGESTQUIET');
 
         // Active: 2 reactions within week
         CommunityReaction::create(['ticket_id' => $active->id, 'user_id' => $reactor->id, 'type' => CommunityReaction::TYPE_ALSO_HAPPENS]);
         CommunityReaction::create(['ticket_id' => $active->id, 'user_id' => $reactor2->id, 'type' => CommunityReaction::TYPE_INTERESTED]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now(), 10);
 
         $ids = $results->pluck('id')->all();
@@ -134,20 +134,20 @@ class CommunityDigestNotificationsTest extends TestCase
 
     public function test_tickets_with_weekly_comments_rank_higher(): void
     {
-        $owner     = $this->makeReporter();
+        $owner = $this->makeReporter();
         $commenter = $this->makeNonReporter();
 
         $commented = $this->makeTicket($owner, 'Ticket comentado DIGESTCMT');
-        $silent    = $this->makeTicket($owner, 'Ticket sin comentarios DIGESTSILENT');
+        $silent = $this->makeTicket($owner, 'Ticket sin comentarios DIGESTSILENT');
 
         CommunityComment::create([
             'ticket_id' => $commented->id,
-            'user_id'   => $commenter->id,
-            'body'      => 'Comentario de test en digest',
-            'status'    => CommunityComment::STATUS_VISIBLE,
+            'user_id' => $commenter->id,
+            'body' => 'Comentario de test en digest',
+            'status' => CommunityComment::STATUS_VISIBLE,
         ]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now(), 10);
 
         $ids = $results->pluck('id')->all();
@@ -161,31 +161,31 @@ class CommunityDigestNotificationsTest extends TestCase
     public function test_pending_reports_penalize_ranking(): void
     {
         $owner = $this->makeReporter();
-        $u1    = $this->makeNonReporter();
-        $u2    = $this->makeNonReporter();
-        $u3    = $this->makeNonReporter();
+        $u1 = $this->makeNonReporter();
+        $u2 = $this->makeNonReporter();
+        $u3 = $this->makeNonReporter();
 
         // ticketA: 1 visible comment (+5)
         $ticketA = $this->makeTicket($owner, 'Ticket comentado DIGESTPENALT');
         CommunityComment::create([
             'ticket_id' => $ticketA->id,
-            'user_id'   => $u1->id,
-            'body'      => 'Comentario único',
-            'status'    => CommunityComment::STATUS_VISIBLE,
+            'user_id' => $u1->id,
+            'body' => 'Comentario único',
+            'status' => CommunityComment::STATUS_VISIBLE,
         ]);
 
         // ticketB: 3 pending reports (-12), no engagement
         $ticketB = $this->makeTicket($owner, 'Ticket penalizado DIGESTPENALB');
         foreach ([$u1, $u2, $u3] as $user) {
             CommunityReport::create([
-                'ticket_id'   => $ticketB->id,
+                'ticket_id' => $ticketB->id,
                 'reported_by' => $user->id,
-                'reason'      => 'spam',
-                'status'      => CommunityReport::STATUS_PENDING,
+                'reason' => 'spam',
+                'status' => CommunityReport::STATUS_PENDING,
             ]);
         }
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now(), 10);
 
         $ids = $results->pluck('id')->all();
@@ -198,7 +198,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
     public function test_digest_uses_only_activity_within_period(): void
     {
-        $owner   = $this->makeReporter();
+        $owner = $this->makeReporter();
         $reactor = $this->makeNonReporter();
 
         $ticketOld = $this->makeTicket($owner, 'Ticket antiguo DIGESTOLD');
@@ -207,8 +207,8 @@ class CommunityDigestNotificationsTest extends TestCase
         // Old ticket: engagement older than 7 days
         $reaction = CommunityReaction::create([
             'ticket_id' => $ticketOld->id,
-            'user_id'   => $reactor->id,
-            'type'      => CommunityReaction::TYPE_ALSO_HAPPENS,
+            'user_id' => $reactor->id,
+            'type' => CommunityReaction::TYPE_ALSO_HAPPENS,
         ]);
         $reaction->created_at = now()->subDays(10);
         $reaction->saveQuietly();
@@ -216,11 +216,11 @@ class CommunityDigestNotificationsTest extends TestCase
         // New ticket: engagement within period
         CommunityReaction::create([
             'ticket_id' => $ticketNew->id,
-            'user_id'   => $reactor->id,
-            'type'      => CommunityReaction::TYPE_ALSO_HAPPENS,
+            'user_id' => $reactor->id,
+            'type' => CommunityReaction::TYPE_ALSO_HAPPENS,
         ]);
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7)->startOfDay(), now()->endOfDay(), 10);
 
         $ids = $results->pluck('id')->all();
@@ -244,8 +244,8 @@ class CommunityDigestNotificationsTest extends TestCase
         $this->assertSame(1, $created);
         $this->assertDatabaseHas('notifications', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
-            'title'   => 'Resumen semanal de Comunidad',
+            'type' => 'community.digest.weekly',
+            'title' => 'Resumen semanal de Comunidad',
         ]);
     }
 
@@ -256,7 +256,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
         $this->assertDatabaseMissing('community_notification_preferences', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
         ]);
 
         $created = app(CommunityDigestService::class)->sendWeeklyDigest();
@@ -264,7 +264,7 @@ class CommunityDigestNotificationsTest extends TestCase
         $this->assertSame(1, $created);
         $this->assertDatabaseHas('notifications', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
         ]);
     }
 
@@ -275,7 +275,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
         CommunityNotificationPreference::create([
             'user_id' => $reporter->id,
-            'type'    => CommunityNotificationPreference::TYPE_DIGEST_WEEKLY,
+            'type' => CommunityNotificationPreference::TYPE_DIGEST_WEEKLY,
             'enabled' => false,
         ]);
 
@@ -284,7 +284,7 @@ class CommunityDigestNotificationsTest extends TestCase
         $this->assertSame(0, $created);
         $this->assertDatabaseMissing('notifications', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
         ]);
     }
 
@@ -295,7 +295,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
         $service = app(CommunityDigestService::class);
 
-        $first  = $service->sendWeeklyDigest();
+        $first = $service->sendWeeklyDigest();
         $second = $service->sendWeeklyDigest();
 
         $this->assertSame(1, $first);
@@ -341,23 +341,23 @@ class CommunityDigestNotificationsTest extends TestCase
     public function test_notification_body_does_not_include_comment_body_or_report_notes(): void
     {
         $reporter = $this->makeReporter();
-        $other    = $this->makeNonReporter();
+        $other = $this->makeNonReporter();
 
         $ticket = $this->makeTicket($reporter, 'Ticket digest noleak DIGESTNL');
 
         CommunityComment::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $other->id,
-            'body'      => 'Contenido secreto del comentario SENSITIVECOMMENT',
-            'status'    => CommunityComment::STATUS_VISIBLE,
+            'user_id' => $other->id,
+            'body' => 'Contenido secreto del comentario SENSITIVECOMMENT',
+            'status' => CommunityComment::STATUS_VISIBLE,
         ]);
 
         CommunityReport::create([
-            'ticket_id'   => $ticket->id,
+            'ticket_id' => $ticket->id,
             'reported_by' => $other->id,
-            'reason'      => 'spam',
-            'note'        => 'Nota privada del reporte SENSITIVENOTE',
-            'status'      => CommunityReport::STATUS_PENDING,
+            'reason' => 'spam',
+            'note' => 'Nota privada del reporte SENSITIVENOTE',
+            'status' => CommunityReport::STATUS_PENDING,
         ]);
 
         app(CommunityDigestService::class)->sendWeeklyDigest();
@@ -407,7 +407,7 @@ class CommunityDigestNotificationsTest extends TestCase
         $reporter = $this->makeReporter();
         $this->addEngagementFor($reporter);
 
-        $admin       = $this->makeNonReporter('admin');
+        $admin = $this->makeNonReporter('admin');
         $maintenance = $this->makeNonReporter('maintenance');
 
         app(CommunityDigestService::class)->sendWeeklyDigest();
@@ -425,7 +425,7 @@ class CommunityDigestNotificationsTest extends TestCase
         // r3 opts out
         CommunityNotificationPreference::create([
             'user_id' => $r3->id,
-            'type'    => CommunityNotificationPreference::TYPE_DIGEST_WEEKLY,
+            'type' => CommunityNotificationPreference::TYPE_DIGEST_WEEKLY,
             'enabled' => false,
         ]);
 
@@ -466,25 +466,25 @@ class CommunityDigestNotificationsTest extends TestCase
 
         $this->assertDatabaseMissing('notifications', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
         ]);
     }
 
     public function test_limit_option_is_respected_by_query(): void
     {
-        $owner   = $this->makeReporter();
+        $owner = $this->makeReporter();
         $reactor = $this->makeNonReporter();
 
         foreach (range(1, 5) as $i) {
             $ticket = $this->makeTicket($owner, "Ticket limit test {$i} DIGESTLIM");
             CommunityReaction::create([
                 'ticket_id' => $ticket->id,
-                'user_id'   => $reactor->id,
-                'type'      => CommunityReaction::TYPE_INTERESTED,
+                'user_id' => $reactor->id,
+                'type' => CommunityReaction::TYPE_INTERESTED,
             ]);
         }
 
-        $query   = app(CommunityDigestQuery::class);
+        $query = app(CommunityDigestQuery::class);
         $results = $query->topActiveTickets(now()->subDays(7), now(), 3);
 
         $this->assertCount(3, $results);
@@ -518,7 +518,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
         $this->assertDatabaseHas('community_notification_preferences', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
             'enabled' => false,
         ]);
 
@@ -533,7 +533,7 @@ class CommunityDigestNotificationsTest extends TestCase
 
         $this->assertDatabaseHas('community_notification_preferences', [
             'user_id' => $reporter->id,
-            'type'    => 'community.digest.weekly',
+            'type' => 'community.digest.weekly',
             'enabled' => true,
         ]);
     }
@@ -568,11 +568,11 @@ class CommunityDigestNotificationsTest extends TestCase
     private function makeLocation(): Location
     {
         return Location::create([
-            'name'      => 'Aula Digest '.Str::random(4),
-            'building'  => 'Edificio Digest',
-            'floor'     => '1',
+            'name' => 'Aula Digest '.Str::random(4),
+            'building' => 'Edificio Digest',
+            'floor' => '1',
             'room_code' => 'DGT-'.Str::upper(Str::random(4)),
-            'qr_token'  => 'qr-dgt-'.Str::lower(Str::random(8)),
+            'qr_token' => 'qr-dgt-'.Str::lower(Str::random(8)),
             'is_active' => true,
         ]);
     }
@@ -580,8 +580,8 @@ class CommunityDigestNotificationsTest extends TestCase
     private function makeCategory(): Category
     {
         return Category::create([
-            'name'        => 'Cat-Dgt-'.Str::lower(Str::random(5)),
-            'icon'        => 'tag',
+            'name' => 'Cat-Dgt-'.Str::lower(Str::random(5)),
+            'icon' => 'tag',
             'description' => 'Categoría para tests de digest',
         ]);
     }
@@ -589,13 +589,13 @@ class CommunityDigestNotificationsTest extends TestCase
     private function makeTicket(User $reporter, string $title): Ticket
     {
         return Ticket::create([
-            'title'             => $title,
-            'description'       => 'Descripción de prueba para digest: '.$title,
-            'reporter_id'       => $reporter->id,
-            'location_id'       => $this->makeLocation()->id,
-            'category_id'       => $this->makeCategory()->id,
-            'state'             => Ticket::STATE_OPEN,
-            'priority'          => 'medium',
+            'title' => $title,
+            'description' => 'Descripción de prueba para digest: '.$title,
+            'reporter_id' => $reporter->id,
+            'location_id' => $this->makeLocation()->id,
+            'category_id' => $this->makeCategory()->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
             'community_visible' => true,
         ]);
     }
@@ -607,12 +607,12 @@ class CommunityDigestNotificationsTest extends TestCase
     private function addEngagementFor(User $reporter): void
     {
         $reactor = $this->makeNonReporter();
-        $ticket  = $this->makeTicket($reporter, 'Ticket con engagement DIGESTENG '.Str::random(4));
+        $ticket = $this->makeTicket($reporter, 'Ticket con engagement DIGESTENG '.Str::random(4));
 
         CommunityReaction::create([
             'ticket_id' => $ticket->id,
-            'user_id'   => $reactor->id,
-            'type'      => CommunityReaction::TYPE_INTERESTED,
+            'user_id' => $reactor->id,
+            'type' => CommunityReaction::TYPE_INTERESTED,
         ]);
     }
 }
