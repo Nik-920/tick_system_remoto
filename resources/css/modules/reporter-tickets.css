@@ -307,7 +307,216 @@
 .rep-list { display: flex; flex-direction: column; gap: 0.75rem; }
 
 /* ============================================================
-   4. TICKET ROW (inbox style)
+   4. TICKET CARD (redesigned)
+   ============================================================ */
+.rep-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.15rem 0.9rem 1.25rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--r-solid);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+    z-index: 0;
+}
+
+.rep-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.rep-card:has(.rep-kebab__menu:not([hidden])),
+.rep-card.rep-card--menu-open { z-index: 10; }
+
+/* ── Head: ref + badges ─────────────────────────────────── */
+.rep-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.rep-card__ref {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
+.rep-card__badges {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.rep-card__status-badge,
+.rep-card__prio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+/* Status colours reuse the same palette as .rep-status--* */
+.rep-card__status-badge.rep-status--open        { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+.rep-card__status-badge.rep-status--in_review   { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
+.rep-card__status-badge.rep-status--in_progress { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.rep-card__status-badge.rep-status--resolved    { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.rep-card__status-badge.rep-status--rejected    { background: #fee2e2; color: #b42318; border-color: #fca5a5; }
+.rep-card__status-badge.rep-status--cancelled   { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+/* Priority badge inherits the tone palette (--r-soft / --r-fg / --r-solid) */
+.rep-card__prio-badge {
+    background: var(--r-soft);
+    color: var(--r-fg);
+    border-color: color-mix(in srgb, var(--r-solid) 60%, transparent);
+}
+
+/* ── Title ───────────────────────────────────────────────── */
+.rep-card__title {
+    margin: 0;
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* ── Meta row ────────────────────────────────────────────── */
+.rep-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.rep-card__meta svg { color: var(--text-faint); flex-shrink: 0; }
+.rep-card__meta-sep { width: 3px; height: 3px; border-radius: 999px; background: var(--text-faint); flex-shrink: 0; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.rep-card__foot {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.15rem -1.15rem -0.9rem -1.25rem; /* bleed to card edges */
+    padding: 0.55rem 1rem 0.55rem 1.1rem;
+    background: var(--bg-soft);
+    border-top: 1px solid var(--border-light);
+    border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.rep-card__updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.rep-card__updated svg { color: var(--text-faint); flex-shrink: 0; }
+
+.rep-card__stats {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex-shrink: 0;
+}
+
+/* Reaction form is display-transparent: the <form> wrapper must not
+   create a block-level gap between the button and its siblings. */
+.rep-card__reaction-form { display: contents; }
+
+.rep-card__stat-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-xs);
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.rep-card__stat-btn:hover { background: var(--bg-surface); color: var(--text-primary); }
+.rep-card__stat-btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* Heart / reaction — active state is rose-red */
+.rep-card__stat-btn--active           { color: #e11d48; }
+.rep-card__stat-btn--active svg       { fill: #e11d48; stroke: #e11d48; }
+.rep-card__stat-btn--active:hover     { background: #fff1f2; color: #e11d48; }
+
+/* Comments button — icon is blue, non-interactive */
+.rep-card__stat-btn--comments         { cursor: default; color: var(--text-muted); }
+.rep-card__stat-btn--comments svg     { color: #2563eb; }
+.rep-card__stat-btn--comments:hover   { background: none; color: var(--text-muted); }
+
+.rep-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Dark-mode overrides */
+@media (prefers-color-scheme: dark) {
+    .rep-card__foot                             { background: rgba(148, 163, 184, 0.06); }
+    .rep-card__status-badge.rep-status--open        { background: rgba(147, 51, 234, 0.18); color: #c084fc; border-color: rgba(147, 51, 234, 0.35); }
+    .rep-card__status-badge.rep-status--in_review   { background: rgba(234, 88, 12, 0.15);  color: #fb923c; border-color: rgba(234, 88, 12, 0.3); }
+    .rep-card__status-badge.rep-status--in_progress { background: rgba(37, 99, 235, 0.18);  color: #60a5fa; border-color: rgba(37, 99, 235, 0.35); }
+    .rep-card__status-badge.rep-status--resolved    { background: rgba(22, 163, 74, 0.18);  color: #4ade80; border-color: rgba(22, 163, 74, 0.35); }
+    .rep-card__status-badge.rep-status--rejected    { background: rgba(239, 68, 68, 0.18);  color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+    .rep-card__status-badge.rep-status--cancelled   { background: rgba(100, 116, 139, 0.18); color: #94a3b8; border-color: rgba(100, 116, 139, 0.3); }
+    .rep-card__stat-btn--active                 { color: #fb7185; }
+    .rep-card__stat-btn--active svg             { fill: #fb7185; stroke: #fb7185; }
+    .rep-card__stat-btn--active:hover           { background: rgba(251, 113, 133, 0.12); color: #fb7185; }
+    .rep-card__stat-btn--comments svg           { color: #60a5fa; }
+}
+
+/* ── Dark-mode class-based (for projects using [data-theme="dark"]) ── */
+[data-theme="dark"] .rep-card__foot                             { background: rgba(148, 163, 184, 0.06); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--open        { background: rgba(147, 51, 234, 0.18); color: #c084fc; border-color: rgba(147, 51, 234, 0.35); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--in_review   { background: rgba(234, 88, 12, 0.15);  color: #fb923c; border-color: rgba(234, 88, 12, 0.3); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--in_progress { background: rgba(37, 99, 235, 0.18);  color: #60a5fa; border-color: rgba(37, 99, 235, 0.35); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--resolved    { background: rgba(22, 163, 74, 0.18);  color: #4ade80; border-color: rgba(22, 163, 74, 0.35); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--rejected    { background: rgba(239, 68, 68, 0.18);  color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+[data-theme="dark"] .rep-card__status-badge.rep-status--cancelled   { background: rgba(100, 116, 139, 0.18); color: #94a3b8; border-color: rgba(100, 116, 139, 0.3); }
+[data-theme="dark"] .rep-card__stat-btn--active                 { color: #fb7185; }
+[data-theme="dark"] .rep-card__stat-btn--active svg             { fill: #fb7185; stroke: #fb7185; }
+[data-theme="dark"] .rep-card__stat-btn--active:hover           { background: rgba(251, 113, 133, 0.12); color: #fb7185; }
+[data-theme="dark"] .rep-card__stat-btn--comments svg           { color: #60a5fa; }
+
+/* ============================================================
+   4b. TICKET ROW — legacy inbox style (kept for reference)
    ============================================================ */
 .rep-item {
     position: relative;
