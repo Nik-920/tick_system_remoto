@@ -258,7 +258,7 @@ class TicketCreateDescriptionTemplateTest extends TestCase
             $response->assertSessionHas('_old_input');
 
             $this->actingAs($reporter)
-                ->withSession($response->getSession()->all())
+                ->withSession(session()->all())
                 ->get(route('tickets.create'))
                 ->assertOk()
                 ->assertSee($customDescription, false);
