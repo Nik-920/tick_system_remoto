@@ -88,6 +88,13 @@ if (document.querySelector('[data-community-social-form]')) {
         .catch((err) => console.error('Error loading community-social-actions', err));
 }
 
+// Community media fallback: hide broken img and show placeholder on error.
+if (document.querySelector('[data-community-media-img]')) {
+    import('./community-media-fallback')
+        .then((mod) => mod.init?.())
+        .catch((err) => console.error('Error loading community-media-fallback', err));
+}
+
 // Carga condicional de scripts por página
 const pageLoaders = [
     { selector: '.tickets-create-page', loader: () => import('./pages/tickets-create') },

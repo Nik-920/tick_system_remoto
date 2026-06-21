@@ -12,7 +12,7 @@ return [
             (string) parse_url((string) env('SUPABASE_URL', ''), PHP_URL_HOST),
         ])),
 
-        'supabase_public_bucket' => env('SUPABASE_PUBLIC_BUCKET', 'tickets'),
+        'supabase_public_bucket' => env('SUPABASE_PUBLIC_BUCKET', env('SUPABASE_BUCKET_TICKETS', 'tickets')),
 
         'thumbnail_disk' => env('COMMUNITY_THUMBNAIL_DISK', 'public'),
 
