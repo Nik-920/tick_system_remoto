@@ -229,19 +229,6 @@
                 </div>
             </section>
 
-            {{-- C. Recent activity — honest placeholder (no fabricated events). --}}
-            <section class="rep-panel">
-                <h2 class="rep-panel__title">
-                    <x-lucide-activity width="16" height="16" stroke-width="2" />
-                    Actividad reciente
-                    <span class="rep-soon">Próximamente</span>
-                </h2>
-                <div class="rep-evidence-empty">
-                    <x-lucide-activity width="26" height="26" stroke-width="1.5" />
-                    <p class="rep-empty__note">El registro de actividad estará disponible pronto. Mientras tanto, revisa el seguimiento de cada ticket.</p>
-                </div>
-            </section>
-
         </aside>
     </div>
 </div>

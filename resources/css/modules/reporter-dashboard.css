@@ -130,7 +130,16 @@
 .rep-kpi__label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-top: 0.1rem; }
 
 /* ============================================================
-   3. PANEL HEAD (title + inline link)
+   3. DASHBOARD MAIN COLUMN
+   ============================================================ */
+.rep-dash-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ============================================================
+   4. PANEL HEAD (title + inline link)
    ============================================================ */
 .rep-panel__head {
     display: flex;
@@ -143,7 +152,7 @@
 .rep-link--inline { margin-top: 0; padding: 0.3rem 0.4rem; }
 
 /* ============================================================
-   4. QUICK ACTIONS
+   5. QUICK ACTIONS
    ============================================================ */
 .rep-quick {
     display: grid;
@@ -187,7 +196,7 @@
 .rep-quick__tile:hover .rep-quick__arrow { color: var(--r-fg); transform: translateX(2px); }
 
 /* ============================================================
-   5. RESPONSIVE
+   6. RESPONSIVE
    ============================================================ */
 @media (max-width: 640px) {
     .rep-hero { 
@@ -202,7 +211,7 @@
 }
 
 /* ============================================================
-   6. REDUCED MOTION
+   7. REDUCED MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
     .rep-kpi,
