@@ -450,6 +450,9 @@ class ReporterTicketsAdvancedFiltersModalTest extends TestCase
     public function test_html_does_not_expose_email_or_phone(): void
     {
         $me = $this->reporter();
+        // Use a non-@example.com domain so the topbar dropdown (which correctly
+        // shows the authenticated user's own email) does not trip the assertion.
+        $me->update(['email' => 'reporter@institution.test']);
         $this->ticketFor($me, 'open');
 
         $html = $this->actingAs($me)->get(route('reporter.tickets.index'))->getContent();
