@@ -473,12 +473,12 @@ final class ReporterTicketsBoardQuery
     private function stateIcon(string $state): string
     {
         return match ($state) {
-            Ticket::STATE_OPEN        => 'circle',
+            Ticket::STATE_OPEN => 'circle',
             Ticket::STATE_IN_PROGRESS => 'loader',
-            Ticket::STATE_RESOLVED    => 'check-circle',
-            Ticket::STATE_REJECTED    => 'x-circle',
-            Ticket::STATE_CANCELLED   => 'minus-circle',
-            default                   => 'circle',
+            Ticket::STATE_RESOLVED => 'check-circle',
+            Ticket::STATE_REJECTED => 'x-circle',
+            Ticket::STATE_CANCELLED => 'minus-circle',
+            default => 'circle',
         };
     }
 
