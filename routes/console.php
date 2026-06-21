@@ -10,6 +10,7 @@ use App\Queries\Community\CommunityDigestQuery;
 use App\Services\Ai\HuggingFaceService;
 use App\Services\Auth\SupabaseRoleSyncService;
 use App\Services\Community\CommunityDigestService;
+use App\Services\Community\CommunityThumbnailPruner;
 use App\Services\Storage\DomainStorageService;
 use App\Services\Storage\SanitizedFileName;
 use App\Services\Storage\SupabaseStorageClient;
@@ -388,3 +389,43 @@ Artisan::command(
             : 'Migracion de URLs de storage finalizada.');
     }
 )->purpose('Migrate legacy media URLs to canonical Supabase public URLs and backfill objects');
+
+Artisan::command(
+    'community:thumbnails:prune
+        {--dry-run : Show what would be deleted without deleting}
+        {--older-than=30 : Delete stale thumbnail files older than N days}
+        {--limit=1000 : Maximum number of files to delete}
+        {--prune-hidden : Delete thumbnails for media whose tickets are no longer public in Community}',
+    function (CommunityThumbnailPruner $pruner): int {
+        $options = [
+            'dry_run' => (bool) $this->option('dry-run'),
+            'older_than' => max(0, (int) $this->option('older-than')),
+            'limit' => max(1, (int) $this->option('limit')),
+            'prune_hidden' => (bool) $this->option('prune-hidden'),
+        ];
+
+        try {
+            $stats = $pruner->prune($options);
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $label = $stats['dry_run'] ? 'Community thumbnails prune dry-run' : 'Community thumbnails pruned';
+        $deletedLabel = $stats['dry_run'] ? 'Would delete' : 'Deleted';
+
+        $this->info($label);
+        $this->table(['Metric', 'Count'], [
+            ['Scanned', $stats['scanned']],
+            [$deletedLabel, $stats['deleted']],
+            ['Skipped', $stats['skipped']],
+            ['Orphans', $stats['orphans']],
+            ['Hidden/non-public', $stats['hidden']],
+            ['Stale', $stats['stale']],
+            ['Limit', $options['limit']],
+        ]);
+
+        return Command::SUCCESS;
+    }
+)->purpose('Prune stale and orphaned community thumbnail cache files');
