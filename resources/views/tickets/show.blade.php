@@ -75,7 +75,6 @@
         {{-- ── Columna derecha ── --}}
         <div class="flex flex-col gap-6">
             @include('tickets.partials.show.assignment')
-            @include('tickets.partials.show.quick-actions')
         </div>
 
     </div>{{-- fin grid principal --}}

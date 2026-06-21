@@ -131,6 +131,28 @@ class Ticket extends Model
         );
     }
 
+    /**
+     * Laravel's prepareBindings() converts PHP bool → (int) before PDO, which PostgreSQL
+     * rejects on boolean columns with SQLSTATE[42804]. Returning the string 'true'/'false'
+     * bypasses that cast and PostgreSQL accepts it as a valid boolean literal.
+     */
+    protected function communityVisible(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value): bool => $this->normalizeBoolean($value),
+            set: function (mixed $value) {
+                $normalized = $this->normalizeBoolean($value);
+                $driver = $this->getConnection()->getDriverName();
+
+                if ($driver === 'pgsql') {
+                    return $normalized ? 'true' : 'false';
+                }
+
+                return $normalized ? 1 : 0;
+            }
+        );
+    }
+
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reporter_id');
