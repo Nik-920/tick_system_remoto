@@ -34,6 +34,7 @@ use App\Http\Controllers\Web\TicketAssignmentsController;
 use App\Http\Controllers\Web\TicketCommunityVisibilityController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\TicketHistoryController;
+use App\Http\Controllers\Web\TicketMediaViewController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -234,6 +235,8 @@ Route::middleware('auth')->group(function (): void {
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/media/{media}/view', TicketMediaViewController::class)
+        ->name('tickets.media.view');
     Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])
         ->middleware($ticketMutationMiddleware)
         ->name('tickets.claim');
