@@ -28,6 +28,8 @@ class CommunityNotificationPreference extends Model
 
     public const TYPE_COMMENT_CREATED = 'community.comment.created';
 
+    public const TYPE_DIGEST_WEEKLY = 'community.digest.weekly';
+
     /** @var list<string> */
     protected $fillable = ['user_id', 'type', 'enabled'];
 
@@ -44,6 +46,7 @@ class CommunityNotificationPreference extends Model
             self::TYPE_REPORT_CREATED,
             self::TYPE_REPORT_REVIEWED,
             self::TYPE_COMMENT_CREATED,
+            self::TYPE_DIGEST_WEEKLY,
         ];
     }
 

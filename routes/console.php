@@ -6,14 +6,55 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Queries\Community\CommunityDigestQuery;
 use App\Services\Ai\HuggingFaceService;
 use App\Services\Auth\SupabaseRoleSyncService;
+use App\Services\Community\CommunityDigestService;
 use App\Services\Storage\DomainStorageService;
 use App\Services\Storage\SanitizedFileName;
 use App\Services\Storage\SupabaseStorageClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
+
+Artisan::command(
+    'community:digest {--period=weekly : Digest period (only "weekly" is supported)} {--dry-run : Show what would be sent without creating notifications} {--limit=5 : Top N tickets to consider for digest relevance}',
+    function (CommunityDigestService $digestService, CommunityDigestQuery $digestQuery): int {
+        $period = (string) $this->option('period');
+        $dryRun = (bool) $this->option('dry-run');
+        $limit = max(1, (int) $this->option('limit'));
+
+        if ($period !== 'weekly') {
+            $this->error("Periodo '{$period}' no soportado. Solo se admite: weekly.");
+
+            return Command::FAILURE;
+        }
+
+        $from = now()->subDays(7)->startOfDay();
+        $to = now()->endOfDay();
+        $tickets = $digestQuery->topActiveTickets($from, $to, $limit);
+
+        if ($tickets->isEmpty()) {
+            $this->line('No community activity found for digest period.');
+
+            return Command::SUCCESS;
+        }
+
+        $recipients = $digestService->recipients();
+
+        if ($dryRun) {
+            $this->info("Community weekly digest [DRY RUN]: {$tickets->count()} tickets destacados, {$recipients->count()} recipients potenciales — no se crearon notificaciones.");
+
+            return Command::SUCCESS;
+        }
+
+        $created = $digestService->sendWeeklyDigest();
+
+        $this->info("Community weekly digest: {$tickets->count()} tickets destacados, {$recipients->count()} recipients, {$created} notifications created.");
+
+        return Command::SUCCESS;
+    }
+)->purpose('Send weekly community digest notifications to reporters');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

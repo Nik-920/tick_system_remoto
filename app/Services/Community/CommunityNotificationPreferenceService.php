@@ -49,6 +49,7 @@ class CommunityNotificationPreferenceService
         if ($user->hasRole('reporter')) {
             $types[] = CommunityNotificationPreference::TYPE_REPORT_REVIEWED;
             $types[] = CommunityNotificationPreference::TYPE_COMMENT_CREATED;
+            $types[] = CommunityNotificationPreference::TYPE_DIGEST_WEEKLY;
         }
 
         return $types;
@@ -93,6 +94,7 @@ class CommunityNotificationPreferenceService
             CommunityNotificationPreference::TYPE_REPORT_CREATED => 'Avisarme cuando haya nuevos reportes de Comunidad pendientes de revisar',
             CommunityNotificationPreference::TYPE_REPORT_REVIEWED => 'Avisarme cuando un reporte que envié sea revisado',
             CommunityNotificationPreference::TYPE_COMMENT_CREATED => 'Avisarme cuando alguien comente en mis reportes públicos',
+            CommunityNotificationPreference::TYPE_DIGEST_WEEKLY => 'Avisarme con un resumen semanal de Comunidad',
         ];
     }
 }
