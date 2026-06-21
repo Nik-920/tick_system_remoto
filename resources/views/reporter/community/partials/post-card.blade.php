@@ -125,7 +125,8 @@
                     {{-- Slides --}}
                     @foreach ($carImgs as $carIdx => $carUrl)
                         <div class="comm-thumb-car__slide {{ $carIdx === 0 ? 'comm-thumb-car__slide--visible' : '' }}"
-                             data-car-slide="{{ $carIdx }}">
+                             data-car-slide="{{ $carIdx }}"
+                             data-community-media-frame>
                             <img
                                 src="{{ $carUrl }}"
                                 alt="Evidencia {{ $carIdx + 1 }} del reporte"
@@ -133,7 +134,12 @@
                                 loading="{{ $carIdx === 0 ? 'eager' : 'lazy' }}"
                                 width="144"
                                 height="112"
+                                data-community-media-img
                             >
+                            <div class="comm-post__thumb-unavailable" data-community-media-fallback hidden aria-hidden="true">
+                                <x-lucide-image-off width="22" height="22" stroke-width="1.5" />
+                                <span>Vista previa no disponible</span>
+                            </div>
                         </div>
                     @endforeach
 
