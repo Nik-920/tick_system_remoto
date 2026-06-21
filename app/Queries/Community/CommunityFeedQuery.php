@@ -487,7 +487,7 @@ final class CommunityFeedQuery
         $mediaImages = $ticket->media
             ->filter(fn ($m) => str_starts_with((string) $m->file_type, 'image'))
             ->values()
-            ->map(fn ($m) => (string) $m->file_url)
+            ->map(fn ($m) => route('reporter.community.media.thumbnail', $m->id))
             ->all();
 
         $counts = [
@@ -521,7 +521,7 @@ final class CommunityFeedQuery
                 'name' => (string) $ticket->category->name,
                 'icon' => (string) $ticket->category->icon,
             ] : null,
-            'thumbnail_url' => $firstMedia?->file_url !== null ? (string) $firstMedia->file_url : null,
+            'thumbnail_url' => $firstMedia !== null ? route('reporter.community.media.thumbnail', $firstMedia->id) : null,
             'thumbnail_type' => $firstMedia?->file_type !== null ? (string) $firstMedia->file_type : null,
             'media_count' => $mediaCount,
             'has_media' => $mediaCount > 0,

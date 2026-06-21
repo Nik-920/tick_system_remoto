@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\AdminCommunityReportController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\CommunityCommentController;
 use App\Http\Controllers\Web\CommunityCommentReportController;
+use App\Http\Controllers\Web\CommunityMediaController;
 use App\Http\Controllers\Web\CommunityModerationQueueController;
 use App\Http\Controllers\Web\CommunityNotificationPreferenceController;
 use App\Http\Controllers\Web\CommunityReactionController;
@@ -138,6 +139,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reporter/community', ReporterCommunityController::class)
         ->middleware('role:reporter')
         ->name('reporter.community');
+
+    // Community Media Privacy Proxy — serves thumbnails/evidence images through
+    // a controlled Laravel endpoint instead of exposing raw Storage URLs.
+    // Access is gated: auth (outer group) + role:reporter + ticket visibility.
+    Route::get('/reporter/community/media/{media}/thumbnail', CommunityMediaController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.community.media.thumbnail');
 
     // Community v2: reactions and saves — reporter-only mutation endpoints.
     // Visibility check is enforced inside each controller (404 if not visible).
