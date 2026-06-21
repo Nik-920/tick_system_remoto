@@ -32,7 +32,7 @@ final class ReporterTicketsBoardViewModel
      * @param  array{from: int, to: int, total: int, current: int, last: int, pages: list<int>}  $pagination
      * @param  array{total: int, avg_value: string, avg_note: string, avg_has_data: bool, donut: list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>}  $summary
      * @param  array{total: int, segments: list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>}  $donut
-     * @param  array{peak: int, items: list<array{name: string, count: int}>}  $labs
+     * @param  array{peak: int, items: list<array{name: string, label: string, count: int}>}  $labs
      */
     public function __construct(
         public readonly string $reporterId,
@@ -72,5 +72,34 @@ final class ReporterTicketsBoardViewModel
     public function hasAnyFilter(): bool
     {
         return $this->activeStatus !== 'all' || $this->hasOtherFilters();
+    }
+
+    /** Number of active filters (status chip + content filters) for the badge on the filter button. */
+    public function activeFiltersCount(): int
+    {
+        $count = $this->activeStatus !== 'all' ? 1 : 0;
+        foreach (['priority', 'location_id', 'category_id', 'from', 'to'] as $key) {
+            if (trim((string) ($this->filters[$key] ?? '')) !== '') {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /** @return array<string, string> */
+    public function sortOptions(): array
+    {
+        return [
+            'recent' => 'Más recientes',
+            'oldest' => 'Más antiguos',
+            'priority' => 'Prioridad',
+        ];
+    }
+
+    /** Human-readable display label for a Location (building · room_code · name). */
+    public function locationLabel(Location $location): string
+    {
+        return $location->getDisplayLabel();
     }
 }

@@ -91,6 +91,21 @@ class Location extends Model
         return $this->applyActiveFilter($query, $isActive);
     }
 
+    /**
+     * Human-readable display label that disambiguates locations in the same building.
+     * Format: "{building} · {room_code} · {name}" — omits blank parts.
+     */
+    public function getDisplayLabel(): string
+    {
+        $parts = array_filter([
+            (string) $this->building,
+            (string) $this->room_code,
+            (string) $this->name,
+        ]);
+
+        return implode(' · ', $parts) ?: (string) $this->name;
+    }
+
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'location_id');
