@@ -4,13 +4,14 @@
 
 @section('content')
 @php
-    /** @var \App\ViewModels\Tickets\ReporterTicketsBoardViewModel $board */
+    /**
+     * @var \App\ViewModels\Tickets\ReporterTicketsBoardViewModel $board
+     * @var string $userName
+     */
     $f = $board->filters;
     $searchValue = (string) ($f['search'] ?? '');
     $sortOptions  = $board->sortOptions();
 
-    // Querystring carried when switching the status chip (drop volatile keys).
-    $chipBase = collect(request()->query())->except(['status', 'page'])->all();
     $pageBase = collect(request()->query())->except(['page'])->all();
 
     // Build the donut conic-gradient from cumulative ring percentages.
@@ -26,25 +27,26 @@
 
 <div class="rep-page">
 
-    {{-- ── 1. HEADER ─────────────────────────────────────────────── --}}
-    <header class="rep-header">
-        <div>
-            <h1 class="rep-header__title">Mis tickets</h1>
-            <p class="rep-header__subtitle">
+    {{-- ── 1. WELCOME HERO ───────────────────────────────────────── --}}
+    <section class="rep-hero">
+        <div class="rep-hero__content">
+            <p class="rep-hero__eyebrow">Mis tickets</p>
+            <h1 class="rep-hero__title">¡Hola, {{ $userName }}! 👋</h1>
+            <p class="rep-hero__subtitle">
                 Consulta y da seguimiento a todas las incidencias que has reportado.
             </p>
         </div>
-        <div class="rep-header__actions">
-            <a href="{{ request()->fullUrl() }}" class="rep-btn-outline">
+        <div class="rep-hero__actions">
+            <a href="{{ request()->fullUrl() }}" class="rep-hero__cta rep-hero__cta--outline">
                 <x-lucide-refresh-cw width="16" height="16" stroke-width="2.5" />
                 Actualizar
             </a>
-            <a href="{{ route('tickets.create') }}" class="rep-btn-primary">
+            <a href="{{ route('tickets.create') }}" class="rep-hero__cta">
                 <x-lucide-plus width="17" height="17" stroke-width="2.5" />
                 Crear nuevo ticket
             </a>
         </div>
-    </header>
+    </section>
 
     {{-- ── 2. SEARCH + FILTERS + QUICK CHIPS ─────────────────────── --}}
     {{-- Real GET form. Everything is applied server-side AFTER the reporter_id
@@ -83,18 +85,6 @@
             </button>
         </div>
 
-        {{-- Quick chips: server-side links (preserve the rest of the query). --}}
-        <div class="rep-chips" role="group" aria-label="Filtros rápidos por estado">
-            @foreach ($board->chips as $chip)
-                <a href="{{ route('reporter.tickets.index', $chip['key'] === 'all' ? $chipBase : array_merge($chipBase, ['status' => $chip['key']])) }}"
-                   class="rep-chip rep-tone-{{ $chip['tone'] }}"
-                   @if ($chip['active']) aria-current="true" @endif>
-                    <span class="rep-chip__dot" aria-hidden="true"></span>
-                    {{ $chip['label'] }}
-                    <span class="rep-chip__count">{{ $chip['count'] }}</span>
-                </a>
-            @endforeach
-        </div>
     </form>
 
     {{-- ── 3. CONTENT LAYOUT: ticket list + insights rail ────────── --}}

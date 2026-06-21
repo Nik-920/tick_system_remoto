@@ -229,6 +229,19 @@
                 </div>
             </section>
 
+            {{-- C. Recent activity (honest placeholder) --}}
+            <section class="rep-panel">
+                <h2 class="rep-panel__title">
+                    <x-lucide-activity width="16" height="16" stroke-width="2" />
+                    Actividad reciente
+                </h2>
+                <div class="rep-empty">
+                    <x-lucide-hourglass width="28" height="28" stroke-width="1.5" />
+                    <p class="rep-empty__title">Próximamente</p>
+                    <p class="rep-empty__note">El historial de actividad estará disponible en una próxima versión.</p>
+                </div>
+            </section>
+
         </aside>
     </div>
 </div>
