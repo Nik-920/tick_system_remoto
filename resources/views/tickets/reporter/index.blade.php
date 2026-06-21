@@ -170,13 +170,21 @@
                                     </button>
                                 </form>
 
-                                {{-- Comments count — modal will be implemented later --}}
+                                {{-- Comments trigger — opens the comments modal via JS. --}}
                                 <button type="button"
-                                        class="rep-card__stat-btn rep-card__stat-btn--comments"
-                                        aria-label="{{ $t['comments_count'] }} {{ $t['comments_count'] === 1 ? 'comentario' : 'comentarios' }}"
-                                        disabled>
+                                        class="rep-card__stat-btn rep-card__comment-btn"
+                                        data-reporter-ticket-comments-trigger
+                                        data-ticket-id="{{ $t['id'] }}"
+                                        data-ticket-ref="{{ $t['ref'] }}"
+                                        data-comments-url="{{ $t['comments_url'] }}"
+                                        data-comments-store-url="{{ $t['comments_store_url'] }}"
+                                        aria-haspopup="dialog"
+                                        aria-controls="reporter-ticket-comments-modal"
+                                        aria-expanded="false"
+                                        aria-label="{{ $t['comments_count'] === 1 ? '1 comentario' : $t['comments_count'].' comentarios' }}, abrir">
                                     <x-lucide-message-circle width="15" height="15" stroke-width="2" aria-hidden="true" />
                                     <span>{{ $t['comments_count'] ?: '' }}</span>
+                                    <span class="sr-only">Ver comentarios del ticket {{ $t['ref'] }}</span>
                                 </button>
                             </div>
 
@@ -390,6 +398,11 @@
    Advanced filters modal
    ============================================================ --}}
 @include('tickets.reporter.partials.advanced-filters-modal')
+
+{{-- ============================================================
+   Comments modal — single instance; JS populates it dynamically.
+   ============================================================ --}}
+@include('tickets.reporter.partials.comments-modal')
 
 {{-- ============================================================
    Cancel-confirmation modal (replaces native browser confirm)
