@@ -94,71 +94,101 @@
         <div class="rep-main">
             <div class="rep-list">
                 @forelse ($board->tickets as $t)
-                    <article class="rep-item rep-tone-{{ $t['status_tone'] }}" aria-labelledby="rep-row-title-{{ $loop->index }}">
-                        <span class="rep-item__rail" aria-hidden="true"></span>
+                    <article id="ticket-{{ $t['id'] }}" class="rep-card rep-tone-{{ $t['status_tone'] }}" aria-labelledby="rep-card-title-{{ $loop->index }}">
 
-                        <div class="rep-item__icon">
-                            <x-dynamic-component :component="'lucide-' . $t['icon']" width="20" height="20" stroke-width="2" />
-                        </div>
+                        {{-- Live region for accessible reaction feedback --}}
+                        <span class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-community-social-status></span>
 
-                        <div class="rep-item__body">
-                            <div class="rep-item__top">
-                                <h3 class="rep-item__title" id="rep-row-title-{{ $loop->index }}">{{ $t['title'] }}</h3>
-                                <span class="rep-item__id">{{ $t['ref'] }}</span>
-                            </div>
-
-                            <div class="rep-item__meta">
-                                <x-lucide-map-pin width="13" height="13" stroke-width="2" />
-                                <span>{{ $t['location'] }}</span>
-                                <span class="rep-item__meta-sep" aria-hidden="true"></span>
-                                <span>{{ $t['category'] }}</span>
-                                @if ($t['type'] !== '')
-                                    <span class="rep-item__meta-sep" aria-hidden="true"></span>
-                                    <span>{{ $t['type'] }}</span>
-                                @endif
-                            </div>
-
-                            <div class="rep-item__tags">
-                                <span class="rep-badge rep-status--{{ $t['status'] }}">
-                                    <span class="rep-badge__dot" aria-hidden="true"></span>
+                        {{-- Head: ticket ref (left) + status & priority badges (right) --}}
+                        <div class="rep-card__head">
+                            <span class="rep-card__ref">{{ $t['ref'] }}</span>
+                            <div class="rep-card__badges">
+                                <span class="rep-card__status-badge rep-status--{{ $t['status'] }}">
+                                    <x-dynamic-component :component="'lucide-' . $t['status_icon']" width="12" height="12" stroke-width="2.5" aria-hidden="true" />
                                     {{ $t['status_label'] }}
                                 </span>
-                                <span class="rep-prio-wrap">
-                                    <span class="rep-prio-label">Prioridad</span>
-                                    <span class="rep-badge rep-prio rep-tone-{{ $t['priority'] }}">
-                                        <span class="rep-badge__dot" aria-hidden="true"></span>
-                                        {{ $t['priority_label'] }}
-                                    </span>
+                                <span class="rep-card__prio-badge rep-tone-{{ $t['priority'] }}">
+                                    <x-lucide-alert-circle width="12" height="12" stroke-width="2.5" aria-hidden="true" />
+                                    {{ $t['priority_label'] }} Prioridad
                                 </span>
                                 @if ($t['is_duplicate'] ?? false)
                                     <span class="rep-badge rep-badge-duplicate rep-tone-warning" title="La IA detectó un ticket similar a este reporte">
-                                        ⚠ Posible duplicado
+                                        ⚠ Duplicado
                                     </span>
                                 @endif
                             </div>
                         </div>
 
-                        <div class="rep-item__side">
-                            <div class="rep-item__update">
-                                <x-lucide-clock width="13" height="13" stroke-width="2" />
-                                <span class="rep-item__update-label">Actualización</span>
-                                <span class="rep-item__update-at">{{ $t['updated'] }}</span>
+                        {{-- Title --}}
+                        <h3 class="rep-card__title" id="rep-card-title-{{ $loop->index }}">{{ $t['title'] }}</h3>
+
+                        {{-- Meta: building · room code · category --}}
+                        <div class="rep-card__meta">
+                            <x-lucide-building-2 width="13" height="13" stroke-width="2" aria-hidden="true" />
+                            <span>{{ $t['location'] }}</span>
+                            @if ($t['type'] !== '')
+                                <span class="rep-card__meta-sep" aria-hidden="true"></span>
+                                <x-lucide-map-pin width="13" height="13" stroke-width="2" aria-hidden="true" />
+                                <span>{{ $t['type'] }}</span>
+                            @endif
+                            <span class="rep-card__meta-sep" aria-hidden="true"></span>
+                            <x-lucide-tag width="13" height="13" stroke-width="2" aria-hidden="true" />
+                            <span>Categoría: {{ $t['category'] }}</span>
+                        </div>
+
+                        {{-- Footer: timestamp · heart · comments · action button --}}
+                        <div class="rep-card__foot">
+                            <div class="rep-card__updated">
+                                <x-lucide-clock width="13" height="13" stroke-width="2" aria-hidden="true" />
+                                <span>Actualizado {{ $t['updated'] }}</span>
                             </div>
 
-                            <div class="rep-item__actions">
-                                {{-- Reporter tracking screen (resolves only own tickets). --}}
+                            <div class="rep-card__stats">
+                                {{-- Heart — toggles "Me interesa" reaction via community-social-actions.js --}}
+                                <form method="POST"
+                                      action="{{ $t['viewer_reacted'] ? $t['reaction_destroy_url'] : $t['reaction_store_url'] }}"
+                                      data-community-social-form
+                                      data-community-action="reaction"
+                                      data-reaction-type="interested"
+                                      data-ticket-id="{{ $t['id'] }}"
+                                      data-active="{{ $t['viewer_reacted'] ? 'true' : 'false' }}"
+                                      data-store-url="{{ $t['reaction_store_url'] }}"
+                                      data-destroy-url="{{ $t['reaction_destroy_url'] }}"
+                                      data-reaction-modifier="interested"
+                                      class="rep-card__reaction-form">
+                                    @csrf
+                                    @if ($t['viewer_reacted'])
+                                        @method('DELETE')
+                                    @endif
+                                    <button type="submit"
+                                            class="rep-card__stat-btn {{ $t['viewer_reacted'] ? 'rep-card__stat-btn--active' : '' }}"
+                                            aria-pressed="{{ $t['viewer_reacted'] ? 'true' : 'false' }}"
+                                            aria-label="{{ $t['viewer_reacted'] ? 'Quitar reacción Me interesa' : 'Marcar como Me interesa' }}"
+                                            data-community-action-button>
+                                        <x-lucide-heart width="15" height="15" stroke-width="2" aria-hidden="true" />
+                                        <span data-community-action-count>{{ $t['reactions_count'] ?: '' }}</span>
+                                    </button>
+                                </form>
+
+                                {{-- Comments count — modal will be implemented later --}}
+                                <button type="button"
+                                        class="rep-card__stat-btn rep-card__stat-btn--comments"
+                                        aria-label="{{ $t['comments_count'] }} {{ $t['comments_count'] === 1 ? 'comentario' : 'comentarios' }}"
+                                        disabled>
+                                    <x-lucide-message-circle width="15" height="15" stroke-width="2" aria-hidden="true" />
+                                    <span>{{ $t['comments_count'] ?: '' }}</span>
+                                </button>
+                            </div>
+
+                            <div class="rep-card__actions">
                                 <a href="{{ route('reporter.tickets.show', $t['id']) }}"
                                    class="rep-btn {{ $t['action'] === 'follow' ? 'rep-btn--primary' : 'rep-btn--ghost' }}">
                                     {{ $t['action_label'] }}
+                                    <x-lucide-arrow-right width="14" height="14" stroke-width="2.5" aria-hidden="true" />
                                 </a>
 
-                                {{-- Kebab only renders while the reporter may still
-                                     act on the ticket (own + open + unassigned +
-                                     unlocked). Once maintenance takes it, it
-                                     disappears. Both "Editar" and "Cancelar
-                                     solicitud" are REAL now. Cancelar withdraws the
-                                     request (open → cancelled) via a PATCH form —
-                                     NOT a rejection and NOT a destructive delete. --}}
+                                {{-- Kebab only renders while the reporter may still act on the ticket.
+                                     Cancelar withdraws the request (open → cancelled) via PATCH. --}}
                                 @if ($t['show_actions_menu'])
                                     <div class="rep-kebab" data-rep-kebab>
                                         <button type="button" class="rep-kebab__btn"
@@ -492,8 +522,11 @@
         });
     }
     function setItemOpen(kebab, open) {
-        var item = kebab.closest('.rep-item');
-        if (item) { item.classList.toggle('rep-item--menu-open', open); }
+        var item = kebab.closest('.rep-card, .rep-item');
+        if (item) {
+            item.classList.toggle('rep-card--menu-open', open);
+            item.classList.toggle('rep-item--menu-open', open);
+        }
     }
 
     kebabs.forEach(function (kebab) {
