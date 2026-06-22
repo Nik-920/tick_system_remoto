@@ -127,6 +127,8 @@ class UpdateReporterTicketRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'new_images.*.uploaded' => 'No se pudo subir una imagen. Verifica que el archivo no supere 5 MB e inténtalo nuevamente.',
+            'new_images.*.file' => 'No se pudo procesar uno de los archivos.',
             'new_images.*.mimes' => 'Formato no permitido. Usa JPG, PNG, WebP, PDF, TXT, Word.',
             'new_images.*.max' => 'Cada imagen no puede superar los 5 MB.',
             'new_images.max' => 'Puedes subir un máximo de '.self::MAX_EVIDENCE_FILES.' imágenes por vez.',

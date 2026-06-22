@@ -88,6 +88,23 @@ class StoreTicketRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $maxMb = self::MAX_MEDIA_SIZE_KB / 1024;
+
+        return [
+            'media_files.*.uploaded' => 'No se pudo subir una evidencia. Verifica que el archivo no supere '.$maxMb.' MB e inténtalo nuevamente.',
+            'media_files.*.max' => 'Cada evidencia no debe superar '.$maxMb.' MB.',
+            'media_files.*.mimes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
+            'media_files.*.mimetypes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
+            'media_files.*.file' => 'No se pudo procesar uno de los archivos adjuntos.',
+            'media_files.max' => 'Puedes adjuntar hasta '.self::MAX_MEDIA_FILES.' archivos.',
+        ];
+    }
+
     private function sanitizePlainText(?string $value): ?string
     {
         if ($value === null) {
