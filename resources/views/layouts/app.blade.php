@@ -43,6 +43,8 @@
 
 <body>
 
+@include('partials.upload-error-modal')
+
 @auth
     <div class="admin-layout" id="adminLayout">
         @include('partials.sidebar')

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketMedia;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -28,23 +29,23 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class TicketMediaViewController extends Controller
 {
-    public function __invoke(Ticket $ticket, TicketMedia $media): RedirectResponse|StreamedResponse
+    public function __invoke(Ticket $ticket, TicketMedia $media): RedirectResponse|StreamedResponse|Response
     {
         $this->authorize('view', $ticket);
 
         if ((string) $media->ticket_id !== (string) $ticket->id) {
-            abort(404);
+            return $this->mediaUnavailable($ticket->id);
         }
 
         $fileUrl = trim((string) ($media->file_url ?? ''));
         if ($fileUrl === '') {
-            abort(404);
+            return $this->mediaUnavailable($ticket->id);
         }
 
         $localPath = $this->localPublicPath($fileUrl);
         if ($localPath !== null) {
             if (! Storage::disk('public')->exists($localPath)) {
-                abort(404);
+                return $this->mediaUnavailable($ticket->id);
             }
 
             return $this->streamFromPublicDisk($localPath, (string) ($media->file_type ?? ''));
@@ -54,7 +55,16 @@ class TicketMediaViewController extends Controller
             return redirect()->away($fileUrl);
         }
 
-        abort(404);
+        return $this->mediaUnavailable($ticket->id);
+    }
+
+    private function mediaUnavailable(mixed $ticketId): Response
+    {
+        return response()->view(
+            'errors.media-unavailable',
+            ['ticketId' => $ticketId],
+            404,
+        );
     }
 
     /**

@@ -40,11 +40,18 @@
                         <label for="evidence-input" class="ticket-show__dropzone" data-evidence-dropzone>
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l-5-5-5 5M12 3v12"/></svg>
                             <span class="text-sm font-semibold">Adjuntar evidencia</span>
-                            <span class="text-xs">Arrastra archivos aquí o haz clic para seleccionarlos. JPG, PNG, WebP, PDF, Word, Excel o MP4 — máx. 10 MB c/u, hasta 5 archivos.</span>
+                            <span class="text-xs">Arrastra archivos aquí o haz clic para seleccionarlos. JPG, PNG, WebP, PDF, TXT o Word — máx. 5 MB c/u, hasta 5 archivos.</span>
                         </label>
                         <input type="file" id="evidence-input" name="evidence[]" multiple form="maintenance-edit-form"
-                               accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.mp4"
-                               class="sr-only">
+                               accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx"
+                               class="sr-only"
+                               data-upload-guard
+                               data-max-file-size="5242880"
+                               data-max-file-size-label="5 MB"
+                               data-max-files="5"
+                               data-max-total-size="26214400"
+                               data-max-total-size-label="25 MB"
+                               data-allowed-extensions="jpg,jpeg,png,webp,pdf,txt,doc,docx">
 
                         <div class="ticket-show__file-list hidden" data-evidence-list aria-live="polite"></div>
 

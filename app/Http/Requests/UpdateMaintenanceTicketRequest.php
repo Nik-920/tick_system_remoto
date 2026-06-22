@@ -118,6 +118,8 @@ class UpdateMaintenanceTicketRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'evidence.*.uploaded' => 'No se pudo subir un archivo de evidencia. Verifica que no supere 5 MB e inténtalo nuevamente.',
+            'evidence.*.file' => 'No se pudo procesar uno de los archivos de evidencia.',
             'evidence.max' => 'Puedes subir un máximo de '.self::MAX_EVIDENCE_FILES.' archivos por vez.',
             'evidence.*.max' => 'Cada archivo no puede superar los 5 MB.',
             'evidence.*.mimes' => 'Formato no permitido. Usa JPG, PNG, WebP, PDF, TXT o Word.',

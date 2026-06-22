@@ -85,6 +85,7 @@
                   action="{{ route('reporter.tickets.update', $ticket->id) }}"
                   enctype="multipart/form-data"
                   id="edit-ticket-form"
+                  data-upload-form
                   novalidate>
                 @csrf
                 @method('PATCH')
@@ -350,13 +351,20 @@
                                 <p class="rep-edit__dropzone-text">
                                     <span class="rep-edit__dropzone-link">Arrastra archivos aquí o haz clic para seleccionar</span>
                                 </p>
-                                <p class="rep-edit__dropzone-hint">Formatos: JPG, PNG, GIF, WebP · Tamaño máximo: 10 MB por archivo · Hasta 10 imágenes</p>
+                                <p class="rep-edit__dropzone-hint">Formatos: JPG, PNG, WebP, PDF, TXT, Word · Tamaño máximo: 5 MB por archivo · Hasta 5 archivos</p>
                                 <input id="new-images"
                                        type="file"
                                        name="new_images[]"
                                        multiple
-                                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                       accept="image/jpeg,image/jpg,image/png,image/webp,.pdf,.txt,.doc,.docx"
                                        class="rep-edit__file-input"
+                                       data-upload-guard
+                                       data-max-file-size="5242880"
+                                       data-max-file-size-label="5 MB"
+                                       data-max-files="5"
+                                       data-max-total-size="26214400"
+                                       data-max-total-size-label="25 MB"
+                                       data-allowed-extensions="jpg,jpeg,png,webp,pdf,txt,doc,docx"
                                        aria-describedby="new-images-err"
                                        aria-label="Subir nuevas imágenes de evidencia">
                             </label>

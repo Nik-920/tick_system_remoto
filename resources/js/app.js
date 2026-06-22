@@ -1,5 +1,6 @@
 import './bootstrap';
 import { escapeHtml } from './utils/escape';
+import { init as initUploadGuard } from './upload-guard';
 import { requestPermissionAndGetToken, onForegroundMessage } from './services/firebase';
 
 // Layout module: sidebar toggle, theme, dropdowns (all authenticated pages)
@@ -129,4 +130,9 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', runPageLoaders, { once: true });
 } else {
     runPageLoaders();
+}
+
+// Upload guard — file validation before submit (all pages with file inputs).
+if (document.querySelector('[data-upload-guard]')) {
+    initUploadGuard();
 }

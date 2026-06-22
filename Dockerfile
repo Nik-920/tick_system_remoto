@@ -84,6 +84,8 @@ RUN echo "opcache.enable=1"                >> /usr/local/etc/php/conf.d/opcache.
  && echo "opcache.validate_timestamps=0"   >> /usr/local/etc/php/conf.d/opcache.ini \
  && echo "opcache.save_comments=1"         >> /usr/local/etc/php/conf.d/opcache.ini
 
+COPY docker/php-uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app

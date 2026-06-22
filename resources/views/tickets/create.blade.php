@@ -110,6 +110,7 @@
                   action="{{ route('tickets.store') }}"
                   enctype="multipart/form-data"
                   id="create-ticket-form"
+                  data-upload-form
                   novalidate>
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
@@ -366,8 +367,15 @@
                                        type="file"
                                        name="media_files[]"
                                        multiple
-                                       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.mp4,.avi,.mov"
+                                       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.mp4"
                                        class="rep-edit__file-input"
+                                       data-upload-guard
+                                       data-max-file-size="10485760"
+                                       data-max-file-size-label="10 MB"
+                                       data-max-files="5"
+                                       data-max-total-size="52428800"
+                                       data-max-total-size-label="50 MB"
+                                       data-allowed-extensions="jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,mp4"
                                        aria-describedby="create-media-err"
                                        aria-label="Adjuntar archivos de evidencia">
                                 <input id="media_camera"
@@ -376,6 +384,13 @@
                                        accept="image/*"
                                        capture="environment"
                                        class="rep-edit__file-input"
+                                       data-upload-guard
+                                       data-max-file-size="10485760"
+                                       data-max-file-size-label="10 MB"
+                                       data-max-files="5"
+                                       data-max-total-size="52428800"
+                                       data-max-total-size-label="50 MB"
+                                       data-allowed-extensions="jpg,jpeg,png,webp"
                                        aria-label="Tomar foto con la cámara">
                             </label>
 
