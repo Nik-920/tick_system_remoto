@@ -10,6 +10,7 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\LocalTime;
 use App\ViewModels\Community\CommunityModerationQueueViewModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -230,7 +231,7 @@ final class CommunityModerationQueueQuery
             'community_visibility_reason' => $ticket->community_visibility_reason !== null
                 ? (string) $ticket->community_visibility_reason
                 : null,
-            'community_hidden_at' => $ticket->community_hidden_at?->format('d/m/Y H:i'),
+            'community_hidden_at' => LocalTime::format($ticket->community_hidden_at),
             'hidden_by_name' => $ticket->community_hidden_by !== null
                 ? $this->displayName($ticket->communityHiddenBy)
                 : null,
@@ -243,8 +244,8 @@ final class CommunityModerationQueueQuery
                 'name' => (string) $ticket->category->name,
             ] : null,
             'show_url' => route('tickets.show', $ticket->id),
-            'created_at' => $ticket->created_at?->format('d/m/Y') ?? '',
-            'updated_at' => $ticket->updated_at?->format('d/m/Y') ?? '',
+            'created_at' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '',
+            'updated_at' => LocalTime::format($ticket->updated_at, 'd/m/Y') ?? '',
             'pending_reports_count' => $pendingReportsCount,
             'latest_pending_report' => $latestPendingReport !== null ? [
                 'id' => (string) $latestPendingReport->id,

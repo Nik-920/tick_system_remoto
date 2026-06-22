@@ -10,6 +10,7 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\LocalTime;
 use App\ViewModels\Tickets\AssignmentsBoardViewModel;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -372,7 +373,7 @@ final class AssignmentsBoardQuery
             'state_note' => $this->stateNote($state, $ticket->assignment_source),
             'priority' => $this->priorityTone((string) $ticket->priority),
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
-            'created' => $ticket->created_at?->format('d/m/Y') ?? '—',
+            'created' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '—',
             'elapsed' => $elapsed,
             'overdue' => $this->isOverdue((string) $ticket->priority, $ticket->created_at, CarbonImmutable::now())
                 && in_array($state, self::TAB_STATES['active'], true),
@@ -422,9 +423,9 @@ final class AssignmentsBoardQuery
             'state_label' => $this->stateLabel($state),
             'context' => $context !== '' ? $context : 'Sin ubicación',
             'description' => (string) ($ticket->description ?? ''),
-            'assigned_at' => $ticket->assigned_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
+            'assigned_at' => LocalTime::format($ticket->assigned_at, self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
             'assigned_by' => $this->displayName($ticket->assignedBy),
-            'taken_at' => $inProgressAt?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? ($ticket->assigned_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—'),
+            'taken_at' => LocalTime::format($inProgressAt ?? $ticket->assigned_at, self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
             'elapsed' => $elapsed,
             'can_start' => $this->canStart($ticket),
             'can_release' => $this->canRelease($ticket),
@@ -442,7 +443,7 @@ final class AssignmentsBoardQuery
         $state = (string) $ticket->state;
         $closed = in_array($state, [Ticket::STATE_RESOLVED, Ticket::STATE_REJECTED], true);
         $assigned = $ticket->assigned_at !== null;
-        $short = static fn (?CarbonInterface $d): string => $d?->format('d/m H:i') ?? '—';
+        $short = static fn (?CarbonInterface $d): string => LocalTime::format($d, 'd/m H:i') ?? '—';
 
         $inProgressAt = $stateTimes[Ticket::STATE_IN_PROGRESS] ?? null;
         $inProgressStatus = match (true) {
@@ -518,7 +519,7 @@ final class AssignmentsBoardQuery
                     'tone' => $tone,
                     'text' => $text,
                     'actor' => $this->displayName($h->changedBy),
-                    'at' => $h->created_at?->format(self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
+                    'at' => LocalTime::format($h->created_at, self::DISPLAY_DATETIME_12H_FORMAT) ?? '—',
                 ];
             })
             ->values()

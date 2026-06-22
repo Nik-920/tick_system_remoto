@@ -10,6 +10,7 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\LocalTime;
 use App\ViewModels\Tickets\HistoryBoardViewModel;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -422,7 +423,7 @@ final class HistoryBoardQuery
                     'tone' => $resolved ? 'success' : 'high',
                     'icon' => $resolved ? 'circle-check' : 'x',
                     'actor' => $this->displayName($h->changedBy),
-                    'at' => $h->created_at?->format('d/m/Y h:i A') ?? '—',
+                    'at' => LocalTime::format($h->created_at, 'd/m/Y h:i A') ?? '—',
                 ];
             })
             ->all();
@@ -452,8 +453,8 @@ final class HistoryBoardQuery
             'status_label' => $this->stateLabel($state),
             'priority' => $this->priorityTone((string) $ticket->priority),
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
-            'created' => $ticket->created_at?->format('d/m/Y') ?? '—',
-            'result' => $resultDate?->format('d/m/Y') ?? '—',
+            'created' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '—',
+            'result' => LocalTime::format($resultDate, 'd/m/Y') ?? '—',
         ];
     }
 
