@@ -8,9 +8,11 @@ use App\Http\Middleware\SecureHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Sentry\Laravel\Integration;
 use Sentry\State\Scope;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -54,6 +56,23 @@ $builder = Application::configure(basePath: dirname(__DIR__))
             }
 
             return back()->withErrors(['ticket' => $e->getMessage()])->withInput();
+        });
+
+        $exceptions->renderable(function (PostTooLargeException $e, Request $request): JsonResponse|RedirectResponse|Response {
+            $message = 'El archivo o conjunto de archivos supera el límite permitido. Sube archivos más pequeños o menos archivos a la vez.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'errors' => ['media_files' => ['Reduce el tamaño de los archivos o sube menos archivos a la vez.']],
+                ], 413);
+            }
+
+            if ($request->hasSession()) {
+                return back()->withErrors(['_upload' => $message]);
+            }
+
+            return response()->view('errors.413', ['message' => $message], 413);
         });
 
         $exceptions->reportable(function (Throwable $throwable): void {
