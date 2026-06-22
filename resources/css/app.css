@@ -87,6 +87,9 @@
 @import './modules/categories.css';
 @import './modules/locations.css';
 
+/* ── Upload UX: error modal + error pages (413, media-unavailable) ── */
+@import './modules/upload-error-modal.css';
+
 /* ── Tailwind Source Scanning — siempre al final ── */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
