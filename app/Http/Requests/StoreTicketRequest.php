@@ -15,12 +15,6 @@ class StoreTicketRequest extends FormRequest
 {
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-    private const MAX_MEDIA_FILES = 5;
-
-    private const MAX_MEDIA_SIZE_KB = 10240;
-
-    private const MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'mp4'];
-
     private const MEDIA_MIME_TYPES = [
         'image/jpeg',
         'image/png',
@@ -62,6 +56,8 @@ class StoreTicketRequest extends FormRequest
      */
     public function rules(): array
     {
+        $upload = UploadRules::fromConfig('create');
+
         return [
             'title' => ['required', 'string', 'min:5', 'max:255'],
             'description' => ['required', 'string', 'min:20', 'max:2000'],
@@ -69,11 +65,11 @@ class StoreTicketRequest extends FormRequest
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
             'community_visible' => ['nullable', 'boolean'],
-            'media_files' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_FILES],
+            'media_files' => ['sometimes', 'array', 'max:'.$upload->maxFiles],
             'media_files.*' => [
                 'file',
-                'max:'.self::MAX_MEDIA_SIZE_KB,
-                'mimes:'.implode(',', self::MEDIA_EXTENSIONS),
+                'max:'.$upload->maxFileSizeKb,
+                'mimes:'.implode(',', $upload->normalizedExtensions()),
                 'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
             ],
         ];
@@ -97,15 +93,15 @@ class StoreTicketRequest extends FormRequest
      */
     public function messages(): array
     {
-        $maxMb = self::MAX_MEDIA_SIZE_KB / 1024;
+        $upload = UploadRules::fromConfig('create');
 
         return [
-            'media_files.*.uploaded' => 'No se pudo subir una evidencia. Verifica que el archivo no supere '.$maxMb.' MB e inténtalo nuevamente.',
-            'media_files.*.max' => 'Cada evidencia no debe superar '.$maxMb.' MB.',
+            'media_files.*.uploaded' => 'No se pudo subir una evidencia. Verifica que el archivo no supere '.$upload->maxFileSizeLabel.' e inténtalo nuevamente.',
+            'media_files.*.max' => 'Cada evidencia no debe superar '.$upload->maxFileSizeLabel.'.',
             'media_files.*.mimes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
             'media_files.*.mimetypes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
             'media_files.*.file' => 'No se pudo procesar uno de los archivos adjuntos.',
-            'media_files.max' => 'Puedes adjuntar hasta '.self::MAX_MEDIA_FILES.' archivos.',
+            'media_files.max' => 'Puedes adjuntar hasta '.$upload->maxFiles.' archivos.',
         ];
     }
 
