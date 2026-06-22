@@ -3,9 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Models\Ticket;
+use App\Support\Functional\UploadRules;
+use App\Support\Functional\UploadValidationPipeline;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreTicketRequest extends FormRequest
 {
@@ -103,6 +107,43 @@ class StoreTicketRequest extends FormRequest
             'media_files.*.file' => 'No se pudo procesar uno de los archivos adjuntos.',
             'media_files.max' => 'Puedes adjuntar hasta '.self::MAX_MEDIA_FILES.' archivos.',
         ];
+    }
+
+    /**
+     * Run the functional upload pipeline after Laravel's per-file rules.
+     *
+     * The pipeline adds total-size validation (not covered by Laravel's 'max'
+     * rule, which is per-file only) and provides a unified functional view
+     * of all upload constraints for the 'create' profile.
+     *
+     * Guard: skip max_files if Laravel's array 'max' already caught it
+     * (both would add to 'media_files'). All other pipeline errors are
+     * additive — they go to the array key while Laravel's per-item errors
+     * go to 'media_files.N', so there is no key collision.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            /** @var list<UploadedFile> $files */
+            $files = array_values(array_filter(
+                (array) $this->file('media_files', []),
+                fn (mixed $f): bool => $f instanceof UploadedFile,
+            ));
+
+            if ($files === []) {
+                return;
+            }
+
+            $rules = UploadRules::fromConfig('create');
+            $errors = (new UploadValidationPipeline)->validate($files, $rules);
+
+            foreach ($errors as $error) {
+                if ($error->code === 'max_files' && $validator->errors()->has('media_files')) {
+                    continue;
+                }
+                $validator->errors()->add('media_files', $error->message);
+            }
+        });
     }
 
     private function sanitizePlainText(?string $value): ?string

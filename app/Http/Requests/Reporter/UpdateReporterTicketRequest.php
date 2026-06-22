@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Reporter;
 
+use App\Support\Functional\UploadRules;
+use App\Support\Functional\UploadValidationPipeline;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
@@ -81,26 +83,34 @@ class UpdateReporterTicketRequest extends FormRequest
         ];
     }
 
+    /**
+     * Run the functional upload pipeline after Laravel's per-file rules.
+     *
+     * Replaces the former inline total-size loop with array_reduce (inside
+     * UploadValidationPipeline) plus the full suite of functional validators.
+     * Guard: skip max_files if Laravel's array 'max' already caught it.
+     */
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator) {
-            $files = $this->file('new_images');
-            if (! is_array($files) || count($files) === 0) {
+        $validator->after(function (Validator $validator): void {
+            /** @var list<UploadedFile> $files */
+            $files = array_values(array_filter(
+                (array) $this->file('new_images', []),
+                fn (mixed $f): bool => $f instanceof UploadedFile,
+            ));
+
+            if ($files === []) {
                 return;
             }
 
-            $totalSize = 0;
-            foreach ($files as $file) {
-                if ($file instanceof UploadedFile) {
-                    $totalSize += $file->getSize();
-                }
-            }
+            $rules = UploadRules::fromConfig('reporter_edit');
+            $errors = (new UploadValidationPipeline)->validate($files, $rules);
 
-            if ($totalSize > (self::MAX_EVIDENCE_TOTAL_KB * 1024)) {
-                $validator->errors()->add(
-                    'new_images',
-                    'El tamaño total de los archivos no puede superar los 25 MB.'
-                );
+            foreach ($errors as $error) {
+                if ($error->code === 'max_files' && $validator->errors()->has('new_images')) {
+                    continue;
+                }
+                $validator->errors()->add('new_images', $error->message);
             }
         });
     }
