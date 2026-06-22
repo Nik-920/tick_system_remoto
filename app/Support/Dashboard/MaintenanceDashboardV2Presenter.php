@@ -79,7 +79,7 @@ final class MaintenanceDashboardV2Presenter
 
         return [
             // ── Header / range control (real, GET-driven) ──
-            'dateRange' => (LocalTime::format($range->from, 'd/m/Y') ?? '—').' – '.(LocalTime::format($range->to, 'd/m/Y') ?? '—'),
+            'dateRange' => $range->from->format('d/m/Y').' – '.$range->to->format('d/m/Y'),
             'rangePreset' => $selectedPreset,
             'rangePresets' => $this->rangePresets(),
             'isCustomRange' => $isCustom,
