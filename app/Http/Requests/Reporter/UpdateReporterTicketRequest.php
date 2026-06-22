@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Reporter;
 
+use App\Http\Requests\Concerns\ValidatesTicketUploads;
 use App\Support\Functional\UploadRules;
-use App\Support\Functional\UploadValidationPipeline;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -30,6 +29,8 @@ use Illuminate\Validation\Validator;
  */
 class UpdateReporterTicketRequest extends FormRequest
 {
+    use ValidatesTicketUploads;
+
     /** @var list<string> */
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
@@ -42,9 +43,6 @@ class UpdateReporterTicketRequest extends FormRequest
         return $this->user() !== null;
     }
 
-    /**
-     * Normalize text inputs to plain text before validation (mirror StoreTicketRequest).
-     */
     protected function prepareForValidation(): void
     {
         $title = $this->input('title');
@@ -61,54 +59,19 @@ class UpdateReporterTicketRequest extends FormRequest
      */
     public function rules(): array
     {
-        $upload = UploadRules::fromConfig('reporter_edit');
-
         return [
             'title' => ['required', 'string', 'min:5', 'max:255'],
             'description' => ['required', 'string', 'min:20', 'max:'.self::MAX_COMMENT_LENGTH],
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['required', Rule::in(self::PRIORITIES)],
-            // Optional evidence uploads — additive only (no existing media is deleted).
-            'new_images' => ['nullable', 'array', 'max:'.$upload->maxFiles],
-            'new_images.*' => [ // NOSONAR
-                'file', // NOSONAR
-                'mimes:'.implode(',', $upload->normalizedExtensions()), // NOSONAR
-                'max:'.$upload->maxFileSizeKb, // NOSONAR
-            ],
+            ...$this->uploadFileRules('new_images', 'reporter_edit'),
         ];
     }
 
-    /**
-     * Run the functional upload pipeline after Laravel's per-file rules.
-     *
-     * Replaces the former inline total-size loop with array_reduce (inside
-     * UploadValidationPipeline) plus the full suite of functional validators.
-     * Guard: skip max_files if Laravel's array 'max' already caught it.
-     */
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
-            /** @var list<UploadedFile> $files */
-            $files = array_values(array_filter(
-                (array) $this->file('new_images', []),
-                fn (mixed $f): bool => $f instanceof UploadedFile,
-            ));
-
-            if ($files === []) {
-                return;
-            }
-
-            $rules = UploadRules::fromConfig('reporter_edit');
-            $errors = (new UploadValidationPipeline)->validate($files, $rules);
-
-            foreach ($errors as $error) {
-                if ($error->code === 'max_files' && $validator->errors()->has('new_images')) {
-                    continue;
-                }
-                $validator->errors()->add('new_images', $error->message);
-            }
-        });
+        $validator->after(fn (Validator $v) => $this->runUploadPipelineAfter('new_images', 'reporter_edit', $v));
     }
 
     /**
@@ -141,16 +104,5 @@ class UpdateReporterTicketRequest extends FormRequest
             'new_images.*.max' => 'Cada imagen no puede superar los '.$upload->maxFileSizeLabel.'.',
             'new_images.max' => 'Puedes subir un máximo de '.$upload->maxFiles.' imágenes por vez.',
         ];
-    }
-
-    private function sanitizePlainText(?string $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $clean = trim(strip_tags($value));
-
-        return $clean === '' ? null : $clean;
     }
 }

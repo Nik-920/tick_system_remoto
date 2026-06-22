@@ -2,19 +2,21 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesTicketUploads;
 use App\Models\Ticket;
 use App\Support\Functional\UploadRules;
-use App\Support\Functional\UploadValidationPipeline;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreTicketRequest extends FormRequest
 {
+    use ValidatesTicketUploads;
+
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
+    /** @var list<string> */
     private const MEDIA_MIME_TYPES = [
         'image/jpeg',
         'image/png',
@@ -27,17 +29,11 @@ class StoreTicketRequest extends FormRequest
         'video/mp4',
     ];
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user()?->can('create', Ticket::class) ?? false;
     }
 
-    /**
-     * Normalize text inputs to plain text before validation.
-     */
     protected function prepareForValidation(): void
     {
         $title = $this->input('title');
@@ -50,14 +46,10 @@ class StoreTicketRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        $upload = UploadRules::fromConfig('create');
-
         return [
             'title' => ['required', 'string', 'min:5', 'max:255'],
             'description' => ['required', 'string', 'min:20', 'max:2000'],
@@ -65,13 +57,7 @@ class StoreTicketRequest extends FormRequest
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
             'community_visible' => ['nullable', 'boolean'],
-            'media_files' => ['sometimes', 'array', 'max:'.$upload->maxFiles],
-            'media_files.*' => [
-                'file',
-                'max:'.$upload->maxFileSizeKb,
-                'mimes:'.implode(',', $upload->normalizedExtensions()),
-                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
-            ],
+            ...$this->uploadFileRules('media_files', 'create', 'sometimes', ['mimetypes:'.implode(',', self::MEDIA_MIME_TYPES)]),
         ];
     }
 
@@ -105,51 +91,8 @@ class StoreTicketRequest extends FormRequest
         ];
     }
 
-    /**
-     * Run the functional upload pipeline after Laravel's per-file rules.
-     *
-     * The pipeline adds total-size validation (not covered by Laravel's 'max'
-     * rule, which is per-file only) and provides a unified functional view
-     * of all upload constraints for the 'create' profile.
-     *
-     * Guard: skip max_files if Laravel's array 'max' already caught it
-     * (both would add to 'media_files'). All other pipeline errors are
-     * additive — they go to the array key while Laravel's per-item errors
-     * go to 'media_files.N', so there is no key collision.
-     */
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
-            /** @var list<UploadedFile> $files */
-            $files = array_values(array_filter(
-                (array) $this->file('media_files', []),
-                fn (mixed $f): bool => $f instanceof UploadedFile,
-            ));
-
-            if ($files === []) {
-                return;
-            }
-
-            $rules = UploadRules::fromConfig('create');
-            $errors = (new UploadValidationPipeline)->validate($files, $rules);
-
-            foreach ($errors as $error) {
-                if ($error->code === 'max_files' && $validator->errors()->has('media_files')) {
-                    continue;
-                }
-                $validator->errors()->add('media_files', $error->message);
-            }
-        });
-    }
-
-    private function sanitizePlainText(?string $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $clean = trim(strip_tags($value));
-
-        return $clean === '' ? null : $clean;
+        $validator->after(fn (Validator $v) => $this->runUploadPipelineAfter('media_files', 'create', $v));
     }
 }
