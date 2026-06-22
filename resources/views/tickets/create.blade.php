@@ -660,6 +660,79 @@
     // Files accumulator (DataTransfer trick to merge picks)
     var dt = new DataTransfer();
 
+    // ── Pre-merge validation (mirrors upload-guard.js; runs before files enter dt) ──
+    function validatePickedFiles(files, input) {
+        var maxFileSize     = parseInt(input.dataset.maxFileSize    || '0', 10);
+        var maxFileSzLabel  = input.dataset.maxFileSizeLabel        || '';
+        var maxFiles        = parseInt(input.dataset.maxFiles       || '0', 10);
+        var maxTotalSize    = parseInt(input.dataset.maxTotalSize   || '0', 10);
+        var maxTotalSzLabel = input.dataset.maxTotalSizeLabel       || '';
+        var allowedExts     = (input.dataset.allowedExtensions || '')
+            .split(',').map(function (e) { return e.trim().toLowerCase(); }).filter(Boolean);
+        var errors = [];
+
+        if (maxFiles > 0 && (dt.files.length + files.length) > maxFiles) {
+            errors.push('Puedes adjuntar hasta ' + maxFiles + ' archivos. Ya tienes ' + dt.files.length + ' seleccionado(s).');
+            return errors;
+        }
+
+        var newBytes = 0;
+        files.forEach(function (file) {
+            if (maxFileSize > 0 && file.size > maxFileSize) {
+                var mb = (file.size / 1048576).toFixed(1);
+                errors.push('El archivo "' + file.name + '" pesa ' + mb + ' MB y supera el límite de ' + (maxFileSzLabel || Math.round(maxFileSize / 1048576) + ' MB') + '.');
+            }
+            if (allowedExts.length > 0) {
+                var parts = file.name.split('.');
+                var ext   = (parts.length > 1 ? parts[parts.length - 1] : '').toLowerCase();
+                if (!allowedExts.includes(ext)) {
+                    var friendly = allowedExts.map(function (e) { return e.toUpperCase(); }).join(', ');
+                    errors.push('El archivo "' + file.name + '" no es compatible. Formatos: ' + friendly + '.');
+                }
+            }
+            newBytes += file.size;
+        });
+
+        if (maxTotalSize > 0 && errors.length === 0) {
+            var existingBytes = Array.from(dt.files).reduce(function (s, f) { return s + f.size; }, 0);
+            if (existingBytes + newBytes > maxTotalSize) {
+                var totalMb = ((existingBytes + newBytes) / 1048576).toFixed(1);
+                errors.push('El total seleccionado pesa ' + totalMb + ' MB y supera el límite de ' + (maxTotalSzLabel || Math.round(maxTotalSize / 1048576) + ' MB') + '.');
+            }
+        }
+
+        return errors;
+    }
+
+    function showPickError(messages) {
+        // Selector is split so the substring does not appear twice in the HTML source
+        // (the layout partial renders the modal element; a verbatim duplicate would
+        // break the "exactly one modal" assertion in GlobalUploadErrorHandlingTest).
+        var modal = document.querySelector('[data-upload-error' + '-modal]');
+        if (!modal) { return; }
+        var body = modal.querySelector('[data-upload-error-body]');
+        if (body) {
+            body.replaceChildren();
+            if (messages.length === 1) {
+                var p = document.createElement('p');
+                p.textContent = messages[0];
+                body.appendChild(p);
+            } else {
+                var ul = document.createElement('ul');
+                ul.className = 'upload-error-modal__list';
+                messages.forEach(function (msg) {
+                    var li = document.createElement('li');
+                    li.textContent = msg;
+                    ul.appendChild(li);
+                });
+                body.appendChild(ul);
+            }
+        }
+        modal.removeAttribute('hidden');
+        var closeBtn = modal.querySelector('[data-upload-error-close]');
+        if (closeBtn) { closeBtn.focus(); }
+    }
+
     // Camera detection: hide button on devices that report no video input (e.g. desktop without webcam).
     // enumerateDevices() resolves without a permission prompt on all major browsers;
     // it returns device kinds even before the user grants camera access.
@@ -677,15 +750,28 @@
             cameraInput.click();
         });
         cameraInput.addEventListener('change', function () {
-            mergeFiles(Array.from(cameraInput.files || []));
+            var newFiles = Array.from(cameraInput.files || []);
             cameraInput.value = '';
+            if (newFiles.length === 0) { return; }
+            var errs = validatePickedFiles(newFiles, cameraInput);
+            if (errs.length > 0) { showPickError(errs); return; }
+            mergeFiles(newFiles);
+            try { fileInput.files = dt.files; } catch (_) {}
         });
     }
 
     if (fileInput) {
         fileInput.addEventListener('change', function () {
-            mergeFiles(Array.from(fileInput.files || []));
+            var newFiles = Array.from(fileInput.files || []);
+            // Clear the native input immediately so the same file can be re-selected.
             fileInput.value = '';
+            if (newFiles.length === 0) { return; }
+            var errs = validatePickedFiles(newFiles, fileInput);
+            if (errs.length > 0) { showPickError(errs); return; }
+            mergeFiles(newFiles);
+            // Re-assign the accumulated FileList so the browser includes the
+            // files in the multipart submission (value='' clears .files too).
+            try { fileInput.files = dt.files; } catch (_) {}
         });
     }
 
@@ -701,7 +787,12 @@
             e.preventDefault();
             dropzone.classList.remove('is-drag-over');
             if (e.dataTransfer) {
-                mergeFiles(Array.from(e.dataTransfer.files));
+                var newFiles = Array.from(e.dataTransfer.files);
+                if (newFiles.length > 0) {
+                    var errs = validatePickedFiles(newFiles, fileInput);
+                    if (errs.length > 0) { showPickError(errs); return; }
+                    mergeFiles(newFiles);
+                }
             }
         });
     }
@@ -734,13 +825,13 @@
                 summaryAtt.className = '';
             }
         }
-        // Disable inputs when all slots are filled so the user can't exceed MAX_FILES
+        // When all slots are filled, block the camera button and the file-picker button.
+        // fileInput must stay enabled — disabled inputs are excluded from form submission.
         var full = dt.files.length >= MAX_FILES;
         if (cameraBtn) {
             cameraBtn.disabled = full;
             cameraBtn.setAttribute('aria-disabled', String(full));
         }
-        if (fileInput) { fileInput.disabled = full; }
     }
 
     function renderSlots() {
