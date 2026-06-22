@@ -448,7 +448,8 @@ class CommunityRankingTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('comm-sort-bar', (string) $html);
+        // Sort controls now live inside the advanced filter panel (modal), not as a visible bar
+        $this->assertStringContainsString('name="sort"', (string) $html);
         $this->assertStringContainsString('Recientes', (string) $html);
         $this->assertStringContainsString('Activos', (string) $html);
         $this->assertStringContainsString('Comentados', (string) $html);
@@ -464,10 +465,9 @@ class CommunityRankingTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('comm-sort-chip--active', (string) $html);
-        // The active chip text is "Recientes"
-        $activePattern = '/comm-sort-chip--active[^>]*>[^<]*Recientes/';
-        $this->assertMatchesRegularExpression($activePattern, (string) $html, '"Recientes" chip must have active class by default');
+        // Sort radios in the filter panel: default (recent) radio is checked and label has comm-fopt--on
+        $activePattern = '/comm-fopt--on[^>]*>\s*<input[^>]*name="sort"[^>]*value="recent"/';
+        $this->assertMatchesRegularExpression($activePattern, (string) $html, '"Recientes" sort option must be active by default');
     }
 
     public function test_active_sort_chip_is_marked_when_sort_active(): void
@@ -479,8 +479,9 @@ class CommunityRankingTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $activePattern = '/comm-sort-chip--active[^>]*>[^<]*Activos/';
-        $this->assertMatchesRegularExpression($activePattern, (string) $html, '"Activos" chip must have active class when sort=active');
+        // Sort radio for "active" must be checked and its label must have comm-fopt--on
+        $activePattern = '/comm-fopt--on[^>]*>\s*<input[^>]*name="sort"[^>]*value="active"/';
+        $this->assertMatchesRegularExpression($activePattern, (string) $html, '"Activos" sort option must be active when sort=active');
     }
 
     public function test_sort_links_are_present_as_get_links(): void
@@ -492,9 +493,10 @@ class CommunityRankingTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('sort=active', (string) $html);
-        $this->assertStringContainsString('sort=discussed', (string) $html);
-        $this->assertStringContainsString('sort=supported', (string) $html);
+        // Sort options are now radio inputs inside the filter panel form
+        $this->assertStringContainsString('value="active"', (string) $html);
+        $this->assertStringContainsString('value="discussed"', (string) $html);
+        $this->assertStringContainsString('value="supported"', (string) $html);
     }
 
     public function test_feed_does_not_show_raw_score(): void

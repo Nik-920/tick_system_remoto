@@ -15,7 +15,6 @@ use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\ViewModels\Community\CommunityFeedViewModel;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -104,10 +103,7 @@ final class CommunityFeedQuery
             posts: $posts,
             filters: $normalized,
             paginator: $paginator,
-            shortcuts: $this->shortcuts(),
-            activeLocations: $this->activeLocations(),
             quickSummary: $this->quickSummary(),
-            hotCategories: $this->hotCategories(),
             buildings: $this->buildings(),
             categories: $this->categoriesForFilter(),
             currentSort: $currentSort,
@@ -564,45 +560,6 @@ final class CommunityFeedQuery
     }
 
     /**
-     * @return list<array{label: string, icon: string, url: string}>
-     */
-    private function shortcuts(): array
-    {
-        $base = route('reporter.community');
-
-        return [
-            ['label' => 'Objetos encontrados',   'icon' => 'package-search',    'url' => $base.'?q=objeto+encontrado'],
-            ['label' => 'Laboratorios con fallas', 'icon' => 'flask-conical',     'url' => $base.'?q=laboratorio'],
-            ['label' => 'Aulas reportadas',       'icon' => 'school',            'url' => $base.'?q=aula'],
-            ['label' => 'Red y conectividad',     'icon' => 'cable',             'url' => $base.'?q=red'],
-            ['label' => 'Resueltos hoy',          'icon' => 'circle-check-big',  'url' => $base.'?state=resolved&period=24h'],
-        ];
-    }
-
-    /**
-     * @return list<array{name: string, building: string, room_code: string, url: string}>
-     */
-    private function activeLocations(): array
-    {
-        return Location::query()
-            ->select(['locations.id', 'locations.name', 'locations.building', 'locations.room_code'])
-            ->join('tickets', 'locations.id', '=', 'tickets.location_id')
-            ->whereRaw('"tickets"."community_visible" IS TRUE')
-            ->whereIn('tickets.state', self::PUBLIC_STATES)
-            ->groupBy('locations.id', 'locations.name', 'locations.building', 'locations.room_code')
-            ->orderByDesc(DB::raw('COUNT(tickets.id)'))
-            ->limit(5)
-            ->get()
-            ->map(fn (Location $loc) => [
-                'name' => (string) $loc->name,
-                'building' => (string) $loc->building,
-                'room_code' => (string) $loc->room_code,
-                'url' => route('reporter.community').'?building='.rawurlencode((string) $loc->building),
-            ])
-            ->all();
-    }
-
-    /**
      * @return array{active: int, resolved: int, locations: int}
      */
     private function quickSummary(): array
@@ -625,28 +582,6 @@ final class CommunityFeedQuery
             'resolved' => (int) ($counts[Ticket::STATE_RESOLVED] ?? 0),
             'locations' => $locationCount,
         ];
-    }
-
-    /**
-     * @return list<array{name: string, icon: string, url: string}>
-     */
-    private function hotCategories(): array
-    {
-        return Category::query()
-            ->select(['categories.id', 'categories.name', 'categories.icon'])
-            ->join('tickets', 'categories.id', '=', 'tickets.category_id')
-            ->whereRaw('"tickets"."community_visible" IS TRUE')
-            ->whereIn('tickets.state', self::PUBLIC_STATES)
-            ->groupBy('categories.id', 'categories.name', 'categories.icon')
-            ->orderByDesc(DB::raw('COUNT(tickets.id)'))
-            ->limit(5)
-            ->get()
-            ->map(fn (Category $cat) => [
-                'name' => (string) $cat->name,
-                'icon' => (string) $cat->icon,
-                'url' => route('reporter.community').'?category='.rawurlencode((string) $cat->id),
-            ])
-            ->all();
     }
 
     /**
