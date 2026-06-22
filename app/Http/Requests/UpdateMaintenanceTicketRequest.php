@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesTicketUploads;
+use App\Support\Functional\UploadRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -24,19 +25,12 @@ use Illuminate\Validation\Validator;
  */
 class UpdateMaintenanceTicketRequest extends FormRequest
 {
+    use ValidatesTicketUploads;
+
     /** @var list<string> */
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-    public const MAX_EVIDENCE_FILES = 5;
-
-    public const MAX_EVIDENCE_FILE_KB = 5120;
-
-    public const MAX_EVIDENCE_TOTAL_KB = 25600;
-
     public const MAX_COMMENT_LENGTH = 2000;
-
-    /** @var list<string> */
-    private const MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'txt', 'doc', 'docx'];
 
     /** @var list<string> */
     private const MEDIA_MIME_TYPES = [
@@ -64,38 +58,13 @@ class UpdateMaintenanceTicketRequest extends FormRequest
             'category_id' => ['nullable', 'uuid', 'exists:categories,id'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
             'comment' => ['nullable', 'string', 'max:'.self::MAX_COMMENT_LENGTH],
-            'evidence' => ['nullable', 'array', 'max:'.self::MAX_EVIDENCE_FILES],
-            'evidence.*' => [ // NOSONAR
-                'file', // NOSONAR
-                'max:'.self::MAX_EVIDENCE_FILE_KB, // NOSONAR
-                'mimes:'.implode(',', self::MEDIA_EXTENSIONS), // NOSONAR
-                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES), // NOSONAR
-            ],
+            ...$this->uploadFileRules('evidence', 'maintenance', 'nullable', ['mimetypes:'.implode(',', self::MEDIA_MIME_TYPES)]),
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator) {
-            $files = $this->file('evidence');
-            if (! is_array($files) || count($files) === 0) {
-                return;
-            }
-
-            $totalSize = 0;
-            foreach ($files as $file) {
-                if ($file instanceof UploadedFile) {
-                    $totalSize += $file->getSize();
-                }
-            }
-
-            if ($totalSize > (self::MAX_EVIDENCE_TOTAL_KB * 1024)) {
-                $validator->errors()->add(
-                    'evidence',
-                    'El tamaño total de los archivos no puede superar los 25 MB.'
-                );
-            }
-        });
+        $validator->after(fn (Validator $v) => $this->runUploadPipelineAfter('evidence', 'maintenance', $v));
     }
 
     /**
@@ -117,11 +86,13 @@ class UpdateMaintenanceTicketRequest extends FormRequest
      */
     public function messages(): array
     {
+        $upload = UploadRules::fromConfig('maintenance');
+
         return [
-            'evidence.*.uploaded' => 'No se pudo subir un archivo de evidencia. Verifica que no supere 5 MB e inténtalo nuevamente.',
+            'evidence.*.uploaded' => 'No se pudo subir un archivo de evidencia. Verifica que no supere '.$upload->maxFileSizeLabel.' e inténtalo nuevamente.',
             'evidence.*.file' => 'No se pudo procesar uno de los archivos de evidencia.',
-            'evidence.max' => 'Puedes subir un máximo de '.self::MAX_EVIDENCE_FILES.' archivos por vez.',
-            'evidence.*.max' => 'Cada archivo no puede superar los 5 MB.',
+            'evidence.max' => 'Puedes subir un máximo de '.$upload->maxFiles.' archivos por vez.',
+            'evidence.*.max' => 'Cada archivo no puede superar los '.$upload->maxFileSizeLabel.'.',
             'evidence.*.mimes' => 'Formato no permitido. Usa JPG, PNG, WebP, PDF, TXT o Word.',
         ];
     }

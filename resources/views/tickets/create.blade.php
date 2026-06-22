@@ -370,12 +370,12 @@
                                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.mp4"
                                        class="rep-edit__file-input"
                                        data-upload-guard
-                                       data-max-file-size="10485760"
-                                       data-max-file-size-label="10 MB"
-                                       data-max-files="5"
-                                       data-max-total-size="52428800"
-                                       data-max-total-size-label="50 MB"
-                                       data-allowed-extensions="jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,mp4"
+                                       data-max-file-size="{{ config('tickets.media.create.max_file_size_kb') * 1024 }}"
+                                       data-max-file-size-label="{{ config('tickets.media.create.max_file_size_mb') }} MB"
+                                       data-max-files="{{ config('tickets.media.create.max_files') }}"
+                                       data-max-total-size="{{ config('tickets.media.create.max_total_size_mb') * 1024 * 1024 }}"
+                                       data-max-total-size-label="{{ config('tickets.media.create.max_total_size_mb') }} MB"
+                                       data-allowed-extensions="{{ implode(',', config('tickets.media.create.allowed_extensions')) }}"
                                        aria-describedby="create-media-err"
                                        aria-label="Adjuntar archivos de evidencia">
                                 <input id="media_camera"
@@ -385,11 +385,11 @@
                                        capture="environment"
                                        class="rep-edit__file-input"
                                        data-upload-guard
-                                       data-max-file-size="10485760"
-                                       data-max-file-size-label="10 MB"
-                                       data-max-files="5"
-                                       data-max-total-size="52428800"
-                                       data-max-total-size-label="50 MB"
+                                       data-max-file-size="{{ config('tickets.media.create.max_file_size_kb') * 1024 }}"
+                                       data-max-file-size-label="{{ config('tickets.media.create.max_file_size_mb') }} MB"
+                                       data-max-files="{{ config('tickets.media.create.max_files') }}"
+                                       data-max-total-size="{{ config('tickets.media.create.max_total_size_mb') * 1024 * 1024 }}"
+                                       data-max-total-size-label="{{ config('tickets.media.create.max_total_size_mb') }} MB"
                                        data-allowed-extensions="jpg,jpeg,png,webp"
                                        aria-label="Tomar foto con la cámara">
                             </label>
@@ -655,7 +655,7 @@
     var slotsEl     = document.getElementById('create-media-preview');
     var dropzone    = document.getElementById('create-dropzone');
     var summaryAtt  = document.getElementById('summary-attachments');
-    var MAX_FILES   = 5;
+    var MAX_FILES   = {{ config('tickets.media.create.max_files') }};
 
     // Files accumulator (DataTransfer trick to merge picks)
     var dt = new DataTransfer();

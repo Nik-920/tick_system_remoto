@@ -46,12 +46,12 @@
                                accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx"
                                class="sr-only"
                                data-upload-guard
-                               data-max-file-size="5242880"
-                               data-max-file-size-label="5 MB"
-                               data-max-files="5"
-                               data-max-total-size="26214400"
-                               data-max-total-size-label="25 MB"
-                               data-allowed-extensions="jpg,jpeg,png,webp,pdf,txt,doc,docx">
+                               data-max-file-size="{{ config('tickets.media.maintenance.max_file_size_kb') * 1024 }}"
+                               data-max-file-size-label="{{ config('tickets.media.maintenance.max_file_size_mb') }} MB"
+                               data-max-files="{{ config('tickets.media.maintenance.max_files') }}"
+                               data-max-total-size="{{ config('tickets.media.maintenance.max_total_size_mb') * 1024 * 1024 }}"
+                               data-max-total-size-label="{{ config('tickets.media.maintenance.max_total_size_mb') }} MB"
+                               data-allowed-extensions="{{ implode(',', config('tickets.media.maintenance.allowed_extensions')) }}">
 
                         <div class="ticket-show__file-list hidden" data-evidence-list aria-live="polite"></div>
 

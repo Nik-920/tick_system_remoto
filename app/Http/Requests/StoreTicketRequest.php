@@ -2,21 +2,21 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesTicketUploads;
 use App\Models\Ticket;
+use App\Support\Functional\UploadRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreTicketRequest extends FormRequest
 {
+    use ValidatesTicketUploads;
+
     private const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
-    private const MAX_MEDIA_FILES = 5;
-
-    private const MAX_MEDIA_SIZE_KB = 10240;
-
-    private const MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'mp4'];
-
+    /** @var list<string> */
     private const MEDIA_MIME_TYPES = [
         'image/jpeg',
         'image/png',
@@ -29,17 +29,11 @@ class StoreTicketRequest extends FormRequest
         'video/mp4',
     ];
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user()?->can('create', Ticket::class) ?? false;
     }
 
-    /**
-     * Normalize text inputs to plain text before validation.
-     */
     protected function prepareForValidation(): void
     {
         $title = $this->input('title');
@@ -52,8 +46,6 @@ class StoreTicketRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -65,13 +57,7 @@ class StoreTicketRequest extends FormRequest
             'category_id' => ['required', 'uuid', 'exists:categories,id'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
             'community_visible' => ['nullable', 'boolean'],
-            'media_files' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_FILES],
-            'media_files.*' => [
-                'file',
-                'max:'.self::MAX_MEDIA_SIZE_KB,
-                'mimes:'.implode(',', self::MEDIA_EXTENSIONS),
-                'mimetypes:'.implode(',', self::MEDIA_MIME_TYPES),
-            ],
+            ...$this->uploadFileRules('media_files', 'create', 'sometimes', ['mimetypes:'.implode(',', self::MEDIA_MIME_TYPES)]),
         ];
     }
 
@@ -93,26 +79,20 @@ class StoreTicketRequest extends FormRequest
      */
     public function messages(): array
     {
-        $maxMb = self::MAX_MEDIA_SIZE_KB / 1024;
+        $upload = UploadRules::fromConfig('create');
 
         return [
-            'media_files.*.uploaded' => 'No se pudo subir una evidencia. Verifica que el archivo no supere '.$maxMb.' MB e inténtalo nuevamente.',
-            'media_files.*.max' => 'Cada evidencia no debe superar '.$maxMb.' MB.',
+            'media_files.*.uploaded' => 'No se pudo subir una evidencia. Verifica que el archivo no supere '.$upload->maxFileSizeLabel.' e inténtalo nuevamente.',
+            'media_files.*.max' => 'Cada evidencia no debe superar '.$upload->maxFileSizeLabel.'.',
             'media_files.*.mimes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
             'media_files.*.mimetypes' => 'Solo se permiten archivos JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX o MP4.',
             'media_files.*.file' => 'No se pudo procesar uno de los archivos adjuntos.',
-            'media_files.max' => 'Puedes adjuntar hasta '.self::MAX_MEDIA_FILES.' archivos.',
+            'media_files.max' => 'Puedes adjuntar hasta '.$upload->maxFiles.' archivos.',
         ];
     }
 
-    private function sanitizePlainText(?string $value): ?string
+    public function withValidator(Validator $validator): void
     {
-        if ($value === null) {
-            return null;
-        }
-
-        $clean = trim(strip_tags($value));
-
-        return $clean === '' ? null : $clean;
+        $validator->after(fn (Validator $v) => $this->runUploadPipelineAfter('media_files', 'create', $v));
     }
 }
