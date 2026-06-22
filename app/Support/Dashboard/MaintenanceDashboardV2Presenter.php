@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\Queries\Dashboard\MaintenanceDashboardQuery;
+use App\Support\LocalTime;
 use App\ViewModels\Dashboard\MaintenanceDashboardViewModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Route;
@@ -366,7 +367,7 @@ final class MaintenanceDashboardV2Presenter
                 'status_label' => $this->stateLabel((string) $t->state),
                 'tone' => $this->stateTone((string) $t->state),
                 'icon' => $this->stateIcon((string) $t->state),
-                'at' => $t->updated_at?->format('d/m/Y h:i A') ?? '—',
+                'at' => LocalTime::format($t->updated_at, 'd/m/Y h:i A') ?? '—',
                 'text' => $this->stateNote((string) $t->state),
             ])
             ->all();

@@ -11,6 +11,7 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\TicketMedia;
 use App\Models\User;
+use App\Support\LocalTime;
 use App\ViewModels\Tickets\ReporterTicketTrackingViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -111,8 +112,8 @@ class ReporterTicketTrackingPageTest extends TestCase
         $response->assertSeeText('En progreso');
         // An open ticket has a live "current" step (awaiting review).
         $response->assertSee('aria-current="step"', false);
-        // The "Reportado" milestone shows the real creation date, not invented.
-        $response->assertSeeText($ticket->created_at->format('d/m/Y · H:i'));
+        // The "Reportado" milestone shows the real creation date in Lima timezone.
+        $response->assertSeeText(LocalTime::format($ticket->created_at, 'd/m/Y · H:i') ?? '—');
     }
 
     public function test_stepper_completes_for_resolved_ticket(): void

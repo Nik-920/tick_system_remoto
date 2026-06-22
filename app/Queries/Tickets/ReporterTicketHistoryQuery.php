@@ -10,6 +10,7 @@ use App\Models\StateHistory;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\LocalTime;
 use App\ViewModels\Tickets\ReporterTicketHistoryViewModel;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -418,8 +419,8 @@ final class ReporterTicketHistoryQuery
             },
             'priority' => $this->priorityTone((string) $ticket->priority),
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
-            'created' => $ticket->created_at?->format('d/m/Y') ?? '—',
-            'closed' => $closedAt?->format('d/m/Y') ?? '—',
+            'created' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '—',
+            'closed' => LocalTime::format($closedAt, 'd/m/Y') ?? '—',
         ];
     }
 
