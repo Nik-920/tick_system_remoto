@@ -19,15 +19,11 @@
 
     @include('reporter.community.partials.hero')
 
-    @include('reporter.community.partials.tabs')
-
     @include('reporter.community.partials.search-filters')
 
     @include('reporter.community.partials.filter-panel')
 
     <div class="comm-layout">
-
-        @include('reporter.community.partials.sidebar')
 
         <main class="comm-feed" aria-label="Feed de reportes de la comunidad">
 

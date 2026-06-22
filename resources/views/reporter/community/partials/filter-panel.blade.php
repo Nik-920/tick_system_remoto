@@ -9,11 +9,8 @@
 ──────────────────────────────────────────────────────────────────────────── --}}
 
 @php
-/* URL para "Limpiar todo" — preserva la búsqueda (q) y el orden (sort) */
-$panelClearParams = array_filter([
-    'q'    => $feed->filters['q'],
-    'sort' => $feed->currentSort !== 'recent' ? $feed->currentSort : '',
-]);
+/* URL para "Limpiar todo" — preserva solo la búsqueda (q); sort se resetea al default */
+$panelClearParams = array_filter(['q' => $feed->filters['q']]);
 $panelClearUrl = route('reporter.community')
     . (! empty($panelClearParams) ? '?' . http_build_query($panelClearParams) : '');
 @endphp
@@ -55,13 +52,31 @@ $panelClearUrl = route('reporter.community')
             class="comm-filter-panel__form"
             id="comm-filter-form"
         >
-            {{-- Preservar búsqueda y orden al aplicar --}}
+            {{-- Preservar búsqueda al aplicar --}}
             @if ($feed->filters['q'] !== '')
                 <input type="hidden" name="q" value="{{ $feed->filters['q'] }}">
             @endif
-            @if ($feed->currentSort !== 'recent')
-                <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
-            @endif
+
+            {{-- ── Sección: Ordenar por ── --}}
+            <fieldset class="comm-fpanel-section">
+                <legend class="comm-fpanel-section__label">
+                    <x-lucide-arrow-up-down width="13" height="13" stroke-width="2" aria-hidden="true" />
+                    Ordenar por
+                </legend>
+                <div class="comm-fpanel-opts">
+                    @foreach ($feed->sortOptions as $opt)
+                        <label class="comm-fopt {{ $opt['active'] ? 'comm-fopt--on' : '' }}">
+                            <input
+                                type="radio"
+                                name="sort"
+                                value="{{ $opt['key'] }}"
+                                {{ $opt['active'] ? 'checked' : '' }}
+                            >
+                            {{ $opt['label'] }}
+                        </label>
+                    @endforeach
+                </div>
+            </fieldset>
 
             {{-- ── Sección: Estado ── --}}
             <fieldset class="comm-fpanel-section">
@@ -98,6 +113,27 @@ $panelClearUrl = route('reporter.community')
                                 name="period"
                                 value="{{ $val }}"
                                 {{ $feed->filters['period'] === $val ? 'checked' : '' }}
+                            >
+                            {{ $label }}
+                        </label>
+                    @endforeach
+                </div>
+            </fieldset>
+
+            {{-- ── Sección: Prioridad ── --}}
+            <fieldset class="comm-fpanel-section">
+                <legend class="comm-fpanel-section__label">
+                    <x-lucide-alert-triangle width="13" height="13" stroke-width="2" aria-hidden="true" />
+                    Prioridad
+                </legend>
+                <div class="comm-fpanel-opts">
+                    @foreach (['' => 'Cualquiera', 'critical' => 'Crítica', 'high' => 'Alta', 'medium' => 'Media', 'low' => 'Baja'] as $val => $label)
+                        <label class="comm-fopt {{ ($feed->filters['priority'] ?? '') === $val ? 'comm-fopt--on' : '' }}">
+                            <input
+                                type="radio"
+                                name="priority"
+                                value="{{ $val }}"
+                                {{ ($feed->filters['priority'] ?? '') === $val ? 'checked' : '' }}
                             >
                             {{ $label }}
                         </label>
@@ -161,7 +197,7 @@ $panelClearUrl = route('reporter.community')
             @endif
 
             {{-- ── Sección: Contenido / Evidencia ── --}}
-            <fieldset class="comm-fpanel-section comm-fpanel-section--last">
+            <fieldset class="comm-fpanel-section">
                 <legend class="comm-fpanel-section__label">
                     <x-lucide-image width="13" height="13" stroke-width="2" aria-hidden="true" />
                     Contenido
@@ -177,6 +213,26 @@ $panelClearUrl = route('reporter.community')
                         <span class="comm-fopt-toggle__thumb"></span>
                     </span>
                     Solo con evidencia (fotos o archivos adjuntos)
+                </label>
+            </fieldset>
+
+            {{-- ── Sección: Guardados ── --}}
+            <fieldset class="comm-fpanel-section comm-fpanel-section--last">
+                <legend class="comm-fpanel-section__label">
+                    <x-lucide-bookmark width="13" height="13" stroke-width="2" aria-hidden="true" />
+                    Guardados
+                </legend>
+                <label class="comm-fopt-toggle">
+                    <input
+                        type="checkbox"
+                        name="saved"
+                        value="1"
+                        {{ ($feed->filters['saved'] ?? '') === '1' ? 'checked' : '' }}
+                    >
+                    <span class="comm-fopt-toggle__track" aria-hidden="true">
+                        <span class="comm-fopt-toggle__thumb"></span>
+                    </span>
+                    Solo mis tickets guardados
                 </label>
             </fieldset>
 

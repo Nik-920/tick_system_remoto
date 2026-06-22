@@ -5,7 +5,7 @@
 ──────────────────────────────────────────────────────────────────────────── --}}
 
 @php
-$panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'period'])
+$panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'period', 'priority', 'saved'])
     ->filter(fn ($k) => ($feed->filters[$k] ?? '') !== '')
     ->count();
 @endphp
@@ -35,6 +35,12 @@ $panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'peri
             @endif
             @if ($feed->currentSort !== 'recent')
                 <input type="hidden" name="sort" value="{{ $feed->currentSort }}">
+            @endif
+            @if (($feed->filters['priority'] ?? '') !== '')
+                <input type="hidden" name="priority" value="{{ $feed->filters['priority'] }}">
+            @endif
+            @if (($feed->filters['saved'] ?? '') === '1')
+                <input type="hidden" name="saved" value="1">
             @endif
 
             <input
@@ -67,18 +73,6 @@ $panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'peri
             @endif
         </button>
     </div>
-
-    {{-- Sort bar --}}
-    <nav class="comm-sort-bar" aria-label="Ordenar feed">
-        <span class="comm-sort-bar__label">Ordenar:</span>
-        @foreach ($feed->sortOptions as $opt)
-            <a
-                href="{{ $opt['url'] }}"
-                class="comm-sort-chip {{ $opt['active'] ? 'comm-sort-chip--active' : '' }}"
-                aria-current="{{ $opt['active'] ? 'true' : 'false' }}"
-            >{{ $opt['label'] }}</a>
-        @endforeach
-    </nav>
 
     {{-- Active filters summary — shown when any filter is active --}}
     @if ($feed->hasActiveFilters())
@@ -115,6 +109,10 @@ $panelFilterCount = collect(['category', 'building', 'state', 'has_media', 'peri
 
             @if ($feed->filters['has_media'] === '1')
                 <span class="comm-active-chip">Con evidencia</span>
+            @endif
+
+            @if (($feed->filters['saved'] ?? '') === '1')
+                <span class="comm-active-chip">Guardados</span>
             @endif
 
             @if ($feed->filters['building'] !== '')
