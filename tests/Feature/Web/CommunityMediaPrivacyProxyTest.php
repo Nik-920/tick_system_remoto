@@ -280,7 +280,7 @@ class CommunityMediaPrivacyProxyTest extends TestCase
         $this->actingAs($reporter)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertSee('comm-post__thumb-placeholder', false);
+            ->assertSee('comm-post-v2__media-placeholder', false);
     }
 
     public function test_has_media_filter_still_works_with_proxied_thumbnails(): void
