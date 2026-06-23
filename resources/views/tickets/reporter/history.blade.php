@@ -40,14 +40,6 @@
                 Consulta el historial de todos los tickets que reportaste y que ya fueron cerrados.
             </p>
         </div>
-        <div class="rep-header__actions">
-            {{-- Visual placeholder: real export lands in a later phase. --}}
-            <button type="button" class="rep-btn-outline" title="Exportación disponible próximamente">
-                <x-lucide-download width="16" height="16" stroke-width="2.5" />
-                Exportar
-                <span class="rep-soon">Próximamente</span>
-            </button>
-        </div>
     </header>
 
     {{-- ── 2. SEARCH + FILTERS + QUICK CHIPS ─────────────────────── --}}

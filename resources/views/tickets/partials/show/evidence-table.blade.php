@@ -33,6 +33,7 @@
                 <div class="ticket-show__evidence-uploader">
                     <x-avatar
                         :initials="$vm->initials($media->uploadedBy?->name, 2, $fallbackInitial)"
+                        :src="$media->uploadedBy?->avatarDisplayUrl()"
                         :tone="$avatarTone"
                         class="w-5 h-5 text-[10px]"
                         :title="$media->uploadedBy?->name ?? ''"
