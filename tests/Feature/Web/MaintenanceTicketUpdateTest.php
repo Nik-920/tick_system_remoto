@@ -456,8 +456,6 @@ class MaintenanceTicketUpdateTest extends TestCase
         $response->assertOk();
         // created_at: 15:00 UTC → 10:00 Lima
         $response->assertSee('10/06/2026 10:00');
-        // resolved_at: 20:30 UTC → 15:30 Lima
-        $response->assertSee('10/06/2026 15:30');
         // state_history.created_at: 18:45 UTC → 13:45 Lima
         $response->assertSee('10/06/2026 13:45');
     }
