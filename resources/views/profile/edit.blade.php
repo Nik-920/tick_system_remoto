@@ -76,8 +76,13 @@
                                 </div>
                                 <p class="profile-upload-text">Arrastra o haz clic para subir</p>
                                 <p class="profile-upload-hint">PNG, JPG, WEBP — máx. 2 MB</p>
-                                <input id="avatar_file" name="avatar_file" type="file" accept="image/*"
-                                       required class="profile-upload-input" onchange="previewAvatar(this)">
+                                <input id="avatar_file" name="avatar_file" type="file"
+                                       accept="image/jpeg,image/png,image/webp"
+                                       required class="profile-upload-input" onchange="previewAvatar(this)"
+                                       data-upload-guard
+                                       data-max-file-size="2097152"
+                                       data-max-file-size-label="2 MB"
+                                       data-allowed-extensions="jpg,jpeg,png,webp">
                             </label>
                         </div>
                     </div>

@@ -90,4 +90,13 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class, 'user_id')
             ->latest('created_at');
     }
+
+    public function avatarDisplayUrl(): ?string
+    {
+        if (! is_string($this->avatar_url) || trim($this->avatar_url) === '') {
+            return null;
+        }
+
+        return $this->avatar_url.'?v='.($this->updated_at?->timestamp ?? 0);
+    }
 }
