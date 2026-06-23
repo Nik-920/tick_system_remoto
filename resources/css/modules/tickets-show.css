@@ -584,6 +584,191 @@
     border-color: rgba(59, 130, 246, 0.3);
 }
 
+/* ── History timeline ──────────────────────────────────────── */
+.ticket-show__history-timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ticket-show__history-event {
+    display: flex;
+    gap: 0.875rem;
+}
+
+.ticket-show__history-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ticket-show__history-dot {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 2px solid;
+    position: relative;
+    z-index: 1;
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+    user-select: none;
+}
+
+.ticket-show__history-dot--open      { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.ticket-show__history-dot--progress  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.ticket-show__history-dot--resolved  { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.ticket-show__history-dot--rejected  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.ticket-show__history-dot--cancelled { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+
+.ticket-show__history-line {
+    flex: 1;
+    width: 2px;
+    background: var(--border-light);
+    margin-top: 0.25rem;
+    min-height: 1.25rem;
+}
+
+.ticket-show__history-content {
+    flex: 1;
+    padding-bottom: 1.5rem;
+    min-width: 0;
+}
+
+.ticket-show__history-event--last .ticket-show__history-content {
+    padding-bottom: 0;
+}
+
+/* History event header */
+.ticket-show__history-event-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-show__history-author-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ticket-show__history-author {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ticket-show__history-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* History action badges */
+.ticket-show__history-action-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.ticket-show__history-action-badge--create    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.ticket-show__history-action-badge--technical { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+.ticket-show__history-action-badge--start     { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.ticket-show__history-action-badge--resolve   { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.ticket-show__history-action-badge--reject    { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.ticket-show__history-action-badge--cancel    { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.ticket-show__history-action-badge--reopen    { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.ticket-show__history-action-badge--neutral   { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+
+/* History state transition */
+.ticket-show__history-transition {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-show__history-arrow {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+/* History comment */
+.ticket-show__history-comment {
+    background: var(--bg-soft);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.ticket-show__history-empty-comment {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    font-style: italic;
+    margin: 0;
+}
+
+/* History responsive */
+@media (max-width: 480px) {
+    .ticket-show__history-event { gap: 0.625rem; }
+    .ticket-show__history-dot   { width: 32px; height: 32px; font-size: 0.625rem; }
+    .ticket-show__history-event-head { flex-direction: column; gap: 0.25rem; }
+    .ticket-show__history-time  { font-size: 0.68rem; }
+}
+
+/* History dark mode */
+[data-theme="dark"] .ticket-show__history-line {
+    background: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="dark"] .ticket-show__history-dot--open      { background: rgba(29, 78, 216, 0.18);   color: #93c5fd; border-color: rgba(147, 197, 253, 0.35); }
+[data-theme="dark"] .ticket-show__history-dot--progress  { background: rgba(180, 83, 9, 0.18);    color: #fcd34d; border-color: rgba(252, 211, 77, 0.32);  }
+[data-theme="dark"] .ticket-show__history-dot--resolved  { background: rgba(4, 120, 87, 0.18);    color: #6ee7b7; border-color: rgba(110, 231, 183, 0.32); }
+[data-theme="dark"] .ticket-show__history-dot--rejected  { background: rgba(185, 28, 28, 0.18);   color: #fca5a5; border-color: rgba(252, 165, 165, 0.32); }
+[data-theme="dark"] .ticket-show__history-dot--cancelled { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(203, 213, 225, 0.22); }
+
+[data-theme="dark"] .ticket-show__history-comment {
+    background: rgba(248, 250, 252, 0.05);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="dark"] .ticket-show__history-action-badge--create    { background: rgba(29, 78, 216, 0.18);   color: #93c5fd; border-color: rgba(147, 197, 253, 0.28); }
+[data-theme="dark"] .ticket-show__history-action-badge--technical { background: rgba(109, 40, 217, 0.22);  color: #c4b5fd; border-color: rgba(196, 181, 253, 0.28); }
+[data-theme="dark"] .ticket-show__history-action-badge--start     { background: rgba(180, 83, 9, 0.18);    color: #fcd34d; border-color: rgba(252, 211, 77, 0.28); }
+[data-theme="dark"] .ticket-show__history-action-badge--resolve   { background: rgba(4, 120, 87, 0.18);    color: #6ee7b7; border-color: rgba(110, 231, 183, 0.28); }
+[data-theme="dark"] .ticket-show__history-action-badge--reject    { background: rgba(185, 28, 28, 0.18);   color: #fca5a5; border-color: rgba(252, 165, 165, 0.28); }
+[data-theme="dark"] .ticket-show__history-action-badge--cancel,
+[data-theme="dark"] .ticket-show__history-action-badge--neutral   { background: rgba(148, 163, 184, 0.14); color: #cbd5e1; border-color: rgba(203, 213, 225, 0.22); }
+[data-theme="dark"] .ticket-show__history-action-badge--reopen    { background: rgba(194, 65, 12, 0.18);   color: #fdba74; border-color: rgba(253, 186, 116, 0.28); }
+
 /* ── Empty states ──────────────────────────────────────────── */
 .ticket-show__empty {
     display: flex;
