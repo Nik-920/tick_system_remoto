@@ -81,7 +81,6 @@
 
     @include('tickets.partials.show.evidence')
     @include('tickets.partials.show.history')
-    @include('tickets.partials.show.closing-info')
     @include('tickets.partials.show.community-visibility')
 
     {{-- ── Botón volver inferior ── --}}
