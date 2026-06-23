@@ -6,6 +6,9 @@ on:
       - master
       - '*.x'
   pull_request:
+    branches:
+      - master
+      - '*.x'
   schedule:
     - cron: '0 0 * * *'
 
