@@ -407,50 +407,181 @@
     color: #fca5a5;
 }
 
-/* ── Tablas ────────────────────────────────────────────────── */
-.ticket-show__table-wrap {
-    overflow-x: auto;
+/* ── Evidence cards ────────────────────────────────────── */
+.ticket-show__evidence-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ticket-show__evidence-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-surface);
     border: 1px solid var(--border-light);
     border-radius: 12px;
-}
-
-.ticket-show__table {
-    min-width: 100%;
-    font-size: 0.75rem;
-    border-collapse: collapse;
-}
-
-.ticket-show__table thead tr {
-    background: var(--bg-soft);
-    text-align: left;
-}
-
-.ticket-show__table th {
-    padding: 0.625rem 0.75rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-}
-
-.ticket-show__table td {
-    padding: 0.625rem 0.75rem;
-    color: var(--text-secondary);
-    border-top: 1px solid var(--border-light);
-}
-
-.ticket-show__table tbody tr {
     transition: var(--transition);
 }
 
-.ticket-show__table tbody tr:hover {
+.ticket-show__evidence-card:hover {
     background: var(--bg-soft);
 }
 
-.ticket-show__table .is-strong {
+.ticket-show__evidence-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+}
+
+.ticket-show__evidence-icon--image {
+    background: rgba(37, 99, 235, 0.08);
+    color: #2563eb;
+}
+
+.ticket-show__evidence-icon--pdf {
+    background: rgba(220, 38, 38, 0.08);
+    color: #dc2626;
+}
+
+.ticket-show__evidence-icon--file {
+    background: var(--bg-soft);
+    color: var(--text-muted);
+}
+
+.ticket-show__evidence-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ticket-show__evidence-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ticket-show__evidence-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+.ticket-show__evidence-type-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.1rem 0.45rem;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    border-radius: 9999px;
+    border: 1px solid var(--border-light);
+    text-transform: lowercase;
+}
+
+.ticket-show__evidence-date {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.ticket-show__evidence-uploader {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.125rem;
+}
+
+.ticket-show__evidence-uploader-name {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.ticket-show__evidence-actions {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.ticket-show__evidence-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.ticket-show__evidence-action:hover {
+    background: var(--bg-soft);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* Evidence responsive */
+@media (max-width: 480px) {
+    .ticket-show__evidence-card {
+        gap: 0.5rem;
+        padding: 0.625rem;
+    }
+
+    .ticket-show__evidence-icon {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* Evidence dark mode */
+[data-theme="dark"] .ticket-show__evidence-card {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .ticket-show__evidence-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .ticket-show__evidence-icon--image {
+    background: rgba(37, 99, 235, 0.16);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .ticket-show__evidence-icon--pdf {
+    background: rgba(220, 38, 38, 0.18);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .ticket-show__evidence-action {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .ticket-show__evidence-action:hover {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 /* ── Empty states ──────────────────────────────────────────── */
