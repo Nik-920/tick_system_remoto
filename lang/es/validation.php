@@ -23,6 +23,7 @@ return [
         'new_images.*' => 'imagen',
         'evidence' => 'evidencias',
         'evidence.*' => 'archivo de evidencia',
+        'avatar_file' => 'foto de perfil',
     ],
 
 ];

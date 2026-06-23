@@ -251,15 +251,15 @@ class TicketHistoryPageTest extends TestCase
         $response->assertSeeText('Sin tickets en el historial');
     }
 
-    public function test_export_remains_a_visual_placeholder(): void
+    public function test_export_button_removed(): void
     {
         $me = $this->userWithRole('maintenance');
 
         $response = $this->actingAs($me)->get(route('tickets.history'));
 
         $response->assertOk();
-        $response->assertSeeText('Exportar');
-        $response->assertSeeText('Próximamente');
+        $response->assertDontSee('Exportar ticket');
+        $response->assertDontSee('Próximamente');
         $response->assertDontSee('tickets.history.export');
     }
 

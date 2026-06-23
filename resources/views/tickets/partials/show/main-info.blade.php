@@ -79,7 +79,7 @@
             <div>
                 <p class="ticket-show__label">Reportado por</p>
                 <div class="flex items-center gap-1.5">
-                    <x-avatar :initials="$vm->initials($ticket->reporter?->name, 1, 'R')" tone="rose" class="w-5 h-5 text-[10px]" aria-hidden="true" />
+                    <x-avatar :initials="$vm->initials($ticket->reporter?->name, 1, 'R')" :src="$ticket->reporter?->avatarDisplayUrl()" tone="rose" class="w-5 h-5 text-[10px]" aria-hidden="true" />
                     <span class="ticket-show__value truncate text-xs">{{ $ticket->reporter?->name ?? $ticket->reporter?->email ?? '—' }}</span>
                 </div>
             </div>

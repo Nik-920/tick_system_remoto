@@ -66,6 +66,7 @@
                     <summary class="topbar-user-trigger">
                         <x-avatar
                             :name="auth()->user()->name"
+                            :src="auth()->user()->avatarDisplayUrl()"
                             as="div"
                             base-class="topbar-avatar"
                             tone-class=""
@@ -81,6 +82,7 @@
                         <div class="topbar-dropdown-head">
                             <x-avatar
                                 :name="auth()->user()->name"
+                                :src="auth()->user()->avatarDisplayUrl()"
                                 as="div"
                                 base-class="topbar-dropdown-avatar"
                                 tone-class=""

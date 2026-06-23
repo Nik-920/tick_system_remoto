@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Queries\Tickets;
 
 use App\Models\Category;
+use App\Models\CommunityComment;
+use App\Models\CommunityReaction;
 use App\Models\Location;
 use App\Models\StateHistory;
 use App\Models\Ticket;
@@ -100,6 +102,16 @@ final class ReporterTicketHistoryQuery
         $page = $this->currentPage($listTotal);
         $rows = $this->rows($page);
 
+        $viewerReacted = $rows->isEmpty()
+            ? []
+            : CommunityReaction::query()
+                ->whereIn('ticket_id', $rows->pluck('id')->all())
+                ->where('user_id', $this->userId())
+                ->where('type', CommunityReaction::TYPE_INTERESTED)
+                ->pluck('ticket_id')
+                ->flip()
+                ->all();
+
         return new ReporterTicketHistoryViewModel(
             reporterId: $this->userId(),
             activeResult: $this->result,
@@ -108,7 +120,7 @@ final class ReporterTicketHistoryQuery
             chips: $this->chips($resolved, $rejected, $cancelled),
             locations: Location::query()->active()->orderBy('name')->get(),
             categories: Category::query()->orderBy('name')->get(),
-            tickets: $rows->map(fn (Ticket $t): array => $this->shapeRow($t))->all(),
+            tickets: $rows->map(fn (Ticket $t): array => $this->shapeRow($t, isset($viewerReacted[(string) $t->id])))->all(),
             pagination: $this->pagination($page, $rows->count(), $listTotal),
             summary: $this->summary($resolved, $rejected, $cancelled),
         );
@@ -204,6 +216,10 @@ final class ReporterTicketHistoryQuery
     {
         $rows = $this->scopedForList()
             ->with(['location', 'category'])
+            ->withCount([
+                'communityReactions as reactions_count' => fn ($q) => $q->where('type', CommunityReaction::TYPE_INTERESTED),
+                'communityComments as comments_count' => fn ($q) => $q->where('status', CommunityComment::STATUS_VISIBLE),
+            ])
             ->forPage($page, self::PER_PAGE)
             ->get();
 
@@ -393,7 +409,7 @@ final class ReporterTicketHistoryQuery
     /**
      * @return array<string, mixed>
      */
-    private function shapeRow(Ticket $ticket): array
+    private function shapeRow(Ticket $ticket, bool $viewerReacted = false): array
     {
         $state = (string) $ticket->state;
         // Resolved uses resolved_at; rejected/cancelled use their state_history
@@ -412,6 +428,7 @@ final class ReporterTicketHistoryQuery
             'icon' => $this->iconFor($ticket->category?->name),
             'status' => $state,
             'status_label' => $this->stateLabel($state),
+            'status_icon' => $this->stateIcon($state),
             'status_tone' => match ($state) {
                 Ticket::STATE_RESOLVED => 'success',
                 Ticket::STATE_REJECTED => 'high',
@@ -421,7 +438,24 @@ final class ReporterTicketHistoryQuery
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
             'created' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '—',
             'closed' => LocalTime::format($closedAt, 'd/m/Y') ?? '—',
+            'reactions_count' => (int) ($ticket->reactions_count ?? 0),
+            'comments_count' => (int) ($ticket->comments_count ?? 0),
+            'viewer_reacted' => $viewerReacted,
+            'reaction_store_url' => route('reporter.community.reactions.store', $ticket->id),
+            'reaction_destroy_url' => route('reporter.community.reactions.destroy', ['ticket' => $ticket->id, 'type' => CommunityReaction::TYPE_INTERESTED]),
+            'comments_url' => route('reporter.tickets.comments.index', $ticket->id),
+            'comments_store_url' => route('reporter.tickets.comments.store', $ticket->id),
         ];
+    }
+
+    private function stateIcon(string $state): string
+    {
+        return match ($state) {
+            Ticket::STATE_RESOLVED => 'check-circle',
+            Ticket::STATE_REJECTED => 'x-circle',
+            Ticket::STATE_CANCELLED => 'minus-circle',
+            default => 'circle',
+        };
     }
 
     // ── Pagination ───────────────────────────────────────────────

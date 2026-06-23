@@ -7,9 +7,7 @@
    primitives from modules/reporter-tickets.css (header, toolbar,
    search, chips, rows, badges, panels, donut, avg); this file only
    adds the history-specific pieces: the "Próximamente" tag, the clear
-   link, the cancelled badge, the two-date stamps and the monthly chart.
-
-   FIRST VISUAL PHASE — static prototype, global tokens, light/dark aware.
+   link, the cancelled badge, the history card v2 and the monthly chart.
    ============================================================ */
 
 /* "Próximamente" tag inside the Exportar button. */
@@ -50,35 +48,169 @@
 /* Cancelled status badge (the board module only defines the active states). */
 .rep-status--cancelled { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
 
-/* ── History row side: two date stamps + actions ─────────────── */
-.rep-hist-side {
+/* ============================================================
+   HISTORY CARD v2
+   ============================================================ */
+
+/* ── Card shell ──────────────────────────────────────────── */
+.rep-history-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1rem 1.15rem 0.9rem calc(1.15rem + 4px);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--r-solid);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+    z-index: 0;
+}
+
+.rep-history-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.rep-history-card:has(.rep-kebab__menu:not([hidden])) { z-index: 10; }
+
+/* ── Top row: ref + badges ───────────────────────────────── */
+.rep-history-card__top {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.rep-history-card__ref {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+}
+
+.rep-history-card__badges {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+/* ── Title ───────────────────────────────────────────────── */
+.rep-history-card__title {
+    margin: 0;
+    font-size: 0.97rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* ── Metadata ────────────────────────────────────────────── */
+.rep-history-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.rep-history-card__meta svg { color: var(--text-faint); flex-shrink: 0; }
+
+.rep-history-card__meta-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--text-faint);
     flex-shrink: 0;
 }
 
-.rep-stamps { display: flex; gap: 1.25rem; margin: 0; }
-.rep-stamp { text-align: right; line-height: 1.25; }
-.rep-stamp__label {
-    display: block;
+/* ── Divider ─────────────────────────────────────────────── */
+.rep-history-card__divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: 0.1rem 0;
+}
+
+/* ── Bottom row: dates + actions ─────────────────────────── */
+.rep-history-card__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.rep-history-card__dates {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0;
+    flex-wrap: wrap;
+}
+
+.rep-history-card__date {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    line-height: 1.25;
+}
+
+.rep-history-card__date-label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     font-size: 0.66rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--text-faint);
-}
-.rep-stamp__label--closed { color: var(--r-fg); }
-.rep-stamp__date {
     margin: 0;
-    font-size: 0.8rem;
+}
+
+.rep-history-card__date-label svg {
+    flex-shrink: 0;
+}
+
+.rep-history-card__date-label--closed { color: var(--r-fg); }
+
+.rep-history-card__date-value {
+    margin: 0;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--text-secondary);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
 
-/* ── Resolved-per-month area chart ───────────────────────────── */
+/* ── Right side: stats + actions ────────────────────────── */
+.rep-history-card__foot-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.rep-history-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.rep-history-card__detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* ── Resolved-per-month area chart ───────────────────────── */
 .rep-area { display: flex; flex-direction: column; gap: 0.4rem; }
 
 .rep-area__svg {
@@ -107,20 +239,28 @@
     color: var(--text-faint);
 }
 
-/* ── Responsive: stack the row side under the body on small screens ── */
+/* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 640px) {
-    .rep-hist-side {
-        grid-column: 1 / -1;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        border-top: 1px solid var(--border-light);
-        padding-top: 0.6rem;
+    .rep-history-card__bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
     }
-    .rep-stamp { text-align: left; }
+
+    .rep-history-card__foot-right {
+        margin-left: 0;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .rep-history-card__actions { flex: 1; }
+
+    .rep-history-card__detail { flex: 1; justify-content: center; }
 }
 
-/* ── Dark mode ───────────────────────────────────────────────── */
+/* ── Dark mode ───────────────────────────────────────────── */
 [data-theme="dark"] .rep-status--cancelled { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
 [data-theme="dark"] .rep-area__fill { fill: color-mix(in srgb, var(--color-primary) 22%, transparent); }
 [data-theme="dark"] .rep-area__dot { fill: var(--bg-surface); }
+[data-theme="dark"] .rep-history-card__divider { background: rgba(148, 163, 184, 0.12); }

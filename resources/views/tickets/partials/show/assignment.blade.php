@@ -12,7 +12,7 @@
                 <p class="ticket-show__label mb-1.5">Asignado a</p>
                 @if ($vm->assignee())
                     <div class="flex items-center gap-2.5">
-                        <x-avatar :initials="$vm->initials($vm->assignee()->name, 2, 'T')" tone="primary" class="w-8 h-8 text-xs" aria-hidden="true" />
+                        <x-avatar :initials="$vm->initials($vm->assignee()->name, 2, 'T')" :src="$vm->assignee()?->avatarDisplayUrl()" tone="primary" class="w-8 h-8 text-xs" aria-hidden="true" />
                         <div class="min-w-0">
                             <p class="ticket-show__value truncate">{{ $vm->assignee()->name ?? $vm->assignee()->email }}</p>
                             <p class="text-xs ticket-show__muted truncate">{{ $vm->assignee()->email ?? '—' }}</p>
@@ -32,7 +32,7 @@
                 <p class="ticket-show__label mb-1.5">Asignado por</p>
                 @if ($vm->assignedBy())
                     <div class="flex items-center gap-2.5">
-                        <x-avatar :initials="$vm->initials($vm->assignedBy()->name, 2, 'A')" tone="violet" class="w-8 h-8 text-xs" aria-hidden="true" />
+                        <x-avatar :initials="$vm->initials($vm->assignedBy()->name, 2, 'A')" :src="$vm->assignedBy()?->avatarDisplayUrl()" tone="violet" class="w-8 h-8 text-xs" aria-hidden="true" />
                         <div class="min-w-0">
                             <p class="ticket-show__value truncate">{{ $vm->assignedBy()->name ?? $vm->assignedBy()->email }}</p>
                             <p class="text-xs ticket-show__muted truncate">{{ $vm->assignedBy()->email ?? '—' }}</p>

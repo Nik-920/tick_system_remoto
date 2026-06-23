@@ -34,7 +34,11 @@
 
                         <div class="ticket-show__history-marker" aria-hidden="true">
                             <div class="ticket-show__history-dot {{ $hDotClass }}" title="{{ $entry->changedBy?->name ?? '' }}">
-                                {{ $vm->initials($entry->changedBy?->name, 2, 'U') }}
+                                @if ($entry->changedBy?->avatarDisplayUrl())
+                                    <img src="{{ $entry->changedBy->avatarDisplayUrl() }}" alt="" class="avatar-img" aria-hidden="true">
+                                @else
+                                    {{ $vm->initials($entry->changedBy?->name, 2, 'U') }}
+                                @endif
                             </div>
                             @unless ($loop->last)
                                 <div class="ticket-show__history-line"></div>

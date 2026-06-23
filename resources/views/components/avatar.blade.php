@@ -1,4 +1,5 @@
 @props([
+    'src' => null,
     'initials' => null,
     'name' => null,
     'tone' => 'primary',
@@ -8,12 +9,25 @@
     'as' => 'span',
 ])
 
+@php
+    $resolvedSrc = is_string($src) && trim($src) !== '' ? $src : null;
+    $resolvedClass = trim($baseClass . ' ' . ($toneClass !== null ? $toneClass : $tonePrefix . $tone));
+@endphp
+
 @if ($as === 'div')
-    <div {{ $attributes->merge(['class' => trim($baseClass . ' ' . ($toneClass !== null ? $toneClass : $tonePrefix . $tone))]) }}>
-        {{ $initials ?? \App\Support\Initials::from($name) }}
+    <div {{ $attributes->merge(['class' => $resolvedClass]) }}>
+        @if ($resolvedSrc)
+            <img src="{{ $resolvedSrc }}" alt="" class="avatar-img" aria-hidden="true">
+        @else
+            {{ $initials ?? \App\Support\Initials::from($name) }}
+        @endif
     </div>
 @else
-    <span {{ $attributes->merge(['class' => trim($baseClass . ' ' . ($toneClass !== null ? $toneClass : $tonePrefix . $tone))]) }}>
-        {{ $initials ?? \App\Support\Initials::from($name) }}
+    <span {{ $attributes->merge(['class' => $resolvedClass]) }}>
+        @if ($resolvedSrc)
+            <img src="{{ $resolvedSrc }}" alt="" class="avatar-img" aria-hidden="true">
+        @else
+            {{ $initials ?? \App\Support\Initials::from($name) }}
+        @endif
     </span>
 @endif

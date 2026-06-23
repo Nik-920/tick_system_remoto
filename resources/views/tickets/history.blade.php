@@ -64,16 +64,6 @@
                 Este historial muestra tickets resueltos o rechazados que estuvieron asignados a ti.
             </p>
         </div>
-        <div class="hist-header__actions">
-            {{-- Visual placeholder: real export is not implemented in this phase. --}}
-            <button type="button" class="hist-btn-outline" data-hist-export
-                    aria-describedby="hist-export-soon"
-                    title="Exportación disponible próximamente">
-                <x-lucide-download width="16" height="16" stroke-width="2.5" />
-                Exportar
-                <span class="hist-soon" id="hist-export-soon">Próximamente</span>
-            </button>
-        </div>
     </header>
 
     {{-- ── 2. FILTER PANEL (real GET form) ───────────────────────── --}}
@@ -249,9 +239,6 @@
                                         <a href="{{ route('tickets.show', $t['id']) }}" class="hist-kebab__item">
                                             <x-lucide-eye width="15" height="15" stroke-width="2" /> Ver detalle
                                         </a>
-                                        <button type="button" class="hist-kebab__item" title="Exportación disponible próximamente">
-                                            <x-lucide-download width="15" height="15" stroke-width="2" /> Exportar ticket
-                                        </button>
                                     </div>
                                 </div>
                             </div>
