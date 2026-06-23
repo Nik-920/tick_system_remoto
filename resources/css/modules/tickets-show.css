@@ -1067,22 +1067,3 @@
     color: #ffffff;
 }
 
-/* ── Cierre (comentario final) ─────────────────────────────── */
-.ticket-show__closure-comment {
-    border-radius: 12px;
-    padding: 0.875rem;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    border: 1px solid var(--border-light);
-    background: var(--bg-soft);
-}
-
-.ticket-show__closure-comment--resolved {
-    background: var(--color-success-light);
-    border-color: var(--color-success-muted);
-}
-
-[data-theme="dark"] .ticket-show__closure-comment--resolved {
-    background: rgba(5, 150, 105, 0.12);
-    border-color: rgba(110, 231, 183, 0.22);
-}
