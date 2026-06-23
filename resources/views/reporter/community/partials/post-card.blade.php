@@ -17,7 +17,7 @@
     $commPrioIcon   = $commPrioIcons[$post['priority_tone']] ?? 'minus';
 @endphp
 
-<article class="comm-post-v2 comm-post-v2--{{ $post['state_tone'] }}"
+<article class="comm-post-v2 comm-post-v2--{{ $post['state_tone'] }} comm-post-v2--priority-{{ $post['priority_tone'] ?? 'low' }}"
          id="ticket-{{ $post['id'] }}"
          aria-label="Reporte público: {{ $post['title'] }}">
 
