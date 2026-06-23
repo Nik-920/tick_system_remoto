@@ -622,6 +622,7 @@
     color: var(--text-secondary);
     border-color: var(--border-default);
     user-select: none;
+    overflow: hidden;
 }
 
 .ticket-show__history-dot--open      { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
@@ -796,6 +797,16 @@
     align-items: center;
     justify-content: center;
     font-weight: 700;
+    overflow: hidden;
+}
+
+.ticket-show__avatar .avatar-img,
+.ticket-show__history-dot .avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
 }
 
 .ticket-show__avatar--primary {
