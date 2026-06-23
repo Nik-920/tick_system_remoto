@@ -8,57 +8,84 @@
 
     <div class="ticket-show__card-body">
         @if ($vm->stateHistory()->isNotEmpty())
-            <div class="ticket-show__table-wrap">
-                <table class="ticket-show__table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Estado anterior</th>
-                            <th scope="col">Estado nuevo</th>
-                            <th scope="col">Cambiado por</th>
-                            <th scope="col">Tipo de acción</th>
-                            <th scope="col">Comentario</th>
-                            <th scope="col">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($vm->stateHistory() as $entry)
-                            <tr>
-                                <td>
-                                    @if ($entry->from_state)
-                                        <span class="{{ $vm->stateBadgeClasses()[$entry->from_state] ?? 'ts-badge ts-badge--neutral' }}">
-                                            {{ $vm->stateLabels()[$entry->from_state] ?? ucfirst(str_replace('_', ' ', $entry->from_state)) }}
-                                        </span>
-                                    @else
-                                        <span class="ticket-show__faint">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($entry->to_state)
-                                        <span class="{{ $vm->stateBadgeClasses()[$entry->to_state] ?? 'ts-badge ts-badge--neutral' }}">
-                                            {{ $vm->stateLabels()[$entry->to_state] ?? ucfirst(str_replace('_', ' ', $entry->to_state)) }}
-                                        </span>
-                                    @else
-                                        <span class="ticket-show__faint">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-1.5">
-                                        <x-avatar :initials="$vm->initials($entry->changedBy?->name, 2, 'U')" tone="primary" class="w-5 h-5 text-[10px]" aria-hidden="true" />
-                                        <span class="is-strong whitespace-nowrap">{{ $entry->changedBy?->name ?? $entry->changedBy?->email ?? '—' }}</span>
-                                    </div>
-                                </td>
-                                <td class="whitespace-nowrap">{{ $vm->actionFor($entry->from_state, $entry->to_state) }}</td>
-                                <td class="max-w-[220px]">
-                                    <p class="truncate" title="{{ $entry->comment ?? '' }}">{{ $entry->comment ?? '—' }}</p>
-                                </td>
-                                <td class="whitespace-nowrap">{{ $vm->fmtDate($entry->created_at) ?? '—' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            <ol class="ticket-show__history-timeline" aria-label="Historial de cambios de estado">
+                @foreach ($vm->stateHistory() as $entry)
+                    @php
+                        $hDotClass = match ($entry->to_state) {
+                            'open'        => 'ticket-show__history-dot--open',
+                            'in_progress' => 'ticket-show__history-dot--progress',
+                            'resolved'    => 'ticket-show__history-dot--resolved',
+                            'rejected'    => 'ticket-show__history-dot--rejected',
+                            'cancelled'   => 'ticket-show__history-dot--cancelled',
+                            default       => '',
+                        };
+                        $hActionTone = match ($vm->actionFor($entry->from_state, $entry->to_state)) {
+                            'Creación'                   => 'create',
+                            'Actualización técnica'      => 'technical',
+                            'Inicio de atención'         => 'start',
+                            'Resolución'                 => 'resolve',
+                            'Rechazo'                    => 'reject',
+                            'Cancelación'                => 'cancel',
+                            'Reapertura / actualización' => 'reopen',
+                            default                      => 'neutral',
+                        };
+                    @endphp
+                    <li class="ticket-show__history-event{{ $loop->last ? ' ticket-show__history-event--last' : '' }}">
+
+                        <div class="ticket-show__history-marker" aria-hidden="true">
+                            <div class="ticket-show__history-dot {{ $hDotClass }}" title="{{ $entry->changedBy?->name ?? '' }}">
+                                {{ $vm->initials($entry->changedBy?->name, 2, 'U') }}
+                            </div>
+                            @unless ($loop->last)
+                                <div class="ticket-show__history-line"></div>
+                            @endunless
+                        </div>
+
+                        <div class="ticket-show__history-content">
+
+                            <div class="ticket-show__history-event-head">
+                                <div class="ticket-show__history-author-row">
+                                    <span class="ticket-show__history-author">{{ $entry->changedBy?->name ?? $entry->changedBy?->email ?? '—' }}</span>
+                                    <span class="ticket-show__history-action-badge ticket-show__history-action-badge--{{ $hActionTone }}">
+                                        {{ $vm->actionFor($entry->from_state, $entry->to_state) }}
+                                    </span>
+                                </div>
+                                <time class="ticket-show__history-time" datetime="{{ $entry->created_at?->toISOString() ?? '' }}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
+                                    {{ $vm->fmtDate($entry->created_at) ?? '—' }}
+                                </time>
+                            </div>
+
+                            <div class="ticket-show__history-transition">
+                                @if ($entry->from_state)
+                                    <span class="{{ $vm->stateBadgeClasses()[$entry->from_state] ?? 'ts-badge ts-badge--neutral' }}">
+                                        {{ $vm->stateLabels()[$entry->from_state] ?? ucfirst(str_replace('_', ' ', (string) $entry->from_state)) }}
+                                    </span>
+                                @else
+                                    <span class="ts-badge ts-badge--neutral">Sin estado</span>
+                                @endif
+                                <span class="ticket-show__history-arrow" aria-hidden="true">→</span>
+                                @if ($entry->to_state)
+                                    <span class="{{ $vm->stateBadgeClasses()[$entry->to_state] ?? 'ts-badge ts-badge--neutral' }}">
+                                        {{ $vm->stateLabels()[$entry->to_state] ?? ucfirst(str_replace('_', ' ', (string) $entry->to_state)) }}
+                                    </span>
+                                @else
+                                    <span class="ts-badge ts-badge--neutral">—</span>
+                                @endif
+                            </div>
+
+                            @if ($entry->comment !== null && trim((string) $entry->comment) !== '')
+                                <div class="ticket-show__history-comment">{{ $entry->comment }}</div>
+                            @else
+                                <p class="ticket-show__history-empty-comment">Sin comentario</p>
+                            @endif
+
+                        </div>
+                    </li>
+                @endforeach
+            </ol>
         @else
-            <x-empty-state message="Aún no hay cambios de estado registrados">
+            <x-empty-state message="Sin cambios registrados.">
                 <x-slot:icon>
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
                 </x-slot:icon>
