@@ -753,7 +753,7 @@ final class CommunityFeedQuery
                 'name' => (string) $category->name,
                 'icon_type' => 'image',
                 'icon_name' => 'tag',
-                'icon_url' => $raw,
+                'icon_url' => route('reporter.community.categories.icon', $category),
             ];
         }
 

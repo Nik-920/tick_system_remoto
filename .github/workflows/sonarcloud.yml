@@ -5,14 +5,16 @@ on:
     branches:
       - main
       - master
-      - develop
-      - develop_Local_Nik
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
       - main
       - master
       - develop
+
+concurrency:
+  group: sonar-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

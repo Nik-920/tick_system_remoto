@@ -97,7 +97,9 @@ class CommunityCategoryIconRenderingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('<img', false);
-        $response->assertSee(self::SUPABASE_ICON_URL, false);
+        // Raw Supabase URL must not appear; the proxy URL must be used instead.
+        $response->assertDontSee(self::SUPABASE_ICON_URL, false);
+        $response->assertSee('/reporter/community/categories/', false);
         $response->assertSee('comm-post-v2__cat-icon-img', false);
     }
 
@@ -116,17 +118,19 @@ class CommunityCategoryIconRenderingTest extends TestCase
     public function test_image_url_is_in_img_src_attribute(): void
     {
         $reporter = $this->makeReporter();
-        $this->makeTicketWithCategory($reporter, icon: self::SUPABASE_ICON_URL);
+        $category = $this->makeCategory(self::SUPABASE_ICON_URL);
+        $this->makeTicketWithExistingCategory($reporter, $category);
 
         $response = $this->actingAs($reporter)
             ->get(route('reporter.community'));
 
         $response->assertOk();
-        $content = $response->getContent();
-        $this->assertStringContainsString(
-            'src="'.e(self::SUPABASE_ICON_URL).'"',
-            (string) $content,
-        );
+        $content = (string) $response->getContent();
+
+        // The proxy URL (not the raw Supabase URL) must be in the img src.
+        $proxyUrl = route('reporter.community.categories.icon', $category);
+        $this->assertStringContainsString('src="'.$proxyUrl.'"', $content);
+        $this->assertStringNotContainsString(e(self::SUPABASE_ICON_URL), $content);
     }
 
     // ── Fallback cases ────────────────────────────────────────────────────────
@@ -270,6 +274,15 @@ class CommunityCategoryIconRenderingTest extends TestCase
         string $title = '',
     ): Ticket {
         $category = $this->makeCategory($icon);
+
+        return $this->makeTicketWithExistingCategory($reporter, $category, $title);
+    }
+
+    private function makeTicketWithExistingCategory(
+        User $reporter,
+        Category $category,
+        string $title = '',
+    ): Ticket {
         $location = $this->makeLocation();
 
         return Ticket::create([

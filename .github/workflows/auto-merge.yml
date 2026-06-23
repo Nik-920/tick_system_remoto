@@ -1,21 +1,13 @@
 name: 🤖 Auto-Merge — develop_Local_Nik → main
 
 on:
-  # Se dispara cuando el CI Pipeline termina sobre un PR
+  # Se dispara cuando el CI Pipeline termina — única fuente de verdad.
+  # No usar pull_request: ese evento llega antes de que CI corra
+  # y obliga al job a esperar/fallar en polling.
   workflow_run:
     workflows: ["🎫 CI Pipeline — Sistema de Incidencias"]
     types:
       - completed
-
-  # También se dispara cuando el análisis de SonarCloud termina
-  # (en caso de que SonarCloud sea el último check requerido)
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -31,10 +23,8 @@ jobs:
   auto-merge:
     name: 🤖 Auto-Merge si todos los checks pasan
     runs-on: ubuntu-latest
-    # Solo ejecutar si el CI concluyó con éxito
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    # Solo ejecutar cuando el CI concluyó con éxito
+    if: github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: 📥 Checkout
@@ -50,31 +40,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # En evento pull_request usamos el número directo
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
-            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
-          else
-            # En workflow_run buscamos el PR que corresponde al commit del CI
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            PR_DATA=$(gh pr list \
-              --base main \
-              --state open \
-              --json number,headRefName,baseRefName,headRefOid \
-              --jq ".[] | select(.headRefOid == \"$SHA\")" \
-              2>/dev/null || echo "")
+          # Siempre llegamos por workflow_run — buscar el PR por SHA del commit de CI
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          PR_DATA=$(gh pr list \
+            --base main \
+            --state open \
+            --json number,headRefName,baseRefName,headRefOid \
+            --jq ".[] | select(.headRefOid == \"$SHA\")" \
+            2>/dev/null || echo "")
 
-            if [ -z "$PR_DATA" ]; then
-              echo "No se encontró PR abierto para SHA=$SHA hacia main"
-              echo "eligible=false" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
-            HEAD_BRANCH=$(echo "$PR_DATA" | jq -r '.headRefName')
-            BASE_BRANCH=$(echo "$PR_DATA" | jq -r '.baseRefName')
+          if [ -z "$PR_DATA" ]; then
+            echo "No se encontró PR abierto para SHA=$SHA hacia main"
+            echo "eligible=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
+          HEAD_BRANCH=$(echo "$PR_DATA" | jq -r '.headRefName')
+          BASE_BRANCH=$(echo "$PR_DATA" | jq -r '.baseRefName')
 
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "head_branch=$HEAD_BRANCH" >> $GITHUB_OUTPUT
