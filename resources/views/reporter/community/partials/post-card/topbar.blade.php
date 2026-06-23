@@ -3,9 +3,19 @@
     <div class="comm-post-v2__topbar-start">
         <span class="comm-post-v2__chip comm-post-v2__chip--cat comm-post-v2__chip--{{ $commCatColor }}">
             @if ($post['category'] !== null)
-                <x-dynamic-component
-                    :component="'lucide-'.($post['category']['icon'] ?: 'tag')"
-                    class="comm-post-v2__chip-icon" width="13" height="13" stroke-width="2" />
+                @if (($post['category']['icon_type'] ?? 'lucide') === 'image' && filled($post['category']['icon_url'] ?? null))
+                    <img
+                        src="{{ $post['category']['icon_url'] }}"
+                        alt=""
+                        class="comm-post-v2__cat-icon-img"
+                        loading="lazy"
+                        decoding="async"
+                    >
+                @else
+                    <x-dynamic-component
+                        :component="'lucide-'.($post['category']['icon_name'] ?? 'tag')"
+                        class="comm-post-v2__chip-icon" width="13" height="13" stroke-width="2" />
+                @endif
                 <span>{{ $post['category']['name'] }}</span>
             @else
                 <x-lucide-wrench class="comm-post-v2__chip-icon" width="13" height="13" stroke-width="2" />

@@ -2955,6 +2955,15 @@
     flex-shrink: 0;
 }
 
+.comm-post-v2__cat-icon-img {
+    width: 1rem;
+    height: 1rem;
+    border-radius: .25rem;
+    object-fit: cover;
+    display: inline-block;
+    flex: 0 0 auto;
+}
+
 .comm-post-v2__chip--cat        { font-weight: 700; }
 .comm-post-v2__chip--blue       { color: #2563eb; }
 .comm-post-v2__chip--red        { color: #ef4444; }

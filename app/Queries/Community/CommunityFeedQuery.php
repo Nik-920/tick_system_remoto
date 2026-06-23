@@ -13,8 +13,10 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
+use App\Support\Cache\CacheTtl;
 use App\ViewModels\Community\CommunityFeedViewModel;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
@@ -464,7 +466,7 @@ final class CommunityFeedQuery
      * @param  array<string, int>  $reactionCounts  {type => count}
      * @param  list<string>  $userReactionTypes  types the viewer has active
      * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>}>  $latestComments
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon: string}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>}>}}
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon_type: string, icon_name: string, icon_url: string|null}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool}>}>}}
      */
     private function toPost(
         Ticket $ticket,
@@ -513,10 +515,7 @@ final class CommunityFeedQuery
                 'floor' => (string) $ticket->location->floor,
                 'room_code' => (string) $ticket->location->room_code,
             ] : null,
-            'category' => $ticket->category !== null ? [
-                'name' => (string) $ticket->category->name,
-                'icon' => (string) $ticket->category->icon,
-            ] : null,
+            'category' => $ticket->category !== null ? $this->normalizeCategory($ticket->category) : null,
             'thumbnail_url' => $firstMedia !== null ? route('reporter.community.media.thumbnail', $firstMedia->id) : null,
             'thumbnail_type' => $firstMedia?->file_type !== null ? (string) $firstMedia->file_type : null,
             'media_count' => $mediaCount,
@@ -564,24 +563,27 @@ final class CommunityFeedQuery
      */
     private function quickSummary(): array
     {
-        $counts = Ticket::query()
-            ->whereRaw('"community_visible" IS TRUE')
-            ->whereIn('state', self::PUBLIC_STATES)
-            ->selectRaw('state, COUNT(*) as cnt')
-            ->groupBy('state')
-            ->pluck('cnt', 'state');
+        /** @var array{active: int, resolved: int, locations: int} */
+        return Cache::remember('community.ref.quick_summary', CacheTtl::COMMUNITY_REFERENCE, function (): array {
+            $counts = Ticket::query()
+                ->whereRaw('"community_visible" IS TRUE')
+                ->whereIn('state', self::PUBLIC_STATES)
+                ->selectRaw('state, COUNT(*) as cnt')
+                ->groupBy('state')
+                ->pluck('cnt', 'state');
 
-        $locationCount = Ticket::query()
-            ->whereRaw('"community_visible" IS TRUE')
-            ->whereIn('state', [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS])
-            ->distinct()
-            ->count('location_id');
+            $locationCount = Ticket::query()
+                ->whereRaw('"community_visible" IS TRUE')
+                ->whereIn('state', [Ticket::STATE_OPEN, Ticket::STATE_IN_PROGRESS])
+                ->distinct()
+                ->count('location_id');
 
-        return [
-            'active' => (int) ($counts[Ticket::STATE_OPEN] ?? 0) + (int) ($counts[Ticket::STATE_IN_PROGRESS] ?? 0),
-            'resolved' => (int) ($counts[Ticket::STATE_RESOLVED] ?? 0),
-            'locations' => $locationCount,
-        ];
+            return [
+                'active' => (int) ($counts[Ticket::STATE_OPEN] ?? 0) + (int) ($counts[Ticket::STATE_IN_PROGRESS] ?? 0),
+                'resolved' => (int) ($counts[Ticket::STATE_RESOLVED] ?? 0),
+                'locations' => $locationCount,
+            ];
+        });
     }
 
     /**
@@ -589,14 +591,17 @@ final class CommunityFeedQuery
      */
     private function buildings(): array
     {
-        return Location::query()
-            ->whereNotNull('building')
-            ->where('building', '!=', '')
-            ->distinct()
-            ->orderBy('building')
-            ->pluck('building')
-            ->map(fn (mixed $b) => (string) $b)
-            ->all();
+        /** @var list<string> */
+        return Cache::remember('community.ref.buildings', CacheTtl::COMMUNITY_REFERENCE, function (): array {
+            return Location::query()
+                ->whereNotNull('building')
+                ->where('building', '!=', '')
+                ->distinct()
+                ->orderBy('building')
+                ->pluck('building')
+                ->map(fn (mixed $b) => (string) $b)
+                ->all();
+        });
     }
 
     /**
@@ -604,16 +609,19 @@ final class CommunityFeedQuery
      */
     private function categoriesForFilter(): array
     {
-        return Category::query()
-            ->select(['id', 'name', 'icon'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Category $c) => [
-                'id' => (string) $c->id,
-                'name' => (string) $c->name,
-                'icon' => (string) $c->icon,
-            ])
-            ->all();
+        /** @var list<array{id: string, name: string, icon: string}> */
+        return Cache::remember('community.ref.categories', CacheTtl::COMMUNITY_REFERENCE, function (): array {
+            return Category::query()
+                ->select(['id', 'name', 'icon'])
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Category $c) => [
+                    'id' => (string) $c->id,
+                    'name' => (string) $c->name,
+                    'icon' => (string) $c->icon,
+                ])
+                ->all();
+        });
     }
 
     /**
@@ -721,6 +729,42 @@ final class CommunityFeedQuery
                 'active' => $option['key'] === $currentSort,
             ];
         }, $options);
+    }
+
+    /**
+     * Normalize a category's icon into a typed shape safe for Blade rendering.
+     *
+     * The `icon` column may hold either a Lucide icon name (e.g. "tag") or a
+     * full Supabase image URL. Passing a URL to `x-dynamic-component` would
+     * produce an invalid component name like `lucide-https://...` and throw an
+     * InvalidArgumentException at render time.
+     *
+     * @return array{name: string, icon_type: string, icon_name: string, icon_url: string|null}
+     */
+    private function normalizeCategory(Category $category): array
+    {
+        $raw = (string) $category->icon;
+
+        if (
+            $raw !== '' &&
+            (str_starts_with($raw, 'https://') || str_starts_with($raw, 'http://'))
+        ) {
+            return [
+                'name' => (string) $category->name,
+                'icon_type' => 'image',
+                'icon_name' => 'tag',
+                'icon_url' => $raw,
+            ];
+        }
+
+        $iconName = (preg_match('/^[a-z0-9-]+$/', $raw) === 1 && $raw !== '') ? $raw : 'tag';
+
+        return [
+            'name' => (string) $category->name,
+            'icon_type' => 'lucide',
+            'icon_name' => $iconName,
+            'icon_url' => null,
+        ];
     }
 
     private function stateLabel(string $state): string

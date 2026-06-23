@@ -20,4 +20,8 @@ class CacheTtl
 
     // Maintenance report: heavier query, longer TTL.
     public const MAINTENANCE_REPORT = 180;
+
+    // Community reference data (buildings, categories, summary stats) — global,
+    // not user-specific, tolerates 60s staleness.
+    public const COMMUNITY_REFERENCE = 60;
 }
