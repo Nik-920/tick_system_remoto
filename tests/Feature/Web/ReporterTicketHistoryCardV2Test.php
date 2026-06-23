@@ -284,7 +284,7 @@ class ReporterTicketHistoryCardV2Test extends TestCase
         $this->assertStringContainsString('rep-history-card__detail', $html);
     }
 
-    public function test_card_renders_kebab_menu_with_ver_detalle_and_export_placeholder(): void
+    public function test_card_renders_kebab_menu_without_export(): void
     {
         $me = $this->reporter();
         $this->resolvedFor($me, 'Kebab ticket');
@@ -295,7 +295,7 @@ class ReporterTicketHistoryCardV2Test extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('rep-kebab', $html);
-        $this->assertStringContainsString('Exportar ticket', $html);
+        $this->assertStringNotContainsString('Exportar ticket', $html);
     }
 
     // ── Social stats ─────────────────────────────────────────────────────────

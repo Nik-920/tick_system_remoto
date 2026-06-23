@@ -269,15 +269,15 @@ class ReporterHistoryPageTest extends TestCase
         $response->assertSeeText('Sin resultados');
     }
 
-    public function test_export_remains_a_visual_placeholder(): void
+    public function test_export_button_removed(): void
     {
         $me = $this->userWithRole('reporter');
 
         $response = $this->actingAs($me)->get(route('reporter.tickets.history'));
 
         $response->assertOk();
-        $response->assertSeeText('Exportar');
-        $response->assertSeeText('Próximamente');
+        $response->assertDontSee('Exportar');
+        $response->assertDontSee('Próximamente');
         $response->assertDontSee('reporter.tickets.history.export');
     }
 
