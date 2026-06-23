@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Web\AdminCommunityCommentController;
 use App\Http\Controllers\Web\AdminCommunityReportController;
 use App\Http\Controllers\Web\CategoryController;
+use App\Http\Controllers\Web\CommunityCategoryIconController;
 use App\Http\Controllers\Web\CommunityCommentController;
 use App\Http\Controllers\Web\CommunityCommentReportController;
 use App\Http\Controllers\Web\CommunityMediaController;
@@ -148,6 +149,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reporter/community/media/{media}/thumbnail', CommunityMediaController::class)
         ->middleware('role:reporter')
         ->name('reporter.community.media.thumbnail');
+
+    // Category Icon Privacy Proxy — serves category icon images through a
+    // controlled Laravel endpoint instead of exposing raw Supabase URLs in HTML.
+    // Access is gated: auth (outer group) + role:reporter + SSRF allowlist.
+    Route::get('/reporter/community/categories/{category}/icon', CommunityCategoryIconController::class)
+        ->middleware('role:reporter')
+        ->name('reporter.community.categories.icon');
 
     // Community v2: reactions and saves — reporter-only mutation endpoints.
     // Visibility check is enforced inside each controller (404 if not visible).

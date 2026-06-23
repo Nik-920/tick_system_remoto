@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 return [
+    'category_icons' => [
+        'supabase_bucket' => env('SUPABASE_BUCKET_CATEGORIES', 'TicketCategoria'),
+        'max_remote_bytes' => 2 * 1024 * 1024,
+        'remote_timeout_seconds' => 5,
+        'cache_max_age' => 3600,
+    ],
+
     'media' => [
         /*
          * Hosts allowed for remote media fetching (SSRF allowlist).
