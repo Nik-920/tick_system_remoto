@@ -128,7 +128,7 @@
                     </button>
                     <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
                         <a href="{{ route('reporter.tickets.show', $t['id']) }}" class="rep-kebab__item">
-                            <x-lucide-eye width="15" height="15" stroke-width="2" aria-hidden="true" /> Ver detalle
+                            <x-lucide-file-text width="15" height="15" stroke-width="2" aria-hidden="true" /> Ficha completa
                         </a>
                     </div>
                 </div>
