@@ -26,20 +26,6 @@
         ->map(fn ($s) => "{$s['label']} {$s['count']} ({$s['percent']}%)")
         ->implode(', ');
 
-    // Resolved-per-month area chart geometry (viewBox 0 0 100 40).
-    $monthly = $board->summary['monthly'];
-    $peak = max(1, (int) $monthly['peak']);
-    $items = $monthly['items'];
-    $count = max(1, count($items));
-    $coords = [];
-    foreach ($items as $i => $point) {
-        $x = $count > 1 ? round($i / ($count - 1) * 100, 2) : 0;
-        $y = round(36 - ($point['count'] / $peak) * 30, 2);
-        $coords[] = ['x' => $x, 'y' => $y, 'label' => $point['label'], 'count' => $point['count']];
-    }
-    $line = collect($coords)->map(fn ($c) => "{$c['x']},{$c['y']}")->implode(' ');
-    $area = '0,38 '.$line.' 100,38';
-    $chartAria = collect($items)->map(fn ($p) => "{$p['label']}: {$p['count']}")->implode(', ');
 
     $resultLabels = ['resolved' => 'resueltos', 'rejected' => 'rechazados', 'cancelled' => 'cancelados'];
 @endphp
@@ -169,80 +155,7 @@
         <div class="rep-main">
             <div class="rep-list">
                 @forelse ($board->tickets as $t)
-                    <article class="rep-item rep-tone-{{ $t['status_tone'] }}" aria-labelledby="rep-hist-title-{{ $loop->index }}">
-                        <span class="rep-item__rail" aria-hidden="true"></span>
-
-                        <div class="rep-item__icon">
-                            <x-dynamic-component :component="'lucide-' . $t['icon']" width="20" height="20" stroke-width="2" />
-                        </div>
-
-                        <div class="rep-item__body">
-                            <div class="rep-item__top">
-                                <h3 class="rep-item__title" id="rep-hist-title-{{ $loop->index }}">{{ $t['title'] }}</h3>
-                                <span class="rep-item__id">{{ $t['ref'] }}</span>
-                            </div>
-
-                            <div class="rep-item__meta">
-                                <x-lucide-map-pin width="13" height="13" stroke-width="2" />
-                                <span>{{ $t['location'] }}</span>
-                                <span class="rep-item__meta-sep" aria-hidden="true"></span>
-                                <span>{{ $t['category'] }}</span>
-                                @if ($t['type'] !== '')
-                                    <span class="rep-item__meta-sep" aria-hidden="true"></span>
-                                    <span>{{ $t['type'] }}</span>
-                                @endif
-                            </div>
-
-                            <div class="rep-item__tags">
-                                <span class="rep-badge rep-status--{{ $t['status'] }}">
-                                    <span class="rep-badge__dot" aria-hidden="true"></span>
-                                    {{ $t['status_label'] }}
-                                </span>
-                                <span class="rep-prio-wrap">
-                                    <span class="rep-prio-label">Prioridad</span>
-                                    <span class="rep-badge rep-prio rep-tone-{{ $t['priority'] }}">
-                                        <span class="rep-badge__dot" aria-hidden="true"></span>
-                                        {{ $t['priority_label'] }}
-                                    </span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="rep-hist-side">
-                            <dl class="rep-stamps">
-                                <div class="rep-stamp">
-                                    <dt class="rep-stamp__label">Creado</dt>
-                                    <dd class="rep-stamp__date">{{ $t['created'] }}</dd>
-                                </div>
-                                <div class="rep-stamp">
-                                    <dt class="rep-stamp__label rep-stamp__label--closed">{{ $t['status_label'] }}</dt>
-                                    <dd class="rep-stamp__date">{{ $t['closed'] }}</dd>
-                                </div>
-                            </dl>
-
-                            <div class="rep-item__actions">
-                                <a href="{{ route('reporter.tickets.show', $t['id']) }}" class="rep-btn rep-btn--ghost">
-                                    Ver detalle
-                                </a>
-
-                                <div class="rep-kebab" data-rep-kebab>
-                                    <button type="button" class="rep-kebab__btn"
-                                            aria-label="Más acciones para {{ $t['title'] }}"
-                                            aria-haspopup="true" aria-expanded="false" data-rep-kebab-btn>
-                                        <x-lucide-more-vertical width="18" height="18" stroke-width="2" />
-                                    </button>
-                                    <div class="rep-kebab__menu" hidden data-rep-kebab-menu>
-                                        <a href="{{ route('reporter.tickets.show', $t['id']) }}" class="rep-kebab__item">
-                                            <x-lucide-eye width="15" height="15" stroke-width="2" /> Ver detalle
-                                        </a>
-                                        <button type="button" class="rep-kebab__item" title="Disponible próximamente">
-                                            <x-lucide-download width="15" height="15" stroke-width="2" /> Exportar ticket
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
+                    @include('tickets.reporter.partials.history-card', ['t' => $t, 'loopIndex' => $loop->index])
                 @empty
                     <div class="rep-empty">
                         @if (! $board->hasAnyHistory())
@@ -360,32 +273,6 @@
                 </div>
             </section>
 
-            {{-- C. Resolved per month --}}
-            <section class="rep-panel">
-                <h2 class="rep-panel__title">
-                    <x-lucide-trending-up width="16" height="16" stroke-width="2" />
-                    Tickets resueltos por mes
-                </h2>
-                @if ($monthly['has_data'])
-                    <div class="rep-area">
-                        <svg class="rep-area__svg" viewBox="0 0 100 40" preserveAspectRatio="none"
-                             role="img" aria-label="Tickets resueltos por mes: {{ $chartAria }}">
-                            <polygon class="rep-area__fill" points="{{ $area }}" />
-                            <polyline class="rep-area__line" points="{{ $line }}" />
-                            @foreach ($coords as $c)
-                                <circle class="rep-area__dot" cx="{{ $c['x'] }}" cy="{{ $c['y'] }}" r="1.4" />
-                            @endforeach
-                        </svg>
-                        <div class="rep-area__labels" aria-hidden="true">
-                            @foreach ($coords as $c)
-                                <span>{{ $c['label'] }}</span>
-                            @endforeach
-                        </div>
-                    </div>
-                @else
-                    <p class="rep-empty__note">Aún no hay tickets resueltos para mostrar.</p>
-                @endif
-            </section>
 
             {{-- D. Tip (static) --}}
             <section class="rep-panel rep-advice">
@@ -410,6 +297,9 @@
    Progressive JS — kebab menus only. Search, chips, filters and
    pagination all work server-side without JS.
    ============================================================ --}}
+{{-- Comments modal — single instance; JS populates it dynamically. --}}
+@include('tickets.reporter.partials.comments-modal')
+
 <script>
 (function () {
     'use strict';
