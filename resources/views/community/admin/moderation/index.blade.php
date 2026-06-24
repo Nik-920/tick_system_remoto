@@ -50,8 +50,8 @@
     {{-- ===== FILTROS ===== --}}
     @include('community.admin.moderation.partials.filters')
 
-    {{-- ===== TABLA ===== --}}
-    <section class="comm-mod-table-shell" aria-label="Cola de moderación">
+    {{-- ===== LISTA DE CARDS ===== --}}
+    <section class="adm-comm-queue" aria-label="Cola de moderación">
         <div class="comm-mod-dataset-head">
             <p class="comm-mod-dataset-count">
                 {{ number_format($vm->paginator->total()) }} ticket(s) en esta vista
@@ -63,29 +63,12 @@
             @endif
         </div>
 
-        <div class="table-wrap">
-            <table class="comm-mod-table">
-                <thead>
-                    <tr>
-                        <th>Ref.</th>
-                        <th>Título</th>
-                        <th>Categoría</th>
-                        <th>Ubicación</th>
-                        <th>Estado</th>
-                        <th>Comunidad</th>
-                        <th>Motivo / Moderador</th>
-                        <th>Reportes</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($vm->items as $item)
-                        @include('community.admin.moderation.partials.row', ['item' => $item])
-                    @empty
-                        @include('community.admin.moderation.partials.empty')
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="adm-comm-list">
+            @forelse($vm->items as $item)
+                @include('community.admin.moderation.partials.card', ['item' => $item])
+            @empty
+                @include('community.admin.moderation.partials.empty')
+            @endforelse
         </div>
     </section>
 

@@ -170,4 +170,32 @@
     /* ── Radios faltantes ────────────────────────────────── */
     --radius-lg:   20px;    /* Tarjetas grandes / modales */
     --radius-full: 9999px;  /* Pills, avatares, chips     */
+    --radius-md:   14px;    /* Alias para --radius (usado en módulos nuevos) */
+
+    /* ── Aliases semánticos — compatibilidad con módulos nuevos ─────────────
+       Los módulos más recientes (community-moderation, etc.) usan la
+       convención --color-surface / --space-N. Estos aliases mapean a los
+       tokens canónicos del proyecto para que ambas convenciones funcionen.
+       dark.css sobreescribe los tokens base (--bg-surface, --text-primary…),
+       por lo que los aliases resuelven correctamente en dark mode también. */
+
+    --color-surface:        var(--bg-surface);    /* #ffffff en light, #1e293b en dark */
+    --color-bg:             var(--bg-soft);       /* #f8fafc en light, #263245 en dark */
+    --color-border:         var(--border-default); /* #e2e8f0 en light */
+    --color-text-primary:   var(--text-primary);   /* #0d1829 en light */
+    --color-text-secondary: var(--text-secondary); /* #334155 en light */
+    --color-text-soft:      var(--text-muted);     /* #64748b */
+
+    /* ── Escala numérica de espaciado ───────────────────────────────────────
+       Compatible con la convención --space-N (Tailwind-style).
+       Los valores coinciden con la escala semántica existente. */
+    --space-1:  0.25rem;   /*  4px */
+    --space-2:  0.5rem;    /*  8px */
+    --space-3:  0.75rem;   /* 12px */
+    --space-4:  1rem;      /* 16px — igual que --space-md */
+    --space-5:  1.25rem;   /* 20px */
+    --space-6:  1.5rem;    /* 24px — igual que --space-lg */
+    --space-8:  2rem;      /* 32px — igual que --space-xl */
+    --space-10: 2.5rem;    /* 40px — igual que --space-2xl */
+    --space-12: 3rem;      /* 48px */
 }

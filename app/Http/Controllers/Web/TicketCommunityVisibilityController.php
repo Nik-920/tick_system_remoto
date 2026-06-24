@@ -23,7 +23,7 @@ class TicketCommunityVisibilityController extends Controller
     {
         $this->authorize('moderateCommunityVisibility', $ticket);
 
-        $previousVisible = $ticket->community_visible;
+        $previousVisible = (bool) $ticket->community_visible;
         $previousReason = $ticket->community_visibility_reason;
         $reason = $request->validated('reason');
         $performedById = $request->user()?->id;
@@ -62,7 +62,7 @@ class TicketCommunityVisibilityController extends Controller
     {
         $this->authorize('moderateCommunityVisibility', $ticket);
 
-        $previousVisible = $ticket->community_visible;
+        $previousVisible = (bool) $ticket->community_visible;
         $previousReason = $ticket->community_visibility_reason;
         $performedById = $request->user()?->id;
 

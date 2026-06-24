@@ -32,9 +32,20 @@ class CategoryController extends Controller
             ->paginate((int) ($filters['per_page'] ?? 15))
             ->withQueryString();
 
+        $maxActivity = max(1, $categories->max(
+            fn ($cat) => (int) $cat->incident_history_count + (int) $cat->tickets_count
+        ));
+
+        $categories->through(static function ($category) {
+            $category->activity_total = (int) $category->incident_history_count + (int) $category->tickets_count;
+
+            return $category;
+        });
+
         return view('categories.index', [
             'categories' => $categories,
             'filters' => $filters,
+            'maxActivity' => $maxActivity,
         ]);
     }
 
