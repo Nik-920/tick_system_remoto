@@ -212,11 +212,13 @@ final class CommunityModerationQueueQuery
     }
 
     /**
-     * @return array{id: string, ref: string, title: string, state: string, state_label: string, priority: string, priority_label: string, community_visible: bool, state_blocks_feed: bool, community_visibility_reason: string|null, community_hidden_at: string|null, hidden_by_name: string|null, location: array{name: string, building: string, room_code: string}|null, category: array{name: string}|null, show_url: string, created_at: string, updated_at: string, pending_reports_count: int, latest_pending_report: array{id: string, target_label: string, reason_label: string, note: string|null, comment_excerpt: string|null}|null}
+     * @return array{id: string, ref: string, title: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, community_visible: bool, community_badge_label: string, state_blocks_feed: bool, has_context: bool, community_visibility_reason: string|null, community_hidden_at: string|null, hidden_by_name: string|null, location: array{name: string, building: string, room_code: string}|null, category: array{name: string}|null, show_url: string, hide_url: string, restore_url: string, review_report_url: string|null, created_at: string, created_at_label: string, updated_at: string, pending_reports_count: int, latest_pending_report: array{id: string, target_label: string, reason_label: string, note: string|null, comment_excerpt: string|null}|null}
      */
     private function toItem(Ticket $ticket, int $pendingReportsCount = 0, ?CommunityReport $latestPendingReport = null): array
     {
         $state = (string) $ticket->state;
+        $communityVisible = (bool) $ticket->community_visible;
+        $createdAtLabel = LocalTime::format($ticket->created_at, 'd/m/Y') ?? '';
 
         return [
             'id' => (string) $ticket->id,
@@ -224,9 +226,11 @@ final class CommunityModerationQueueQuery
             'title' => (string) $ticket->title,
             'state' => $state,
             'state_label' => $this->stateLabel($state),
+            'state_tone' => $this->stateTone($state),
             'priority' => (string) $ticket->priority,
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
-            'community_visible' => (bool) $ticket->community_visible,
+            'community_visible' => $communityVisible,
+            'community_badge_label' => $communityVisible ? 'Visible' : 'Oculto',
             'state_blocks_feed' => ! in_array($state, self::PUBLIC_STATES, true),
             'community_visibility_reason' => $ticket->community_visibility_reason !== null
                 ? (string) $ticket->community_visibility_reason
@@ -244,8 +248,16 @@ final class CommunityModerationQueueQuery
                 'name' => (string) $ticket->category->name,
             ] : null,
             'show_url' => route('tickets.show', $ticket->id),
-            'created_at' => LocalTime::format($ticket->created_at, 'd/m/Y') ?? '',
+            'hide_url' => route('tickets.community.hide', $ticket->id),
+            'restore_url' => route('tickets.community.restore', $ticket->id),
+            'review_report_url' => $latestPendingReport !== null
+                ? route('admin.community.reports.review', $latestPendingReport->id)
+                : null,
+            'created_at' => $createdAtLabel,
+            'created_at_label' => $createdAtLabel,
             'updated_at' => LocalTime::format($ticket->updated_at, 'd/m/Y') ?? '',
+            'has_context' => (! $communityVisible && $ticket->community_visibility_reason !== null)
+                || $pendingReportsCount > 0,
             'pending_reports_count' => $pendingReportsCount,
             'latest_pending_report' => $latestPendingReport !== null ? [
                 'id' => (string) $latestPendingReport->id,
@@ -259,6 +271,16 @@ final class CommunityModerationQueueQuery
                     : null,
             ] : null,
         ];
+    }
+
+    private function stateTone(string $state): string
+    {
+        return match ($state) {
+            'open', 'in_progress' => 'info',
+            'resolved' => 'success',
+            'cancelled', 'rejected' => 'muted',
+            default => 'neutral',
+        };
     }
 
     /**

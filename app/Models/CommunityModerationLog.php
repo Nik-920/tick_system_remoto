@@ -57,6 +57,20 @@ class CommunityModerationLog extends Model
         ];
     }
 
+    /**
+     * Store as string '1'/'0' so PDO uses PARAM_STR instead of PARAM_INT.
+     * PostgreSQL rejects integer parameters for boolean columns (SQLSTATE 42804).
+     */
+    public function setPreviousVisibleAttribute(mixed $value): void
+    {
+        $this->attributes['previous_visible'] = is_null($value) ? null : ($value ? '1' : '0');
+    }
+
+    public function setNewVisibleAttribute(mixed $value): void
+    {
+        $this->attributes['new_visible'] = is_null($value) ? null : ($value ? '1' : '0');
+    }
+
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class, 'ticket_id');
