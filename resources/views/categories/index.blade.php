@@ -3,15 +3,6 @@
 @section('title', 'Categorias')
 
 @section('content')
-@php
-$searchValue = (string) ($filters['search'] ?? '');
-$perPageValue = (int) ($filters['per_page'] ?? 15);
-$activeFilterCount = $searchValue !== '' ? 1 : 0;
-$iconsVisibleCount = $categories->getCollection()->filter(static function ($category): bool {
-return is_string($category->icon) && trim($category->icon) !== '';
-})->count();
-@endphp
-
 <div class="cats-page">
 
     {{-- ===== HERO ===== --}}
@@ -24,7 +15,6 @@ return is_string($category->icon) && trim($category->icon) !== '';
             </div>
             <a href="{{ route('categories.create') }}" class="btn-primary cats-btn-new">Nueva categoría</a>
         </div>
-
     </section>
 
     {{-- Alerts --}}
@@ -39,21 +29,21 @@ return is_string($category->icon) && trim($category->icon) !== '';
                 <h2 class="cats-filters-title">Filtros de búsqueda</h2>
                 <p class="cats-filters-subtitle">Refina por nombre o descripción y ajusta la densidad de página</p>
             </div>
-            <span class="cats-filter-badge">{{ $activeFilterCount }} activos</span>
+            <span class="cats-filter-badge">{{ (($filters['search'] ?? '') !== '') ? 1 : 0 }} activos</span>
         </div>
 
         <form method="GET" action="{{ route('categories.index') }}" class="cats-filter-form">
             <div class="cats-filter-grid">
                 <div>
                     <label for="search" class="cats-field-label">Búsqueda</label>
-                    <input id="search" type="text" name="search" value="{{ $searchValue }}"
+                    <input id="search" type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                         placeholder="Nombre o descripción" class="cats-field">
                 </div>
                 <div>
                     <label for="per_page" class="cats-field-label">Por página</label>
                     <select id="per_page" name="per_page" class="cats-field">
                         @foreach ([10, 15, 25, 50] as $option)
-                        <option value="{{ $option }}" @selected($perPageValue===$option)>{{ $option }}</option>
+                        <option value="{{ $option }}" @selected(((int) ($filters['per_page'] ?? 15)) === $option)>{{ $option }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -65,101 +55,34 @@ return is_string($category->icon) && trim($category->icon) !== '';
         </form>
     </section>
 
-    {{-- ===== TABLA CRUD ===== --}}
+    {{-- ===== GRID DE CARDS ===== --}}
     <section class="cats-table-shell">
         <div class="cats-dataset-head">
             <p class="cats-dataset-count">{{ number_format($categories->count()) }} categorías en la vista actual</p>
             <span class="cats-dataset-chip">Página {{ $categories->currentPage() }} de {{ $categories->lastPage() }}</span>
         </div>
 
-        <div class="table-wrap">
-            <table class="cats-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Icono</th>
-                        <th>Incidencias</th>
-                        <th>Tickets</th>
-                        <th>Comunidad</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($categories as $category)
-                    <tr>
-                        <td>
-                            <span class="cats-name">{{ $category->name }}</span>
-                        </td>
-                        <td>
-                            @if (is_string($category->icon) && filter_var($category->icon, FILTER_VALIDATE_URL))
-                            <img src="{{ $category->icon }}" alt="Icono" class="cats-icon-img">
-                            @elseif (is_string($category->icon) && trim($category->icon) !== '')
-                            <span class="cats-icon-chip">{{ $category->icon }}</span>
-                            @else
-                            <span class="cats-icon-empty">—</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="cats-count-badge cats-count-badge--blue">
-                                {{ number_format((int) $category->incident_history_count) }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="cats-count-badge cats-count-badge--navy">
-                                {{ number_format((int) $category->tickets_count) }}
-                            </span>
-                        </td>
-                        <td>
-                            @if ($category->community_visibility_locked)
-                                <span class="cats-community-badge cats-community-badge--locked">Bloqueado</span>
-                            @elseif ($category->community_default_visible)
-                                <span class="cats-community-badge cats-community-badge--public">Público</span>
-                            @else
-                                <span class="cats-community-badge cats-community-badge--private">Privado</span>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="cats-actions">
-                                <a href="{{ route('categories.edit', $category) }}" class="cats-btn-edit">
-                                    Editar
-                                </a>
-                                @can('delete', $category)
-                                @php
-                                    $hasRelations = ((int) $category->tickets_count) > 0 || ((int) $category->incident_history_count) > 0;
-                                @endphp
-                                @if ($hasRelations)
-                                <button type="button" class="cats-btn-delete" disabled aria-disabled="true"
-                                    title="Tiene tickets o incidencias asociadas; no se puede eliminar.">Eliminar</button>
-                                @else
-                                <form method="POST" action="{{ route('categories.destroy', $category) }}"
-                                    onsubmit="return confirm('¿Seguro que deseas eliminar la categoría «{{ $category->name }}»? Esta acción no se puede deshacer.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="cats-btn-delete">Eliminar</button>
-                                </form>
-                                @endif
-                                @endcan
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="cats-empty-cell">
-                            <x-empty-state
-                                base-class="empty-state"
-                                title="No hay categorías para mostrar"
-                                note="Prueba ajustar o limpiar filtros. Si aún no existen categorías, crea una nueva para clasificar incidencias."
-                                title-class="empty-state__title"
-                                note-class="empty-state__note"
-                            >
-                                <a href="{{ route('categories.create') }}" class="btn-primary">Crear categoría</a>
-                            </x-empty-state>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        @if ($categories->count())
+            <div class="cat-grid">
+                @foreach ($categories as $category)
+                    @include('categories.partials.card', [
+                        'category'    => $category,
+                        'maxActivity' => $maxActivity,
+                        'toneIndex'   => $loop->index % 7,
+                    ])
+                @endforeach
+            </div>
+        @else
+            <x-empty-state
+                base-class="empty-state"
+                title="No se encontraron categorías"
+                note="Prueba ajustar o limpiar filtros. Si aún no existen categorías, crea una nueva para clasificar incidencias."
+                title-class="empty-state__title"
+                note-class="empty-state__note"
+            >
+                <a href="{{ route('categories.create') }}" class="btn-primary">Crear categoría</a>
+            </x-empty-state>
+        @endif
     </section>
 
     <div class="c-pagination">
