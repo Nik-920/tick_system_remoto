@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $community_visibility_help
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property int $activity_total Computed by CategoryController: incident_history_count + tickets_count for the card grid.
  */
 class Category extends Model
 {
