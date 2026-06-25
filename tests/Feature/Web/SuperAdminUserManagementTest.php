@@ -20,7 +20,7 @@ class SuperAdminUserManagementTest extends TestCase
         $response = $this->actingAs($superAdmin)->get(route('users.index'));
 
         $response->assertOk();
-        $response->assertSee('Gestion de usuarios y roles');
+        $response->assertSee('Gestión de usuarios');
     }
 
     public function test_admin_cannot_access_user_management_routes(): void

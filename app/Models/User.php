@@ -99,4 +99,16 @@ class User extends Authenticatable
 
         return $this->avatar_url.'?v='.($this->updated_at?->timestamp ?? 0);
     }
+
+    public function fullName(): string
+    {
+        return trim($this->name.' '.($this->last_name ?? ''));
+    }
+
+    public function primaryRoleName(): string
+    {
+        $role = $this->roles->pluck('name')->first();
+
+        return is_string($role) && $role !== '' ? $role : 'reporter';
+    }
 }
