@@ -83,7 +83,7 @@ class TicketNotificationPreferenceService
 
         $result = [];
         foreach ($types as $type) {
-            $typeChannels = $this->channelsFor($type);
+            $typeChannels = $this->channelsFor();
             $channelPrefs = [];
 
             foreach ($typeChannels as $channel) {
@@ -128,7 +128,7 @@ class TicketNotificationPreferenceService
      *
      * @return list<string>
      */
-    private function channelsFor(string $type): array
+    private function channelsFor(): array
     {
         return $this->channels();
     }

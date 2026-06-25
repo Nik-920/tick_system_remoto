@@ -55,11 +55,7 @@ class SendFcmPushOnTicketEvidenceAdded implements ShouldQueue
             $ticket = $event->ticket;
             $reporter = $ticket->reporter;
 
-            if (! $reporter instanceof User) {
-                return;
-            }
-
-            if ($reporter->id === $event->actor->id) {
+            if (! $reporter instanceof User || $reporter->id === $event->actor->id) {
                 return;
             }
 
@@ -93,20 +89,15 @@ class SendFcmPushOnTicketEvidenceAdded implements ShouldQueue
             $ticket = $event->ticket;
             $assignee = $ticket->assignee;
 
-            if (! $assignee instanceof User) {
-                return;
-            }
-
-            if (! $assignee->hasRole('maintenance')) {
-                return;
-            }
-
-            if ($assignee->id === $event->actor->id) {
+            if (! $assignee instanceof User || ! $assignee->hasRole('maintenance')) {
                 return;
             }
 
             $reporter = $ticket->reporter;
-            if ($reporter instanceof User && $reporter->id === $assignee->id) {
+            $actorIsAssignee = $assignee->id === $event->actor->id;
+            $reporterIsAssignee = $reporter instanceof User && $reporter->id === $assignee->id;
+
+            if ($actorIsAssignee || $reporterIsAssignee) {
                 return;
             }
 
