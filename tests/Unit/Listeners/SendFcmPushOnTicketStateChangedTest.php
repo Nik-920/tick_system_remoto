@@ -103,6 +103,131 @@ class SendFcmPushOnTicketStateChangedTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    // ── Maintenance assignee: push FCM al técnico asignado ──
+
+    public function test_maintenance_assignee_receives_fcm_push_on_state_change(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-1');
+        $actor = $this->makeUser('actor-m1');
+        $assignee = $this->makeMaintenanceUser('assignee-m1');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $fake = new FakePushNotificationProvider;
+
+        (new SendFcmPushOnTicketStateChanged($fake))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $fake->assertSentToUser('assignee-m1');
+    }
+
+    public function test_both_reporter_and_maintenance_assignee_receive_push(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-both');
+        $actor = $this->makeUser('actor-both');
+        $assignee = $this->makeMaintenanceUser('assignee-both');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $fake = new FakePushNotificationProvider;
+
+        (new SendFcmPushOnTicketStateChanged($fake))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'resolved'));
+
+        $fake->assertSentToUser('reporter-both');
+        $fake->assertSentToUser('assignee-both');
+        $this->assertCount(2, $fake->sentToUsers);
+    }
+
+    public function test_no_self_push_when_actor_is_maintenance_assignee(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-self');
+        $assignee = $this->makeMaintenanceUser('assignee-self');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $fake = new FakePushNotificationProvider;
+
+        (new SendFcmPushOnTicketStateChanged($fake))
+            ->handle(new TicketStateChanged($ticket, $assignee, 'open', 'in_progress'));
+
+        $fake->assertNotSentToUser('assignee-self');
+    }
+
+    public function test_no_fcm_push_when_assignee_is_not_maintenance(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-nm');
+        $actor = $this->makeUser('actor-nm');
+        $assignee = $this->makeNonMaintenanceUser('assignee-nm');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $fake = new FakePushNotificationProvider;
+
+        (new SendFcmPushOnTicketStateChanged($fake))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $fake->assertNotSentToUser('assignee-nm');
+    }
+
+    public function test_fcm_data_for_assignee_contains_from_to_state_and_recipient_role(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-data');
+        $actor = $this->makeUser('actor-data');
+        $assignee = $this->makeMaintenanceUser('assignee-data');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee, 'Fuga de agua');
+
+        $fake = new FakePushNotificationProvider;
+
+        (new SendFcmPushOnTicketStateChanged($fake))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'resolved'));
+
+        $assigneeEntry = collect($fake->sentToUsers)
+            ->firstWhere(fn ($s) => $s['user']->id === 'assignee-data');
+
+        $this->assertNotNull($assigneeEntry);
+        $data = $assigneeEntry['data'];
+        $this->assertSame('open', $data['from_state']);
+        $this->assertSame('resolved', $data['to_state']);
+        $this->assertSame('maintenance', $data['recipient_role']);
+        $this->assertSame('ticket_state_changed', $data['type']);
+    }
+
+    public function test_exception_in_assignee_path_is_caught_independently(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-exc');
+        $actor = $this->makeUser('actor-exc');
+        $assignee = $this->makeMaintenanceUser('assignee-exc');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $callCount = 0;
+        $fcm = $this->createMock(PushNotificationProvider::class);
+        $fcm->method('sendToUser')
+            ->willReturnCallback(function () use (&$callCount) {
+                $callCount++;
+                if ($callCount === 2) {
+                    throw new \RuntimeException('FCM assignee error');
+                }
+            });
+
+        (new SendFcmPushOnTicketStateChanged($fcm))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        /** @phpstan-ignore-next-line */
+        Log::shouldHaveReceived('error')
+            ->withArgs(fn ($msg) => str_contains((string) $msg, 'técnico'));
+
+        $this->addToAssertionCount(1);
+    }
+
     // ── Queue contract: push usa queue 'notifications' con 1 intento ──
 
     public function test_implements_should_queue(): void
@@ -140,12 +265,38 @@ class SendFcmPushOnTicketStateChangedTest extends TestCase
         return $user;
     }
 
+    private function makeMaintenanceUser(string $id): User
+    {
+        $user = $this->createPartialMock(User::class, ['hasRole']);
+        $user->id = $id;
+        $user->method('hasRole')->willReturnCallback(fn ($role) => $role === 'maintenance');
+
+        return $user;
+    }
+
+    private function makeNonMaintenanceUser(string $id): User
+    {
+        $user = $this->createPartialMock(User::class, ['hasRole']);
+        $user->id = $id;
+        $user->method('hasRole')->willReturn(false);
+
+        return $user;
+    }
+
     private function makeTicket(?User $reporter, string $title = 'Ticket de prueba'): Ticket
     {
         $ticket = new Ticket;
         $ticket->id = 'ticket-state-001';
         $ticket->title = $title;
         $ticket->setRelation('reporter', $reporter);
+
+        return $ticket;
+    }
+
+    private function makeTicketWithAssignee(?User $reporter, User $assignee, string $title = 'Ticket de prueba'): Ticket
+    {
+        $ticket = $this->makeTicket($reporter, $title);
+        $ticket->setRelation('assignee', $assignee);
 
         return $ticket;
     }
