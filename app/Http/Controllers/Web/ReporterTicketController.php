@@ -96,7 +96,16 @@ class ReporterTicketController extends Controller
 
         $tracking = ReporterTicketTrackingQuery::for($user, $ticket);
 
-        return view('tickets.reporter.show', ['tracking' => $tracking]);
+        $ticketModel = Ticket::query()
+            ->where('reporter_id', $user->id)
+            ->with(['ticketComments' => fn ($q) => $q->with('user')->oldest('created_at')])
+            ->findOrFail($tracking->ticket['id']);
+
+        return view('tickets.reporter.show', [
+            'tracking' => $tracking,
+            'ticketForComments' => $ticketModel,
+            'coreComments' => $ticketModel->ticketComments,
+        ]);
     }
 
     /**

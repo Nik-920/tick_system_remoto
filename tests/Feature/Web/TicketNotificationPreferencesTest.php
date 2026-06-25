@@ -738,6 +738,85 @@ class TicketNotificationPreferencesTest extends TestCase
         ]);
     }
 
+    // ── Comment preference tests ──────────────────────────────────────────────
+
+    public function test_reporter_sees_comment_reporter_type_in_applicable_types(): void
+    {
+        $reporter = $this->makeReporter();
+        $types = $this->prefs->applicableTypesFor($reporter);
+        $this->assertContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER, $types);
+    }
+
+    public function test_maintenance_sees_comment_assignee_type_in_applicable_types(): void
+    {
+        $maintenance = $this->makeMaintenance();
+        $types = $this->prefs->applicableTypesFor($maintenance);
+        $this->assertContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE, $types);
+    }
+
+    public function test_admin_does_not_see_comment_types_in_applicable_types(): void
+    {
+        $admin = $this->makeAdmin();
+        $types = $this->prefs->applicableTypesFor($admin);
+        $this->assertNotContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER, $types);
+        $this->assertNotContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE, $types);
+    }
+
+    public function test_patch_saves_comment_reporter_preference_for_reporter(): void
+    {
+        $reporter = $this->makeReporter();
+
+        $this->actingAs($reporter)
+            ->patch(route('profile.ticket-notifications.update'), [
+                'preferences' => [
+                    TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER => [
+                        TicketNotificationPreference::CHANNEL_IN_APP => '0',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertDatabaseHas('ticket_notification_preferences', [
+            'user_id' => $reporter->id,
+            'type' => TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER,
+            'channel' => TicketNotificationPreference::CHANNEL_IN_APP,
+            'enabled' => false,
+        ]);
+    }
+
+    public function test_patch_ignores_comment_assignee_preference_for_reporter(): void
+    {
+        $reporter = $this->makeReporter();
+
+        $this->actingAs($reporter)
+            ->patch(route('profile.ticket-notifications.update'), [
+                'preferences' => [
+                    TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE => [
+                        TicketNotificationPreference::CHANNEL_IN_APP => '0',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertDatabaseMissing('ticket_notification_preferences', [
+            'user_id' => $reporter->id,
+            'type' => TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE,
+        ]);
+    }
+
+    public function test_comment_reporter_type_has_both_channels_with_default_enabled(): void
+    {
+        $reporter = $this->makeReporter();
+        $prefs = $this->prefs->applicablePreferencesFor($reporter);
+
+        $this->assertArrayHasKey(TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER, $prefs);
+        $channels = $prefs[TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER]['channels'];
+        $this->assertArrayHasKey(TicketNotificationPreference::CHANNEL_IN_APP, $channels);
+        $this->assertArrayHasKey(TicketNotificationPreference::CHANNEL_FCM, $channels);
+        $this->assertTrue($channels[TicketNotificationPreference::CHANNEL_IN_APP]);
+        $this->assertTrue($channels[TicketNotificationPreference::CHANNEL_FCM]);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function ensureRolesExist(): void

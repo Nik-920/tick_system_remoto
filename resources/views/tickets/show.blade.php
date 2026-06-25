@@ -83,6 +83,14 @@
     @include('tickets.partials.show.history')
     @include('tickets.partials.show.community-visibility')
 
+    @can('viewComments', $ticket)
+        @include('tickets.partials.comments.core-comments', [
+            'ticket'        => $ticket,
+            'coreComments'  => $coreComments,
+            'currentUserId' => (string) auth()->id(),
+        ])
+    @endcan
+
     {{-- ── Botón volver inferior ── --}}
     <div class="mt-6 pb-2">
         <a href="{{ $vm->backUrl() }}"

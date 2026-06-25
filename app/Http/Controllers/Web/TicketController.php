@@ -217,6 +217,7 @@ class TicketController extends Controller
             'embedding.reviewer',
             'communityModerationLogs' => fn ($q) => $q->with('performedBy')->latest('created_at'),
             'communityCommentEditLogs' => fn ($q) => $q->with('editedBy')->latest('created_at'),
+            'ticketComments' => fn ($q) => $q->with('user')->oldest('created_at'),
         ]);
 
         $availableTransitions = $currentUser instanceof User
@@ -253,6 +254,7 @@ class TicketController extends Controller
                 : collect(),
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'duplicateExplanation' => DuplicateExplanationPresenter::present($ticket),
+            'coreComments' => $ticket->ticketComments,
         ]);
     }
 

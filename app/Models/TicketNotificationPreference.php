@@ -41,6 +41,10 @@ class TicketNotificationPreference extends Model
 
     public const TYPE_TICKET_EVIDENCE_ASSIGNEE = 'ticket.evidence.assignee';
 
+    public const TYPE_TICKET_COMMENT_REPORTER = 'ticket.comment.reporter';
+
+    public const TYPE_TICKET_COMMENT_ASSIGNEE = 'ticket.comment.assignee';
+
     /** @var list<string> */
     protected $fillable = ['user_id', 'type', 'channel', 'enabled'];
 

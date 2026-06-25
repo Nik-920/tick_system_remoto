@@ -165,6 +165,40 @@ class TicketPolicy
         return $this->canUnassignTicket($user);
     }
 
+    /**
+     * Create a private core comment on a ticket.
+     *
+     * Reporter: own ticket, not cancelled/rejected.
+     * Maintenance: assigned ticket, not cancelled/rejected.
+     * Admin/super_admin: any viewable ticket, no state restriction.
+     */
+    public function comment(User $user, Ticket $ticket): bool
+    {
+        if ($this->hasAnyRole($user, ['admin', 'super_admin'])) {
+            return $this->view($user, $ticket);
+        }
+
+        $closedStates = [Ticket::STATE_CANCELLED, Ticket::STATE_REJECTED];
+        if (in_array($ticket->state, $closedStates, true)) {
+            return false;
+        }
+
+        if ($this->hasRole($user, 'reporter')) {
+            return $ticket->reporter_id === $user->id;
+        }
+
+        if ($this->hasRole($user, 'maintenance')) {
+            return $ticket->assigned_to === $user->id;
+        }
+
+        return false;
+    }
+
+    public function viewComments(User $user, Ticket $ticket): bool
+    {
+        return $this->view($user, $ticket);
+    }
+
     public function moderateCommunityVisibility(User $user, Ticket $ticket): bool
     {
         unset($ticket);

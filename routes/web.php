@@ -32,6 +32,7 @@ use App\Http\Controllers\Web\ReporterGuideController;
 use App\Http\Controllers\Web\ReporterTicketCommentController;
 use App\Http\Controllers\Web\ReporterTicketController;
 use App\Http\Controllers\Web\TicketAssignmentsController;
+use App\Http\Controllers\Web\TicketCommentController;
 use App\Http\Controllers\Web\TicketCommunityVisibilityController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\TicketHistoryController;
@@ -247,6 +248,9 @@ Route::middleware('auth')->group(function (): void {
         ->middleware(['idempotency', 'throttle:creations'])
         ->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])
+        ->middleware(['throttle:mutations'])
+        ->name('tickets.comments.store');
     Route::get('/tickets/{ticket}/media/{media}/view', TicketMediaViewController::class)
         ->name('tickets.media.view');
     Route::patch('/tickets/{ticket}/claim', [TicketController::class, 'claim'])

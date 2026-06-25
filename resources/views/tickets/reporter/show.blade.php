@@ -291,7 +291,16 @@
         </aside>
     </div>
 
-    {{-- ── 4. NOTICE BANNER ──────────────────────────────────────── --}}
+    {{-- ── 4. COMENTARIOS INTERNOS ────────────────────────────────── --}}
+    @can('viewComments', $ticketForComments)
+        @include('tickets.partials.comments.core-comments', [
+            'ticket'        => $ticketForComments,
+            'coreComments'  => $coreComments,
+            'currentUserId' => (string) auth()->id(),
+        ])
+    @endcan
+
+    {{-- ── 5. NOTICE BANNER ──────────────────────────────────────── --}}
     <div class="rep-notice" role="note">
         <x-lucide-bell width="17" height="17" stroke-width="2" />
         <span>{{ $tracking->notice }}</span>
