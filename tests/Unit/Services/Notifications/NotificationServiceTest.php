@@ -76,6 +76,84 @@ class NotificationServiceTest extends TestCase
         ]);
     }
 
+    public function test_notify_assignee_creates_notification_for_maintenance_user(): void
+    {
+        $this->ensureRolesExist();
+
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $service = new NotificationService;
+        $service->notifyAssignee($maintenance, new NotificationPayload(
+            type: 'ticket_state_changed',
+            title: '🔧 En progreso: Fuga de agua',
+            body: 'Un ticket asignado a ti fue actualizado a: in_progress',
+        ));
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_state_changed',
+            'title' => '🔧 En progreso: Fuga de agua',
+        ]);
+    }
+
+    public function test_notify_assignee_skips_null_assignee(): void
+    {
+        $service = new NotificationService;
+        $service->notifyAssignee(null, new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B'));
+
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_notify_assignee_skips_user_without_maintenance_role(): void
+    {
+        $this->ensureRolesExist();
+
+        $reporter = User::factory()->create();
+        $reporter->assignRole('reporter');
+
+        $service = new NotificationService;
+        $service->notifyAssignee($reporter, new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B'));
+
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_notify_assignee_skips_when_actor_is_assignee(): void
+    {
+        $this->ensureRolesExist();
+
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $service = new NotificationService;
+        $service->notifyAssignee(
+            $maintenance,
+            new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B'),
+            $maintenance,
+        );
+
+        $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_notify_assignee_notifies_when_actor_is_different(): void
+    {
+        $this->ensureRolesExist();
+
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $actor = User::factory()->create();
+
+        $service = new NotificationService;
+        $service->notifyAssignee(
+            $maintenance,
+            new NotificationPayload(type: 'ticket_state_changed', title: 'T', body: 'B'),
+            $actor,
+        );
+
+        $this->assertDatabaseHas('notifications', ['user_id' => $maintenance->id, 'type' => 'ticket_state_changed']);
+    }
+
     private function ensureRolesExist(): void
     {
         foreach (['reporter', 'maintenance', 'admin', 'super_admin'] as $roleName) {

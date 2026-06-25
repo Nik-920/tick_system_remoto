@@ -53,6 +53,24 @@ class NotificationService
     }
 
     /**
+     * Notifica al usuario asignado (maintenance) descartando: assignee nulo,
+     * assignee sin rol maintenance, y auto-notificación cuando actor === assignee.
+     */
+    public function notifyAssignee(?User $assignee, NotificationPayload $payload, ?User $actor = null): void
+    {
+        if (! $assignee instanceof User) {
+            return;
+        }
+        if (! $assignee->hasRole('maintenance')) {
+            return;
+        }
+        if ($actor instanceof User && $actor->id === $assignee->id) {
+            return;
+        }
+        $this->notifyUser($assignee, $payload);
+    }
+
+    /**
      * ¿Ya existe hoy una notificación in-app equivalente para este usuario?
      *
      * - Si viene dedup_key (Fase 5.4): identidad precisa del evento lógico

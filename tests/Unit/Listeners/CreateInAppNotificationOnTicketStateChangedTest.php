@@ -154,6 +154,143 @@ class CreateInAppNotificationOnTicketStateChangedTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
+    // ── Mantenimiento: notificación al técnico asignado ──
+
+    public function test_handle_calls_notify_assignee_for_maintenance(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m1');
+        $actor = $this->makeUser('actor-m1');
+        $assignee = $this->makeUser('assignee-m1');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $capturedAssignee = null;
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->expects($this->once())
+            ->method('notifyAssignee')
+            ->willReturnCallback(function (User $u, NotificationPayload $p, ?User $a) use (&$capturedAssignee) {
+                $capturedAssignee = $u->id;
+            });
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $this->assertSame('assignee-m1', $capturedAssignee);
+    }
+
+    public function test_handle_passes_actor_to_notify_assignee_for_self_notification_guard(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m2');
+        $actor = $this->makeUser('actor-m2');
+        $assignee = $this->makeUser('assignee-m2');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $capturedActor = null;
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->method('notifyAssignee')
+            ->willReturnCallback(function (User $u, NotificationPayload $p, ?User $a) use (&$capturedActor) {
+                $capturedActor = $a?->id;
+            });
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $this->assertSame('actor-m2', $capturedActor);
+    }
+
+    public function test_handle_skips_notify_assignee_when_ticket_has_no_assignee(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m3');
+        $actor = $this->makeUser('actor-m3');
+        $ticket = $this->makeTicket($reporter);  // no assignee relation set
+
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->expects($this->never())->method('notifyAssignee');
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_assignee_payload_contains_correct_dedup_key(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m4');
+        $actor = $this->makeUser('actor-m4');
+        $assignee = $this->makeUser('assignee-m4');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $capturedDedupKey = null;
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->method('notifyAssignee')
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedDedupKey) {
+                $capturedDedupKey = $p->dedupKey;
+            });
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'in_progress'));
+
+        $this->assertSame('ticket_state_changed:ticket-state-001:open:in_progress', $capturedDedupKey);
+    }
+
+    public function test_assignee_payload_body_uses_asignado_wording(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m5');
+        $actor = $this->makeUser('actor-m5');
+        $assignee = $this->makeUser('assignee-m5');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee, 'Puerta rota');
+
+        $capturedBody = null;
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->method('notifyAssignee')
+            ->willReturnCallback(function (User $u, NotificationPayload $p) use (&$capturedBody) {
+                $capturedBody = $p->body;
+            });
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'resolved'));
+
+        $this->assertStringContainsString('asignado a ti', $capturedBody ?? '');
+    }
+
+    public function test_exception_in_assignee_notification_is_caught_and_logged(): void
+    {
+        Log::spy();
+
+        $reporter = $this->makeUser('reporter-m6');
+        $actor = $this->makeUser('actor-m6');
+        $assignee = $this->makeUser('assignee-m6');
+        $ticket = $this->makeTicketWithAssignee($reporter, $assignee);
+
+        $notif = $this->createMock(NotificationService::class);
+        $notif->method('notifyUser');
+        $notif->method('notifyAssignee')
+            ->willThrowException(new \RuntimeException('DB error'));
+
+        (new CreateInAppNotificationOnTicketStateChanged($notif))
+            ->handle(new TicketStateChanged($ticket, $actor, 'open', 'resolved'));
+
+        /** @phpstan-ignore-next-line */
+        Log::shouldHaveReceived('error')
+            ->withArgs(fn ($msg) => str_contains((string) $msg, 'asignado'));
+
+        $this->addToAssertionCount(1);
+    }
+
     // ── Queue contract: in-app usa queue 'default' con 3 intentos ──
 
     public function test_implements_should_queue(): void
@@ -199,6 +336,14 @@ class CreateInAppNotificationOnTicketStateChangedTest extends TestCase
         $ticket->id = 'ticket-state-001';
         $ticket->title = $title;
         $ticket->setRelation('reporter', $reporter);
+
+        return $ticket;
+    }
+
+    private function makeTicketWithAssignee(?User $reporter, User $assignee, string $title = 'Ticket de prueba'): Ticket
+    {
+        $ticket = $this->makeTicket($reporter, $title);
+        $ticket->setRelation('assignee', $assignee);
 
         return $ticket;
     }
