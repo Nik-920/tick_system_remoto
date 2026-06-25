@@ -5,9 +5,11 @@ namespace App\Listeners;
 use App\Events\TicketStateChanged;
 use App\Listeners\Concerns\BuildsTicketStateChangedNotification;
 use App\Listeners\Concerns\DeliversTicketInAppNotification;
+use App\Models\TicketNotificationPreference;
 use App\Models\User;
 use App\Services\Notifications\NotificationPayload;
 use App\Services\Notifications\NotificationService;
+use App\Services\Notifications\TicketNotificationPreferenceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +34,8 @@ class CreateInAppNotificationOnTicketStateChanged implements ShouldQueue
     public bool $afterCommit = true;
 
     public function __construct(
-        private NotificationService $notificationService
+        private NotificationService $notificationService,
+        private ?TicketNotificationPreferenceService $preferences = null,
     ) {}
 
     protected function notificationService(): NotificationService
@@ -42,10 +45,15 @@ class CreateInAppNotificationOnTicketStateChanged implements ShouldQueue
 
     public function handle(TicketStateChanged $event): void
     {
+        $prefs = $this->preferences;
+
         $this->deliverInAppNotification(
             fn (): ?array => $this->buildTicketStateChangedNotification($event),
             'Error creando notificación in-app en cambio de estado.',
             (string) $event->ticket->id,
+            $prefs !== null
+                ? fn (User $u) => $prefs->isEnabled($u, TicketNotificationPreference::TYPE_TICKET_STATE_REPORTER, TicketNotificationPreference::CHANNEL_IN_APP)
+                : null,
         );
 
         $this->deliverInAppNotificationToAssignee($event);
@@ -57,6 +65,10 @@ class CreateInAppNotificationOnTicketStateChanged implements ShouldQueue
             $assignee = $event->ticket->assignee;
 
             if (! $assignee instanceof User) {
+                return;
+            }
+
+            if ($this->preferences !== null && ! $this->preferences->isEnabled($assignee, TicketNotificationPreference::TYPE_TICKET_STATE_ASSIGNEE, TicketNotificationPreference::CHANNEL_IN_APP)) {
                 return;
             }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Events\TicketEvidenceAdded;
 use App\Http\Controllers\Concerns\DispatchesTicketCreatedAfterResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AssignTicketRequest;
@@ -326,6 +327,7 @@ class TicketController extends Controller
 
         if ($files !== []) {
             $mediaStorage->storeManyForTicket($ticket, $user, $files);
+            TicketEvidenceAdded::dispatch($ticket, $user, count($files));
         }
 
         return redirect()

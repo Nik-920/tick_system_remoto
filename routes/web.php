@@ -36,6 +36,7 @@ use App\Http\Controllers\Web\TicketCommunityVisibilityController;
 use App\Http\Controllers\Web\TicketController;
 use App\Http\Controllers\Web\TicketHistoryController;
 use App\Http\Controllers\Web\TicketMediaViewController;
+use App\Http\Controllers\Web\TicketNotificationPreferenceController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -117,6 +118,9 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/profile/community-notifications', [CommunityNotificationPreferenceController::class, 'update'])
         ->middleware('throttle:mutations')
         ->name('profile.community-notifications.update');
+    Route::patch('/profile/ticket-notifications', [TicketNotificationPreferenceController::class, 'update'])
+        ->middleware('throttle:mutations')
+        ->name('profile.ticket-notifications.update');
 
     Route::get('/scan/{token}', [QrScanController::class, 'show'])
         ->middleware('throttle:20,1')

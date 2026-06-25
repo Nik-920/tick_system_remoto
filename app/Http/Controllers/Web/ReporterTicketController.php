@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Events\TicketEvidenceAdded;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reporter\CancelReporterTicketRequest;
 use App\Http\Requests\Reporter\UpdateReporterTicketRequest;
@@ -158,6 +159,7 @@ class ReporterTicketController extends Controller
 
             if ($validFiles !== []) {
                 $mediaStorage->storeManyForTicket($model, $user, $validFiles);
+                TicketEvidenceAdded::dispatch($model, $user, count($validFiles));
             }
         }
 

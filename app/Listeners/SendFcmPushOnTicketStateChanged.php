@@ -5,7 +5,9 @@ namespace App\Listeners;
 use App\Contracts\Notifications\PushNotificationProvider;
 use App\Events\TicketStateChanged;
 use App\Listeners\Concerns\BuildsTicketStateChangedNotification;
+use App\Models\TicketNotificationPreference;
 use App\Models\User;
+use App\Services\Notifications\TicketNotificationPreferenceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +31,8 @@ class SendFcmPushOnTicketStateChanged implements ShouldQueue
     public bool $afterCommit = true;
 
     public function __construct(
-        private PushNotificationProvider $fcm
+        private PushNotificationProvider $fcm,
+        private ?TicketNotificationPreferenceService $preferences = null,
     ) {}
 
     public function handle(TicketStateChanged $event): void
@@ -43,6 +46,10 @@ class SendFcmPushOnTicketStateChanged implements ShouldQueue
         try {
             $n = $this->buildTicketStateChangedNotification($event);
             if ($n === null) {
+                return;
+            }
+
+            if ($this->preferences !== null && ! $this->preferences->isEnabled($n['user'], TicketNotificationPreference::TYPE_TICKET_STATE_REPORTER, TicketNotificationPreference::CHANNEL_FCM)) {
                 return;
             }
 
@@ -75,6 +82,10 @@ class SendFcmPushOnTicketStateChanged implements ShouldQueue
             $reporterIsAssignee = $reporter instanceof User && $reporter->id === $assignee->id;
 
             if ($actorIsAssignee || $reporterIsAssignee) {
+                return;
+            }
+
+            if ($this->preferences !== null && ! $this->preferences->isEnabled($assignee, TicketNotificationPreference::TYPE_TICKET_STATE_ASSIGNEE, TicketNotificationPreference::CHANNEL_FCM)) {
                 return;
             }
 

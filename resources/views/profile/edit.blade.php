@@ -164,6 +164,8 @@
 
             @include('profile.partials.community-notifications', ['communityPreferences' => $communityPreferences])
 
+            @include('profile.partials.ticket-notifications', ['ticketPreferences' => $ticketPreferences])
+
         </div>
 
         {{-- ===== SIDEBAR ===== --}}
