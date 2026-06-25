@@ -66,20 +66,15 @@ class SendFcmPushOnTicketStateChanged implements ShouldQueue
             $ticket = $event->ticket;
             $assignee = $ticket->assignee;
 
-            if (! $assignee instanceof User) {
-                return;
-            }
-
-            if (! $assignee->hasRole('maintenance')) {
-                return;
-            }
-
-            if ($event->actor->id === $assignee->id) {
+            if (! $assignee instanceof User || ! $assignee->hasRole('maintenance')) {
                 return;
             }
 
             $reporter = $ticket->reporter;
-            if ($reporter instanceof User && $reporter->id === $assignee->id) {
+            $actorIsAssignee = $event->actor->id === $assignee->id;
+            $reporterIsAssignee = $reporter instanceof User && $reporter->id === $assignee->id;
+
+            if ($actorIsAssignee || $reporterIsAssignee) {
                 return;
             }
 

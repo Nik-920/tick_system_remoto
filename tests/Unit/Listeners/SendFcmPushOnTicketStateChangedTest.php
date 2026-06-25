@@ -267,10 +267,8 @@ class SendFcmPushOnTicketStateChangedTest extends TestCase
 
     private function makeMaintenanceUser(string $id): User
     {
-        /** @phpstan-ignore-next-line */
         $user = $this->createPartialMock(User::class, ['hasRole']);
         $user->id = $id;
-        /** @phpstan-ignore-next-line */
         $user->method('hasRole')->willReturnCallback(fn ($role) => $role === 'maintenance');
 
         return $user;
@@ -278,10 +276,8 @@ class SendFcmPushOnTicketStateChangedTest extends TestCase
 
     private function makeNonMaintenanceUser(string $id): User
     {
-        /** @phpstan-ignore-next-line */
         $user = $this->createPartialMock(User::class, ['hasRole']);
         $user->id = $id;
-        /** @phpstan-ignore-next-line */
         $user->method('hasRole')->willReturn(false);
 
         return $user;
