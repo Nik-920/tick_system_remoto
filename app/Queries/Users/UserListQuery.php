@@ -29,6 +29,7 @@ final class UserListQuery
             $query->where(function (Builder $inner) use ($search): void {
                 $inner
                     ->where('name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }

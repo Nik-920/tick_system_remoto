@@ -36,6 +36,9 @@ class UserController extends Controller
             'users' => $users,
             'filters' => $filters,
             'availableRoles' => $this->availableRoles(),
+            'searchValue' => (string) ($filters['search'] ?? ''),
+            'roleFilter' => (string) ($filters['role'] ?? ''),
+            'roleCounts' => $this->getRoleCounts(),
         ]);
     }
 
@@ -173,6 +176,18 @@ class UserController extends Controller
     private function availableRoles(): array
     {
         return ['reporter', 'maintenance', 'admin', 'super_admin'];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function getRoleCounts(): array
+    {
+        return [
+            'reporter' => User::role('reporter')->count(),
+            'admin' => User::role(['admin', 'super_admin'])->count(),
+            'maintenance' => User::role('maintenance')->count(),
+        ];
     }
 
     private function resolvePrimaryRole(User $user): string
