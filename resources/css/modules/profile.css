@@ -237,41 +237,214 @@
     margin-top: 0.15rem;
 }
 
-/* ============================= */
-/* NOTIFICATION PREFERENCES      */
-/* ============================= */
+/* ============================================================ */
+/* 🔔 NOTIFICATION PREFERENCES — Premium Toggle Design         */
+/* ============================================================ */
+
 .profile-pref-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0;
 }
 
-.profile-pref-item {
+/* ── Row card ──────────────────────────────────────────────── */
+.profile-pref-item--group {
     display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
-    cursor: pointer;
-    user-select: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.18s ease;
+    position: relative;
 }
 
-.profile-pref-checkbox {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    margin-top: 2px;
-    accent-color: #1d4ed8;
-    cursor: pointer;
+.profile-pref-item--group:last-child {
+    border-bottom: none;
 }
 
+.profile-pref-item--group:hover {
+    background: var(--color-primary-light);
+}
+
+.profile-pref-item--group::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--color-primary);
+    opacity: 0;
+    border-radius: 0 2px 2px 0;
+    transition: opacity 0.18s ease;
+}
+
+.profile-pref-item--group:hover::before {
+    opacity: 1;
+}
+
+/* ── Label text ────────────────────────────────────────────── */
 .profile-pref-text {
-    font-size: 0.875rem;
-    color: var(--text-secondary, var(--text-primary));
-    line-height: 1.5;
+    font-size: 0.845rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    flex: 1;
+    min-width: 0;
 }
 
 [data-theme="dark"] .profile-pref-text {
     color: var(--text-muted);
 }
+
+/* ── Channel group (right side) ───────────────────────────── */
+.profile-pref-channels {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-shrink: 0;
+}
+
+/* ── Individual channel label ─────────────────────────────── */
+.profile-pref-channel-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.profile-pref-channel-name {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    transition: color 0.18s ease;
+}
+
+.profile-pref-channel-label:has(.profile-pref-toggle:checked) .profile-pref-channel-name {
+    color: var(--color-primary);
+}
+
+/* ── Hide the native checkbox ─────────────────────────────── */
+.profile-pref-checkbox {
+    display: none;
+}
+
+/* ── Toggle pill wrapper ──────────────────────────────────── */
+.profile-pref-toggle-wrap {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 21px;
+    flex-shrink: 0;
+}
+
+/* ── Hidden real checkbox (bound to pill) ─────────────────── */
+.profile-pref-toggle {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* ── Pill track ───────────────────────────────────────────── */
+.profile-pref-toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow  0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.profile-pref-toggle:checked + .profile-pref-toggle-track {
+    background: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.18);
+}
+
+.profile-pref-toggle-track:hover {
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+}
+
+/* ── Pill thumb (circle) ──────────────────────────────────── */
+.profile-pref-toggle-track::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.22s ease;
+}
+
+.profile-pref-toggle:checked + .profile-pref-toggle-track::after {
+    transform: translateX(17px);
+    box-shadow: 0 2px 6px rgba(29, 78, 216, 0.35);
+}
+
+/* ── Focus ring for accessibility ─────────────────────────── */
+.profile-pref-toggle:focus-visible + .profile-pref-toggle-track {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+/* ── Channel icon badge ───────────────────────────────────── */
+.profile-pref-channel-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+    background: var(--bg-soft);
+}
+
+.profile-pref-channel-label:hover .profile-pref-channel-icon {
+    transform: scale(1.12);
+}
+
+/* ── Dark mode adjustments ─────────────────────────────────── */
+[data-theme="dark"] .profile-pref-toggle-track {
+    background: #374151;
+}
+
+[data-theme="dark"] .profile-pref-toggle:checked + .profile-pref-toggle-track {
+    background: #3b82f6;
+}
+
+[data-theme="dark"] .profile-pref-channel-icon {
+    background: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .profile-pref-item--group:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
+/* ── Save success flash ───────────────────────────────────── */
+@keyframes prefSaved {
+    0%   { box-shadow: 0 0 0 0   rgba(29, 78, 216, 0.4); }
+    70%  { box-shadow: 0 0 0 8px rgba(29, 78, 216, 0);   }
+    100% { box-shadow: 0 0 0 0   rgba(29, 78, 216, 0);   }
+}
+
+.profile-pref-saved-flash {
+    animation: prefSaved 0.6s ease forwards;
+}
+
+
 
 /* ============================= */
 /* ðŸ“Œ SIDEBAR                    */
