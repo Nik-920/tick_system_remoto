@@ -48,6 +48,7 @@ class TicketNotificationPreferenceService
         if ($user->hasRole('reporter')) {
             $types[] = TicketNotificationPreference::TYPE_TICKET_STATE_REPORTER;
             $types[] = TicketNotificationPreference::TYPE_TICKET_EVIDENCE_REPORTER;
+            $types[] = TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER;
         }
 
         if ($user->hasRole('maintenance')) {
@@ -55,6 +56,7 @@ class TicketNotificationPreferenceService
             $types[] = TicketNotificationPreference::TYPE_TICKET_UNASSIGNED_ASSIGNEE;
             $types[] = TicketNotificationPreference::TYPE_TICKET_STATE_ASSIGNEE;
             $types[] = TicketNotificationPreference::TYPE_TICKET_EVIDENCE_ASSIGNEE;
+            $types[] = TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE;
         }
 
         return array_values(array_unique($types));
@@ -111,6 +113,8 @@ class TicketNotificationPreferenceService
             TicketNotificationPreference::TYPE_TICKET_STATE_ASSIGNEE => 'Cambios de estado asignado — avisarme cuando cambie el estado de un ticket que tengo asignado',
             TicketNotificationPreference::TYPE_TICKET_EVIDENCE_REPORTER => 'Evidencias en mis tickets — avisarme cuando alguien adjunte evidencia en mi ticket',
             TicketNotificationPreference::TYPE_TICKET_EVIDENCE_ASSIGNEE => 'Evidencias en tickets asignados — avisarme cuando alguien adjunte evidencia en un ticket asignado a mí',
+            TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER => 'Comentarios en mis tickets — avisarme cuando alguien comente en mi ticket',
+            TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE => 'Comentarios en tickets asignados — avisarme cuando alguien comente en un ticket asignado a mí',
         ];
     }
 

@@ -43,6 +43,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property-read Collection<int, CommunityReport> $communityReports
  * @property-read Collection<int, CommunityComment> $communityComments
  * @property-read Collection<int, CommunityCommentEditLog> $communityCommentEditLogs
+ * @property-read Collection<int, TicketComment> $ticketComments
  */
 class Ticket extends Model
 {
@@ -231,6 +232,11 @@ class Ticket extends Model
     public function communityCommentEditLogs(): HasMany
     {
         return $this->hasMany(CommunityCommentEditLog::class, 'ticket_id');
+    }
+
+    public function ticketComments(): HasMany
+    {
+        return $this->hasMany(TicketComment::class, 'ticket_id');
     }
 
     public function scopeAvailableForClaim(Builder $query): Builder

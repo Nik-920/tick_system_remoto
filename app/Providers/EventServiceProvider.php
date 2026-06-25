@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use App\Events\DuplicateDetected;
 use App\Events\TicketAssigned;
+use App\Events\TicketCommentCreated;
 use App\Events\TicketCreated;
 use App\Events\TicketEvidenceAdded;
 use App\Events\TicketResolved;
 use App\Events\TicketStateChanged;
 use App\Listeners\CreateInAppNotificationOnTicketAssigned;
+use App\Listeners\CreateInAppNotificationOnTicketCommentCreated;
 use App\Listeners\CreateInAppNotificationOnTicketCreated;
 use App\Listeners\CreateInAppNotificationOnTicketEvidenceAdded;
 use App\Listeners\CreateInAppNotificationOnTicketStateChanged;
@@ -18,6 +20,7 @@ use App\Listeners\InvalidateDashboardCacheOnTicketChanged;
 use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
 use App\Listeners\SendFcmPushOnTicketAssigned;
+use App\Listeners\SendFcmPushOnTicketCommentCreated;
 use App\Listeners\SendFcmPushOnTicketCreated;
 use App\Listeners\SendFcmPushOnTicketEvidenceAdded;
 use App\Listeners\SendFcmPushOnTicketStateChanged;
@@ -51,6 +54,10 @@ class EventServiceProvider extends ServiceProvider
         TicketEvidenceAdded::class => [
             CreateInAppNotificationOnTicketEvidenceAdded::class,
             SendFcmPushOnTicketEvidenceAdded::class,
+        ],
+        TicketCommentCreated::class => [
+            CreateInAppNotificationOnTicketCommentCreated::class,
+            SendFcmPushOnTicketCommentCreated::class,
         ],
         JobFailed::class => [
             ReportFailedQueueJob::class,
