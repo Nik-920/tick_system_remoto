@@ -28,12 +28,21 @@ trait DeliversTicketInAppNotification
      *     ticketId: string,
      *     dedupKey: string
      * }|null)  $buildPayload
+     * @param  (callable(User): bool)|null  $shouldDeliver  Optional preference gate; null means always deliver.
      */
-    protected function deliverInAppNotification(callable $buildPayload, string $errorMessage, string $ticketId): void
-    {
+    protected function deliverInAppNotification(
+        callable $buildPayload,
+        string $errorMessage,
+        string $ticketId,
+        ?callable $shouldDeliver = null,
+    ): void {
         try {
             $n = $buildPayload();
             if ($n === null) {
+                return;
+            }
+
+            if ($shouldDeliver !== null && ! $shouldDeliver($n['user'])) {
                 return;
             }
 

@@ -5,6 +5,8 @@ namespace App\Listeners;
 use App\Contracts\Notifications\PushNotificationProvider;
 use App\Events\TicketAssigned;
 use App\Listeners\Concerns\BuildsTicketAssignedNotification;
+use App\Models\TicketNotificationPreference;
+use App\Services\Notifications\TicketNotificationPreferenceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +29,8 @@ class SendFcmPushOnTicketAssigned implements ShouldQueue
     public bool $afterCommit = true;
 
     public function __construct(
-        private PushNotificationProvider $fcm
+        private PushNotificationProvider $fcm,
+        private ?TicketNotificationPreferenceService $preferences = null,
     ) {}
 
     public function handle(TicketAssigned $event): void
@@ -35,6 +38,14 @@ class SendFcmPushOnTicketAssigned implements ShouldQueue
         try {
             $n = $this->buildTicketAssignedNotification($event);
             if ($n === null) {
+                return;
+            }
+
+            $prefType = $event->action === 'unassigned'
+                ? TicketNotificationPreference::TYPE_TICKET_UNASSIGNED_ASSIGNEE
+                : TicketNotificationPreference::TYPE_TICKET_ASSIGNED_ASSIGNEE;
+
+            if ($this->preferences !== null && ! $this->preferences->isEnabled($n['user'], $prefType, TicketNotificationPreference::CHANNEL_FCM)) {
                 return;
             }
 
