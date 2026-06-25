@@ -137,6 +137,86 @@ class NotificationControllerTest extends TestCase
         $this->assertNull($foreignNotification->fresh()->read_at);
     }
 
+    // ── Maintenance: dropdown y endpoints son role-agnostic (filtran por user_id) ──
+
+    public function test_maintenance_user_can_list_own_notifications(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+
+        $maintenanceNotif = Notification::create([
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_state_changed',
+            'title' => '🔧 En progreso: Luz rota',
+            'body' => 'Un ticket asignado a ti fue actualizado a: in_progress',
+            'created_at' => now(),
+        ]);
+
+        $reporterNotif = Notification::create([
+            'user_id' => $reporter->id,
+            'type' => 'ticket_state_changed',
+            'title' => 'Notif del reporter',
+            'body' => 'Body',
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($maintenance)->getJson(route('notifications.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('unread_count', 1);
+        $response->assertJsonCount(1, 'notifications');
+        $response->assertJsonFragment(['id' => $maintenanceNotif->id]);
+        $response->assertJsonMissing(['id' => $reporterNotif->id]);
+    }
+
+    public function test_maintenance_can_mark_own_notification_as_read(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        $notif = Notification::create([
+            'user_id' => $maintenance->id,
+            'type' => 'ticket_assigned',
+            'title' => 'Nuevo ticket asignado',
+            'body' => 'Se te asignó el ticket',
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($maintenance)->postJson(route('notifications.read', $notif->id));
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+        $this->assertNotNull($notif->fresh()->read_at);
+    }
+
+    public function test_maintenance_can_mark_all_notifications_as_read(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        Notification::create(['user_id' => $maintenance->id, 'type' => 'ticket_assigned', 'title' => 'A', 'body' => 'B', 'created_at' => now()]);
+        Notification::create(['user_id' => $maintenance->id, 'type' => 'ticket_state_changed', 'title' => 'C', 'body' => 'D', 'created_at' => now()]);
+
+        $response = $this->actingAs($maintenance)->postJson(route('notifications.readAll'));
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+        $this->assertSame(0, Notification::where('user_id', $maintenance->id)->whereNull('read_at')->count());
+    }
+
+    public function test_maintenance_unread_count_reflects_unread_notifications(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+
+        Notification::create(['user_id' => $maintenance->id, 'type' => 'ticket_assigned', 'title' => 'A', 'body' => 'B', 'read_at' => now(), 'created_at' => now()]);
+        Notification::create(['user_id' => $maintenance->id, 'type' => 'ticket_state_changed', 'title' => 'C', 'body' => 'D', 'created_at' => now()]);
+        Notification::create(['user_id' => $maintenance->id, 'type' => 'ticket_state_changed', 'title' => 'E', 'body' => 'F', 'created_at' => now()]);
+
+        $response = $this->actingAs($maintenance)->getJson(route('notifications.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('unread_count', 2);
+        $response->assertJsonCount(3, 'notifications');
+    }
+
     private function createUserWithRole(string $role): User
     {
         $this->ensureRolesExist();

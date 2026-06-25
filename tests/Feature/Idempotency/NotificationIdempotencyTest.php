@@ -192,6 +192,96 @@ class NotificationIdempotencyTest extends TestCase
         );
     }
 
+    // ── Mantenimiento: notificaciones al técnico asignado ──
+
+    public function test_maintenance_assignee_receives_notification_on_state_change(): void
+    {
+        $this->ensureRolesExist();
+
+        $reporter = User::factory()->create();
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $actor = User::factory()->create();
+        $ticket = $this->makeTicketWithAssignee($reporter, $maintenance);
+
+        $this->stateListener()->handle($this->stateEvent($ticket, $actor, 'open', 'in_progress'));
+
+        $this->assertSame(1, $this->stateNotifCount($maintenance, $ticket));
+    }
+
+    public function test_maintenance_state_change_retry_does_not_duplicate(): void
+    {
+        $this->ensureRolesExist();
+
+        $reporter = User::factory()->create();
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $actor = User::factory()->create();
+        $ticket = $this->makeTicketWithAssignee($reporter, $maintenance);
+
+        $listener = $this->stateListener();
+        $event = $this->stateEvent($ticket, $actor, 'open', 'in_progress');
+        $listener->handle($event);
+        $listener->handle($event); // retry
+
+        $this->assertSame(1, $this->stateNotifCount($maintenance, $ticket));
+    }
+
+    public function test_reporter_and_maintenance_receive_independent_notifications(): void
+    {
+        $this->ensureRolesExist();
+
+        $reporter = User::factory()->create();
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $actor = User::factory()->create();
+        $ticket = $this->makeTicketWithAssignee($reporter, $maintenance);
+
+        $this->stateListener()->handle($this->stateEvent($ticket, $actor, 'open', 'in_progress'));
+
+        $this->assertSame(1, $this->stateNotifCount($reporter, $ticket));
+        $this->assertSame(1, $this->stateNotifCount($maintenance, $ticket));
+        $this->assertSame(2, Notification::where('ticket_id', $ticket->id)->where('type', 'ticket_state_changed')->count());
+    }
+
+    public function test_maintenance_does_not_receive_notification_when_actor_is_self(): void
+    {
+        $this->ensureRolesExist();
+
+        $reporter = User::factory()->create();
+        $maintenance = User::factory()->create();
+        $maintenance->assignRole('maintenance');
+
+        $ticket = $this->makeTicketWithAssignee($reporter, $maintenance);
+
+        // Actor es el mismo maintenance
+        $this->stateListener()->handle($this->stateEvent($ticket, $maintenance, 'open', 'in_progress'));
+
+        $this->assertSame(0, $this->stateNotifCount($maintenance, $ticket));
+        $this->assertSame(1, $this->stateNotifCount($reporter, $ticket));
+    }
+
+    public function test_no_duplicate_when_reporter_equals_maintenance_assignee(): void
+    {
+        $this->ensureRolesExist();
+
+        // Edge case: un usuario es reporter y también maintenance
+        $user = User::factory()->create();
+        $user->assignRole('reporter');
+        $user->assignRole('maintenance');
+
+        $actor = User::factory()->create();
+        $ticket = $this->makeTicketWithAssignee($user, $user);
+
+        $this->stateListener()->handle($this->stateEvent($ticket, $actor, 'open', 'in_progress'));
+
+        // Dedup por user_id+dedup_key previene la segunda notificación → solo 1
+        $this->assertSame(1, $this->stateNotifCount($user, $ticket));
+    }
+
     // ── Helpers ──
 
     private function stateListener(): CreateInAppNotificationOnTicketStateChanged
@@ -258,5 +348,14 @@ class NotificationIdempotencyTest extends TestCase
             'state' => 'open',
             'priority' => 'medium',
         ]);
+    }
+
+    private function makeTicketWithAssignee(User $reporter, User $assignee): Ticket
+    {
+        $ticket = $this->makeTicket($reporter);
+        $ticket->assigned_to = $assignee->id;
+        $ticket->save();
+
+        return $ticket->fresh(['reporter', 'assignee']) ?? $ticket;
     }
 }
