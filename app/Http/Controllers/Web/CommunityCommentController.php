@@ -10,13 +10,57 @@ use App\Http\Requests\Community\UpdateCommunityCommentRequest;
 use App\Models\CommunityComment;
 use App\Models\CommunityCommentEditLog;
 use App\Models\Ticket;
+use App\Queries\Community\CommunityFeedQuery;
 use App\Services\Community\CommunityNotificationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CommunityCommentController extends Controller
 {
+    /** Root comments returned per "Ver más comentarios" page, mirrors the feed's initial page size. */
+    private const COMMENTS_PER_PAGE = 2;
+
     public function __construct(private readonly CommunityNotificationService $communityNotifications) {}
+
+    /**
+     * GET /reporter/community/tickets/{ticket}/comments?offset=N
+     * Returns the next page of root comments (2 at a time) as server-rendered
+     * HTML, reusing comment-list-item.blade.php — the exact same partial used
+     * by the initial feed render — so paginated comments (and their Editar/
+     * Eliminar/Reportar/Responder forms) never drift from the first page.
+     */
+    public function index(Request $request, Ticket $ticket, CommunityFeedQuery $feedQuery): JsonResponse
+    {
+        abort_unless(
+            $ticket->community_visible && in_array($ticket->state, [
+                Ticket::STATE_OPEN,
+                Ticket::STATE_IN_PROGRESS,
+                Ticket::STATE_RESOLVED,
+            ], true),
+            404
+        );
+
+        $offset = max(0, (int) $request->query('offset', 0));
+        $viewerId = (string) $request->user()?->id;
+
+        $page = $feedQuery->loadMoreComments($ticket, $viewerId, $offset, self::COMMENTS_PER_PAGE);
+
+        $html = collect($page['items'])
+            ->map(fn (array $comment) => view('reporter.community.partials.comment-list-item', [
+                'comment' => $comment,
+                'post_id' => $ticket->id,
+            ])->render())
+            ->implode('');
+
+        return response()->json([
+            'ok' => true,
+            'html' => $html,
+            'has_more' => $page['has_more'],
+            'next_offset' => $offset + count($page['items']),
+        ]);
+    }
 
     /**
      * POST /reporter/community/tickets/{ticket}/comments
