@@ -1,660 +1,675 @@
-/* ── Community Moderation Queue — admin-only panel ──────────────────────── */
+/* ============================================================
+   MODULE — Community · Moderación (admin-only panel)
+   INCIDEX
+
+   Restyled to share the same visual language as
+   modules/tickets-assignments.css (the "Mis asignaciones" board):
+   soft-surface cards, tone-driven pills with a leading dot, a
+   left rail keyed to state, and asg-style buttons. The page
+   structure stays purpose-built for moderation (hero + KPI row +
+   filter grid + card list with a context/report block), only the
+   *look* is shared.
+
+   Tone system: every tone-aware element picks up --cm-soft /
+   --cm-fg / --cm-solid from a `.comm-mod-tone-*` ancestor, which
+   map straight onto the project-wide --tone-* tokens (tokens/base.css).
+   Dark mode "just works" because dark.css overrides --tone-*
+   globally — no manual [data-theme="dark"] duplication needed here.
+   ============================================================ */
 
 .comm-mod-page {
-    padding: var(--space-6);
-    max-width: 1400px;
-    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    color: var(--text-primary);
 }
 
-/* Hero */
+/* ── Tone palette — soft surface / readable fg / solid accent ──────────── */
+.comm-mod-tone-primary { --cm-soft: var(--tone-primary-soft);  --cm-fg: var(--tone-primary-fg);  --cm-solid: var(--tone-primary-solid);  }
+.comm-mod-tone-info    { --cm-soft: var(--tone-info-soft);     --cm-fg: var(--tone-info-fg);     --cm-solid: var(--tone-info-solid);     }
+.comm-mod-tone-medium  { --cm-soft: var(--tone-medium-soft);   --cm-fg: var(--tone-medium-fg);   --cm-solid: var(--tone-medium-solid);   }
+.comm-mod-tone-low     { --cm-soft: var(--tone-low-soft);      --cm-fg: var(--tone-low-fg);      --cm-solid: var(--tone-low-solid);      }
+.comm-mod-tone-high    { --cm-soft: var(--tone-high-soft);     --cm-fg: var(--tone-high-fg);     --cm-solid: var(--tone-high-solid);     }
+.comm-mod-tone-success { --cm-soft: var(--tone-success-soft);  --cm-fg: var(--tone-success-fg);  --cm-solid: var(--tone-success-solid);  }
+.comm-mod-tone-warning { --cm-soft: var(--tone-warning-soft);  --cm-fg: var(--tone-warning-fg);  --cm-solid: var(--tone-warning-solid);  }
+.comm-mod-tone-neutral { --cm-soft: var(--tone-neutral-soft);  --cm-fg: var(--tone-neutral-fg);  --cm-solid: var(--tone-neutral-solid);  }
 
-.comm-mod-hero {
-    margin-bottom: var(--space-6);
-}
-
+/* ============================================================
+   1. HERO
+   ============================================================ */
 .comm-mod-hero-inner {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: var(--space-4);
+    gap: 1.25rem;
+    flex-wrap: wrap;
 }
 
 .comm-mod-overline {
-    font-size: var(--text-xs);
+    margin: 0 0 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-text-soft);
-    margin-bottom: var(--space-1);
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
 }
 
 .comm-mod-title {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: var(--space-2);
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    text-wrap: balance;
 }
 
 .comm-mod-subtitle {
-    font-size: var(--text-sm);
-    color: var(--color-text-soft);
-    max-width: 60ch;
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 62ch;
+    text-wrap: pretty;
 }
 
-/* Summary KPI cards */
-
+/* ============================================================
+   2. SUMMARY KPI CARDS
+   ============================================================ */
 .comm-mod-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.9rem;
 }
 
 .comm-mod-kpi-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-left: 3px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-5);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: var(--transition);
+}
+
+.comm-mod-kpi-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.comm-mod-kpi-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--cm-soft);
+    color: var(--cm-fg);
+    flex-shrink: 0;
+}
+
+.comm-mod-kpi-body {
+    min-width: 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-}
-
-.comm-mod-kpi-card--warning {
-    border-left-color: #f59e0b;
-}
-
-.comm-mod-kpi-card--alert {
-    border-left-color: #ef4444;
 }
 
 .comm-mod-kpi-value {
-    font-size: var(--text-3xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
 }
 
 .comm-mod-kpi-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Filters panel */
-
-.comm-mod-filters {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-5);
-    margin-bottom: var(--space-6);
-}
-
-.comm-mod-filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-4);
-}
-
-.comm-mod-field-label {
-    display: block;
-    font-size: var(--text-xs);
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-1);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--text-muted);
 }
 
-.comm-mod-field {
-    width: 100%;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-sm);
-    color: var(--color-text-primary);
-    background: var(--color-bg);
-    transition: border-color 0.15s;
+/* Generic "needs attention" state for any KPI card (currently used by
+   pending reports > 0) — tone-agnostic so it can be reused elsewhere. */
+.comm-mod-kpi-card--active {
+    border-color: color-mix(in srgb, var(--cm-solid) 45%, var(--border-default));
+    background: color-mix(in srgb, var(--cm-soft) 55%, var(--bg-surface));
 }
 
-.comm-mod-field:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-    border-color: var(--color-primary);
-}
-
-.comm-mod-filter-actions {
+/* ============================================================
+   3. SEARCH + FILTERS TOOLBAR
+   Same language as modules/tickets-assignments.css (.asg-toolbar):
+   a search bar, a collapsible "Filtros" panel, one submit button.
+   ============================================================ */
+.comm-mod-toolbar-form {
     display: flex;
-    gap: var(--space-2);
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-/* Queue header (count + pagination chip) */
-
-.adm-comm-queue {
-    margin-bottom: var(--space-4);
+.comm-mod-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
+.comm-mod-toolbar-submit { flex-shrink: 0; }
+
+.comm-mod-search {
+    position: relative;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.comm-mod-search__icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    pointer-events: none;
+}
+
+.comm-mod-search__input {
+    width: 100%;
+    height: 42px;
+    padding: 0 0.9rem 0 2.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: var(--transition);
+}
+
+.comm-mod-search__input::placeholder { color: var(--text-faint); }
+
+.comm-mod-search__input:focus {
+    outline: none;
+    border-color: var(--color-primary-muted);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.comm-mod-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 42px;
+    padding: 0 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.comm-mod-filters-toggle:hover {
+    background: var(--bg-soft);
+    color: var(--text-primary);
+    border-color: #cbd5e1;
+}
+
+.comm-mod-filters-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.comm-mod-filters-toggle__chevron { transition: transform 0.2s ease; }
+.comm-mod-filters-toggle[aria-expanded="true"] .comm-mod-filters-toggle__chevron { transform: rotate(180deg); }
+
+/* Compact filter row — small inline selects, never a giant panel. */
+.comm-mod-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-xs);
+}
+
+.comm-mod-filters[hidden] { display: none; }
+
+.comm-mod-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 150px;
+    flex: 1 1 150px;
+}
+
+.comm-mod-filter__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.comm-mod-filter__select {
+    height: 38px;
+    padding: 0 0.7rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-default);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.83rem;
+    transition: var(--transition);
+}
+
+.comm-mod-filter__select:focus {
+    outline: none;
+    border-color: var(--color-primary-muted);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.comm-mod-filters__clear {
+    margin-left: auto;
+    align-self: flex-end;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: none;
+    border: none;
+    padding: 0.5rem 0.6rem;
+    color: var(--color-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius-xs);
+    text-decoration: none;
+}
+
+.comm-mod-filters__clear:hover { text-decoration: underline; }
+.comm-mod-filters__clear:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ============================================================
+   4. DATASET HEAD (count + pagination chip)
+   ============================================================ */
 .comm-mod-dataset-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-3) 0;
-    margin-bottom: var(--space-3);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .comm-mod-dataset-count {
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 .comm-mod-dataset-chip {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-soft);
+    border: 1px solid var(--border-default);
     border-radius: 999px;
-    padding: 2px 10px;
+    padding: 0.2rem 0.65rem;
 }
 
-/* ── Card list ──────────────────────────────────────────────────────────── */
-
+/* ============================================================
+   5. CARD LIST
+   ============================================================ */
 .adm-comm-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 0.75rem;
 }
 
-/* Card */
-
+/* ============================================================
+   6. CARD
+   ============================================================ */
 .adm-comm-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-left: 4px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--cm-solid, var(--tone-neutral-solid));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
     overflow: hidden;
+    transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
 }
 
-.adm-comm-card--open {
-    border-left-color: #3b82f6;
+.adm-comm-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
-.adm-comm-card--in_progress {
-    border-left-color: #f59e0b;
-}
-
-.adm-comm-card--resolved {
-    border-left-color: #22c55e;
-}
-
-.adm-comm-card--cancelled,
-.adm-comm-card--rejected {
-    border-left-color: #9ca3af;
-}
-
-/* Card topbar */
-
+/* Topbar — ref, date, badges */
 .adm-comm-card__topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-bg);
+    gap: 0.6rem;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-soft);
 }
 
 .adm-comm-card__meta {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 0.65rem;
 }
 
 .adm-comm-card__ref {
     font-family: ui-monospace, monospace;
-    font-size: var(--text-xs);
+    font-size: 0.72rem;
     font-weight: 700;
     color: var(--color-primary);
     text-decoration: none;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
 }
 
-.adm-comm-card__ref:hover {
-    text-decoration: underline;
-}
+.adm-comm-card__ref:hover { text-decoration: underline; }
+.adm-comm-card__ref:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
 
 .adm-comm-card__date {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-faint);
 }
 
 .adm-comm-card__badges {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 0.4rem;
 }
 
-/* Card body */
-
+/* Body — title + chips */
 .adm-comm-card__body {
-    padding: var(--space-3) var(--space-4);
+    padding: 0.9rem 1.1rem;
 }
 
 .adm-comm-card__title {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-2);
+    margin: 0 0 0.55rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
     line-height: 1.4;
 }
 
 .adm-comm-card__chips {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 0.4rem;
 }
 
 .adm-comm-chip {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    color: var(--color-text-secondary);
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-soft);
+    border: 1px solid var(--border-light);
     white-space: nowrap;
 }
 
 .adm-comm-chip--location {
     font-family: ui-monospace, monospace;
-    font-weight: 600;
+    font-weight: 700;
 }
 
-.adm-comm-chip--building {
-    color: var(--color-text-soft);
+.adm-comm-chip--building { color: var(--text-faint); }
+
+/* ============================================================
+   7. TONE PILLS (state · priority · visibility · feed-off)
+   Shared by the card topbar. One rule set, any tone — reuse
+   `.comm-mod-tone-*` instead of hand-rolling a new colour block
+   per badge type.
+   ============================================================ */
+.comm-mod-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    background: var(--cm-soft);
+    color: var(--cm-fg);
+    border: 1px solid color-mix(in srgb, var(--cm-solid) 32%, transparent);
 }
 
-/* Context block (hidden reason / reports) */
+.comm-mod-pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    flex-shrink: 0;
+}
 
+/* ============================================================
+   8. CONTEXT BLOCK (hidden reason / pending reports)
+   ============================================================ */
 .adm-comm-card__context {
-    padding: var(--space-3) var(--space-4);
-    border-top: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-surface) 97%, var(--color-text-soft) 3%);
+    padding: 0.85rem 1.1rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-soft);
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 0.75rem;
 }
 
 .adm-comm-context-block {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: 0.2rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--tone-neutral-solid);
 }
 
-.adm-comm-context-block--hide {
-    padding-left: var(--space-3);
-    border-left: 2px solid #9ca3af;
-}
-
-.adm-comm-context-block--reports {
-    padding-left: var(--space-3);
-    border-left: 2px solid #f59e0b;
-}
+.adm-comm-context-block--reports { border-left-color: var(--tone-medium-solid); }
 
 .adm-comm-context-reason {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
     margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
     word-break: break-word;
 }
 
 .adm-comm-context-meta {
-    font-size: 10px;
-    color: var(--color-text-soft);
     margin: 0;
+    font-size: 0.68rem;
+    color: var(--text-faint);
 }
 
 .adm-comm-reports-summary {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    color: #92400e;
     margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--tone-medium-fg);
 }
 
-.adm-comm-reports-target {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
-    margin: 0;
-}
-
-.adm-comm-reports-excerpt {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
-    font-style: italic;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 60ch;
-}
-
+.adm-comm-reports-target,
+.adm-comm-reports-excerpt,
 .adm-comm-reports-note {
-    font-size: var(--text-xs);
-    color: var(--color-text-soft);
-    font-style: italic;
     margin: 0;
+    font-size: 0.76rem;
+    color: var(--text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 60ch;
 }
 
-/* Report review details */
+.adm-comm-reports-excerpt,
+.adm-comm-reports-note { font-style: italic; }
 
-.adm-comm-report-details {
-    margin-top: var(--space-2);
-}
+/* Report review <details> — chevron affordance so it reads as expandable */
+.adm-comm-report-details { margin-top: 0.5rem; }
 
-/* Card footer / actions */
-
-.adm-comm-card__actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    border-top: 1px solid var(--color-border);
-    background: var(--color-bg);
-}
-
-.adm-comm-restore-form {
-    display: inline-flex;
-}
-
-/* Buttons */
-
-.adm-comm-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 12px;
-    border-radius: var(--radius-md);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid transparent;
-    text-decoration: none;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    list-style: none;
-}
-
-.adm-comm-btn--view {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text-secondary);
-}
-
-.adm-comm-btn--view:hover {
-    background: var(--color-bg);
-}
-
-.adm-comm-btn--hide {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text-secondary);
-}
-
-.adm-comm-btn--hide:hover {
-    background: var(--color-bg);
-}
-
-.adm-comm-btn--restore {
-    background: #dcfce7;
-    border-color: #bbf7d0;
-    color: #16a34a;
-}
-
-.adm-comm-btn--restore:hover {
-    background: #16a34a;
-    color: #fff;
-}
-
-.adm-comm-btn--review {
-    background: var(--color-surface);
-    border-color: #fde68a;
-    color: #92400e;
-}
-
-.adm-comm-btn--review:hover {
-    background: #fef3c7;
-}
-
-.adm-comm-btn--confirm-hide {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
-}
-
-.adm-comm-btn--confirm-hide:hover {
-    background: #dc2626;
-    color: #fff;
-}
-
-.adm-comm-btn--confirm {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-    color: var(--color-text-secondary);
-}
-
-.adm-comm-btn--confirm:hover {
-    background: var(--color-bg);
-}
-
-/* Suppress details marker on summary elements used as buttons (webkit + Firefox) */
-
-.adm-comm-card__visibility-panel summary,
 .adm-comm-report-details summary {
     list-style: none;
+    cursor: pointer;
 }
 
-.adm-comm-card__visibility-panel summary::-webkit-details-marker,
-.adm-comm-report-details summary::-webkit-details-marker {
-    display: none;
-}
+.adm-comm-report-details summary::-webkit-details-marker { display: none; }
+.adm-comm-report-details summary::marker { content: ''; }
 
-.adm-comm-card__visibility-panel summary::marker,
-.adm-comm-report-details summary::marker {
-    content: '';
-}
-
-/* Chevron affordance so the summary reads as expandable, not a dead-end button */
-
-.adm-comm-card__visibility-panel summary::after,
 .adm-comm-report-details summary::after {
     content: '\25BE';
     display: inline-block;
-    margin-left: var(--space-1);
+    margin-left: 0.3rem;
     font-size: 10px;
-    transition: transform 0.15s;
+    transition: transform 0.15s ease;
 }
 
-.adm-comm-card__visibility-panel[open] summary::after,
-.adm-comm-report-details[open] summary::after {
-    transform: rotate(-180deg);
-}
-
-/* Inline form inside details */
-
-.adm-comm-card__visibility-panel {
-    display: block;
-}
+.adm-comm-report-details[open] summary::after { transform: rotate(-180deg); }
 
 .adm-comm-form-wrap {
-    margin-top: var(--space-2);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-left: 3px solid var(--tone-high-solid);
-    border-radius: var(--radius-md);
-    padding: var(--space-3);
-}
-
-.adm-comm-report-details .adm-comm-form-wrap {
-    border-left-color: var(--tone-warning-solid);
+    margin-top: 0.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 3px solid var(--tone-warning-solid);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
 }
 
 .adm-comm-form {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-}
-
-.adm-comm-form-label {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    color: var(--color-text-secondary);
+    gap: 0.5rem;
 }
 
 .adm-comm-form-input {
     width: 100%;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-xs);
-    color: var(--color-text-primary);
-    background: var(--color-bg);
-    transition: border-color 0.15s;
+    height: 36px;
+    padding: 0 0.65rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border-default);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.78rem;
+    transition: var(--transition);
 }
 
 .adm-comm-form-input:focus {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-    border-color: var(--color-primary);
+    outline: none;
+    border-color: var(--color-primary-muted);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-/* Card hover affordance */
-
-.adm-comm-card {
-    transition: box-shadow 0.15s, border-color 0.15s;
+/* ============================================================
+   9. FOOTER ACTIONS + BUTTONS
+   ============================================================ */
+.adm-comm-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1.1rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-soft);
 }
 
-.adm-comm-card:hover {
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
-}
+.adm-comm-restore-form { display: inline-flex; margin: 0; }
 
-/* Feed-off badge */
-
-.adm-comm-badge {
+.adm-comm-btn {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: var(--text-xs);
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.adm-comm-badge--feed-off {
-    background: #fef9c3;
-    color: #854d0e;
-    border: 1px solid #fef08a;
-}
-
-/* Empty state */
-
-.adm-comm-empty {
-    padding: var(--space-10, 2.5rem) var(--space-4);
-    text-align: center;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-}
-
-/* State badges (shared with comm-mod prefix — kept for backward compat) */
-
-.comm-mod-state-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: var(--text-xs);
-    font-weight: 500;
+    gap: 0.35rem;
+    height: 34px;
+    padding: 0 0.85rem;
+    border-radius: var(--radius-xs);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
     border: 1px solid transparent;
+    transition: var(--transition);
     white-space: nowrap;
 }
 
-.comm-mod-state-badge--open {
-    background: #dbeafe;
-    color: #1d4ed8;
-    border-color: #bfdbfe;
+.adm-comm-btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.adm-comm-btn--view {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+.adm-comm-btn--view:hover { background: var(--bg-soft); color: var(--text-primary); }
+
+.adm-comm-btn--hide {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+.adm-comm-btn--hide:hover {
+    background: var(--tone-high-soft);
+    color: var(--tone-high-fg);
+    border-color: color-mix(in srgb, var(--tone-high-solid) 40%, transparent);
 }
 
-.comm-mod-state-badge--in_progress {
-    background: #fef9c3;
-    color: #854d0e;
-    border-color: #fef08a;
+.adm-comm-btn--restore {
+    background: var(--tone-success-soft);
+    border-color: color-mix(in srgb, var(--tone-success-solid) 35%, transparent);
+    color: var(--tone-success-fg);
+}
+.adm-comm-btn--restore:hover { background: var(--tone-success-solid); color: #fff; }
+
+.adm-comm-btn--review {
+    background: var(--tone-warning-soft);
+    border-color: color-mix(in srgb, var(--tone-warning-solid) 35%, transparent);
+    color: var(--tone-warning-fg);
+}
+.adm-comm-btn--review:hover { background: var(--tone-warning-solid); color: #fff; }
+
+.adm-comm-btn--confirm {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+.adm-comm-btn--confirm:hover { background: var(--color-primary-hover); }
+
+/* ============================================================
+   10. EMPTY STATE
+   ============================================================ */
+.adm-comm-empty {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius);
 }
 
-.comm-mod-state-badge--resolved {
-    background: #dcfce7;
-    color: #166534;
-    border-color: #bbf7d0;
-}
-
-.comm-mod-state-badge--cancelled,
-.comm-mod-state-badge--rejected {
-    background: #f3f4f6;
-    color: #6b7280;
-    border-color: #e5e7eb;
-}
-
-/* Community visibility badges */
-
-.comm-mod-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: var(--text-xs);
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.comm-mod-badge--visible {
-    background: #dcfce7;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-}
-
-.comm-mod-badge--hidden {
-    background: #f3f4f6;
-    color: #6b7280;
-    border: 1px solid #e5e7eb;
-}
-
-/* KPI card — reports */
-
-.comm-mod-kpi-card--reports {
-    border-left: 3px solid #fbbf24;
-}
-
-.comm-mod-kpi-card--reports-active {
-    border-left-color: #d97706;
-    background: #fffbeb;
-}
-
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
-
+/* ============================================================
+   11. RESPONSIVE
+   ============================================================ */
 @media (max-width: 640px) {
-    .comm-mod-page {
-        padding: var(--space-4);
-    }
+    .comm-mod-filter { flex-basis: 100%; }
+    .comm-mod-filters__clear { margin-left: 0; }
+
+    /* No iOS zoom-on-focus (16px inputs). */
+    .comm-mod-search__input,
+    .comm-mod-filter__select { font-size: 16px; }
 
     .adm-comm-card__topbar {
         flex-direction: column;
@@ -668,96 +683,8 @@
     .adm-comm-btn {
         flex: 1 1 auto;
         justify-content: center;
+        min-height: 40px;
     }
-
-    .comm-mod-filter-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* ── Dark mode ───────────────────────────────────────────────────────────── */
-
-[data-theme="dark"] .adm-comm-card__topbar,
-[data-theme="dark"] .adm-comm-card__actions {
-    background: var(--color-surface);
-}
-
-[data-theme="dark"] .adm-comm-card__context {
-    background: color-mix(in srgb, var(--color-surface) 90%, #1e293b 10%);
-}
-
-[data-theme="dark"] .adm-comm-reports-summary {
-    color: #fde68a;
-}
-
-[data-theme="dark"] .adm-comm-badge--feed-off {
-    background: #3b2500;
-    color: #fde68a;
-    border-color: #854d0e;
-}
-
-[data-theme="dark"] .adm-comm-btn--restore {
-    background: #14532d;
-    border-color: #166534;
-    color: #86efac;
-}
-
-[data-theme="dark"] .adm-comm-btn--restore:hover {
-    background: #16a34a;
-    color: #fff;
-}
-
-[data-theme="dark"] .adm-comm-btn--confirm-hide {
-    background: #450a0a;
-    border-color: #7f1d1d;
-    color: #fca5a5;
-}
-
-[data-theme="dark"] .adm-comm-btn--review {
-    background: var(--color-surface);
-    border-color: #92400e;
-    color: #fde68a;
-}
-
-[data-theme="dark"] .comm-mod-state-badge--open {
-    background: #1e3a5f;
-    color: #93c5fd;
-    border-color: #1d4ed8;
-}
-
-[data-theme="dark"] .comm-mod-state-badge--in_progress {
-    background: #3b2500;
-    color: #fde68a;
-    border-color: #854d0e;
-}
-
-[data-theme="dark"] .comm-mod-state-badge--resolved {
-    background: #14532d;
-    color: #86efac;
-    border-color: #166534;
-}
-
-[data-theme="dark"] .comm-mod-state-badge--cancelled,
-[data-theme="dark"] .comm-mod-state-badge--rejected {
-    background: #374151;
-    color: #9ca3af;
-    border-color: #4b5563;
-}
-
-[data-theme="dark"] .comm-mod-badge--visible {
-    background: #14532d;
-    color: #86efac;
-    border-color: #166534;
-}
-
-[data-theme="dark"] .comm-mod-badge--hidden {
-    background: #374151;
-    color: #9ca3af;
-    border-color: #4b5563;
-}
-
-[data-theme="dark"] .comm-mod-kpi-card--reports-active {
-    background: #1c1400;
 }
 
 /* ── Community Visibility Card — Ticket Show §9 ──────────────────────────── */
