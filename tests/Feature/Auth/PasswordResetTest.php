@@ -2,8 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\ResetPasswordMail;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -51,7 +52,7 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseHas('password_reset_tokens', [
             'email' => $user->email,
         ]);
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($user, ResetPasswordNotification::class);
     }
 
     public function test_password_reset_link_returns_generic_message_for_unknown_email(): void
@@ -132,5 +133,143 @@ class PasswordResetTest extends TestCase
 
         $response->assertRedirect(route('password.reset', ['token' => 'token-invalido']));
         $response->assertSessionHasErrors('email');
+    }
+
+    public function test_login_screen_shows_forgot_password_link(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertSee(route('password.request'), false);
+    }
+
+    public function test_forgot_password_rejects_invalid_email_format(): void
+    {
+        $response = $this->from(route('password.request'))->post(route('password.email'), [
+            'email' => 'not-an-email',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+    }
+
+    public function test_password_reset_email_uses_branded_mailable_with_correct_url(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+
+        $this->post(route('password.email'), ['email' => $user->email]);
+
+        Notification::assertSentTo($user, ResetPasswordNotification::class, function (ResetPasswordNotification $notification) use ($user): bool {
+            $mail = $notification->toMail($user);
+
+            return $mail instanceof ResetPasswordMail
+                && $mail->hasTo($user->email)
+                && str_contains($mail->resetUrl, (string) config('app.url'))
+                && str_contains($mail->resetUrl, url('/reset-password/'))
+                && str_contains($mail->resetUrl, 'email='.rawurlencode($user->email));
+        });
+    }
+
+    public function test_password_reset_token_is_invalidated_after_use(): void
+    {
+        $user = User::factory()->create();
+        $token = Password::createToken($user);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'primeraClave123',
+            'password_confirmation' => 'primeraClave123',
+        ])->assertRedirect(route('login'));
+
+        $response = $this->from(route('password.reset', ['token' => $token]))->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'segundaClave123',
+            'password_confirmation' => 'segundaClave123',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('primeraClave123', $user->password));
+    }
+
+    public function test_password_reset_token_expires_after_configured_ttl(): void
+    {
+        $user = User::factory()->create();
+        $originalPassword = $user->password;
+        $token = Password::createToken($user);
+
+        $this->travel(61)->minutes();
+
+        $response = $this->from(route('password.reset', ['token' => $token]))->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'nuevaClave123',
+            'password_confirmation' => 'nuevaClave123',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+
+        $user->refresh();
+        $this->assertSame($originalPassword, $user->password);
+    }
+
+    public function test_old_password_no_longer_works_after_reset(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('password123'),
+        ]);
+        $token = Password::createToken($user);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'nuevaClave123',
+            'password_confirmation' => 'nuevaClave123',
+        ]);
+
+        $response = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_remember_token_is_regenerated_after_reset(): void
+    {
+        $user = User::factory()->create([
+            'remember_token' => 'old-remember-token',
+        ]);
+        $token = Password::createToken($user);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'nuevaClave123',
+            'password_confirmation' => 'nuevaClave123',
+        ]);
+
+        $user->refresh();
+        $this->assertNotSame('old-remember-token', $user->remember_token);
+        $this->assertNotEmpty($user->remember_token);
+    }
+
+    public function test_password_cannot_be_reset_with_password_shorter_than_minimum(): void
+    {
+        $user = User::factory()->create();
+        $token = Password::createToken($user);
+
+        $response = $this->from(route('password.reset', ['token' => $token]))->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'short1',
+            'password_confirmation' => 'short1',
+        ]);
+
+        $response->assertSessionHasErrors('password');
     }
 }
