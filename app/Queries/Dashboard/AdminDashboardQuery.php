@@ -142,6 +142,20 @@ final class AdminDashboardQuery
             'priorityBreakdown' => $priorityBreakdown,
             'recentTickets' => $recentTickets,
             'qrIssues' => $qrIssues,
+
+            // Raw scalars — kept alongside the shaped keys above so a presenter
+            // (e.g. AdminDashboardV2Presenter) can build KPI/gauge/alert widgets
+            // without re-deriving numbers already computed here.
+            'totalTicketsCount' => $totalTickets,
+            'openUnassignedCount' => $globalOpenUnassigned,
+            'criticalOpenCount' => $globalCriticalOpen,
+            'createdLast7DaysCount' => $createdLast7Days,
+            'resolvedLast7DaysCount' => $resolvedLast7Days,
+            'resolutionRate7DaysValue' => $resolutionRate7Days,
+            'totalLocationsCount' => $totalLocations,
+            'activeLocationsCount' => $activeLocations,
+            'totalCategoriesCount' => $totalCategories,
+            'totalUsersCount' => User::query()->count(),
         ];
     }
 

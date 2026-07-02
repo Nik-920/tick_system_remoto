@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\DashboardDateRangeRequest;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Queries\Dashboard\AdminDashboardQuery;
+use App\Support\Dashboard\AdminDashboardV2Presenter;
 use App\Support\Dashboard\MaintenanceDashboardV2Presenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -15,7 +15,7 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly MaintenanceDashboardV2Presenter $maintenancePresenter,
-        private readonly AdminDashboardQuery $adminDashboardQuery,
+        private readonly AdminDashboardV2Presenter $adminPresenter,
     ) {}
 
     public function index(DashboardDateRangeRequest $request): View|RedirectResponse
@@ -42,9 +42,7 @@ class DashboardController extends Controller
         return view('dashboard.admin', [
             'roleProfile' => $roleProfile,
             'roleLabel' => $this->resolveRoleLabel($roleProfile),
-            'stateLabels' => $this->stateLabels(),
-            'priorityLabels' => $this->priorityLabels(),
-            ...$this->adminDashboardQuery->execute($user),
+            ...$this->adminPresenter->payload($user),
         ]);
     }
 
@@ -68,32 +66,6 @@ class DashboardController extends Controller
             'maintenance' => 'Mantenimiento',
             default => 'Reporter',
         };
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function stateLabels(): array
-    {
-        return [
-            'open' => 'Abierto',
-            'in_progress' => 'En progreso',
-            'resolved' => 'Resuelto',
-            'rejected' => 'Rechazado',
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function priorityLabels(): array
-    {
-        return [
-            'low' => 'Baja',
-            'medium' => 'Media',
-            'high' => 'Alta',
-            'critical' => 'Critica',
-        ];
     }
 
     /**
