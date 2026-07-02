@@ -601,6 +601,7 @@
     border-radius: var(--radius-sm);
     padding: 1rem 1.25rem;
     box-shadow: var(--shadow-xs);
+    margin-bottom: 1.25rem;
 }
 
 .tickets-dup-banner {
