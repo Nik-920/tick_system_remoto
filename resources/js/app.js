@@ -171,8 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modal.classList.remove('hidden');
-        // trigger reflow so the opacity change below transitions instead of jumping
-        modal.offsetWidth;
+        // trigger reflow (function call, not a bare property read) so the
+        // opacity change below transitions instead of jumping
+        modal.getBoundingClientRect();
         modal.classList.remove('opacity-0');
     }
 
