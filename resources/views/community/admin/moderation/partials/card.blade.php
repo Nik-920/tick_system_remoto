@@ -104,29 +104,14 @@
            class="adm-comm-btn adm-comm-btn--view">Ver ficha</a>
 
         @if($item['community_visible'])
-            <details class="adm-comm-card__visibility-panel">
-                <summary class="adm-comm-btn adm-comm-btn--hide">Ocultar</summary>
-                <div class="adm-comm-form-wrap">
-                    <form method="POST"
-                          action="{{ $item['hide_url'] }}"
-                          class="adm-comm-form">
-                        @csrf
-                        @method('PATCH')
-                        <label for="adm-comm-hide-reason-{{ $item['id'] }}" class="adm-comm-form-label">
-                            Motivo de ocultamiento
-                        </label>
-                        <input type="text"
-                               id="adm-comm-hide-reason-{{ $item['id'] }}"
-                               name="reason"
-                               required
-                               maxlength="255"
-                               placeholder="Ej.: Contenido duplicado, información sensible..."
-                               class="adm-comm-form-input"
-                               aria-label="Motivo de ocultamiento">
-                        <button type="submit" class="adm-comm-btn adm-comm-btn--confirm-hide">Confirmar ocultamiento</button>
-                    </form>
-                </div>
-            </details>
+            <form method="POST"
+                  action="{{ $item['hide_url'] }}"
+                  class="adm-comm-restore-form"
+                  data-prompt="¿Ocultar ticket? Ingresa el motivo:">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="adm-comm-btn adm-comm-btn--hide">Ocultar</button>
+            </form>
         @else
             <form method="POST"
                   action="{{ $item['restore_url'] }}"

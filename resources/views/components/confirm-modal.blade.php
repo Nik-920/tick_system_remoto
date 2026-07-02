@@ -10,6 +10,11 @@
         <div class="text-center mb-6">
             <h3 class="text-lg font-bold mb-2" style="color: var(--text-primary); letter-spacing: -0.01em;">Confirmación</h3>
             <p id="globalConfirmModalText" class="text-sm" style="color: var(--text-muted); line-height: 1.5;"></p>
+            
+            <div id="globalConfirmModalInputWrap" class="hidden mt-4 text-left">
+                <input type="text" id="globalConfirmModalInput" class="c-input w-full" placeholder="Ingresa el motivo...">
+                <p id="globalConfirmModalInputError" class="hidden text-xs text-red-500 mt-1">Este campo es requerido.</p>
+            </div>
         </div>
 
         <div class="flex gap-3 justify-center mt-2">
