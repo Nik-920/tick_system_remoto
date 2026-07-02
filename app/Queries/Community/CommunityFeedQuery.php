@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\Support\Cache\CacheTtl;
+use App\Support\Community\CommentAuthorPresenter;
 use App\ViewModels\Community\CommunityFeedViewModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
@@ -24,8 +25,14 @@ use Illuminate\Support\Str;
  *
  * Security contract:
  * - Base query selects only safe ticket columns — reporter_id, assigned_to,
- *   and assigned_by are never loaded.
- * - Eager loading uses explicit column lists; user relations are not loaded.
+ *   and assigned_by are never loaded. The ticket/post author stays anonymous
+ *   ("Creado por usuario anónimo") — this decision is unrelated to comments.
+ * - Eager loading uses explicit column lists; user relations are not loaded
+ *   for the ticket itself.
+ * - Comment authors are a deliberate exception: the commenter's display name
+ *   (name + last_name) and role are shown next to each comment/reply, see
+ *   batchCommentData()/mapCommentItem(). Email and internal IDs are still
+ *   never exposed.
  * - Returned ViewModel contains pre-mapped arrays, not raw Eloquent models.
  * - Reaction/save counts are aggregate only; no user identity is exposed.
  *
@@ -194,13 +201,14 @@ final class CommunityFeedQuery
      * - Each shown root carries the latest 2 visible replies; replies of
      *   hidden/deleted roots never surface because those roots are excluded.
      *
-     * Only user_id (for the viewer ownership check) and safe fields are loaded —
-     * no names, emails or PII.
+     * Commenter display name (name + last_name) and role are loaded in one
+     * batched query (see userDataMap below) to render the author's identity
+     * next to each comment/reply — email and internal IDs are never loaded.
      *
      * @param  list<string>  $ticketIds
      * @return array{
      *   0: array<string, int>,
-     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>>
+     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>>
      * }
      */
     private function batchCommentData(array $ticketIds, string $viewerId): array
@@ -286,9 +294,8 @@ final class CommunityFeedQuery
             $viewerPendingReportSet = array_fill_keys($pendingCommentIds, true);
         }
 
-        // Query 5 — commenter roles (safe: role name is not PII).
-        /** @var array<string, string> $userRoleMap */
-        $userRoleMap = [];
+        // Query 5 — commenter display name + role (batched, no N+1), shared
+        // with the reporter's own ticket-comments modal via CommentAuthorPresenter.
         $allCommentUserIds = array_values(array_unique(array_filter(array_map(
             fn (CommunityComment $c) => $c->user_id !== null ? (string) $c->user_id : null,
             array_merge(
@@ -296,21 +303,9 @@ final class CommunityFeedQuery
                 array_merge(...array_values($shownRepliesByParent) ?: [[]])
             )
         ))));
-        if ($allCommentUserIds !== []) {
-            $userRoleMap = User::query()
-                ->whereIn('id', $allCommentUserIds)
-                ->with('roles:id,name')
-                ->get(['id'])
-                ->mapWithKeys(function (User $u): array {
-                    $firstRole = $u->roles->first();
-                    $roleName = $firstRole !== null ? (string) $firstRole->getAttribute('name') : '';
+        $userDataMap = CommentAuthorPresenter::loadUserData($allCommentUserIds);
 
-                    return [(string) $u->id => $roleName];
-                })
-                ->all();
-        }
-
-        /** @var array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>> $latestCommentsMap */
+        /** @var array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>> $latestCommentsMap */
         $latestCommentsMap = [];
         foreach ($shownRootsByTicket as $tid => $roots) {
             foreach ($roots as $root) {
@@ -318,10 +313,10 @@ final class CommunityFeedQuery
 
                 $replyItems = [];
                 foreach ($shownRepliesByParent[$rid] ?? [] as $reply) {
-                    $replyItems[] = $this->mapCommentItem($reply, $viewerId, $viewerPendingReportSet, $userRoleMap);
+                    $replyItems[] = $this->mapCommentItem($reply, $viewerId, $viewerPendingReportSet, $userDataMap);
                 }
 
-                $item = $this->mapCommentItem($root, $viewerId, $viewerPendingReportSet, $userRoleMap);
+                $item = $this->mapCommentItem($root, $viewerId, $viewerPendingReportSet, $userDataMap);
                 $item['reply_count'] = (int) ($replyCountByParent[$rid] ?? 0);
                 $item['replies'] = $replyItems;
 
@@ -334,36 +329,22 @@ final class CommunityFeedQuery
 
     /**
      * Map a single comment/reply model into the safe feed array shape.
-     * Role information is included for visual differentiation; role names are not PII.
+     * The commenter's display name and role are included for identification;
+     * email and internal IDs are never part of this shape.
      *
      * @param  array<string, true>  $viewerPendingReportSet
-     * @param  array<string, string>  $userRoleMap
-     * @return array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}
+     * @param  array<string, array{name: string, last_name: string, role: string}>  $userDataMap
+     * @return array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}
      */
-    private function mapCommentItem(CommunityComment $comment, string $viewerId, array $viewerPendingReportSet, array $userRoleMap = []): array
+    private function mapCommentItem(CommunityComment $comment, string $viewerId, array $viewerPendingReportSet, array $userDataMap = []): array
     {
         $cid = (string) $comment->id;
-        $isOwner = (string) $comment->user_id === $viewerId;
-        $roleName = $userRoleMap[(string) $comment->user_id] ?? '';
+        $uid = $comment->user_id !== null ? (string) $comment->user_id : null;
+        $isOwner = $uid !== null && $uid === $viewerId;
+        $userData = $uid !== null ? ($userDataMap[$uid] ?? null) : null;
 
-        $roleTone = match (true) {
-            $roleName === 'maintenance' => 'maintenance',
-            in_array($roleName, ['admin', 'super_admin'], true) => 'admin',
-            default => 'reporter',
-        };
-
-        $roleLabel = match ($roleTone) {
-            'maintenance' => 'Maintenance',
-            'admin' => 'Admin',
-            default => 'Reporter',
-        };
-
-        $authorInitials = match (true) {
-            $isOwner => 'TU',
-            $roleTone === 'maintenance' => 'MT',
-            $roleTone === 'admin' => 'AD',
-            default => 'RC',
-        };
+        $roleTone = CommentAuthorPresenter::roleTone($userData);
+        $author = CommentAuthorPresenter::resolve($userData, $isOwner);
 
         return [
             'id' => $cid,
@@ -373,8 +354,9 @@ final class CommunityFeedQuery
             'viewer_report_pending' => isset($viewerPendingReportSet[$cid]),
             'edited' => $comment->edited_at !== null,
             'role_tone' => $roleTone,
-            'role_label' => $roleLabel,
-            'author_initials' => $authorInitials,
+            'role_label' => CommentAuthorPresenter::roleLabel($roleTone),
+            'author_label' => $author['label'],
+            'author_initials' => $author['initials'],
         ];
     }
 
@@ -515,8 +497,8 @@ final class CommunityFeedQuery
     /**
      * @param  array<string, int>  $reactionCounts  {type => count}
      * @param  list<string>  $userReactionTypes  types the viewer has active
-     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>  $latestComments
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon_type: string, icon_name: string, icon_url: string|null}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>}}
+     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>  $latestComments
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon_type: string, icon_name: string, icon_url: string|null}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>}}
      */
     private function toPost(
         Ticket $ticket,
