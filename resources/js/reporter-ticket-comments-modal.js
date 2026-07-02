@@ -10,8 +10,9 @@
  * Accessibility: focus trap, Escape closes, aria-expanded on trigger, focus
  * returns to trigger on close.
  *
- * No PII: the server only sends author_label (Tú / Reporter de la comunidad),
- * body text, and a relative timestamp — no names, emails, or IDs.
+ * No PII: the server sends the commenter's display name (author_label),
+ * pre-resolved avatar initials, a role badge (role_label/role_tone), body
+ * text, and a relative timestamp — never email, user_id, or other IDs.
  */
 
 // ── CSRF ─────────────────────────────────────────────────────────────────────
@@ -101,11 +102,11 @@ function showError(msg) {
 
 // ── Comment rendering ─────────────────────────────────────────────────────────
 
-function buildAvatar(label) {
+function buildAvatar(comment) {
     const av = document.createElement('div');
-    av.className = 'rep-comments-modal__avatar';
+    av.className = 'rep-comments-modal__avatar rep-comments-modal__avatar--' + comment.role_tone;
     av.setAttribute('aria-hidden', 'true');
-    av.textContent = label === 'Tú' ? 'T' : 'R';
+    av.textContent = comment.author_initials; // safe: server-controlled string
     return av;
 }
 
@@ -115,7 +116,7 @@ function buildCommentNode(comment, isReply) {
         ? 'rep-comments-modal__item rep-comments-modal__item--reply'
         : 'rep-comments-modal__item';
 
-    wrap.appendChild(buildAvatar(comment.author_label));
+    wrap.appendChild(buildAvatar(comment));
 
     const bubble = document.createElement('div');
     bubble.className = 'rep-comments-modal__bubble';
@@ -128,6 +129,11 @@ function buildCommentNode(comment, isReply) {
     author.className = 'rep-comments-modal__author';
     author.textContent = comment.author_label; // safe: server-controlled string
     meta.appendChild(author);
+
+    const role = document.createElement('span');
+    role.className = 'rep-comments-modal__role rep-comments-modal__role--' + comment.role_tone;
+    role.textContent = comment.role_label; // safe: server-controlled string
+    meta.appendChild(role);
 
     if (comment.owned_by_viewer) {
         const badge = document.createElement('span');
