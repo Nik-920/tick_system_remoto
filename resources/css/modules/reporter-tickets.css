@@ -1884,14 +1884,23 @@ body.rep-modal-open { overflow: hidden; }
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: var(--bg-soft);
-    color: var(--text-muted);
     font-size: 0.7rem;
     font-weight: 800;
     flex-shrink: 0;
-    border: 1px solid var(--border-light);
+    border: 1px solid transparent;
     user-select: none;
 }
+
+/* ── Avatar / role tones — same palette as the community feed (comm-comment-v2__*) ── */
+.rep-comments-modal__avatar--reporter { background: #ffe4e6; color: #be123c; }
+.rep-comments-modal__avatar--maintenance { background: #dbeafe; color: #1e40af; }
+.rep-comments-modal__avatar--admin { background: #ede9fe; color: #6d28d9; }
+.rep-comments-modal__avatar--unknown { background: #f1f5f9; color: #475569; }
+
+[data-theme="dark"] .rep-comments-modal__avatar--reporter { background: #4c0519; color: #fda4af; }
+[data-theme="dark"] .rep-comments-modal__avatar--maintenance { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .rep-comments-modal__avatar--admin { background: #2e1065; color: #c4b5fd; }
+[data-theme="dark"] .rep-comments-modal__avatar--unknown { background: #1e293b; color: #cbd5e1; }
 
 /* ── Bubble ── */
 .rep-comments-modal__bubble {
@@ -1913,10 +1922,33 @@ body.rep-modal-open { overflow: hidden; }
 }
 
 .rep-comments-modal__author {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--text-primary);
 }
+
+.rep-comments-modal__role {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.06rem 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+.rep-comments-modal__role--reporter { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.rep-comments-modal__role--maintenance { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.rep-comments-modal__role--admin { background: #f5f3ff; color: #6d28d9; border-color: #ede9fe; }
+.rep-comments-modal__role--unknown { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+
+[data-theme="dark"] .rep-comments-modal__role--reporter { background: #4c0519; color: #fda4af; border-color: #9f1239; }
+[data-theme="dark"] .rep-comments-modal__role--maintenance { background: #1e3a5f; color: #93c5fd; border-color: #1d4ed8; }
+[data-theme="dark"] .rep-comments-modal__role--admin { background: #2e1065; color: #c4b5fd; border-color: #6d28d9; }
+[data-theme="dark"] .rep-comments-modal__role--unknown { background: #1e293b; color: #cbd5e1; border-color: #334155; }
 
 .rep-comments-modal__you,
 .rep-comments-modal__edited {
