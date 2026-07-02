@@ -162,6 +162,12 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('role:reporter')
         ->name('reporter.community.categories.icon');
 
+    // Community v6: "Ver más comentarios" — paginated read endpoint, not a
+    // mutation, so it stays outside the throttle:mutations group below.
+    Route::get('/reporter/community/tickets/{ticket}/comments', [CommunityCommentController::class, 'index'])
+        ->middleware('role:reporter')
+        ->name('reporter.community.comments.index');
+
     // Community v2: reactions and saves — reporter-only mutation endpoints.
     // Visibility check is enforced inside each controller (404 if not visible).
     Route::middleware(['role:reporter', 'throttle:mutations'])
