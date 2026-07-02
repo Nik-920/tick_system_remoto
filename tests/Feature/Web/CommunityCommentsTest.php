@@ -275,30 +275,30 @@ class CommunityCommentsTest extends TestCase
             ->assertDontSee('Comentario eliminado por reporter FDELBODY.', false);
     }
 
-    public function test_feed_uses_generic_author_label_not_user_name(): void
+    public function test_feed_shows_commenter_display_name_and_role(): void
     {
         $this->ensureRolesExist();
         $author = User::factory()->create([
-            'name' => 'NombreRealSecretoAutor',
-            'email' => 'autor-secreto@test.test',
+            'name' => 'NombreVisibleAutor',
+            'email' => 'autor-visible@test.test',
         ]);
         $author->assignRole('reporter');
         $reporter = $this->createUserWithRole('reporter');
-        $ticket = $this->makeVisibleTicket(title: 'Ticket anonimo FANON');
+        $ticket = $this->makeVisibleTicket(title: 'Ticket con nombre visible FNAME');
 
         CommunityComment::create([
             'ticket_id' => $ticket->id,
             'user_id' => $author->id,
-            'body' => 'Comentario de autor anónimo FAUTHOR.',
+            'body' => 'Comentario de autor visible FAUTHOR.',
             'status' => CommunityComment::STATUS_VISIBLE,
         ]);
 
         $this->actingAs($reporter)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertDontSee('NombreRealSecretoAutor', false)
-            ->assertDontSee('autor-secreto@test.test', false)
-            ->assertSee('Reporter de la comunidad', false);
+            ->assertSee('NombreVisibleAutor', false)
+            ->assertDontSee('autor-visible@test.test', false)
+            ->assertSee('Reporter', false);
     }
 
     public function test_xss_comment_body_is_escaped(): void
