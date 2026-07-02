@@ -106,6 +106,9 @@
     {{-- ── 3. DUPLICATE NOTICE (reporter-safe, shown only when flagged) ── --}}
     @include('tickets.reporter.partials.duplicate-notice', ['duplicate' => $tracking->duplicate])
 
+    {{-- ── 3b. PRECHECK NOTICE (reporter confirmed "caso distinto") ── --}}
+    @include('tickets.reporter.partials.precheck-notice', ['precheckNotice' => $tracking->precheckNotice])
+
     {{-- ── 4. CONTENT LAYOUT: description + timeline + detail rail ── --}}
     <div class="rep-show-layout">
 

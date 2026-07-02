@@ -395,6 +395,38 @@ final class TicketShowViewModel
             && in_array($matched->state, ['open', 'in_progress'], true);
     }
 
+    // ─── Duplicate precheck notice (reporter confirmed "caso distinto") ───────
+
+    public function precheckMatchedTicket(): ?Ticket
+    {
+        return $this->duplicateEmbedding()?->precheckMatchedTicket;
+    }
+
+    public function precheckReason(): ?string
+    {
+        return $this->duplicateEmbedding()?->precheck_reason;
+    }
+
+    public function precheckConfirmedAt(): ?DateTimeInterface
+    {
+        return $this->duplicateEmbedding()?->precheck_confirmed_at;
+    }
+
+    /**
+     * True when there is a precheck candidate to surface AND the main AI
+     * duplicate warning is not already covering it — the precheck notice is
+     * a softer, read-only, secondary signal (see the 2026_07_01_000100
+     * migration for why it never feeds is_duplicate/effective_duplicate).
+     */
+    public function shouldShowPrecheckNotice(): bool
+    {
+        $embedding = $this->duplicateEmbedding();
+
+        return $embedding !== null
+            && $embedding->hasPrecheckCandidate()
+            && ! $this->shouldShowDuplicateWarning();
+    }
+
     // ─── Community visibility ─────────────────────────────────────────────────
 
     public function isCommunityVisible(): bool

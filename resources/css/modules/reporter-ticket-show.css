@@ -1619,3 +1619,15 @@
 }
 
 [data-theme="dark"] .rep-dup-notice__row { border-bottom-color: rgba(148, 163, 184, 0.1); }
+
+/* Softer "related" variant: reporter confirmed a precheck candidate was a
+   distinct case (informational only, not the AI-confirmed warning tone).
+   Overrides the dark-theme amber rail above — same specificity, so it must
+   also be scoped under [data-theme="dark"] to win in dark mode. */
+.rep-dup-notice--info { border-left-color: var(--tone-info-solid); }
+
+.rep-dup-notice--info .rep-panel__title svg { color: var(--tone-info-fg); }
+
+[data-theme="dark"] .rep-dup-notice--info { border-left-color: var(--tone-info-solid); }
+
+[data-theme="dark"] .rep-dup-notice--info .rep-panel__title svg { color: var(--tone-info-fg); }
