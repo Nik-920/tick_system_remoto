@@ -8,6 +8,7 @@ use App\Models\Location;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Dashboard\AdminDashboardQuery;
+use App\Support\Dashboard\Concerns\BuildsDashboardCharts;
 use App\Support\LocalTime;
 use Illuminate\Support\Collection;
 
@@ -23,6 +24,8 @@ use Illuminate\Support\Collection;
  */
 final class AdminDashboardV2Presenter
 {
+    use BuildsDashboardCharts;
+
     /** How many rows the recent-activity feed shows (query fetches 10). */
     private const ACTIVITY_LIMIT = 6;
 
@@ -106,7 +109,6 @@ final class AdminDashboardV2Presenter
      */
     private function statusDonut(array $dist): array
     {
-        $total = array_sum($dist);
         $bands = [
             ['key' => Ticket::STATE_OPEN, 'label' => self::STATE_LABELS[Ticket::STATE_OPEN], 'color' => '#2563eb', 'tone' => 'primary'],
             ['key' => Ticket::STATE_IN_PROGRESS, 'label' => self::STATE_LABELS[Ticket::STATE_IN_PROGRESS], 'color' => '#f59e0b', 'tone' => 'warning'],
@@ -115,23 +117,7 @@ final class AdminDashboardV2Presenter
             ['key' => 'cancelled', 'label' => self::STATE_LABELS['cancelled'], 'color' => '#94a3b8', 'tone' => 'neutral'],
         ];
 
-        $cursor = 0.0;
-        $segments = [];
-        foreach ($bands as $band) {
-            $count = $dist[$band['key']] ?? 0;
-            $percent = $total > 0 ? round($count / $total * 100, 1) : 0.0;
-            $start = $cursor;
-            $cursor += $percent;
-            $segments[] = [
-                ...$band,
-                'count' => $count,
-                'percent' => $percent,
-                'start' => round($start, 1),
-                'end' => round($cursor, 1),
-            ];
-        }
-
-        return ['total' => $total, 'segments' => $segments];
+        return $this->buildDonutSegments($bands, $dist, array_sum($dist));
     }
 
     /**
@@ -140,22 +126,12 @@ final class AdminDashboardV2Presenter
      */
     private function priorityBars(array $dist): array
     {
-        $bands = [
-            ['key' => 'critical', 'label' => 'Crítica', 'tone' => 'purple'],
-            ['key' => 'high', 'label' => 'Alta', 'tone' => 'high'],
-            ['key' => 'medium', 'label' => 'Media', 'tone' => 'warning'],
-            ['key' => 'low', 'label' => 'Baja', 'tone' => 'success'],
-        ];
-
-        $items = array_map(static fn (array $b): array => [
-            'label' => $b['label'],
-            'count' => $dist[$b['key']] ?? 0,
-            'tone' => $b['tone'],
-        ], $bands);
-
-        $peak = max(1, ...array_map(static fn (array $i): int => $i['count'], $items));
-
-        return ['peak' => $peak, 'items' => $items];
+        return $this->buildBarItems([
+            ['key' => 'critical', 'label' => self::PRIORITY_LABELS['critical'], 'tone' => 'purple'],
+            ['key' => 'high', 'label' => self::PRIORITY_LABELS['high'], 'tone' => 'high'],
+            ['key' => 'medium', 'label' => self::PRIORITY_LABELS['medium'], 'tone' => 'warning'],
+            ['key' => 'low', 'label' => self::PRIORITY_LABELS['low'], 'tone' => 'success'],
+        ], $dist);
     }
 
     /**
@@ -174,15 +150,7 @@ final class AdminDashboardV2Presenter
             ['key' => 'failed', 'label' => self::QR_LABELS['failed'], 'tone' => 'high'],
         ];
 
-        $items = array_map(static fn (array $b): array => [
-            'label' => $b['label'],
-            'count' => $summary[$b['key']] ?? 0,
-            'tone' => $b['tone'],
-        ], $bands);
-
-        $peak = max(1, ...array_map(static fn (array $i): int => $i['count'], $items));
-
-        return ['total' => array_sum($summary), 'peak' => $peak, 'items' => $items];
+        return ['total' => array_sum($summary), ...$this->buildBarItems($bands, $summary)];
     }
 
     // ── Main column lists ────────────────────────────────────────
@@ -340,11 +308,6 @@ final class AdminDashboardV2Presenter
     }
 
     // ── Small shared helpers ─────────────────────────────────────
-
-    private function reference(Ticket $ticket): string
-    {
-        return '#'.strtoupper(substr((string) $ticket->id, 0, 8));
-    }
 
     private function stateTone(string $state): string
     {

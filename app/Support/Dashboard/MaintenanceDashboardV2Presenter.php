@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\Queries\Dashboard\MaintenanceDashboardQuery;
+use App\Support\Dashboard\Concerns\BuildsDashboardCharts;
 use App\Support\LocalTime;
 use App\ViewModels\Dashboard\MaintenanceDashboardViewModel;
 use Illuminate\Database\Eloquent\Builder;
@@ -42,6 +43,8 @@ use Illuminate\Support\Facades\Route;
  */
 final class MaintenanceDashboardV2Presenter
 {
+    use BuildsDashboardCharts;
+
     /** Existing maintenance PDF export route (reused, never recreated). */
     private const PDF_ROUTE = 'dashboard.maintenance.report.pdf';
 
@@ -182,23 +185,7 @@ final class MaintenanceDashboardV2Presenter
             ['key' => Ticket::STATE_REJECTED, 'label' => 'Rechazados', 'color' => '#ef4444', 'tone' => 'high'],
         ];
 
-        $cursor = 0.0;
-        $segments = [];
-        foreach ($bands as $band) {
-            $count = $dist[$band['key']] ?? 0;
-            $percent = $total > 0 ? round($count / $total * 100, 1) : 0.0;
-            $start = $cursor;
-            $cursor += $percent;
-            $segments[] = [
-                ...$band,
-                'count' => $count,
-                'percent' => $percent,
-                'start' => round($start, 1),
-                'end' => round($cursor, 1),
-            ];
-        }
-
-        return ['total' => $total, 'segments' => $segments];
+        return $this->buildDonutSegments($bands, $dist, $total);
     }
 
     /**
@@ -207,22 +194,12 @@ final class MaintenanceDashboardV2Presenter
      */
     private function priorityBars(array $dist): array
     {
-        $bands = [
+        return $this->buildBarItems([
             ['key' => 'high', 'label' => 'Alta', 'tone' => 'high'],
             ['key' => 'medium', 'label' => 'Media', 'tone' => 'warning'],
             ['key' => 'low', 'label' => 'Baja', 'tone' => 'success'],
             ['key' => 'critical', 'label' => 'Crítica', 'tone' => 'purple'],
-        ];
-
-        $items = array_map(static fn (array $b): array => [
-            'label' => $b['label'],
-            'count' => $dist[$b['key']] ?? 0,
-            'tone' => $b['tone'],
-        ], $bands);
-
-        $peak = max(1, ...array_map(static fn (array $i): int => $i['count'], $items));
-
-        return ['peak' => $peak, 'items' => $items];
+        ], $dist);
     }
 
     /**
@@ -517,11 +494,6 @@ final class MaintenanceDashboardV2Presenter
     private function kpiInt(array $kpiByKey, string $key): int
     {
         return (int) ($kpiByKey[$key]['value'] ?? 0);
-    }
-
-    private function reference(Ticket $ticket): string
-    {
-        return '#'.strtoupper(substr((string) $ticket->id, 0, 8));
     }
 
     private function stateLabel(string $state): string
