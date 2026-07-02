@@ -246,6 +246,10 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
                                           && $teMatch
                                           && in_array($teMatch->state, ['open', 'in_progress'], true);
                         $reviewStatus   = $te?->review_status;
+                        // Softer signal: reporter confirmed a precheck candidate was
+                        // distinct. Only surfaced when the AI hasn't independently
+                        // confirmed a duplicate — see 2026_07_01_000100 migration.
+                        $isRelated      = $te && $te->hasPrecheckCandidate() && ! $effectiveDup;
                     @endphp
                     <tr>
                         <td class="tickets-td-title">
@@ -269,6 +273,12 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
                                         ⚠️ Posible duplicado
                                     </span>
                                 @endif
+                            @endif
+                            {{-- Related badge (precheck candidate, reporter confirmed distinct) --}}
+                            @if ($isRelated)
+                                <span class="ticket-badge ticket-badge--info" title="{{ $te->precheck_reason ?? 'Reporte relacionado detectado al crear el ticket' }}" style="font-size:0.72rem; margin-left:0.3rem;">
+                                    🔗 Relacionado
+                                </span>
                             @endif
                         </td>
                         <td>

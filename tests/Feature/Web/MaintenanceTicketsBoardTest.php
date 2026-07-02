@@ -7,6 +7,7 @@ namespace Tests\Feature\Web;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\User;
 use App\ViewModels\Tickets\MaintenanceBoardViewModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -136,6 +137,30 @@ class MaintenanceTicketsBoardTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Incidencia critica');
         $response->assertDontSeeText('Incidencia menor');
+    }
+
+    public function test_related_badge_shown_for_precheck_candidate_without_ai_duplicate(): void
+    {
+        $maintenance = $this->createUserWithRole('maintenance');
+        $reporter = $this->createUserWithRole('reporter');
+
+        $precheckMatched = $this->createTicket('Cable existente relacionado', $reporter);
+        $ticket = $this->createTicket('Cable confirmado como caso distinto', $reporter);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [],
+            'is_duplicate' => false,
+            'precheck_matched_ticket_id' => $precheckMatched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($maintenance)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Posible duplicado');
+        $response->assertSeeText('Relacionado');
     }
 
     public function test_invalid_view_falls_back_to_all(): void

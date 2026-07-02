@@ -37,10 +37,13 @@ final class TicketIndexQuery
         // Load embedding for the duplicate badge — but skip embedding_vector
         // (a large JSON column not needed for the index view). matchedTicket
         // only needs id+state to compute $effectiveDup in the view.
+        // precheck_matched_ticket_id/precheck_reason back the softer
+        // "related" badge (reporter confirmed a precheck candidate distinct).
         $query->with([
             'embedding' => function ($q): void {
                 $q->select(['id', 'ticket_id', 'is_duplicate', 'matched_ticket_id',
-                    'similarity_score', 'review_status']);
+                    'similarity_score', 'review_status',
+                    'precheck_matched_ticket_id', 'precheck_reason']);
             },
             'embedding.matchedTicket' => function ($q): void {
                 $q->select(['id', 'state']);

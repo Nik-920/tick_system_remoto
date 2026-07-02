@@ -602,6 +602,13 @@
     white-space: nowrap;
 }
 
+/* ── Related tag (precheck confirmed distinct) — informational, not a warning ── */
+.tkv2-dup--info {
+    background: var(--tone-info-soft);
+    color: var(--tone-info-fg);
+    border-color: var(--tone-info-solid);
+}
+
 /* ── Row action buttons ── */
 .tkv2-btn {
     display: inline-flex;
@@ -1094,6 +1101,12 @@
     background: rgba(249, 115, 22, 0.14);
     color: #fdba74;
     border-color: rgba(249, 115, 22, 0.3);
+}
+
+[data-theme="dark"] .tkv2-dup--info {
+    background: var(--tone-info-soft);
+    color: var(--tone-info-fg);
+    border-color: var(--tone-info-solid);
 }
 
 [data-theme="dark"] .tkv2-btn--ghost:hover { background: rgba(255, 255, 255, 0.1); }
