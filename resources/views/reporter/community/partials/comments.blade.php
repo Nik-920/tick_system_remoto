@@ -15,41 +15,27 @@
 
     {{-- ── Root comments ── --}}
     @if (count($post['comments']['items']) > 0)
-        <ul class="comm-comments__list comm-comments-v2__list" aria-label="Comentarios recientes">
+        <ul class="comm-comments__list comm-comments-v2__list"
+            aria-label="Comentarios recientes"
+            data-community-comments-list
+            data-ticket-id="{{ $post['id'] }}">
             @foreach ($post['comments']['items'] as $comment)
-                <li class="comm-comment comm-comment-v2">
-                    {{-- avatar + main (with Reportar + Responder in actions) --}}
-                    @include('reporter.community.partials.comment-item', [
-                        'comment'          => $comment,
-                        'show_reply_form'  => true,
-                        'post_id'          => $post['id'],
-                    ])
-
-                    {{-- ── Replies (one level) ── --}}
-                    @if (count($comment['replies']) > 0)
-                        <ul class="comm-comment__replies comm-replies-v2" aria-label="Respuestas">
-                            @foreach ($comment['replies'] as $reply)
-                                <li class="comm-comment comm-comment--reply comm-comment-v2 comm-comment-v2--reply">
-                                    @include('reporter.community.partials.comment-item', ['comment' => $reply])
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-
-                    @if ($comment['reply_count'] > count($comment['replies']))
-                        <p class="comm-comments__more-hint comm-comments__more-hint--replies">
-                            + {{ $comment['reply_count'] - count($comment['replies']) }}
-                            respuesta{{ ($comment['reply_count'] - count($comment['replies'])) !== 1 ? 's' : '' }} más
-                        </p>
-                    @endif
-                </li>
+                @include('reporter.community.partials.comment-list-item', [
+                    'comment' => $comment,
+                    'post_id' => $post['id'],
+                ])
             @endforeach
         </ul>
 
-        @if ($post['comments']['count'] > 2)
-            <p class="comm-comments__more-hint">
-                + {{ $post['comments']['count'] - 2 }} comentario{{ ($post['comments']['count'] - 2) !== 1 ? 's' : '' }} más
-            </p>
+        @if ($post['comments']['root_count'] > count($post['comments']['items']))
+            <button type="button"
+                    class="comm-comments__load-more comm-comments-v2__load-more"
+                    data-community-comments-more
+                    data-url="{{ route('reporter.community.comments.index', $post['id']) }}"
+                    data-offset="{{ count($post['comments']['items']) }}">
+                <x-lucide-chevron-down width="14" height="14" stroke-width="2" />
+                Ver {{ $post['comments']['root_count'] - count($post['comments']['items']) }} comentario{{ ($post['comments']['root_count'] - count($post['comments']['items'])) !== 1 ? 's' : '' }} más
+            </button>
         @endif
     @else
         <p class="comm-comments__empty">Sé el primero en aportar contexto útil.</p>
