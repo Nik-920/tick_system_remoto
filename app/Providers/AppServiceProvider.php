@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\Ai\EmbeddingProvider;
+use App\Contracts\Notifications\EmailNotificationProvider;
 use App\Contracts\Notifications\PushNotificationProvider;
 use App\Models\Category;
 use App\Models\Location;
@@ -28,6 +29,8 @@ use App\Services\Ai\Duplicates\Strategies\TitleOverlapStrategy;
 use App\Services\Ai\Duplicates\Strategies\VisionEvidenceStrategy;
 use App\Services\Ai\HuggingFaceEmbeddingAdapter;
 use App\Services\Firebase\FirebasePushNotificationAdapter;
+use App\Services\Notifications\NullEmailNotificationProvider;
+use App\Services\Resend\ResendEmailNotificationAdapter;
 use BladeUI\Icons\Factory as BladeIconsFactory;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\QueryExecuted;
@@ -49,6 +52,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             PushNotificationProvider::class,
             FirebasePushNotificationAdapter::class
+        );
+
+        // En tests (runningUnitTests()) se liga un no-op para que los flujos que
+        // disparan eventos de ticket reales no llamen a la API de Resend; los
+        // tests dedicados de email inyectan FakeEmailNotificationProvider
+        // directamente en el listener/servicio, sin pasar por el contenedor.
+        $this->app->bind(
+            EmailNotificationProvider::class,
+            $this->app->runningUnitTests()
+                ? NullEmailNotificationProvider::class
+                : ResendEmailNotificationAdapter::class
         );
 
         $this->app->bind(
