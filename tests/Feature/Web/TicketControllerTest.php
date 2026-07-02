@@ -1073,7 +1073,7 @@ class TicketControllerTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Tickets');
         $response->assertSeeText('Asignación');
-        $response->assertSeeText('Vista rápida:');
+        $response->assertSeeText('Filtros avanzados');
         $response->assertSeeText('Posibles duplicados');
     }
 

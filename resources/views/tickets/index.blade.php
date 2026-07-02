@@ -104,118 +104,7 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
     @endif
 
     {{-- ===== FILTROS ===== --}}
-    <section class="tickets-filters">
-        <div class="tickets-filters-header">
-            <div>
-                <h2 class="tickets-filters-title">Filtros de búsqueda</h2>
-                <p class="tickets-filters-subtitle">Refina por estado, prioridad, ubicación, categoría, fecha y densidad de página</p>
-            </div>
-            <span class="tickets-filter-badge">{{ $activeFilterCount }} activos</span>
-        </div>
-
-        <form method="GET" action="{{ route('tickets.index') }}" class="tickets-filter-form">
-            <div class="tickets-filter-grid">
-                <div>
-                    <label for="search" class="tickets-field-label">Búsqueda</label>
-                    <input id="search" type="text" name="search" value="{{ $searchValue }}" placeholder="Título o descripción" class="tickets-field">
-                </div>
-
-                <div>
-                    <label for="state" class="tickets-field-label">Estado</label>
-                    <select id="state" name="state" class="tickets-field">
-                        <option value="">Todos</option>
-                        @foreach ($stateLabels as $value => $label)
-                        <option value="{{ $value }}" @selected($stateValue===$value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label for="priority" class="tickets-field-label">Prioridad</label>
-                    <select id="priority" name="priority" class="tickets-field">
-                        <option value="">Todas</option>
-                        @foreach ($priorityLabels as $value => $label)
-                        <option value="{{ $value }}" @selected($priorityValue===$value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label for="location_id" class="tickets-field-label">Ubicación</label>
-                    <select id="location_id" name="location_id" class="tickets-field">
-                        <option value="">Todas</option>
-                        @foreach ($locations as $location)
-                        <option value="{{ $location->id }}" @selected($locationValue===(string)$location->id)>{{ $location->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label for="category_id" class="tickets-field-label">Categoría</label>
-                    <select id="category_id" name="category_id" class="tickets-field">
-                        <option value="">Todas</option>
-                        @foreach ($categories as $category)
-                        <option value="{{ $category->id }}" @selected($categoryValue===(string)$category->id)>{{ $category->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                @unless ($isReporterOnly)
-                <div>
-                    <label for="assignment" class="tickets-field-label">Asignación</label>
-                    <select id="assignment" name="assignment" class="tickets-field">
-                        <option value="all" @selected($assignmentValue==='' || $assignmentValue==='all')>Todos</option>
-                        <option value="unassigned" @selected($assignmentValue==='unassigned')>Sin asignar</option>
-                        <option value="mine" @selected($assignmentValue==='mine')>Mis tickets</option>
-                        <option value="assigned" @selected($assignmentValue==='assigned')>Asignados</option>
-                    </select>
-                </div>
-                @endunless
-
-                <div>
-                    <label for="per_page" class="tickets-field-label">Por página</label>
-                    <select id="per_page" name="per_page" class="tickets-field">
-                        <option value="">15</option>
-                        @foreach ([10, 15, 25, 50] as $option)
-                        <option value="{{ $option }}" @selected($perPageValue===(string) $option)>{{ $option }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label for="from" class="tickets-field-label">Desde</label>
-                    <input id="from" type="date" name="from" value="{{ $fromValue }}" class="tickets-field">
-                </div>
-
-                <div>
-                    <label for="to" class="tickets-field-label">Hasta</label>
-                    <input id="to" type="date" name="to" value="{{ $toValue }}" class="tickets-field">
-                </div>
-
-                <div class="tickets-filter-actions">
-                    <button type="submit" class="btn-primary">Filtrar</button>
-                    <a href="{{ route('tickets.index') }}" class="btn-secondary">Limpiar</a>
-                </div>
-            </div>
-
-            @unless ($isReporterOnly)
-            {{-- Duplicate quick-filter --}}
-            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                <span style="font-size:0.85rem; font-weight:600; opacity:0.7;">Vista rápida:</span>
-                <a href="{{ route('tickets.index', array_merge(request()->except(['duplicates', 'page']), [])) }}"
-                   class="{{ ! $duplicatesOn ? 'btn-primary' : 'btn-secondary' }}"
-                   style="font-size:0.82rem; padding:0.25rem 0.75rem;">
-                   Todos
-                </a>
-                <a href="{{ route('tickets.index', array_merge(request()->except(['duplicates', 'page']), ['duplicates' => '1'])) }}"
-                   class="{{ $duplicatesOn ? 'btn-primary' : 'btn-secondary' }}"
-                   style="font-size:0.82rem; padding:0.25rem 0.75rem;">
-                   ⚠️ Posibles duplicados
-                </a>
-            </div>
-            @endunless
-        </form>
-    </section>
+    @include('tickets.partials.toolbar')
 
     {{-- ===== LISTADO DE TICKETS (filas, sin tabla) ===== --}}
     <section class="tickets-list-shell">
@@ -372,4 +261,73 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
     </div>
 
 </div>
+
+{{-- ============================================================
+   Advanced filters modal
+   ============================================================ --}}
+@include('tickets.partials.filter-modal')
+
+{{-- ============================================================
+   Progressive JS — filter modal toggle only. Search and the
+   applied filters work server-side without JS.
+   ============================================================ --}}
+<script>
+(function () {
+    'use strict';
+
+    var filterBtn      = document.getElementById('tickets-filter-btn');
+    var filterModal     = document.getElementById('tickets-filter-modal');
+    var filterBackdrop = document.getElementById('tickets-filter-backdrop');
+    var filterClose    = document.getElementById('tickets-filter-close');
+    var filterPrevFocus = null;
+
+    function openFilter() {
+        if (!filterModal) { return; }
+        filterPrevFocus = document.activeElement;
+        filterModal.classList.add('tickets-filter-modal--open');
+        filterModal.setAttribute('aria-hidden', 'false');
+        if (filterBtn) { filterBtn.setAttribute('aria-expanded', 'true'); }
+        document.body.style.overflow = 'hidden';
+        if (filterClose) { filterClose.focus(); }
+    }
+
+    function closeFilter() {
+        if (!filterModal) { return; }
+        filterModal.classList.remove('tickets-filter-modal--open');
+        filterModal.setAttribute('aria-hidden', 'true');
+        if (filterBtn) { filterBtn.setAttribute('aria-expanded', 'false'); }
+        document.body.style.overflow = '';
+        if (filterPrevFocus) { filterPrevFocus.focus(); }
+    }
+
+    if (filterBtn)      { filterBtn.addEventListener('click', openFilter); }
+    if (filterBackdrop) { filterBackdrop.addEventListener('click', closeFilter); }
+    if (filterClose)    { filterClose.addEventListener('click', closeFilter); }
+
+    if (filterModal) {
+        filterModal.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeFilter(); return; }
+            if (e.key !== 'Tab') { return; }
+            var focusable = Array.prototype.slice.call(
+                filterModal.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])')
+            ).filter(function (el) { return !el.disabled && !el.hidden; });
+            if (!focusable.length) { return; }
+            var first = focusable[0], last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
+        });
+
+        filterModal.querySelectorAll('.tickets-fm-opts .tickets-fopt input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                radio.closest('.tickets-fm-opts').querySelectorAll('.tickets-fopt').forEach(function (opt) {
+                    opt.classList.toggle('tickets-fopt--on', opt.querySelector('input[type="radio"]') === radio);
+                });
+            });
+        });
+    }
+})();
+</script>
 @endsection
