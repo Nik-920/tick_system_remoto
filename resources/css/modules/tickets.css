@@ -1581,3 +1581,541 @@
 }
 
 [data-theme="dark"] .tickets-media-file { background: var(--bg-soft); }
+
+/* ============================================================
+   FILTER CONTROLS + ADVANCED FILTERS MODAL — /tickets index
+   Search + trigger button + active-filter chips row, and a
+   JS-toggled modal (bottom-sheet on mobile, centered on desktop).
+   Mirrors the pattern used in /reporter/community and
+   /reporter/tickets (comm-filter-panel / rep-filter-modal).
+   ============================================================ */
+
+.tickets-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.tickets-controls__row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.tickets-search {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.tickets-search__input {
+    flex: 1;
+    min-width: 0;
+    height: 2.625rem;
+    padding: 0 1rem;
+    border: 1.5px solid var(--border-default);
+    border-right: none;
+    border-radius: 0.75rem 0 0 0.75rem;
+    font-size: 0.875rem;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-shadow: var(--shadow-xs);
+}
+
+.tickets-search__input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.tickets-search__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.625rem;
+    height: 2.625rem;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 0 0.75rem 0.75rem 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+    box-shadow: var(--shadow-xs);
+}
+
+.tickets-search__submit:hover { background: var(--color-primary-hover); }
+.tickets-search__submit:active { transform: scale(0.95); }
+
+/* ── Filter trigger button ── */
+.tickets-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.75rem;
+    padding: 0 1rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.tickets-filter-trigger:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.tickets-filter-trigger--active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.tickets-filter-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+@media (max-width: 374px) {
+    .tickets-filter-trigger__label { display: none; }
+}
+
+/* ── Active filter summary chips ── */
+.tickets-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.tickets-active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.625rem;
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: var(--color-primary-light);
+    color: var(--color-primary-hover);
+    border: 1px solid var(--color-primary-muted);
+    white-space: nowrap;
+}
+
+.tickets-active-chip--clear {
+    background: transparent;
+    color: var(--color-danger);
+    border-color: var(--color-danger-muted);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.tickets-active-chip--clear:hover { background: var(--color-danger-light); }
+
+/* ============================================================
+   FILTER MODAL (DRAWER)
+   Mobile  (<640px): bottom-sheet
+   Desktop (≥640px): centered modal (fade + scale)
+   ============================================================ */
+
+.tickets-filter-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.tickets-filter-modal--open {
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.tickets-filter-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.46);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.tickets-filter-modal--open .tickets-filter-modal__backdrop { opacity: 1; }
+
+.tickets-filter-modal__drawer {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page);
+    border-radius: 1rem 1rem 0 0;
+    box-shadow: 0 -4px 32px rgba(15, 23, 42, 0.18);
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.34, 1.1, 0.64, 1);
+    overflow: hidden;
+}
+
+.tickets-filter-modal--open .tickets-filter-modal__drawer { transform: translateY(0); }
+
+@media (min-width: 640px) {
+    .tickets-filter-modal { align-items: center; padding: 1rem; }
+
+    .tickets-filter-modal__drawer {
+        border-radius: var(--radius-lg, 0.875rem);
+        max-height: 80vh;
+        box-shadow: 0 8px 40px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0,0,0,0.05);
+        transform: scale(0.96);
+        opacity: 0;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .tickets-filter-modal--open .tickets-filter-modal__drawer { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tickets-filter-modal__backdrop,
+    .tickets-filter-modal__drawer { transition: none; }
+}
+
+.tickets-filter-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.875rem;
+    border-bottom: 1px solid var(--border-default);
+    flex-shrink: 0;
+}
+
+.tickets-filter-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tickets-filter-modal__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+}
+
+.tickets-filter-modal__close:hover { background: var(--bg-soft); color: var(--text-primary); }
+.tickets-filter-modal__close:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.tickets-filter-modal__form {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.tickets-filter-modal__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--border-default);
+    background: var(--bg-page);
+    flex-shrink: 0;
+}
+
+.tickets-fm-section {
+    border: none;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.tickets-fm-section--last { border-bottom: none; }
+
+.tickets-fm-section__label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0;
+    margin-bottom: 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tickets-fm-opts {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.tickets-fopt {
+    display: inline-flex;
+    align-items: center;
+    height: 2rem;
+    padding: 0 0.875rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.tickets-fopt input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.tickets-fopt:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+.tickets-fopt:has(input:checked),
+.tickets-fopt--on {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.tickets-fopt:focus-within {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+}
+
+.tickets-fm-select {
+    width: 100%;
+    height: 2.5rem;
+    padding: 0 0.875rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+    background: var(--bg-soft);
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: auto;
+    transition: border-color 0.12s;
+}
+
+.tickets-fm-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.tickets-fm-select:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.tickets-fm-date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.tickets-fm-date-field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.tickets-fm-date-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+/* ── Toggle switch (posibles duplicados) ── */
+.tickets-fopt-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    user-select: none;
+}
+
+.tickets-fopt-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.tickets-fopt-toggle__track {
+    position: relative;
+    width: 2.5rem;
+    height: 1.375rem;
+    border-radius: 9999px;
+    background: var(--border-default);
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.tickets-fopt-toggle__thumb {
+    position: absolute;
+    top: 0.1875rem;
+    left: 0.1875rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.tickets-fopt-toggle:has(input:checked) .tickets-fopt-toggle__track { background: var(--color-primary); }
+.tickets-fopt-toggle:has(input:checked) .tickets-fopt-toggle__thumb { transform: translateX(1.125rem); }
+
+.tickets-fm-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.375rem;
+    padding: 0 0.875rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: border-color 0.12s, color 0.12s;
+}
+
+.tickets-fm-clear:hover { border-color: var(--color-danger); color: var(--color-danger); }
+.tickets-fm-clear:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+.tickets-fm-apply {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    height: 2.375rem;
+    padding: 0 1.25rem;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.tickets-fm-apply:hover { background: var(--color-primary-hover); }
+.tickets-fm-apply:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+@media (max-width: 639px) {
+    .tickets-fm-date-row { grid-template-columns: 1fr; }
+}
+
+/* ── Dark mode — filter controls + modal ── */
+[data-theme="dark"] .tickets-search__input {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .tickets-filter-trigger {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .tickets-filter-trigger:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+[data-theme="dark"] .tickets-filter-trigger--active {
+    border-color: rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .tickets-active-chip {
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.22);
+}
+
+[data-theme="dark"] .tickets-active-chip--clear {
+    background: transparent;
+    color: #fca5a5;
+    border-color: rgba(220, 38, 38, 0.28);
+}
+
+[data-theme="dark"] .tickets-active-chip--clear:hover { background: rgba(220, 38, 38, 0.14); }
+
+[data-theme="dark"] .tickets-filter-modal__drawer {
+    background: var(--bg-surface);
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+[data-theme="dark"] .tickets-filter-modal__header,
+[data-theme="dark"] .tickets-filter-modal__footer {
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .tickets-fm-section { border-bottom-color: rgba(148,163,184,0.08); }
+[data-theme="dark"] .tickets-fm-section__label { color: #64748b; }
+
+[data-theme="dark"] .tickets-fopt {
+    background: var(--bg-page);
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .tickets-fopt:hover { border-color: var(--color-primary); color: #93c5fd; }
+
+[data-theme="dark"] .tickets-fm-select {
+    background: var(--bg-page);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .tickets-fm-clear { color: #64748b; }
+[data-theme="dark"] .tickets-fm-clear:hover { color: #fca5a5; border-color: #fca5a5; }
+
+[data-theme="dark"] .tickets-fopt-toggle__track { background: var(--border-default); }
