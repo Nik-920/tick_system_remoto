@@ -15,6 +15,9 @@ use App\Listeners\GenerateEmbeddingOnTicketCreated;
 use App\Listeners\InvalidateDashboardCacheOnTicketChanged;
 use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
+use App\Listeners\SendEmailOnTicketAssigned;
+use App\Listeners\SendEmailOnTicketCreated;
+use App\Listeners\SendEmailOnTicketStateChanged;
 use App\Listeners\SendFcmPushOnTicketAssigned;
 use App\Listeners\SendFcmPushOnTicketCreated;
 use App\Listeners\SendFcmPushOnTicketStateChanged;
@@ -132,31 +135,31 @@ class FirebaseEventServiceProviderTest extends TestCase
     //    Detecta si alguien registra un segundo provider y duplica.
     // ──────────────────────────────────────────────────────────
 
-    public function test_ticket_created_has_exactly_five_listeners(): void
+    public function test_ticket_created_has_exactly_six_listeners(): void
     {
         $count = count(Event::getListeners(TicketCreated::class));
 
         $this->assertSame(
-            5,
+            6,
             $count,
-            'TicketCreated debe tener exactamente 5 listeners: '.
+            'TicketCreated debe tener exactamente 6 listeners: '.
             'GenerateEmbeddingOnTicketCreated, DispatchDuplicateDetectionOnTicketCreated, '.
             'CreateInAppNotificationOnTicketCreated, SendFcmPushOnTicketCreated, '.
-            'InvalidateDashboardCacheOnTicketChanged. '.
-            'Si hay 10, un segundo provider fue registrado y duplicó todos.'
+            'SendEmailOnTicketCreated, InvalidateDashboardCacheOnTicketChanged. '.
+            'Si hay 12, un segundo provider fue registrado y duplicó todos.'
         );
     }
 
-    public function test_ticket_state_changed_has_exactly_three_listeners(): void
+    public function test_ticket_state_changed_has_exactly_four_listeners(): void
     {
         $count = count(Event::getListeners(TicketStateChanged::class));
 
         $this->assertSame(
-            3,
+            4,
             $count,
-            'TicketStateChanged debe tener exactamente 3 listeners: '.
+            'TicketStateChanged debe tener exactamente 4 listeners: '.
             'CreateInAppNotificationOnTicketStateChanged, SendFcmPushOnTicketStateChanged, '.
-            'InvalidateDashboardCacheOnTicketChanged'
+            'SendEmailOnTicketStateChanged, InvalidateDashboardCacheOnTicketChanged'
         );
     }
 
@@ -172,16 +175,16 @@ class FirebaseEventServiceProviderTest extends TestCase
         );
     }
 
-    public function test_ticket_assigned_has_exactly_three_listeners(): void
+    public function test_ticket_assigned_has_exactly_four_listeners(): void
     {
         $count = count(Event::getListeners(TicketAssigned::class));
 
         $this->assertSame(
-            3,
+            4,
             $count,
-            'TicketAssigned debe tener exactamente 3 listeners: '.
+            'TicketAssigned debe tener exactamente 4 listeners: '.
             'CreateInAppNotificationOnTicketAssigned, SendFcmPushOnTicketAssigned, '.
-            'InvalidateDashboardCacheOnTicketChanged'
+            'SendEmailOnTicketAssigned, InvalidateDashboardCacheOnTicketChanged'
         );
     }
 
@@ -207,13 +210,14 @@ class FirebaseEventServiceProviderTest extends TestCase
             DispatchDuplicateDetectionOnTicketCreated::class,
             CreateInAppNotificationOnTicketCreated::class,
             SendFcmPushOnTicketCreated::class,
+            SendEmailOnTicketCreated::class,
             // subscriber — dashboard cache invalidation
             InvalidateDashboardCacheOnTicketChanged::class,
         ];
 
         $registered = Event::getListeners(TicketCreated::class);
 
-        $this->assertCount(5, $registered);
+        $this->assertCount(6, $registered);
         foreach ($registered as $listener) {
             $this->assertIsCallable($listener);
         }
@@ -236,6 +240,9 @@ class FirebaseEventServiceProviderTest extends TestCase
             UpdateRecurrenceOnTicketResolved::class,
             CreateInAppNotificationOnTicketAssigned::class,
             SendFcmPushOnTicketAssigned::class,
+            SendEmailOnTicketCreated::class,
+            SendEmailOnTicketStateChanged::class,
+            SendEmailOnTicketAssigned::class,
             LogDuplicateDetectionAudit::class,
             ReportFailedQueueJob::class,
             InvalidateDashboardCacheOnTicketChanged::class,

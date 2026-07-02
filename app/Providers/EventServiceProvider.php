@@ -19,6 +19,11 @@ use App\Listeners\GenerateEmbeddingOnTicketCreated;
 use App\Listeners\InvalidateDashboardCacheOnTicketChanged;
 use App\Listeners\LogDuplicateDetectionAudit;
 use App\Listeners\ReportFailedQueueJob;
+use App\Listeners\SendEmailOnTicketAssigned;
+use App\Listeners\SendEmailOnTicketCommentCreated;
+use App\Listeners\SendEmailOnTicketCreated;
+use App\Listeners\SendEmailOnTicketEvidenceAdded;
+use App\Listeners\SendEmailOnTicketStateChanged;
 use App\Listeners\SendFcmPushOnTicketAssigned;
 use App\Listeners\SendFcmPushOnTicketCommentCreated;
 use App\Listeners\SendFcmPushOnTicketCreated;
@@ -36,6 +41,7 @@ class EventServiceProvider extends ServiceProvider
             DispatchDuplicateDetectionOnTicketCreated::class,
             CreateInAppNotificationOnTicketCreated::class,
             SendFcmPushOnTicketCreated::class,
+            SendEmailOnTicketCreated::class,
         ],
         DuplicateDetected::class => [
             LogDuplicateDetectionAudit::class,
@@ -46,18 +52,22 @@ class EventServiceProvider extends ServiceProvider
         TicketStateChanged::class => [
             CreateInAppNotificationOnTicketStateChanged::class,
             SendFcmPushOnTicketStateChanged::class,
+            SendEmailOnTicketStateChanged::class,
         ],
         TicketAssigned::class => [
             CreateInAppNotificationOnTicketAssigned::class,
             SendFcmPushOnTicketAssigned::class,
+            SendEmailOnTicketAssigned::class,
         ],
         TicketEvidenceAdded::class => [
             CreateInAppNotificationOnTicketEvidenceAdded::class,
             SendFcmPushOnTicketEvidenceAdded::class,
+            SendEmailOnTicketEvidenceAdded::class,
         ],
         TicketCommentCreated::class => [
             CreateInAppNotificationOnTicketCommentCreated::class,
             SendFcmPushOnTicketCommentCreated::class,
+            SendEmailOnTicketCommentCreated::class,
         ],
         JobFailed::class => [
             ReportFailedQueueJob::class,
