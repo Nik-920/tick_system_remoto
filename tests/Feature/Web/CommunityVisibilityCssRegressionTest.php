@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * CSS/markup regression guard for the redesigned "Visibilidad en Comunidad"
- * component (ticket show §9) and the moderation queue visibility panel.
+ * component (ticket show §9) and the moderation queue's "Ocultar" reason prompt.
  *
  * Mirrors the layered approach of AdminCommunityModerationCssRegressionTest:
  *   1. Source  — CSS module contains the new component selectors.
@@ -154,27 +154,16 @@ class CommunityVisibilityCssRegressionTest extends TestCase
         $response->assertSee('name="reason"', false);
     }
 
-    // ── 4. DOM-level: moderation queue renders the visibility panel ───────────
+    // ── 4. DOM-level: moderation queue "Ocultar" form triggers the reason prompt ──
 
-    public function test_moderation_queue_renders_visibility_panel(): void
+    public function test_moderation_queue_ocultar_form_triggers_reason_prompt(): void
     {
         $this->makeVisibleTicket();
 
         $this->actingAs($this->adminUser())
             ->get(route('admin.community.moderation'))
             ->assertOk()
-            ->assertSee('adm-comm-card__visibility-panel', false);
-    }
-
-    public function test_moderation_queue_visibility_panel_has_reason_label(): void
-    {
-        $this->makeVisibleTicket();
-
-        $this->actingAs($this->adminUser())
-            ->get(route('admin.community.moderation'))
-            ->assertOk()
-            ->assertSee('adm-comm-form-label', false)
-            ->assertSee('Motivo de ocultamiento', false);
+            ->assertSee('data-prompt="¿Ocultar ticket? Ingresa el motivo:"', false);
     }
 
     // ── 5. Hygiene: no new @php blocks or debug markers in touched partials ───

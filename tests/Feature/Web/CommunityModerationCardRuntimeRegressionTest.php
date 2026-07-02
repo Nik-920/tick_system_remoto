@@ -251,17 +251,17 @@ class CommunityModerationCardRuntimeRegressionTest extends TestCase
 
     // ── 5. Hide / Ocultar form ────────────────────────────────────────────────
 
-    public function test_ocultar_form_contains_reason_text_input(): void
+    public function test_ocultar_form_uses_prompt_modal_to_collect_reason(): void
     {
         $this->makeVisibleTicket(title: 'Reason input RR17');
 
         $this->actingAs($this->makeAdmin())
             ->get(route('admin.community.moderation'))
             ->assertOk()
-            ->assertSee('name="reason"', false);
+            ->assertSee('data-prompt="¿Ocultar ticket? Ingresa el motivo:"', false);
     }
 
-    public function test_ocultar_form_reason_input_has_required_attribute(): void
+    public function test_ocultar_form_prompt_reuses_global_confirm_modal(): void
     {
         $this->makeVisibleTicket(title: 'Reason required RR18');
 
@@ -269,8 +269,11 @@ class CommunityModerationCardRuntimeRegressionTest extends TestCase
             ->get(route('admin.community.moderation'))
             ->assertOk();
 
-        $this->assertStringContainsString('name="reason"', (string) $response->getContent());
-        $this->assertStringContainsString('required', (string) $response->getContent());
+        // The "reason" field is injected client-side by the prompt modal on
+        // confirm; server-side enforcement (required, max:255) is covered by
+        // TicketCommunityVisibilityTest::test_hide_requires_reason().
+        $this->assertStringContainsString('id="globalConfirmModalInputWrap"', (string) $response->getContent());
+        $this->assertStringContainsString('id="globalConfirmModalInputError"', (string) $response->getContent());
     }
 
     public function test_ocultar_form_action_uses_tickets_community_hide_route(): void

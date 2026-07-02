@@ -146,16 +146,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancel = document.getElementById('globalConfirmModalCancel');
     const btnConfirm = document.getElementById('globalConfirmModalConfirm');
     const backdrop = document.getElementById('globalConfirmModalBackdrop');
+    const inputWrap = document.getElementById('globalConfirmModalInputWrap');
+    const inputField = document.getElementById('globalConfirmModalInput');
+    const inputError = document.getElementById('globalConfirmModalInputError');
 
     let pendingForm = null;
+    let isPrompt = false;
+    let promptName = 'reason';
 
-    function openModal(message, form) {
+    function openModal(message, form, isPromptMode = false) {
         modalText.textContent = message;
         pendingForm = form;
+        isPrompt = isPromptMode;
         
+        if (isPrompt) {
+            inputWrap.classList.remove('hidden');
+            inputField.value = '';
+            inputError.classList.add('hidden');
+            // Allow forms to specify the input name, default to 'reason'
+            promptName = form.dataset.promptName || 'reason';
+            setTimeout(() => inputField.focus(), 50);
+        } else {
+            inputWrap.classList.add('hidden');
+        }
+
         modal.classList.remove('hidden');
-        // trigger reflow
-        void modal.offsetWidth;
+        // trigger reflow (function call, not a bare property read) so the
+        // opacity change below transitions instead of jumping
+        modal.getBoundingClientRect();
         modal.classList.remove('opacity-0');
     }
 
@@ -164,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             modal.classList.add('hidden');
             pendingForm = null;
+            isPrompt = false;
         }, 300);
     }
 
@@ -171,25 +190,57 @@ document.addEventListener('DOMContentLoaded', () => {
     backdrop.addEventListener('click', closeModal);
 
     btnConfirm.addEventListener('click', () => {
-        if (pendingForm) {
-            // Remove data-confirm so it doesn't trigger again
-            pendingForm.removeAttribute('data-confirm');
-            // Use requestSubmit to fire submit events (so button disabling scripts still run)
-            if (pendingForm.requestSubmit) {
-                pendingForm.requestSubmit();
-            } else {
-                pendingForm.submit();
+        if (!pendingForm) return;
+
+        if (isPrompt) {
+            const val = inputField.value.trim();
+            if (!val) {
+                inputError.classList.remove('hidden');
+                inputField.focus();
+                return;
             }
+            
+            // Create hidden input or update existing
+            let hiddenInput = pendingForm.querySelector(`input[name="${promptName}"]`);
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = promptName;
+                pendingForm.appendChild(hiddenInput);
+            }
+            hiddenInput.value = val;
+            delete pendingForm.dataset.prompt;
+        } else {
+            delete pendingForm.dataset.confirm;
         }
+
+        // Use requestSubmit to fire submit events (so button disabling scripts still run)
+        if (pendingForm.requestSubmit) {
+            pendingForm.requestSubmit();
+        } else {
+            pendingForm.submit();
+        }
+        
         closeModal();
+    });
+
+    // Handle Enter key inside the prompt input
+    inputField?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btnConfirm.click();
+        }
     });
 
     // Intercept form submissions globally
     document.addEventListener('submit', (e) => {
         const form = e.target;
-        if (form && form.hasAttribute('data-confirm')) {
+        if (form?.dataset.confirm) {
             e.preventDefault();
-            openModal(form.getAttribute('data-confirm'), form);
+            openModal(form.dataset.confirm, form, false);
+        } else if (form?.dataset.prompt) {
+            e.preventDefault();
+            openModal(form.dataset.prompt, form, true);
         }
     });
 });

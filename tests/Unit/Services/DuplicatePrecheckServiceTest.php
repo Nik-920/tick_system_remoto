@@ -59,7 +59,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no emite imagen desde esta mañana.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -83,7 +83,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertIsArray($result);
         $this->assertArrayHasKey('matchedTitle', $result);
@@ -111,7 +111,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'No enciende el proyector.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertIsArray($result);
     }
@@ -135,7 +135,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -159,7 +159,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -184,7 +184,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -208,7 +208,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'Prueba safe fields.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertIsArray($result);
         $this->assertSame(['matchedTitle', 'matchedState', 'reason'], array_keys($result));
@@ -225,7 +225,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'title' => 'Proyector sin imagen',
             'description' => 'No funciona.',
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -258,7 +258,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertNull($result);
     }
@@ -282,7 +282,7 @@ class DuplicatePrecheckServiceTest extends TestCase
             'description' => 'El proyector no proyecta imagen.',
             'location_id' => $this->location->id,
             'category_id' => $this->category->id,
-        ], $this->reporter);
+        ]);
 
         $this->assertIsArray($match);
         $this->assertArrayHasKey('ticket', $match);
@@ -302,8 +302,8 @@ class DuplicatePrecheckServiceTest extends TestCase
             'category_id' => $this->category->id,
         ];
 
-        $this->assertNull($this->service->check($payload, $this->reporter));
-        $this->assertNull($this->service->findMatch($payload, $this->reporter));
+        $this->assertNull($this->service->check($payload));
+        $this->assertNull($this->service->findMatch($payload));
     }
 
     // ── 12. findMatch() never leaks into check()'s safe payload ────────────
@@ -327,8 +327,8 @@ class DuplicatePrecheckServiceTest extends TestCase
             'category_id' => $this->category->id,
         ];
 
-        $match = $this->service->findMatch($payload, $this->reporter);
-        $checkResult = $this->service->check($payload, $this->reporter);
+        $match = $this->service->findMatch($payload);
+        $checkResult = $this->service->check($payload);
 
         $this->assertNotNull($match);
         $this->assertIsArray($checkResult);

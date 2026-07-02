@@ -3,7 +3,7 @@
 namespace App\Services\Tickets;
 
 use App\Models\Ticket;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 final class DuplicatePrecheckService
@@ -42,9 +42,9 @@ final class DuplicatePrecheckService
      * @param  array<string, mixed>  $payload
      * @return array{matchedTitle: string, matchedState: string, reason: string}|null
      */
-    public function check(array $payload, User $reporter): ?array
+    public function check(array $payload): ?array
     {
-        $match = $this->findMatch($payload, $reporter);
+        $match = $this->findMatch($payload);
 
         if ($match === null) {
             return null;
@@ -66,7 +66,7 @@ final class DuplicatePrecheckService
      * @param  array<string, mixed>  $payload
      * @return array{ticket: Ticket, reason: string}|null
      */
-    public function findMatch(array $payload, User $reporter): ?array
+    public function findMatch(array $payload): ?array
     {
         $title = trim((string) ($payload['title'] ?? ''));
         $locationId = (string) ($payload['location_id'] ?? '');
@@ -76,7 +76,17 @@ final class DuplicatePrecheckService
             return null;
         }
 
-        $candidates = Ticket::query()
+        $candidates = $this->recentCandidates($locationId, $categoryId);
+
+        return $this->bestOverlapMatch($title, $candidates);
+    }
+
+    /**
+     * @return Collection<int, Ticket>
+     */
+    private function recentCandidates(string $locationId, string $categoryId): Collection
+    {
+        return Ticket::query()
             ->whereIn('state', self::ACTIVE_STATES)
             ->where('location_id', $locationId)
             ->where('category_id', $categoryId)
@@ -85,26 +95,33 @@ final class DuplicatePrecheckService
             ->latest('created_at')
             ->limit(10)
             ->get();
+    }
 
-        if ($candidates->isEmpty()) {
-            return null;
-        }
+    /**
+     * Flag-level overlap wins immediately (first match, in query order). If no
+     * candidate reaches the flag threshold, the earliest soft-overlap match
+     * (if any) is returned instead.
+     *
+     * @param  Collection<int, Ticket>  $candidates
+     * @return array{ticket: Ticket, reason: string}|null
+     */
+    private function bestOverlapMatch(string $title, Collection $candidates): ?array
+    {
+        $softMatch = null;
 
         foreach ($candidates as $candidate) {
             $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
+
             if ($overlap >= self::OVERLAP_FLAG) {
                 return ['ticket' => $candidate, 'reason' => 'Misma ubicación, categoría y título similar'];
             }
-        }
 
-        foreach ($candidates as $candidate) {
-            $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
-            if ($overlap >= self::OVERLAP_SOFT) {
-                return ['ticket' => $candidate, 'reason' => 'Misma ubicación y categoría con descripción relacionada'];
+            if ($softMatch === null && $overlap >= self::OVERLAP_SOFT) {
+                $softMatch = ['ticket' => $candidate, 'reason' => 'Misma ubicación y categoría con descripción relacionada'];
             }
         }
 
-        return null;
+        return $softMatch;
     }
 
     /**
