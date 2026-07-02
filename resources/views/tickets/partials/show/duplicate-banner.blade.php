@@ -9,4 +9,9 @@
         'ticket' => $ticket,
         'vm' => $vm,
     ])
+@elseif ($vm->shouldShowPrecheckNotice())
+    @include('tickets.partials.show.duplicate-banner.precheck-notice', [
+        'ticket' => $ticket,
+        'vm' => $vm,
+    ])
 @endif

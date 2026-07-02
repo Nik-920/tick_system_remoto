@@ -262,4 +262,76 @@ class DuplicatePrecheckServiceTest extends TestCase
 
         $this->assertNull($result);
     }
+
+    // ── 10. findMatch() returns the real candidate Ticket (server-only) ────
+
+    public function test_find_match_returns_the_actual_candidate_ticket_with_id(): void
+    {
+        $existing = Ticket::create([
+            'title' => 'Proyector sin imagen laboratorio',
+            'description' => 'El proyector del lab no funciona.',
+            'reporter_id' => $this->reporter->id,
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
+        ]);
+
+        $match = $this->service->findMatch([
+            'title' => 'Proyector sin imagen laboratorio aula',
+            'description' => 'El proyector no proyecta imagen.',
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+        ], $this->reporter);
+
+        $this->assertIsArray($match);
+        $this->assertArrayHasKey('ticket', $match);
+        $this->assertArrayHasKey('reason', $match);
+        $this->assertSame($existing->id, $match['ticket']->id);
+        $this->assertSame('Misma ubicación, categoría y título similar', $match['reason']);
+    }
+
+    // ── 11. findMatch() and check() agree on whether there is a match ──────
+
+    public function test_find_match_returns_null_exactly_when_check_returns_null(): void
+    {
+        $payload = [
+            'title' => 'Filtración agua techo baño',
+            'description' => 'Hay una gotera en el baño.',
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+        ];
+
+        $this->assertNull($this->service->check($payload, $this->reporter));
+        $this->assertNull($this->service->findMatch($payload, $this->reporter));
+    }
+
+    // ── 12. findMatch() never leaks into check()'s safe payload ────────────
+
+    public function test_check_result_does_not_expose_the_id_findmatch_would_return(): void
+    {
+        Ticket::create([
+            'title' => 'Proyector sin imagen laboratorio',
+            'description' => 'El proyector del lab no funciona.',
+            'reporter_id' => $this->reporter->id,
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+            'state' => Ticket::STATE_OPEN,
+            'priority' => 'medium',
+        ]);
+
+        $payload = [
+            'title' => 'Proyector sin imagen laboratorio aula',
+            'description' => 'El proyector no proyecta imagen.',
+            'location_id' => $this->location->id,
+            'category_id' => $this->category->id,
+        ];
+
+        $match = $this->service->findMatch($payload, $this->reporter);
+        $checkResult = $this->service->check($payload, $this->reporter);
+
+        $this->assertNotNull($match);
+        $this->assertIsArray($checkResult);
+        $this->assertSame(['matchedTitle', 'matchedState', 'reason'], array_keys($checkResult));
+    }
 }

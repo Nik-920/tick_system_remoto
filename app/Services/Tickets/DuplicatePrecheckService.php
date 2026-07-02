@@ -31,10 +31,42 @@ final class DuplicatePrecheckService
      * same location/category has enough title overlap with the submitted payload.
      * Returns null if no suspicious match is found.
      *
+     * SECURITY: this payload is flashed into the session and rendered back to
+     * the browser (see TicketController::store()), so it intentionally never
+     * contains the candidate ticket's id — a reporter must not be able to
+     * discover the id of a ticket they are not authorised to view. Server-side
+     * code that needs the actual candidate (e.g. to persist which ticket was
+     * flagged once the reporter confirms "caso distinto") must call
+     * findMatch() instead and must never forward its result to the client.
+     *
      * @param  array<string, mixed>  $payload
      * @return array{matchedTitle: string, matchedState: string, reason: string}|null
      */
     public function check(array $payload, User $reporter): ?array
+    {
+        $match = $this->findMatch($payload, $reporter);
+
+        if ($match === null) {
+            return null;
+        }
+
+        return $this->buildResult(
+            (string) $match['ticket']->title,
+            (string) $match['ticket']->state,
+            $match['reason']
+        );
+    }
+
+    /**
+     * Same detection logic as check(), but returns the actual candidate Ticket
+     * (including its id) for SERVER-SIDE-ONLY use. Never expose this return
+     * value to the client (no session flash, no JSON, no hidden form field) —
+     * see the SECURITY note on check().
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{ticket: Ticket, reason: string}|null
+     */
+    public function findMatch(array $payload, User $reporter): ?array
     {
         $title = trim((string) ($payload['title'] ?? ''));
         $locationId = (string) ($payload['location_id'] ?? '');
@@ -61,22 +93,14 @@ final class DuplicatePrecheckService
         foreach ($candidates as $candidate) {
             $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
             if ($overlap >= self::OVERLAP_FLAG) {
-                return $this->buildResult(
-                    (string) $candidate->title,
-                    (string) $candidate->state,
-                    'Misma ubicación, categoría y título similar'
-                );
+                return ['ticket' => $candidate, 'reason' => 'Misma ubicación, categoría y título similar'];
             }
         }
 
         foreach ($candidates as $candidate) {
             $overlap = $this->jaccardOverlap($title, (string) $candidate->title);
             if ($overlap >= self::OVERLAP_SOFT) {
-                return $this->buildResult(
-                    (string) $candidate->title,
-                    (string) $candidate->state,
-                    'Misma ubicación y categoría con descripción relacionada'
-                );
+                return ['ticket' => $candidate, 'reason' => 'Misma ubicación y categoría con descripción relacionada'];
             }
         }
 

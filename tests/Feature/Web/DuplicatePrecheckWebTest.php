@@ -5,6 +5,7 @@ namespace Tests\Feature\Web;
 use App\Models\Category;
 use App\Models\Location;
 use App\Models\Ticket;
+use App\Models\TicketEmbedding;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -405,6 +406,130 @@ class DuplicatePrecheckWebTest extends TestCase
         $response->assertSessionMissing('duplicate_precheck');
         $response->assertSessionHas('status');
         $this->assertDatabaseCount('tickets', 2);
+    }
+
+    // ── 12. Confirming "caso distinto" persists the precheck metadata ─────
+
+    public function test_confirming_distinct_persists_precheck_metadata_on_ticket_embedding(): void
+    {
+        $reporter = $this->makeReporter();
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        $existing = Ticket::create([
+            'title' => 'Proyector laboratorio A-201 no enciende',
+            'description' => 'El proyector del lab no emite señal.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $response = $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Proyector laboratorio A-201 no enciende luz',
+            'description' => 'El proyector del laboratorio no prende desde esta mañana.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'idempotency_key' => (string) Str::uuid(),
+            'duplicate_ack' => '1',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('tickets', 2);
+
+        $newTicket = Ticket::query()->where('id', '!=', $existing->id)->firstOrFail();
+        $embedding = TicketEmbedding::where('ticket_id', $newTicket->id)->first();
+
+        $this->assertNotNull($embedding, 'confirming past the warning must persist a ticket_embeddings row');
+        $this->assertSame($existing->id, $embedding->precheck_matched_ticket_id);
+        $this->assertSame('Misma ubicación, categoría y título similar', $embedding->precheck_reason);
+        $this->assertNotNull($embedding->precheck_confirmed_at);
+
+        // AI lane / human-review lane are untouched by the precheck confirmation.
+        $this->assertNull($embedding->similarity_score);
+        $this->assertNull($embedding->matched_ticket_id);
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->review_status);
+        $this->assertNull($embedding->strategy_score);
+    }
+
+    // ── 13. No candidate anymore on confirm → nothing extra persisted ─────
+
+    public function test_confirming_when_candidate_no_longer_matches_persists_no_precheck_metadata(): void
+    {
+        $reporter = $this->makeReporter();
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+
+        // No similar ticket exists at all — an ack=1 with nothing to match
+        // against must create the ticket normally, without inventing data.
+        $response = $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Cable pelado sala cómputo',
+            'description' => 'El cable del cargador está pelado y es peligroso.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'high',
+            'idempotency_key' => (string) Str::uuid(),
+            'duplicate_ack' => '1',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('tickets', 1);
+
+        $ticket = Ticket::query()->firstOrFail();
+        $this->assertDatabaseMissing('ticket_embeddings', ['ticket_id' => $ticket->id]);
+    }
+
+    // ── 14. Security: the server re-derives the candidate, it never trusts ─
+    // ── client input for it — there is no hidden matched-ticket field to ──
+    // ── manipulate, since findMatch() never leaves the server. ────────────
+
+    public function test_duplicate_ack_cannot_be_used_to_fabricate_a_precheck_match(): void
+    {
+        $reporter = $this->makeReporter();
+        $location = $this->makeLocation();
+        $category = $this->makeCategory();
+        $otherLocation = $this->makeLocation('OTR-'.Str::upper(Str::random(5)));
+
+        // A ticket exists, but in a DIFFERENT location — never a real candidate
+        // for the payload below, regardless of what the client claims.
+        $unrelated = Ticket::create([
+            'title' => 'Filtración de agua techo',
+            'description' => 'Gotera constante.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $otherLocation->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        // Reporter sends duplicate_ack=1 straight away (spoofing "I already
+        // saw the warning") plus an attempted matched-ticket id — a field the
+        // route/controller does not even read, since the server always
+        // recomputes the candidate itself.
+        $response = $this->actingAs($reporter)->post(route('tickets.store'), [
+            'title' => 'Filtración de agua techo',
+            'description' => 'Gotera constante en el techo.',
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'priority' => 'medium',
+            'idempotency_key' => (string) Str::uuid(),
+            'duplicate_ack' => '1',
+            'matched_ticket_id' => $unrelated->id,
+            'precheck_matched_ticket_id' => $unrelated->id,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('tickets', 2);
+
+        $newTicket = Ticket::query()->where('id', '!=', $unrelated->id)->firstOrFail();
+
+        // Nothing was fabricated: the unrelated ticket (different location)
+        // must never appear as a precheck match, however it was submitted.
+        $embedding = TicketEmbedding::where('ticket_id', $newTicket->id)->first();
+        $this->assertNull($embedding);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

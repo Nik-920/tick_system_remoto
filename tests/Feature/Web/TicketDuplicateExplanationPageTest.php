@@ -119,6 +119,85 @@ class TicketDuplicateExplanationPageTest extends TestCase
         $response->assertDontSeeText('¿Por qué la IA lo marcó como posible duplicado?');
     }
 
+    // ── Precheck notice (reporter confirmed "caso distinto") ───────────────────
+
+    public function test_precheck_notice_shows_matched_title_state_and_reason(): void
+    {
+        $reporter = $this->createUserWithRole('reporter');
+        $location = $this->createLocation(['name' => 'Laboratorio Precheck']);
+        $category = $this->createCategory(['name' => 'Redes']);
+
+        $matched = Ticket::create([
+            'title' => 'Router de laboratorio sin señal',
+            'description' => 'El router no responde desde ayer.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'in_progress',
+            'priority' => 'medium',
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Router laboratorio sin señal wifi',
+            'description' => 'No hay señal wifi en el laboratorio desde hoy.',
+            'reporter_id' => $reporter->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [],
+            'is_duplicate' => false,
+            'precheck_matched_ticket_id' => $matched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($reporter)->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSeeText('Relacionado con otro reporte');
+        $response->assertSeeText('Router de laboratorio sin señal');
+        // The admin/maintenance show page renders the raw state value here,
+        // same as the sibling AI-duplicate warning banner (no label mapping).
+        $response->assertSeeText('in_progress');
+        $response->assertSeeText('Misma ubicación, categoría y título similar');
+    }
+
+    public function test_precheck_notice_hidden_when_main_duplicate_warning_is_shown(): void
+    {
+        $precheckMatch = Ticket::create([
+            'title' => 'Otro ticket relacionado por precheck',
+            'description' => 'Ticket distinto al confirmado por IA.',
+            'reporter_id' => $this->createUserWithRole('reporter')->id,
+            'location_id' => $this->createLocation(['name' => 'Laboratorio Precheck 2'])->id,
+            'category_id' => $this->createCategory(['name' => 'Mobiliario'])->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        [$ticket, $reporter] = $this->makeDuplicatePair([
+            'is_duplicate' => true,
+            'similarity_score' => 0.97,
+            'strategy_score' => 95,
+            'strategy_results' => $this->strategyResults(),
+            'precheck_matched_ticket_id' => $precheckMatch->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($reporter)->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        // The stronger, actionable AI banner takes precedence...
+        $response->assertSeeText('Posible duplicado detectado por IA');
+        // ...the softer precheck notice must not also render.
+        $response->assertDontSeeText('Relacionado con otro reporte');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
