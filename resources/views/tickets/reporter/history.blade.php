@@ -266,31 +266,7 @@
             </section>
 
 
-            {{-- C. Monthly resolved chart --}}
-            <section class="rep-panel">
-                <h2 class="rep-panel__title">
-                    <x-lucide-bar-chart-2 width="16" height="16" stroke-width="2" />
-                    Resueltos por mes
-                </h2>
-                @if ($board->summary['monthly']['has_data'])
-                    <div class="rep-chart" aria-label="Tickets resueltos por mes">
-                        @foreach ($board->summary['monthly']['items'] as $item)
-                            @php $pct = $board->summary['monthly']['peak'] > 0 ? (int) round($item['count'] / $board->summary['monthly']['peak'] * 100) : 0; @endphp
-                            <div class="rep-chart__row">
-                                <span class="rep-chart__label">{{ $item['label'] }}</span>
-                                <div class="rep-chart__bar-wrap">
-                                    <div class="rep-chart__bar" style="width: {{ $pct }}%;" aria-label="{{ $item['count'] }} tickets"></div>
-                                </div>
-                                <span class="rep-chart__value">{{ $item['count'] }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="rep-panel__empty">Aún no hay tickets resueltos para mostrar.</p>
-                @endif
-            </section>
-
-            {{-- D. Tip (static) --}}
+            {{-- C. Tip (static) --}}
             <section class="rep-panel rep-advice">
                 <div class="rep-advice__icon rep-tone-purple">
                     <x-lucide-lightbulb width="20" height="20" stroke-width="2" />
