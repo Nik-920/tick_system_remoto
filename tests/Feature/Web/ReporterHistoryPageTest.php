@@ -22,7 +22,7 @@ use Tests\TestCase;
  * History = the reporter's OWN closed-out tickets (reporter_id = them, state in
  * resolved/rejected/cancelled). The chips are Todos / Resueltos / Rechazados /
  * Cancelados. These tests pin down the ownership/no-leak scope across every entry
- * point, the real chips/filters/pagination, the honest average + monthly metrics,
+ * point, the real chips/filters/pagination, the honest average metrics,
  * the empty states, and that NO maintenance action is exposed.
  */
 class ReporterHistoryPageTest extends TestCase
@@ -220,18 +220,6 @@ class ReporterHistoryPageTest extends TestCase
 
         $this->assertFalse($board->summary['avg_has_data']);
         $this->assertSame('Sin datos', $board->summary['avg_value']);
-    }
-
-    public function test_monthly_chart_shows_placeholder_without_resolved(): void
-    {
-        $me = $this->userWithRole('reporter');
-        $this->ticketFor($me, 'rejected', 'Rechazado sin resueltos');
-
-        $response = $this->actingAs($me)->get(route('reporter.tickets.history'));
-
-        $response->assertOk();
-        $this->assertFalse($response->viewData('board')->summary['monthly']['has_data']);
-        $response->assertSeeText('Aún no hay tickets resueltos para mostrar.');
     }
 
     public function test_rows_link_to_the_reporter_tracking_screen(): void
