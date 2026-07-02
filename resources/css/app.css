@@ -49,6 +49,12 @@
 @import './modules/welcome.css';
 
 /* ── 6b. Feature Modules — Dashboard ── */
+/* LEGACY — table-based dashboard (role-hero, role-kpi-card, dash-mini-card,
+   dash-location-card and friends). Only remaining consumer is
+   dashboard/reporter.blade.php, which is dead code (DashboardController
+   always redirects the reporter profile to /reporter/dashboard before that
+   view is ever rendered). Kept for now, not imported by the live admin
+   dashboard (see dashboard-admin-v2.css). */
 @import './modules/dashboard/base.css';
 @import './modules/dashboard/hero.css';
 @import './modules/dashboard/kpi.css';
@@ -59,6 +65,9 @@
 /* Dashboard Maintenance V2 — the official maintenance dashboard (also reachable
    via the /dashboard/maintenance-v2 alias). */
 @import './modules/dashboard-maintenance-v2.css';
+/* Dashboard Admin V2 — the official admin/super_admin dashboard at /dashboard.
+   Card-based, no <table>; mirrors the maintenance V2 + reporter dashboards. */
+@import './modules/dashboard-admin-v2.css';
 @import './modules/tickets.css';
 /* TEMPORARY — static V2 design prototype for the maintenance Tickets tab. */
 @import './modules/tickets-maintenance-v2.css';

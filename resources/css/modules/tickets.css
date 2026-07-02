@@ -30,8 +30,8 @@
 /* ðŸŽ¨ HERO â€” INDEX               */
 /* ============================= */
 .tickets-hero {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--tone-primary-solid) 55%, var(--focus-ring-color) 100%);
-    border: 1px solid var(--color-primary-muted);
+    background: linear-gradient(135deg, #0f1e3d 0%, #1e3a8a 55%, #1d4ed8 100%);
+    border: 1px solid #3b82f6;
 }
 
 .tickets-subtitle {
@@ -39,16 +39,12 @@
     max-width: 50ch;
 }
 
-.tickets-hero::after {
-    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-}
-
 .tickets-btn-create {
-    color: var(--color-primary) !important;
+    color: #1e3a8a !important;
 }
 
 .tickets-btn-create:hover {
-    background: var(--color-primary-light) !important;
+    background: #eff6ff !important;
 }
 
 /* KPI Grid en hero */
@@ -181,6 +177,299 @@
 /* ðŸ“­ EMPTY STATE                */
 /* ============================= */
 .tickets-empty-cell { padding: 0 !important; }
+
+/* ============================================================
+   ðŸŽ« TICKET ROWS â€” INDEX (v2, no table)
+
+   Replaces the old <table> layout. Each ticket is a full-width
+   grid row — one column per field, so nothing is wasted in the
+   middle like a floating two-block card would. Same tone system
+   and badge language as "Mis asignaciones" (tickets-assignments.css)
+   so every ticket board in the app reads as one visual system.
+   Columns: Título, Estado, Prioridad, Ubicación, Asignado a,
+   Creado, Acción.
+   ============================================================ */
+.tickets-tone-high   { --tk-soft: var(--tone-high-soft);   --tk-fg: var(--tone-high-fg);   --tk-solid: var(--tone-high-solid); }
+.tickets-tone-medium { --tk-soft: var(--tone-medium-soft); --tk-fg: var(--tone-medium-fg); --tk-solid: var(--tone-medium-solid); }
+.tickets-tone-low    { --tk-soft: var(--tone-low-soft);    --tk-fg: var(--tone-low-fg);    --tk-solid: var(--tone-low-solid); }
+
+.tickets-list-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tickets-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.tickets-list-count {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.tickets-list-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+    white-space: nowrap;
+}
+
+/* Shared column template — header + rows must line up. */
+.tickets-list-cols,
+.tickets-row {
+    grid-template-columns: minmax(200px, 2.2fr) 116px 100px minmax(110px, 1fr) minmax(140px, 1fr) 92px 84px;
+}
+
+.tickets-list-cols {
+    display: grid;
+    align-items: center;
+    gap: 0.6rem 0.85rem;
+    padding: 0 1.1rem 0 1.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+}
+
+.tickets-list-cols span:last-child { text-align: right; }
+
+.tickets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+/* ── Row ── */
+.tickets-row {
+    position: relative;
+    display: grid;
+    align-items: center;
+    gap: 0.6rem 0.85rem;
+    padding: 0.8rem 1.1rem 0.8rem 1.35rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.tickets-row:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #d4dce8;
+    transform: translateY(-1px);
+}
+
+.tickets-row__rail {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.7rem;
+    bottom: 0.7rem;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--tk-solid);
+}
+
+/* Título — the one column allowed to wrap (flags go underneath). */
+.tickets-row__title-cell { min-width: 0; }
+
+.tickets-row__title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+}
+
+.tickets-row__title-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-xs);
+}
+
+.tickets-row__title-link:hover { color: var(--color-primary); text-decoration: underline; }
+.tickets-row__title-link:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 3px; }
+
+.tickets-row__flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.35rem;
+}
+
+/* ── Every other cell: single line, own column, truncates cleanly ── */
+.tickets-row__cell {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.tickets-row__cell--location,
+.tickets-row__cell--assignee,
+.tickets-row__cell--date { align-items: flex-start; }
+
+.tickets-row__cell--action { align-items: flex-end; }
+
+.tickets-row__label {
+    display: none;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+}
+
+.tickets-row__location {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.tickets-row__location span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tickets-row__location svg { color: var(--text-faint); flex-shrink: 0; }
+
+.tickets-row__assignee-value {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.tickets-row__date {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.tickets-row__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 32px;
+    padding: 0 0.75rem;
+    border-radius: var(--radius-xs);
+    background: var(--color-primary);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.tickets-row__action:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+.tickets-row__action:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+
+/* ── Badges: state / priority (dot-marked pill, matches Mis asignaciones) ── */
+.tickets-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.tickets-badge__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.tickets-state--open        { background: var(--tone-info-soft);    color: var(--tone-info-fg);    border-color: #7dd3fc; }
+.tickets-state--in_progress { background: var(--tone-medium-soft);  color: var(--tone-medium-fg);  border-color: #fcd34d; }
+.tickets-state--resolved    { background: var(--tone-low-soft);     color: var(--tone-low-fg);     border-color: #86efac; }
+.tickets-state--rejected,
+.tickets-state--cancelled   { background: var(--tone-neutral-soft); color: var(--text-secondary);  border-color: #cbd5e1; }
+
+.tickets-prio { background: var(--tk-soft); color: var(--tk-fg); }
+.tickets-prio .tickets-badge__dot { background: var(--tk-solid); }
+
+/* ── Flags: comunidad / duplicado / relacionado ── */
+.tickets-flag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.16rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.tickets-flag--success { background: var(--tone-low-soft);     color: var(--tone-low-fg);     border-color: #86efac; }
+.tickets-flag--neutral { background: var(--tone-neutral-soft); color: var(--text-secondary);  border-color: #cbd5e1; }
+.tickets-flag--warning { background: var(--tone-medium-soft);  color: var(--tone-medium-fg);  border-color: #fcd34d; }
+.tickets-flag--info    { background: var(--tone-info-soft);    color: var(--tone-info-fg);    border-color: #7dd3fc; }
+
+/* ── Below 1180px: columns get tight — drop the shared header and
+   let each row stack as a compact two-line card with inline labels. ── */
+@media (max-width: 1179px) {
+    .tickets-list-cols { display: none; }
+
+    .tickets-row {
+        grid-template-columns: 1fr 1fr;
+        row-gap: 0.55rem;
+    }
+
+    .tickets-row__title-cell { grid-column: 1 / -1; }
+
+    .tickets-row__cell--action {
+        grid-column: 1 / -1;
+        align-items: stretch;
+        border-top: 1px solid var(--border-light);
+        padding-top: 0.6rem;
+        margin-top: 0.1rem;
+    }
+
+    .tickets-row__action { justify-content: center; width: 100%; height: 38px; }
+
+    .tickets-row__label { display: block; }
+}
+
+@media (max-width: 480px) {
+    .tickets-row { grid-template-columns: 1fr; }
+    .tickets-row__cell--action { grid-column: 1; }
+}
 
 /* ============================= */
 /* ðŸ“„ PAGINACIÃ“N                 */
@@ -1150,7 +1439,7 @@
     .tickets-filter-actions .btn-primary,
     .tickets-filter-actions .btn-secondary { flex: 1; }
 
-    /* Tabla */
+    /* Tabla (available.blade.php) */
     .tickets-table { min-width: 560px; }
 
     .tickets-td-title { max-width: 16ch; }
@@ -1231,6 +1520,24 @@
 [data-theme="dark"] .tickets-filters { border-color: var(--border-default); }
 [data-theme="dark"] .tickets-table-shell { border-left-color: var(--color-primary); }
 [data-theme="dark"] .tickets-show-section { border-left-color: var(--color-primary); }
+
+/* ── Ticket rows (index) ── */
+[data-theme="dark"] .tickets-tone-high   { --tk-soft: rgba(239, 68, 68, 0.16);  --tk-fg: #fca5a5; }
+[data-theme="dark"] .tickets-tone-medium { --tk-soft: rgba(245, 158, 11, 0.16); --tk-fg: #fbbf24; }
+[data-theme="dark"] .tickets-tone-low    { --tk-soft: rgba(34, 197, 94, 0.16);  --tk-fg: #86efac; }
+
+[data-theme="dark"] .tickets-state--open        { background: rgba(8, 145, 178, 0.16);   color: #67e8f9; border-color: rgba(8, 145, 178, 0.3); }
+[data-theme="dark"] .tickets-state--in_progress { background: rgba(245, 158, 11, 0.16);  color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+[data-theme="dark"] .tickets-state--resolved    { background: rgba(34, 197, 94, 0.16);   color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
+[data-theme="dark"] .tickets-state--rejected,
+[data-theme="dark"] .tickets-state--cancelled   { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+
+[data-theme="dark"] .tickets-flag--success { background: rgba(34, 197, 94, 0.16);  color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
+[data-theme="dark"] .tickets-flag--neutral { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+[data-theme="dark"] .tickets-flag--warning { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+[data-theme="dark"] .tickets-flag--info    { background: rgba(8, 145, 178, 0.16);  color: #67e8f9; border-color: rgba(8, 145, 178, 0.3); }
+
+[data-theme="dark"] .tickets-row:hover { border-color: rgba(255, 255, 255, 0.16); }
 
 [data-theme="dark"] .tickets-field,
 [data-theme="dark"] .tickets-review-note {

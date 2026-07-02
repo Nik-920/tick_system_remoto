@@ -7,7 +7,9 @@
 .tickets-hero,
 .locs-hero,
 .users-hero,
-.cats-hero {
+.cats-hero,
+.comm-mod-hero,
+.adm-hero {
     border-radius: var(--radius);
     padding: 1.75rem 1.5rem;
     position: relative;
@@ -18,7 +20,9 @@
 .tickets-hero::before,
 .locs-hero::before,
 .users-hero::before,
-.cats-hero::before {
+.cats-hero::before,
+.comm-mod-hero::before,
+.adm-hero::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -31,7 +35,9 @@
 .tickets-hero::after,
 .locs-hero::after,
 .users-hero::after,
-.cats-hero::after {
+.cats-hero::after,
+.comm-mod-hero::after,
+.adm-hero::after {
     content: "";
     position: absolute;
     top: -60px;
@@ -47,7 +53,9 @@
 .tickets-hero-inner,
 .locs-hero-inner,
 .users-hero-inner,
-.cats-hero-inner {
+.cats-hero-inner,
+.comm-mod-hero-inner,
+.adm-hero-inner {
     position: relative;
     z-index: 1;
     display: flex;
@@ -108,7 +116,9 @@
     .tickets-hero,
     .locs-hero,
     .users-hero,
-    .cats-hero {
+    .cats-hero,
+    .comm-mod-hero,
+    .adm-hero {
         padding: 1.1rem 1rem;
     }
 
@@ -124,7 +134,9 @@
     .tickets-hero-inner,
     .locs-hero-inner,
     .users-hero-inner,
-    .cats-hero-inner {
+    .cats-hero-inner,
+    .comm-mod-hero-inner,
+    .adm-hero-inner {
         flex-direction: column;
         gap: 0.75rem;
     }

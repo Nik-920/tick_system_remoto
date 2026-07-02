@@ -212,7 +212,7 @@ final class CommunityModerationQueueQuery
     }
 
     /**
-     * @return array{id: string, ref: string, title: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, community_visible: bool, community_badge_label: string, state_blocks_feed: bool, has_context: bool, community_visibility_reason: string|null, community_hidden_at: string|null, hidden_by_name: string|null, location: array{name: string, building: string, room_code: string}|null, category: array{name: string}|null, show_url: string, hide_url: string, restore_url: string, review_report_url: string|null, created_at: string, created_at_label: string, updated_at: string, pending_reports_count: int, latest_pending_report: array{id: string, target_label: string, reason_label: string, note: string|null, comment_excerpt: string|null}|null}
+     * @return array{id: string, ref: string, title: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, community_visible: bool, community_badge_label: string, state_blocks_feed: bool, has_context: bool, community_visibility_reason: string|null, community_hidden_at: string|null, hidden_by_name: string|null, location: array{name: string, building: string, room_code: string}|null, category: array{name: string}|null, show_url: string, hide_url: string, restore_url: string, review_report_url: string|null, created_at: string, created_at_label: string, updated_at: string, pending_reports_count: int, latest_pending_report: array{id: string, target_label: string, reason_label: string, note: string|null, comment_excerpt: string|null}|null}
      */
     private function toItem(Ticket $ticket, int $pendingReportsCount = 0, ?CommunityReport $latestPendingReport = null): array
     {
@@ -229,6 +229,7 @@ final class CommunityModerationQueueQuery
             'state_tone' => $this->stateTone($state),
             'priority' => (string) $ticket->priority,
             'priority_label' => $this->priorityLabel((string) $ticket->priority),
+            'priority_tone' => $this->priorityTone((string) $ticket->priority),
             'community_visible' => $communityVisible,
             'community_badge_label' => $communityVisible ? 'Visible' : 'Oculto',
             'state_blocks_feed' => ! in_array($state, self::PUBLIC_STATES, true),
@@ -276,10 +277,10 @@ final class CommunityModerationQueueQuery
     private function stateTone(string $state): string
     {
         return match ($state) {
-            'open', 'in_progress' => 'info',
-            'resolved' => 'success',
-            'cancelled', 'rejected' => 'muted',
-            default => 'neutral',
+            'open' => 'info',
+            'in_progress' => 'medium',
+            'resolved' => 'low',
+            default => 'neutral', // cancelled, rejected
         };
     }
 

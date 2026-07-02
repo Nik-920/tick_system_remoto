@@ -25,25 +25,50 @@
 
     {{-- ===== SUMMARY CARDS ===== --}}
     <section class="comm-mod-summary" aria-label="Resumen de moderación">
-        <div class="comm-mod-kpi-card">
-            <span class="comm-mod-kpi-value">{{ number_format($vm->summary['total_visible']) }}</span>
-            <span class="comm-mod-kpi-label">Visibles en Comunidad</span>
+        <div class="comm-mod-kpi-card comm-mod-tone-primary">
+            <div class="comm-mod-kpi-icon">
+                <x-lucide-eye width="22" height="22" stroke-width="2" />
+            </div>
+            <div class="comm-mod-kpi-body">
+                <span class="comm-mod-kpi-value">{{ number_format($vm->summary['total_visible']) }}</span>
+                <span class="comm-mod-kpi-label">Visibles en Comunidad</span>
+            </div>
         </div>
-        <div class="comm-mod-kpi-card comm-mod-kpi-card--warning">
-            <span class="comm-mod-kpi-value">{{ number_format($vm->summary['total_hidden']) }}</span>
-            <span class="comm-mod-kpi-label">Ocultos en Comunidad</span>
+        <div class="comm-mod-kpi-card comm-mod-tone-neutral">
+            <div class="comm-mod-kpi-icon">
+                <x-lucide-eye-off width="22" height="22" stroke-width="2" />
+            </div>
+            <div class="comm-mod-kpi-body">
+                <span class="comm-mod-kpi-value">{{ number_format($vm->summary['total_hidden']) }}</span>
+                <span class="comm-mod-kpi-label">Ocultos en Comunidad</span>
+            </div>
         </div>
-        <div class="comm-mod-kpi-card">
-            <span class="comm-mod-kpi-value">{{ number_format($vm->summary['hidden_last_7d']) }}</span>
-            <span class="comm-mod-kpi-label">Ocultos últimos 7 días</span>
+        <div class="comm-mod-kpi-card comm-mod-tone-info">
+            <div class="comm-mod-kpi-icon">
+                <x-lucide-history width="22" height="22" stroke-width="2" />
+            </div>
+            <div class="comm-mod-kpi-body">
+                <span class="comm-mod-kpi-value">{{ number_format($vm->summary['hidden_last_7d']) }}</span>
+                <span class="comm-mod-kpi-label">Ocultos últimos 7 días</span>
+            </div>
         </div>
-        <div class="comm-mod-kpi-card comm-mod-kpi-card--alert">
-            <span class="comm-mod-kpi-value">{{ number_format($vm->summary['visible_high_priority']) }}</span>
-            <span class="comm-mod-kpi-label">Visibles alta prioridad</span>
+        <div class="comm-mod-kpi-card comm-mod-tone-high">
+            <div class="comm-mod-kpi-icon">
+                <x-lucide-alert-triangle width="22" height="22" stroke-width="2" />
+            </div>
+            <div class="comm-mod-kpi-body">
+                <span class="comm-mod-kpi-value">{{ number_format($vm->summary['visible_high_priority']) }}</span>
+                <span class="comm-mod-kpi-label">Visibles alta prioridad</span>
+            </div>
         </div>
-        <div class="comm-mod-kpi-card comm-mod-kpi-card--reports {{ $vm->summary['pending_reports'] > 0 ? 'comm-mod-kpi-card--reports-active' : '' }}">
-            <span class="comm-mod-kpi-value">{{ number_format($vm->summary['pending_reports']) }}</span>
-            <span class="comm-mod-kpi-label">Reportes pendientes</span>
+        <div class="comm-mod-kpi-card comm-mod-tone-medium{{ $vm->summary['pending_reports'] > 0 ? ' comm-mod-kpi-card--active' : '' }}">
+            <div class="comm-mod-kpi-icon">
+                <x-lucide-flag width="22" height="22" stroke-width="2" />
+            </div>
+            <div class="comm-mod-kpi-body">
+                <span class="comm-mod-kpi-value">{{ number_format($vm->summary['pending_reports']) }}</span>
+                <span class="comm-mod-kpi-label">Reportes pendientes</span>
+            </div>
         </div>
     </section>
 
@@ -78,4 +103,30 @@
     </div>
 
 </div>
+
+{{-- ============================================================
+   Progressive JS — filters toggle + select auto-submit.
+   Filtering works server-side without JS; this only smooths the UX.
+   ============================================================ --}}
+<script>
+(function () {
+    'use strict';
+
+    var toggleBtn = document.querySelector('[data-cmq-filters-toggle]');
+    var panel = document.getElementById('comm-mod-filters');
+    if (toggleBtn && panel) {
+        toggleBtn.addEventListener('click', function () {
+            var open = toggleBtn.getAttribute('aria-expanded') === 'true';
+            toggleBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+            panel.hidden = open;
+        });
+    }
+
+    document.querySelectorAll('[data-cmq-autosubmit]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            if (sel.form) { sel.form.submit(); }
+        });
+    });
+})();
+</script>
 @endsection

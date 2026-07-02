@@ -217,123 +217,152 @@ $isMaintenance  = $user->hasRole('maintenance') && ! $user->hasAnyRole(['admin',
         </form>
     </section>
 
-    {{-- ===== TABLA ===== --}}
-    <section class="tickets-table-shell">
-        <div class="tickets-dataset-head">
-            <p class="tickets-dataset-count">{{ number_format($tickets->count()) }} tickets visibles</p>
-            <span class="tickets-dataset-chip">Página {{ $tickets->currentPage() }} de {{ $tickets->lastPage() }}</span>
+    {{-- ===== LISTADO DE TICKETS (filas, sin tabla) ===== --}}
+    <section class="tickets-list-shell">
+        <div class="tickets-list-head">
+            <p class="tickets-list-count">{{ number_format($tickets->count()) }} tickets visibles</p>
+            <span class="tickets-list-chip">Página {{ $tickets->currentPage() }} de {{ $tickets->lastPage() }}</span>
         </div>
 
-        <div class="table-wrap">
-            <table class="tickets-table">
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Estado</th>
-                        <th>Prioridad</th>
-                        <th>Ubicación</th>
-                        <th>Asignado a</th>
-                        <th>Creado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($tickets as $ticket)
-                    @php
-                        $te             = $ticket->relationLoaded('embedding') ? $ticket->embedding : null;
-                        $teMatch        = $te?->relationLoaded('matchedTicket') ? $te->matchedTicket : null;
-                        $effectiveDup   = $te && $te->effective_duplicate
-                                          && $teMatch
-                                          && in_array($teMatch->state, ['open', 'in_progress'], true);
-                        $reviewStatus   = $te?->review_status;
-                        // Softer signal: reporter confirmed a precheck candidate was
-                        // distinct. Only surfaced when the AI hasn't independently
-                        // confirmed a duplicate — see 2026_07_01_000100 migration.
-                        $isRelated      = $te && $te->hasPrecheckCandidate() && ! $effectiveDup;
-                    @endphp
-                    <tr>
-                        <td class="tickets-td-title">
-                            {{ $ticket->title }}
-                            {{-- Community visibility badge (admin/super_admin only) --}}
-                            @if (! $isReporterOnly && ! $isMaintenance)
-                                @if ($ticket->community_visible)
-                                    <span class="ticket-badge ticket-badge--resolved" title="Visible en Comunidad" style="font-size:0.72rem; margin-left:0.3rem;">Comunidad: Visible</span>
-                                @else
-                                    <span class="ticket-badge ticket-badge--closed" title="Oculto en Comunidad" style="font-size:0.72rem; margin-left:0.3rem;">Comunidad: Oculto</span>
-                                @endif
+        @if ($tickets->isNotEmpty())
+        <div class="tickets-list-cols" aria-hidden="true">
+            <span>Título</span>
+            <span>Estado</span>
+            <span>Prioridad</span>
+            <span>Ubicación</span>
+            <span>Asignado a</span>
+            <span>Creado</span>
+            <span>Acción</span>
+        </div>
+        @endif
+
+        <div class="tickets-list">
+            @forelse ($tickets as $ticket)
+            @php
+                $te             = $ticket->relationLoaded('embedding') ? $ticket->embedding : null;
+                $teMatch        = $te?->relationLoaded('matchedTicket') ? $te->matchedTicket : null;
+                $effectiveDup   = $te && $te->effective_duplicate
+                                  && $teMatch
+                                  && in_array($teMatch->state, ['open', 'in_progress'], true);
+                $reviewStatus   = $te?->review_status;
+                // Softer signal: reporter confirmed a precheck candidate was
+                // distinct. Only surfaced when the AI hasn't independently
+                // confirmed a duplicate — see 2026_07_01_000100 migration.
+                $isRelated      = $te && $te->hasPrecheckCandidate() && ! $effectiveDup;
+
+                // Same tone system as "Mis asignaciones" (tickets-assignments.css)
+                // so both boards read as one visual language.
+                $priorityTone = match ($ticket->priority) {
+                    'critical', 'high' => 'high',
+                    'low' => 'low',
+                    default => 'medium',
+                };
+            @endphp
+            <article class="tickets-row tickets-tone-{{ $priorityTone }}">
+                <span class="tickets-row__rail" aria-hidden="true"></span>
+
+                <div class="tickets-row__title-cell">
+                    <h3 class="tickets-row__title">
+                        <a href="{{ route('tickets.show', $ticket) }}" class="tickets-row__title-link">{{ $ticket->title }}</a>
+                    </h3>
+
+                    @if ((! $isReporterOnly && ! $isMaintenance) || $effectiveDup || $isRelated)
+                    <div class="tickets-row__flags">
+                        {{-- Community visibility flag (admin/super_admin only) --}}
+                        @if (! $isReporterOnly && ! $isMaintenance)
+                            @if ($ticket->community_visible)
+                                <span class="tickets-flag tickets-flag--success" title="Visible en Comunidad">Comunidad: Visible</span>
+                            @else
+                                <span class="tickets-flag tickets-flag--neutral" title="Oculto en Comunidad">Comunidad: Oculto</span>
                             @endif
-                            {{-- Duplicate badge --}}
-                            @if ($effectiveDup)
-                                @if ($reviewStatus === 'confirmed')
-                                    <span class="ticket-badge ticket-badge--warning" title="Duplicado confirmado manualmente" style="font-size:0.72rem; margin-left:0.3rem;">
-                                        ✅ Duplicado confirmado
-                                    </span>
-                                @else
-                                    <span class="ticket-badge ticket-badge--warning" title="Posible duplicado detectado por IA" style="font-size:0.72rem; margin-left:0.3rem;">
-                                        ⚠️ Posible duplicado
-                                    </span>
-                                @endif
+                        @endif
+
+                        {{-- Duplicate flag --}}
+                        @if ($effectiveDup)
+                            @if ($reviewStatus === 'confirmed')
+                                <span class="tickets-flag tickets-flag--warning" title="Duplicado confirmado manualmente">✅ Duplicado confirmado</span>
+                            @else
+                                <span class="tickets-flag tickets-flag--warning" title="Posible duplicado detectado por IA">⚠️ Posible duplicado</span>
                             @endif
-                            {{-- Related badge (precheck candidate, reporter confirmed distinct) --}}
-                            @if ($isRelated)
-                                <span class="ticket-badge ticket-badge--info" title="{{ $te->precheck_reason ?? 'Reporte relacionado detectado al crear el ticket' }}" style="font-size:0.72rem; margin-left:0.3rem;">
-                                    🔗 Relacionado
-                                </span>
+                        @endif
+
+                        {{-- Related flag (precheck candidate, reporter confirmed distinct) --}}
+                        @if ($isRelated)
+                            <span class="tickets-flag tickets-flag--info" title="{{ $te->precheck_reason ?? 'Reporte relacionado detectado al crear el ticket' }}">🔗 Relacionado</span>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--state">
+                    <span class="tickets-row__label">Estado</span>
+                    <span class="tickets-badge tickets-state--{{ $ticket->state }}">
+                        <span class="tickets-badge__dot" aria-hidden="true"></span>
+                        {{ $stateLabels[$ticket->state] ?? str_replace('_', ' ', $ticket->state) }}
+                    </span>
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--priority">
+                    <span class="tickets-row__label">Prioridad</span>
+                    <span class="tickets-badge tickets-prio tickets-tone-{{ $priorityTone }}">
+                        <span class="tickets-badge__dot" aria-hidden="true"></span>
+                        {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
+                    </span>
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--location">
+                    <span class="tickets-row__label">Ubicación</span>
+                    <span class="tickets-row__location">
+                        <x-lucide-map-pin width="13" height="13" stroke-width="2" />
+                        <span>{{ $ticket->location?->name ?? 'N/A' }}</span>
+                    </span>
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--assignee">
+                    <span class="tickets-row__label">Asignado a</span>
+                    <span class="tickets-row__assignee-value">
+                        @if ($isMaintenance)
+                            @if ($ticket->assigned_to === $user->id)
+                                <span class="assignment-badge assignment-badge--claimed">Asignado a mí</span>
+                            @elseif ($ticket->assigned_to === null)
+                                <span class="assignment-badge assignment-badge--none">Disponible</span>
+                            @else
+                                {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
                             @endif
-                        </td>
-                        <td>
-                            <span class="ticket-badge ticket-badge--{{ $ticket->state }}">
-                                {{ $stateLabels[$ticket->state] ?? str_replace('_', ' ', $ticket->state) }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="ticket-badge ticket-badge--{{ $ticket->priority }}">
-                                {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
-                            </span>
-                        </td>
-                        <td class="tickets-td-meta">{{ $ticket->location?->name ?? 'N/A' }}</td>
-                        <td>
-                            <div class="tickets-td-meta">
-                                @if ($isMaintenance)
-                                    @if ($ticket->assigned_to === $user->id)
-                                        <span class="assignment-badge assignment-badge--claimed">Asignado a mí</span>
-                                    @elseif ($ticket->assigned_to === null)
-                                        <span class="assignment-badge assignment-badge--none">Disponible</span>
-                                    @else
-                                        {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
-                                    @endif
-                                @else
-                                    {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
-                                @endif
-                            </div>
-                            @if ($ticket->assignment_locked)
-                                <span class="assignment-badge assignment-badge--locked">Fija</span>
-                            @elseif ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF)
-                                <span class="assignment-badge assignment-badge--claimed">Tomado</span>
-                            @endif
-                        </td>
-                        <td class="tickets-td-meta">{{ $ticket->created_at?->format('d/m/Y') }}</td>
-                        <td>
-                            <a href="{{ route('tickets.show', $ticket) }}" class="tickets-link-action">Ver</a>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="7" class="tickets-empty-cell">
-                            <x-empty-state
-                                base-class="empty-state"
-                                title="No hay tickets para mostrar"
-                                note="Prueba ajustar o limpiar filtros para ampliar resultados."
-                                title-class="empty-state__title"
-                                note-class="empty-state__note"
-                            >
-                                <a href="{{ route('tickets.create') }}" class="btn-primary">Crear primer ticket</a>
-                            </x-empty-state>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        @else
+                            {{ $ticket->assignee?->name ?? $ticket->assignee?->email ?? 'Sin asignar' }}
+                        @endif
+                    </span>
+                    @if ($ticket->assignment_locked)
+                        <span class="assignment-badge assignment-badge--locked">Fija</span>
+                    @elseif ($ticket->assignment_source === \App\Models\Ticket::ASSIGNMENT_SOURCE_SELF)
+                        <span class="assignment-badge assignment-badge--claimed">Tomado</span>
+                    @endif
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--date">
+                    <span class="tickets-row__label">Creado</span>
+                    <span class="tickets-row__date">{{ $ticket->created_at?->format('d/m/Y') }}</span>
+                </div>
+
+                <div class="tickets-row__cell tickets-row__cell--action">
+                    <a href="{{ route('tickets.show', $ticket) }}" class="tickets-row__action">
+                        Ver
+                        <x-lucide-chevron-right width="14" height="14" stroke-width="2.5" />
+                    </a>
+                </div>
+            </article>
+            @empty
+                <x-empty-state
+                    base-class="empty-state"
+                    title="No hay tickets para mostrar"
+                    note="Prueba ajustar o limpiar filtros para ampliar resultados."
+                    title-class="empty-state__title"
+                    note-class="empty-state__note"
+                >
+                    <a href="{{ route('tickets.create') }}" class="btn-primary">Crear primer ticket</a>
+                </x-empty-state>
+            @endforelse
         </div>
     </section>
 
