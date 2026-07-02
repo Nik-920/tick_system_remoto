@@ -108,7 +108,7 @@ class TicketShowHistoryTimelineTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString($reporter->name, $html);
+        $this->assertStringContainsString(e($reporter->name), $html);
         $this->assertStringContainsString('ticket-show__history-author', $html);
     }
 
