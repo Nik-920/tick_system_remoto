@@ -96,6 +96,13 @@ if (document.querySelector('[data-reporter-ticket-comments-trigger]')) {
         .catch((err) => console.error('Error loading reporter-ticket-comments-modal', err));
 }
 
+// Community feed: "Ver más comentarios" pagination.
+if (document.querySelector('[data-community-comments-more]')) {
+    import('./community-comments-load-more')
+        .then((mod) => mod.init?.())
+        .catch((err) => console.error('Error loading community-comments-load-more', err));
+}
+
 // Community media fallback: hide broken img and show placeholder on error.
 if (document.querySelector('[data-community-media-img]')) {
     import('./community-media-fallback')
