@@ -7,8 +7,9 @@
        $post_id          string|int — target post for reply store route.
 
      Security contract:
-     - No commenter names, emails, or PII rendered.
-     - Generic author label: "Reporter de la comunidad" / "Tú".
+     - No commenter email or internal IDs rendered.
+     - Author label shows the commenter's display name, or "Tú" for the
+       viewer's own comments (author_label, pre-resolved server-side).
      - Body escaped with {{ }} — no raw HTML.
      - Report reason/note/reporter never shown here.
      - Role label is not PII (reporter/maintenance/admin categories only).
@@ -26,7 +27,7 @@
     <div class="comm-comment-v2__main">
         <div class="comm-comment__header">
             <span class="comm-comment__author">
-                {{ $comment['owned_by_viewer'] ? 'Tú' : 'Reporter de la comunidad' }}
+                {{ $comment['author_label'] }}
             </span>
             <span class="comm-comment-v2__role comm-comment-v2__role--{{ $comment['role_tone'] }}">
                 {{ $comment['role_label'] }}
@@ -42,15 +43,16 @@
         <div class="comm-comment__actions">
             @if ($comment['owned_by_viewer'])
                 {{-- Edit form (no JS — details/summary toggle) --}}
-                <details class="comm-comment-edit">
+                <details class="comm-comment-edit comm-comment-edit-v2">
                     <summary class="comm-comment-edit__toggle">
                         <x-lucide-pencil width="12" height="12" stroke-width="2" />
                         Editar
                     </summary>
-                    <div class="comm-comment-edit__form-wrap">
+                    <div class="comm-comment-edit__form-wrap comm-comment-edit-v2__panel">
+                        <p class="comm-comment-edit-v2__title">Editar comentario</p>
                         <form method="POST"
                               action="{{ route('reporter.community.comments.update', $comment['id']) }}"
-                              class="comm-comment-edit__form">
+                              class="comm-comment-edit__form comm-comment-edit-v2__form">
                             @csrf
                             @method('PATCH')
                             <textarea name="body"
@@ -58,11 +60,17 @@
                                       minlength="2"
                                       rows="2"
                                       required
-                                      class="comm-comment-edit__textarea"
+                                      class="comm-comment-edit__textarea comm-comment-edit-v2__textarea"
                                       aria-label="Editar comentario">{{ $comment['body'] }}</textarea>
-                            <div class="comm-comment-edit__actions-row">
-                                <button type="submit" class="comm-comment-edit__submit">
+                            <div class="comm-comment-edit__actions-row comm-comment-edit-v2__actions-row">
+                                <button type="submit" class="comm-comment-edit__submit comm-comment-edit-v2__submit">
+                                    <x-lucide-check width="12" height="12" stroke-width="2" />
                                     Guardar cambios
+                                </button>
+                                <button type="button"
+                                        class="comm-comment-edit-v2__cancel"
+                                        onclick="this.closest('details').removeAttribute('open')">
+                                    Cancelar
                                 </button>
                             </div>
                         </form>

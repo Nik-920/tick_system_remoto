@@ -377,13 +377,13 @@ class CommunityCommentEditingTest extends TestCase
         $response->assertSee('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', false);
     }
 
-    public function test_edited_comment_does_not_expose_user_email_or_name(): void
+    public function test_edited_comment_does_not_expose_user_email(): void
     {
         $this->ensureRolesExist();
 
         // Author with a distinctive name edits their comment
         $author = User::factory()->create([
-            'name' => 'NombreSecreto XSS EDITPII',
+            'name' => 'NombreVisible XSS EDITPII',
             'email' => 'editpii-secret@test.test',
         ]);
         $author->assignRole('reporter');
@@ -401,13 +401,14 @@ class CommunityCommentEditingTest extends TestCase
                 'body' => 'Comentario editado PII.',
             ]);
 
-        // A different reporter views the feed — must not see the author's PII
+        // A different reporter views the feed — the display name is shown by
+        // design, but the author's email must never leak.
         $viewer = $this->createUserWithRole('reporter');
 
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertDontSee('NombreSecreto XSS EDITPII', false)
+            ->assertSee('NombreVisible XSS EDITPII', false)
             ->assertDontSee('editpii-secret@test.test', false);
     }
 

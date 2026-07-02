@@ -251,10 +251,11 @@ class CommunityRepliesTest extends TestCase
             ->assertSee('Respuesta visible bajo raíz FREPLY.', false);
     }
 
-    public function test_feed_replies_use_generic_author_labels(): void
+    public function test_feed_replies_show_display_name_and_tu_label(): void
     {
         $viewer = $this->createUserWithRole('reporter');
         $other = $this->createUserWithRole('reporter');
+        $other->update(['name' => 'Otro', 'last_name' => 'Reportero']);
         $ticket = $this->makeVisibleTicket(title: 'Ticket reply labels FLABEL');
         $root = $this->makeRootComment($ticket, user: $other);
         $this->makeReply($ticket, $root, user: $viewer, body: 'Mi respuesta propia FMINE.');
@@ -264,7 +265,7 @@ class CommunityRepliesTest extends TestCase
             ->get(route('reporter.community'))
             ->assertOk()
             ->assertSee('Tú', false)
-            ->assertSee('Reporter de la comunidad', false);
+            ->assertSee('Otro Reportero', false);
     }
 
     public function test_feed_does_not_show_replies_for_hidden_parent(): void
@@ -323,24 +324,24 @@ class CommunityRepliesTest extends TestCase
         $response->assertSee('&lt;script&gt;alert(&quot;reply&quot;)&lt;/script&gt;', false);
     }
 
-    public function test_feed_replies_do_not_expose_pii(): void
+    public function test_feed_replies_show_display_name_but_not_email(): void
     {
         $this->ensureRolesExist();
-        $secret = User::factory()->create([
-            'name' => 'AutorRespuestaSecretoPII',
+        $author = User::factory()->create([
+            'name' => 'AutorRespuestaVisible',
             'email' => 'reply-secret@test.test',
         ]);
-        $secret->assignRole('reporter');
+        $author->assignRole('reporter');
         $viewer = $this->createUserWithRole('reporter');
         $ticket = $this->makeVisibleTicket(title: 'Ticket reply pii FRPII');
         $root = $this->makeRootComment($ticket);
-        $this->makeReply($ticket, $root, user: $secret, body: 'Respuesta anónima FRPIIBODY.');
+        $this->makeReply($ticket, $root, user: $author, body: 'Respuesta visible FRPIIBODY.');
 
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertSee('Respuesta anónima FRPIIBODY.', false)
-            ->assertDontSee('AutorRespuestaSecretoPII', false)
+            ->assertSee('Respuesta visible FRPIIBODY.', false)
+            ->assertSee('AutorRespuestaVisible', false)
             ->assertDontSee('reply-secret@test.test', false);
     }
 

@@ -396,12 +396,12 @@ class CommunityCommentEditAuditLogTest extends TestCase
             ->assertDontSee('Cuerpo previo NO debe verse FEEDPREV.', false);
     }
 
-    public function test_reporter_feed_does_not_expose_editor_pii(): void
+    public function test_reporter_feed_does_not_expose_editor_email(): void
     {
         $this->ensureRolesExist();
 
         $author = User::factory()->create([
-            'name' => 'EditorSecreto AUDITPII',
+            'name' => 'EditorVisible AUDITPII',
             'email' => 'auditpii-secret@test.test',
         ]);
         $author->assignRole('reporter');
@@ -424,7 +424,7 @@ class CommunityCommentEditAuditLogTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertDontSee('EditorSecreto AUDITPII', false)
+            ->assertSee('EditorVisible AUDITPII', false)
             ->assertDontSee('auditpii-secret@test.test', false);
     }
 

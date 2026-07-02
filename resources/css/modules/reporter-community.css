@@ -1795,10 +1795,15 @@
 .comm-comment__header {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
 .comm-comment__author {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 0.74rem;
     font-weight: 600;
     color: var(--color-text, #1e293b);
@@ -1848,6 +1853,40 @@
     color: var(--color-text-soft, #94a3b8);
     margin: 0;
     padding-left: 4px;
+}
+
+/* "Ver más comentarios" — loads the next page of root comments in place. */
+.comm-comments__load-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    padding: 5px 4px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-primary, #2563eb);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.comm-comments__load-more:hover:not(:disabled) {
+    color: var(--color-primary-hover, #1d4ed8);
+    text-decoration: underline;
+}
+
+.comm-comments__load-more:disabled {
+    color: var(--color-text-soft, #94a3b8);
+    cursor: default;
+}
+
+[data-theme="dark"] .comm-comments__load-more {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .comm-comments__load-more:hover:not(:disabled) {
+    color: #bfdbfe;
 }
 
 /* Empty state */
@@ -2077,8 +2116,11 @@
 }
 
 /* ── Comment report details ── */
+/* Floating popover (mirrors .comm-report-details) — stays out of flow so
+   it never pushes sibling actions (e.g. "Responder") around when open. */
 .comm-comment-report {
     display: inline-block;
+    position: relative;
 }
 
 .comm-comment-report__toggle {
@@ -2105,11 +2147,16 @@
 }
 
 .comm-comment-report__form-wrap {
-    margin-top: 6px;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    min-width: 260px;
     padding: 8px;
     background: var(--color-surface-soft, #f8fafc);
     border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .comm-comment-report__form {
@@ -3592,6 +3639,11 @@
     color: #6d28d9;
 }
 
+.comm-comment-v2__avatar--unknown {
+    background: #f1f5f9;
+    color: #475569;
+}
+
 /* ── Main body column ── */
 .comm-comment-v2__main {
     flex: 1;
@@ -3630,6 +3682,12 @@
     background: #f5f3ff;
     color: #6d28d9;
     border-color: #ede9fe;
+}
+
+.comm-comment-v2__role--unknown {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
 }
 
 /* ── Reply list v2 — indented under main col (42px = 32px avatar + 10px gap) ── */
@@ -3734,12 +3792,11 @@
     color: var(--color-text, #1e293b);
 }
 
-/* ── Report form v2 — modern panel ── */
+/* ── Report form v2 — modern panel (floating, same popover pattern as
+     .comm-report-v2__panel — position/z-index/shadow live on the base
+     .comm-comment-report__form-wrap rule above) ── */
 .comm-comment-report-v2__panel {
-    margin-top: 8px;
     padding: 12px 14px;
-    background: var(--color-surface-soft, #f8fafc);
-    border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 8px;
 }
 
@@ -3826,6 +3883,135 @@
     color: var(--color-text, #1e293b);
 }
 
+/* ── Post report v2 — same panel style as comment report, popover positioning kept ── */
+.comm-report-v2__panel {
+    padding: 12px 14px;
+    border-radius: 8px;
+}
+
+.comm-report-v2__title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-soft, #64748b);
+    margin: 0 0 8px;
+}
+
+.comm-report-v2__form {
+    gap: 8px;
+}
+
+.comm-report-v2__select,
+.comm-report-v2__note {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.comm-report-v2__note {
+    min-height: 52px;
+    cursor: auto;
+}
+
+.comm-report-v2__actions-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comm-report-v2__submit {
+    display: inline-flex;
+    align-items: center;
+    align-self: auto;
+    gap: 5px;
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+    background: #e11d48;
+    border-radius: 6px;
+}
+
+.comm-report-v2__submit:hover {
+    background: #be123c;
+}
+
+.comm-report-v2__cancel {
+    font-size: 0.74rem;
+    color: var(--color-text-soft, #64748b);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.comm-report-v2__cancel:hover {
+    color: var(--color-text, #1e293b);
+}
+
+/* ── Edit form v2 — modern panel (mirrors report-v2) ── */
+/* When the edit form is open it takes the full action-row width,
+   so it stacks above the delete button instead of floating beside it. */
+details.comm-comment-edit-v2[open] {
+    flex: 1 0 100%;
+}
+
+.comm-comment-edit-v2__panel {
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: var(--color-surface-soft, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+}
+
+.comm-comment-edit-v2__title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-soft, #64748b);
+    margin: 0 0 8px;
+}
+
+.comm-comment-edit-v2__form {
+    gap: 8px;
+}
+
+.comm-comment-edit-v2__textarea {
+    padding: 7px 10px;
+    border-radius: 6px;
+    min-height: 44px;
+}
+
+.comm-comment-edit-v2__actions-row {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.comm-comment-edit-v2__submit {
+    padding: 5px 12px;
+    border-radius: 6px;
+}
+
+.comm-comment-edit-v2__cancel {
+    font-size: 0.74rem;
+    color: var(--color-text-soft, #64748b);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.comm-comment-edit-v2__cancel:hover {
+    color: var(--color-text, #1e293b);
+}
+
 /* ── Bottom composer ── */
 .comm-comments-composer {
     margin-top: 12px;
@@ -3906,6 +4092,11 @@ details.comm-reply-form-v2[open] {
     color: #c4b5fd;
 }
 
+[data-theme="dark"] .comm-comment-v2__avatar--unknown {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
 [data-theme="dark"] .comm-comment-v2__role--reporter {
     background: #4c0519;
     color: #fda4af;
@@ -3922,6 +4113,12 @@ details.comm-reply-form-v2[open] {
     background: #2e1065;
     color: #c4b5fd;
     border-color: #6d28d9;
+}
+
+[data-theme="dark"] .comm-comment-v2__role--unknown {
+    background: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
 }
 
 [data-theme="dark"] .comm-replies-v2 {
@@ -3948,8 +4145,33 @@ details.comm-reply-form-v2[open] {
     border-color: var(--color-border-dark, #334155);
 }
 
+[data-theme="dark"] .comm-comment-edit-v2__panel {
+    background: var(--color-surface-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+}
+
+[data-theme="dark"] .comm-comment-edit-v2__title {
+    color: var(--color-text-soft-dark, #64748b);
+}
+
 [data-theme="dark"] .comm-comment-report-v2__select,
 [data-theme="dark"] .comm-comment-report-v2__note {
+    background: var(--color-bg-dark, #0f172a);
+    border-color: var(--color-border-dark, #334155);
+    color: var(--color-text-dark, #e2e8f0);
+}
+
+[data-theme="dark"] .comm-report-v2__panel {
+    background: var(--color-surface-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+}
+
+[data-theme="dark"] .comm-report-v2__title {
+    color: var(--color-text-soft-dark, #64748b);
+}
+
+[data-theme="dark"] .comm-report-v2__select,
+[data-theme="dark"] .comm-report-v2__note {
     background: var(--color-bg-dark, #0f172a);
     border-color: var(--color-border-dark, #334155);
     color: var(--color-text-dark, #e2e8f0);

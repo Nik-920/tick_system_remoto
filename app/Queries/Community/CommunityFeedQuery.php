@@ -14,6 +14,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\Support\Cache\CacheTtl;
+use App\Support\Community\CommentAuthorPresenter;
 use App\ViewModels\Community\CommunityFeedViewModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
@@ -24,8 +25,14 @@ use Illuminate\Support\Str;
  *
  * Security contract:
  * - Base query selects only safe ticket columns — reporter_id, assigned_to,
- *   and assigned_by are never loaded.
- * - Eager loading uses explicit column lists; user relations are not loaded.
+ *   and assigned_by are never loaded. The ticket/post author stays anonymous
+ *   ("Creado por usuario anónimo") — this decision is unrelated to comments.
+ * - Eager loading uses explicit column lists; user relations are not loaded
+ *   for the ticket itself.
+ * - Comment authors are a deliberate exception: the commenter's display name
+ *   (name + last_name) and role are shown next to each comment/reply, see
+ *   batchCommentData()/mapCommentItem(). Email and internal IDs are still
+ *   never exposed.
  * - Returned ViewModel contains pre-mapped arrays, not raw Eloquent models.
  * - Reaction/save counts are aggregate only; no user identity is exposed.
  *
@@ -81,7 +88,7 @@ final class CommunityFeedQuery
         [$reactionCountsMap, $userReactionTypesMap, $userSavesSet, $saveCountsMap, $viewerPendingReportSet] =
             $this->batchSocialData($ticketIds, $viewer->id);
 
-        [$commentCountsMap, $latestCommentsMap] =
+        [$commentCountsMap, $rootCommentCountsMap, $latestCommentsMap] =
             $this->batchCommentData($ticketIds, $viewer->id);
 
         $posts = [];
@@ -95,6 +102,7 @@ final class CommunityFeedQuery
                 (int) ($saveCountsMap[$tid] ?? 0),
                 isset($viewerPendingReportSet[$tid]),
                 (int) ($commentCountsMap[$tid] ?? 0),
+                (int) ($rootCommentCountsMap[$tid] ?? 0),
                 $latestCommentsMap[$tid] ?? [],
             );
         }
@@ -190,28 +198,40 @@ final class CommunityFeedQuery
      *
      * Hierarchy rules:
      * - count includes ALL visible comments (root comments + replies).
-     * - Only the latest 2 visible ROOT comments per ticket are shown.
+     * - root_count includes only visible ROOT comments — it powers "Ver más
+     *   comentarios" pagination, which loads more roots (not replies).
+     * - Only the latest 2 visible ROOT comments per ticket are shown here.
      * - Each shown root carries the latest 2 visible replies; replies of
      *   hidden/deleted roots never surface because those roots are excluded.
-     *
-     * Only user_id (for the viewer ownership check) and safe fields are loaded —
-     * no names, emails or PII.
      *
      * @param  list<string>  $ticketIds
      * @return array{
      *   0: array<string, int>,
-     *   1: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>>
+     *   1: array<string, int>,
+     *   2: array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>>
      * }
      */
     private function batchCommentData(array $ticketIds, string $viewerId): array
     {
         if ($ticketIds === []) {
-            return [[], []];
+            return [[], [], []];
         }
 
         // Query 1 — aggregate visible counts per ticket (root comments AND replies).
         $commentCountsMap = CommunityComment::query()
             ->whereIn('ticket_id', $ticketIds)
+            ->where('status', CommunityComment::STATUS_VISIBLE)
+            ->selectRaw('ticket_id, COUNT(*) as cnt')
+            ->groupBy('ticket_id')
+            ->pluck('cnt', 'ticket_id')
+            ->map(fn ($c) => (int) $c)
+            ->all();
+
+        // Query 1b — aggregate visible ROOT-only counts per ticket, used to
+        // decide whether "Ver más comentarios" should render.
+        $rootCommentCountsMap = CommunityComment::query()
+            ->whereIn('ticket_id', $ticketIds)
+            ->whereNull('parent_id')
             ->where('status', CommunityComment::STATUS_VISIBLE)
             ->selectRaw('ticket_id, COUNT(*) as cnt')
             ->groupBy('ticket_id')
@@ -232,8 +252,6 @@ final class CommunityFeedQuery
         $rootSeenPerTicket = [];
         /** @var array<string, list<CommunityComment>> $shownRootsByTicket */
         $shownRootsByTicket = [];
-        /** @var list<string> $shownRootIds */
-        $shownRootIds = [];
         foreach ($rootComments as $root) {
             $tid = (string) $root->ticket_id;
             $rootSeenPerTicket[$tid] = ($rootSeenPerTicket[$tid] ?? 0) + 1;
@@ -241,129 +259,162 @@ final class CommunityFeedQuery
                 continue;
             }
             $shownRootsByTicket[$tid][] = $root;
-            $shownRootIds[] = (string) $root->id;
         }
 
-        // Query 3 — visible replies for the shown roots; newest 2 per parent
-        // are kept for display, the rest only contribute to reply_count.
+        $latestCommentsMap = $this->mapRootsToCommentItems($shownRootsByTicket, $viewerId);
+
+        return [$commentCountsMap, $rootCommentCountsMap, $latestCommentsMap];
+    }
+
+    /**
+     * Load the next page of visible ROOT comments for a single ticket, each
+     * with up to 2 visible replies — powers "Ver más comentarios" beyond the
+     * first 2 roots already rendered by the feed. Shares mapRootsToCommentItems()
+     * with batchCommentData() so a paginated comment renders identically to
+     * one shown on initial load (same author resolution, same report flags).
+     *
+     * @return array{items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>, has_more: bool}
+     */
+    public function loadMoreComments(Ticket $ticket, string $viewerId, int $offset, int $limit = 2): array
+    {
+        $offset = max(0, $offset);
+        $limit = max(1, $limit);
+
+        // Fetch one extra row to detect "has more" without a second COUNT query.
+        $page = CommunityComment::query()
+            ->where('ticket_id', $ticket->id)
+            ->whereNull('parent_id')
+            ->where('status', CommunityComment::STATUS_VISIBLE)
+            ->select(['id', 'ticket_id', 'user_id', 'body', 'edited_at', 'created_at'])
+            ->orderByDesc('created_at')
+            ->skip($offset)
+            ->take($limit + 1)
+            ->get();
+
+        $hasMore = $page->count() > $limit;
+        $roots = $page->take($limit)->values();
+
+        $tid = (string) $ticket->id;
+        $itemsByTicket = $this->mapRootsToCommentItems([$tid => $roots->all()], $viewerId);
+
+        return [
+            'items' => $itemsByTicket[$tid] ?? [],
+            'has_more' => $hasMore,
+        ];
+    }
+
+    /**
+     * Shared by batchCommentData() (many tickets, capped at 2 roots each) and
+     * loadMoreComments() (one ticket, offset-paginated): loads visible replies
+     * (top 2 per parent), the viewer's pending comment reports, and commenter
+     * identities for an already-selected set of root comments, then maps every
+     * root + its replies into the feed's comment item shape. No N+1 regardless
+     * of how many tickets/roots are passed in.
+     *
+     * @param  array<string, list<CommunityComment>>  $rootsByTicket
+     * @return array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>>
+     */
+    private function mapRootsToCommentItems(array $rootsByTicket, string $viewerId): array
+    {
+        /** @var list<string> $shownRootIds */
+        $shownRootIds = [];
+        foreach ($rootsByTicket as $roots) {
+            foreach ($roots as $root) {
+                $shownRootIds[] = (string) $root->id;
+            }
+        }
+
+        if ($shownRootIds === []) {
+            return [];
+        }
+
+        // Visible replies for the shown roots; newest 2 per parent are kept
+        // for display, the rest only contribute to reply_count.
         /** @var array<string, list<CommunityComment>> $shownRepliesByParent */
         $shownRepliesByParent = [];
         /** @var array<string, int> $replyCountByParent */
         $replyCountByParent = [];
         /** @var list<string> $shownReplyIds */
         $shownReplyIds = [];
-        if ($shownRootIds !== []) {
-            $replies = CommunityComment::query()
-                ->whereIn('parent_id', $shownRootIds)
-                ->where('status', CommunityComment::STATUS_VISIBLE)
-                ->select(['id', 'parent_id', 'user_id', 'body', 'edited_at', 'created_at'])
-                ->orderByDesc('created_at')
-                ->get();
+        $replies = CommunityComment::query()
+            ->whereIn('parent_id', $shownRootIds)
+            ->where('status', CommunityComment::STATUS_VISIBLE)
+            ->select(['id', 'parent_id', 'user_id', 'body', 'edited_at', 'created_at'])
+            ->orderByDesc('created_at')
+            ->get();
 
-            foreach ($replies as $reply) {
-                $pid = (string) $reply->parent_id;
-                $replyCountByParent[$pid] = ($replyCountByParent[$pid] ?? 0) + 1;
-                if (($replyCountByParent[$pid]) > 2) {
-                    continue;
-                }
-                $shownRepliesByParent[$pid][] = $reply;
-                $shownReplyIds[] = (string) $reply->id;
+        foreach ($replies as $reply) {
+            $pid = (string) $reply->parent_id;
+            $replyCountByParent[$pid] = ($replyCountByParent[$pid] ?? 0) + 1;
+            if ($replyCountByParent[$pid] > 2) {
+                continue;
             }
+            $shownRepliesByParent[$pid][] = $reply;
+            $shownReplyIds[] = (string) $reply->id;
         }
 
-        // Query 4 — viewer's pending reports for every rendered comment/reply id.
+        // Viewer's pending reports for every rendered comment/reply id.
         $shownCommentIds = array_merge($shownRootIds, $shownReplyIds);
+        $pendingCommentIds = CommunityReport::query()
+            ->whereNotNull('comment_id')
+            ->whereIn('comment_id', $shownCommentIds)
+            ->where('reported_by', $viewerId)
+            ->where('status', CommunityReport::STATUS_PENDING)
+            ->pluck('comment_id')
+            ->all();
         /** @var array<string, true> $viewerPendingReportSet */
-        $viewerPendingReportSet = [];
-        if ($shownCommentIds !== []) {
-            $pendingCommentIds = CommunityReport::query()
-                ->whereNotNull('comment_id')
-                ->whereIn('comment_id', $shownCommentIds)
-                ->where('reported_by', $viewerId)
-                ->where('status', CommunityReport::STATUS_PENDING)
-                ->pluck('comment_id')
-                ->all();
-            $viewerPendingReportSet = array_fill_keys($pendingCommentIds, true);
-        }
+        $viewerPendingReportSet = array_fill_keys($pendingCommentIds, true);
 
-        // Query 5 — commenter roles (safe: role name is not PII).
-        /** @var array<string, string> $userRoleMap */
-        $userRoleMap = [];
+        // Commenter display name + role (batched, no N+1), shared with the
+        // reporter's own ticket-comments modal via CommentAuthorPresenter.
         $allCommentUserIds = array_values(array_unique(array_filter(array_map(
             fn (CommunityComment $c) => $c->user_id !== null ? (string) $c->user_id : null,
             array_merge(
-                array_merge(...array_values($shownRootsByTicket) ?: [[]]),
+                array_merge(...array_values($rootsByTicket) ?: [[]]),
                 array_merge(...array_values($shownRepliesByParent) ?: [[]])
             )
         ))));
-        if ($allCommentUserIds !== []) {
-            $userRoleMap = User::query()
-                ->whereIn('id', $allCommentUserIds)
-                ->with('roles:id,name')
-                ->get(['id'])
-                ->mapWithKeys(function (User $u): array {
-                    $firstRole = $u->roles->first();
-                    $roleName = $firstRole !== null ? (string) $firstRole->getAttribute('name') : '';
+        $userDataMap = CommentAuthorPresenter::loadUserData($allCommentUserIds);
 
-                    return [(string) $u->id => $roleName];
-                })
-                ->all();
-        }
-
-        /** @var array<string, list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>> $latestCommentsMap */
-        $latestCommentsMap = [];
-        foreach ($shownRootsByTicket as $tid => $roots) {
+        $itemsByTicket = [];
+        foreach ($rootsByTicket as $tid => $roots) {
             foreach ($roots as $root) {
                 $rid = (string) $root->id;
 
                 $replyItems = [];
                 foreach ($shownRepliesByParent[$rid] ?? [] as $reply) {
-                    $replyItems[] = $this->mapCommentItem($reply, $viewerId, $viewerPendingReportSet, $userRoleMap);
+                    $replyItems[] = $this->mapCommentItem($reply, $viewerId, $viewerPendingReportSet, $userDataMap);
                 }
 
-                $item = $this->mapCommentItem($root, $viewerId, $viewerPendingReportSet, $userRoleMap);
+                $item = $this->mapCommentItem($root, $viewerId, $viewerPendingReportSet, $userDataMap);
                 $item['reply_count'] = (int) ($replyCountByParent[$rid] ?? 0);
                 $item['replies'] = $replyItems;
 
-                $latestCommentsMap[$tid][] = $item;
+                $itemsByTicket[$tid][] = $item;
             }
         }
 
-        return [$commentCountsMap, $latestCommentsMap];
+        return $itemsByTicket;
     }
 
     /**
      * Map a single comment/reply model into the safe feed array shape.
-     * Role information is included for visual differentiation; role names are not PII.
+     * The commenter's display name and role are included for identification;
+     * email and internal IDs are never part of this shape.
      *
      * @param  array<string, true>  $viewerPendingReportSet
-     * @param  array<string, string>  $userRoleMap
-     * @return array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}
+     * @param  array<string, array{name: string, last_name: string, role: string}>  $userDataMap
+     * @return array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}
      */
-    private function mapCommentItem(CommunityComment $comment, string $viewerId, array $viewerPendingReportSet, array $userRoleMap = []): array
+    private function mapCommentItem(CommunityComment $comment, string $viewerId, array $viewerPendingReportSet, array $userDataMap = []): array
     {
         $cid = (string) $comment->id;
-        $isOwner = (string) $comment->user_id === $viewerId;
-        $roleName = $userRoleMap[(string) $comment->user_id] ?? '';
+        $uid = $comment->user_id !== null ? (string) $comment->user_id : null;
+        $isOwner = $uid !== null && $uid === $viewerId;
+        $userData = $uid !== null ? ($userDataMap[$uid] ?? null) : null;
 
-        $roleTone = match (true) {
-            $roleName === 'maintenance' => 'maintenance',
-            in_array($roleName, ['admin', 'super_admin'], true) => 'admin',
-            default => 'reporter',
-        };
-
-        $roleLabel = match ($roleTone) {
-            'maintenance' => 'Maintenance',
-            'admin' => 'Admin',
-            default => 'Reporter',
-        };
-
-        $authorInitials = match (true) {
-            $isOwner => 'TU',
-            $roleTone === 'maintenance' => 'MT',
-            $roleTone === 'admin' => 'AD',
-            default => 'RC',
-        };
+        $roleTone = CommentAuthorPresenter::roleTone($userData);
+        $author = CommentAuthorPresenter::resolve($userData, $isOwner);
 
         return [
             'id' => $cid,
@@ -373,8 +424,9 @@ final class CommunityFeedQuery
             'viewer_report_pending' => isset($viewerPendingReportSet[$cid]),
             'edited' => $comment->edited_at !== null,
             'role_tone' => $roleTone,
-            'role_label' => $roleLabel,
-            'author_initials' => $authorInitials,
+            'role_label' => CommentAuthorPresenter::roleLabel($roleTone),
+            'author_label' => $author['label'],
+            'author_initials' => $author['initials'],
         ];
     }
 
@@ -515,8 +567,8 @@ final class CommunityFeedQuery
     /**
      * @param  array<string, int>  $reactionCounts  {type => count}
      * @param  list<string>  $userReactionTypes  types the viewer has active
-     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>  $latestComments
-     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon_type: string, icon_name: string, icon_url: string|null}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_initials: string}>}>}}
+     * @param  list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>  $latestComments
+     * @return array{id: string, ref: string, title: string, summary: string, state: string, state_label: string, state_tone: string, priority: string, priority_label: string, priority_tone: string, updated_ago: string, created_ago: string, is_recent: bool, is_resolved: bool, location: array{name: string, building: string, floor: string, room_code: string}|null, category: array{name: string, icon_type: string, icon_name: string, icon_url: string|null}|null, thumbnail_url: string|null, thumbnail_type: string|null, media_count: int, has_media: bool, media_images: list<string>, reactions: array{counts: array<string, int>, user_types: list<string>}, saved: bool, saves_count: int, viewer_report_pending: bool, comments: array{count: int, root_count: int, items: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string, reply_count: int, replies: list<array{id: string, body: string, created_ago: string, owned_by_viewer: bool, viewer_report_pending: bool, edited: bool, role_tone: string, role_label: string, author_label: string, author_initials: string}>}>}}
      */
     private function toPost(
         Ticket $ticket,
@@ -526,6 +578,7 @@ final class CommunityFeedQuery
         int $savesCount,
         bool $viewerReportPending = false,
         int $commentCount = 0,
+        int $rootCommentCount = 0,
         array $latestComments = [],
     ): array {
         $firstMedia = $ticket->media->first();
@@ -580,6 +633,7 @@ final class CommunityFeedQuery
             'viewer_report_pending' => $viewerReportPending,
             'comments' => [
                 'count' => $commentCount,
+                'root_count' => $rootCommentCount,
                 'items' => array_values($latestComments),
             ],
         ];

@@ -269,18 +269,124 @@ class ReporterTicketCommentsModalTest extends TestCase
             ->assertJsonPath('comments.0.owned_by_viewer', true);
     }
 
-    public function test_author_label_is_generic_for_other_reporters(): void
+    public function test_author_label_is_display_name_for_other_reporters(): void
     {
         $me = $this->reporter();
         $other = $this->reporter();
+        $other->update(['name' => 'Otro', 'last_name' => 'Reportero']);
         $ticket = $this->ticketFor($me);
         $this->visibleComment($ticket, $other);
 
         $this->actingAs($me)
             ->getJson(route('reporter.tickets.comments.index', $ticket->id))
             ->assertOk()
-            ->assertJsonPath('comments.0.author_label', 'Reporter de la comunidad')
+            ->assertJsonPath('comments.0.author_label', 'Otro Reportero')
+            ->assertJsonPath('comments.0.role_label', 'Reporter')
             ->assertJsonPath('comments.0.owned_by_viewer', false);
+    }
+
+    public function test_maintenance_commenter_shows_maintenance_role_badge(): void
+    {
+        $me = $this->reporter();
+        $tech = $this->userWithRole('maintenance');
+        $tech->update(['name' => 'Maintenance', 'last_name' => 'Admin']);
+        $ticket = $this->ticketFor($me);
+        $this->visibleComment($ticket, $tech);
+
+        $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->assertJsonPath('comments.0.author_label', 'Maintenance Admin')
+            ->assertJsonPath('comments.0.role_tone', 'maintenance')
+            ->assertJsonPath('comments.0.role_label', 'Maintenance');
+    }
+
+    public function test_admin_commenter_shows_admin_role_badge(): void
+    {
+        $me = $this->reporter();
+        $admin = $this->userWithRole('admin');
+        $admin->update(['name' => 'Admin', 'last_name' => 'Sistema']);
+        $ticket = $this->ticketFor($me);
+        $this->visibleComment($ticket, $admin);
+
+        $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->assertJsonPath('comments.0.author_label', 'Admin Sistema')
+            ->assertJsonPath('comments.0.role_tone', 'admin')
+            ->assertJsonPath('comments.0.role_label', 'Admin');
+    }
+
+    public function test_commenter_without_last_name_shows_first_name_only(): void
+    {
+        $me = $this->reporter();
+        $other = $this->reporter();
+        $other->update(['name' => 'SoloNombre', 'last_name' => null]);
+        $ticket = $this->ticketFor($me);
+        $this->visibleComment($ticket, $other);
+
+        $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->assertJsonPath('comments.0.author_label', 'SoloNombre');
+    }
+
+    public function test_reply_shows_display_name_and_role(): void
+    {
+        $me = $this->reporter();
+        $ticket = $this->ticketFor($me);
+        $root = $this->visibleComment($ticket, $me);
+        $replier = $this->userWithRole('maintenance');
+        $replier->update(['name' => 'Tecnico', 'last_name' => 'Mantenimiento']);
+        CommunityComment::create([
+            'ticket_id' => $ticket->id,
+            'parent_id' => $root->id,
+            'user_id' => $replier->id,
+            'body' => 'Respuesta con nombre visible',
+            'status' => CommunityComment::STATUS_VISIBLE,
+        ]);
+
+        $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->assertJsonPath('comments.0.replies.0.author_label', 'Tecnico Mantenimiento')
+            ->assertJsonPath('comments.0.replies.0.role_tone', 'maintenance');
+    }
+
+    public function test_deleted_user_comment_falls_back_to_generic_label(): void
+    {
+        $me = $this->reporter();
+        $ticket = $this->ticketFor($me);
+        CommunityComment::create([
+            'ticket_id' => $ticket->id,
+            'parent_id' => null,
+            'user_id' => null,
+            'body' => 'Comentario de usuario eliminado',
+            'status' => CommunityComment::STATUS_VISIBLE,
+        ]);
+
+        $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->assertJsonPath('comments.0.author_label', 'Usuario de la comunidad')
+            ->assertJsonPath('comments.0.role_tone', 'unknown');
+    }
+
+    public function test_does_not_expose_other_commenters_email(): void
+    {
+        $me = $this->reporter();
+        $other = User::factory()->create(['email' => 'oculto-modal@test.test']);
+        $other->assignRole('reporter');
+        $ticket = $this->ticketFor($me);
+        $this->visibleComment($ticket, $other);
+
+        $content = $this->actingAs($me)
+            ->getJson(route('reporter.tickets.comments.index', $ticket->id))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('oculto-modal@test.test', (string) $content);
+        $this->assertStringNotContainsString((string) $other->id, (string) $content);
     }
 
     // ── can_comment flag ─────────────────────────────────────────────────────

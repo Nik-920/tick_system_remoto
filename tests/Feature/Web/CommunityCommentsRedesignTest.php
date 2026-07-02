@@ -148,17 +148,18 @@ class CommunityCommentsRedesignTest extends TestCase
             ->assertSee('Tú', false);
     }
 
-    public function test_other_comment_shows_generic_author_label(): void
+    public function test_other_comment_shows_real_display_name(): void
     {
         $viewer = $this->reporter();
         $other = $this->reporter();
+        $other->update(['name' => 'Nombre', 'last_name' => 'Visible']);
         $ticket = $this->visibleTicket();
         $this->makeComment($ticket, $other);
 
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertSee('Reporter de la comunidad', false);
+            ->assertSee('Nombre Visible', false);
     }
 
     // ── C. Role differentiation ───────────────────────────────────────────────
@@ -447,10 +448,10 @@ class CommunityCommentsRedesignTest extends TestCase
             ->assertDontSee('secret-commenter-v2@test.test', false);
     }
 
-    public function test_does_not_expose_commenter_real_name(): void
+    public function test_shows_commenter_display_name(): void
     {
         $viewer = $this->reporter();
-        $commenter = User::factory()->create(['name' => 'NombreRealCommentadorV2Secreto']);
+        $commenter = User::factory()->create(['name' => 'NombreVisibleComentadorV2']);
         $commenter->assignRole('reporter');
         $ticket = $this->visibleTicket();
         $this->makeComment($ticket, $commenter);
@@ -458,7 +459,7 @@ class CommunityCommentsRedesignTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('reporter.community'))
             ->assertOk()
-            ->assertDontSee('NombreRealCommentadorV2Secreto', false);
+            ->assertSee('NombreVisibleComentadorV2', false);
     }
 
     public function test_does_not_expose_reporter_id_in_html(): void
