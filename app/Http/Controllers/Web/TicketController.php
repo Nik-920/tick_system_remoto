@@ -154,7 +154,7 @@ class TicketController extends Controller
         $confirmedPastWarning = $request->boolean('duplicate_ack');
 
         if (! $confirmedPastWarning) {
-            $precheck = $precheckService->check($request->validated(), $request->user());
+            $precheck = $precheckService->check($request->validated());
 
             if ($precheck !== null) {
                 $precheck['hadAttachments'] = $this->requestHasTicketMedia($request);
@@ -172,7 +172,7 @@ class TicketController extends Controller
         // Null when nothing matches anymore (e.g. the candidate was resolved
         // between the first and second submit) — nothing extra to persist then.
         $duplicateCandidate = $confirmedPastWarning
-            ? $precheckService->findMatch($request->validated(), $request->user())
+            ? $precheckService->findMatch($request->validated())
             : null;
 
         $correlationId = (string) $request->attributes->get('correlation_id', '');
