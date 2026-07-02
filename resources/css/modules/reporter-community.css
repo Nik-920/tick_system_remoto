@@ -1855,6 +1855,40 @@
     padding-left: 4px;
 }
 
+/* "Ver más comentarios" — loads the next page of root comments in place. */
+.comm-comments__load-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    padding: 5px 4px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-primary, #2563eb);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.comm-comments__load-more:hover:not(:disabled) {
+    color: var(--color-primary-hover, #1d4ed8);
+    text-decoration: underline;
+}
+
+.comm-comments__load-more:disabled {
+    color: var(--color-text-soft, #94a3b8);
+    cursor: default;
+}
+
+[data-theme="dark"] .comm-comments__load-more {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .comm-comments__load-more:hover:not(:disabled) {
+    color: #bfdbfe;
+}
+
 /* Empty state */
 .comm-comments__empty {
     font-size: 0.78rem;
