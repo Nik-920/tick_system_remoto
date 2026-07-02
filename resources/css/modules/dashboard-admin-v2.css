@@ -91,41 +91,47 @@
 }
 
 /* ============================================================
-   1. HEADER
+   1. HERO — Navy Blue (shared shape from components/page-hero.css)
    ============================================================ */
-.adm-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1.25rem;
-    flex-wrap: wrap;
+.adm-hero {
+    background: linear-gradient(135deg, #0f1e3d 0%, #1e3a8a 55%, #1d4ed8 100%);
+    border: 1px solid #3b82f6;
+}
+
+.adm-header__overline {
+    margin: 0 0 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #93c5fd;
 }
 
 .adm-header__title {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: 2rem;
+    font-weight: 900;
     letter-spacing: -0.02em;
-    color: var(--text-primary);
+    color: white;
     text-wrap: balance;
 }
 
 .adm-header__subtitle {
-    margin: 0.35rem 0 0;
-    font-size: 0.9rem;
+    margin: 0.4rem 0 0;
+    font-size: 0.85rem;
     line-height: 1.5;
-    color: var(--text-secondary);
+    color: rgba(255,255,255,0.75);
     max-width: 60ch;
     text-wrap: pretty;
 }
 
 .adm-header__meta {
-    margin: 0.5rem 0 0;
-    font-size: 0.75rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--text-faint);
+    color: rgba(255,255,255,0.55);
 }
 
 .adm-header__actions {
@@ -155,11 +161,11 @@
 
 .adm-btn:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
 
-.adm-btn--ghost { background: var(--bg-surface); color: var(--text-secondary); border-color: var(--border-default); }
-.adm-btn--ghost:hover { background: var(--bg-soft); color: var(--text-primary); border-color: #cbd5e1; }
+.adm-btn--ghost { background: rgba(255,255,255,0.12); color: #ffffff; border-color: rgba(255,255,255,0.3); }
+.adm-btn--ghost:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); }
 
-.adm-btn--primary { background: var(--color-primary); color: #ffffff; }
-.adm-btn--primary:hover { background: var(--color-primary-hover); }
+.adm-btn--primary { background: #ffffff; color: #1e3a8a; }
+.adm-btn--primary:hover { background: #eff6ff; }
 
 /* ============================================================
    2. KPI ROW
@@ -544,8 +550,6 @@
 [data-theme="dark"] .adm-qr--processing { background: rgba(245, 158, 11, 0.16);  color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
 [data-theme="dark"] .adm-qr--failed     { background: rgba(239, 68, 68, 0.16);   color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
 [data-theme="dark"] .adm-qr--ready      { background: rgba(34, 197, 94, 0.16);   color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
-
-[data-theme="dark"] .adm-btn--ghost:hover { background: rgba(255, 255, 255, 0.08); }
 
 /* ============================================================
    10. REDUCED MOTION
