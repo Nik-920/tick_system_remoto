@@ -1,7 +1,7 @@
 {{-- Single card in the community moderation queue.
      Receives: $item (array from CommunityModerationQueueViewModel::$items)
 --}}
-<article class="adm-comm-card adm-comm-card--{{ $item['state'] }}"
+<article class="adm-comm-card comm-mod-tone-{{ $item['state_tone'] }}"
          aria-label="Ticket {{ $item['ref'] }}">
 
     <header class="adm-comm-card__topbar">
@@ -10,16 +10,15 @@
             <span class="adm-comm-card__date">{{ $item['created_at_label'] }}</span>
         </div>
         <div class="adm-comm-card__badges">
-            <span class="comm-mod-state-badge comm-mod-state-badge--{{ $item['state'] }}">
-                {{ $item['state_label'] }}
-            </span>
+            <span class="comm-mod-pill comm-mod-tone-{{ $item['state_tone'] }}">{{ $item['state_label'] }}</span>
+            <span class="comm-mod-pill comm-mod-tone-{{ $item['priority_tone'] }}">{{ $item['priority_label'] }}</span>
             @if($item['state_blocks_feed'])
-                <span class="adm-comm-badge adm-comm-badge--feed-off">No aparece en feed</span>
+                <span class="comm-mod-pill comm-mod-tone-warning">No aparece en feed</span>
             @endif
             @if($item['community_visible'])
-                <span class="comm-mod-badge comm-mod-badge--visible">Visible</span>
+                <span class="comm-mod-pill comm-mod-tone-success">Visible</span>
             @else
-                <span class="comm-mod-badge comm-mod-badge--hidden">Oculto</span>
+                <span class="comm-mod-pill comm-mod-tone-neutral">Oculto</span>
             @endif
         </div>
     </header>
