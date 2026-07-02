@@ -27,6 +27,8 @@ class TicketNotificationPreference extends Model
 
     public const CHANNEL_FCM = 'fcm';
 
+    public const CHANNEL_EMAIL = 'email';
+
     public const TYPE_TICKET_CREATED_ADMIN = 'ticket.created.admin';
 
     public const TYPE_TICKET_ASSIGNED_ASSIGNEE = 'ticket.assigned.assignee';
