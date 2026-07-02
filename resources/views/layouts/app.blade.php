@@ -114,5 +114,6 @@
     </script>
 @endif
 
+<x-confirm-modal />
 </body>
 </html>

@@ -824,6 +824,49 @@ class TicketControllerTest extends TestCase
         $response->assertDontSee('Posible duplicado');
     }
 
+    public function test_index_shows_related_badge_for_precheck_candidate_without_ai_duplicate(): void
+    {
+        // Reporters are redirected to their own board; use admin for classic index.
+        $user = $this->createUserWithRole('admin');
+        $location = $this->createLocation();
+        $category = $this->createCategory();
+
+        $precheckMatched = Ticket::create([
+            'title' => 'Proyector existente relacionado',
+            'description' => 'Ticket detectado por el precheck al crear el otro.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Proyector confirmado como caso distinto',
+            'description' => 'El reportante confirmó que es un caso distinto.',
+            'reporter_id' => $user->id,
+            'location_id' => $location->id,
+            'category_id' => $category->id,
+            'state' => 'open',
+            'priority' => 'medium',
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [],
+            'is_duplicate' => false,
+            'precheck_matched_ticket_id' => $precheckMatched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSee('Posible duplicado');
+        $response->assertSee('Relacionado');
+    }
+
     public function test_index_filter_duplicates_shows_only_effective_duplicates(): void
     {
         // Reporters are redirected to their own board; use admin for classic index.

@@ -136,3 +136,60 @@ if (document.readyState === 'loading') {
 if (document.querySelector('[data-upload-guard]')) {
     initUploadGuard();
 }
+
+// Global Confirm Modal Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('globalConfirmModal');
+    if (!modal) return;
+
+    const modalText = document.getElementById('globalConfirmModalText');
+    const btnCancel = document.getElementById('globalConfirmModalCancel');
+    const btnConfirm = document.getElementById('globalConfirmModalConfirm');
+    const backdrop = document.getElementById('globalConfirmModalBackdrop');
+
+    let pendingForm = null;
+
+    function openModal(message, form) {
+        modalText.textContent = message;
+        pendingForm = form;
+        
+        modal.classList.remove('hidden');
+        // trigger reflow
+        void modal.offsetWidth;
+        modal.classList.remove('opacity-0');
+    }
+
+    function closeModal() {
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            pendingForm = null;
+        }, 300);
+    }
+
+    btnCancel.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+
+    btnConfirm.addEventListener('click', () => {
+        if (pendingForm) {
+            // Remove data-confirm so it doesn't trigger again
+            pendingForm.removeAttribute('data-confirm');
+            // Use requestSubmit to fire submit events (so button disabling scripts still run)
+            if (pendingForm.requestSubmit) {
+                pendingForm.requestSubmit();
+            } else {
+                pendingForm.submit();
+            }
+        }
+        closeModal();
+    });
+
+    // Intercept form submissions globally
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (form && form.hasAttribute('data-confirm')) {
+            e.preventDefault();
+            openModal(form.getAttribute('data-confirm'), form);
+        }
+    });
+});

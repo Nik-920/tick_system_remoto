@@ -151,7 +151,9 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
-        if (! $request->boolean('duplicate_ack')) {
+        $confirmedPastWarning = $request->boolean('duplicate_ack');
+
+        if (! $confirmedPastWarning) {
             $precheck = $precheckService->check($request->validated(), $request->user());
 
             if ($precheck !== null) {
@@ -164,6 +166,15 @@ class TicketController extends Controller
             }
         }
 
+        // Re-derive the candidate server-side rather than trusting any client
+        // input: findMatch() never leaves the server (see DuplicatePrecheckService),
+        // so there is no hidden matched_ticket_id a reporter could tamper with.
+        // Null when nothing matches anymore (e.g. the candidate was resolved
+        // between the first and second submit) — nothing extra to persist then.
+        $duplicateCandidate = $confirmedPastWarning
+            ? $precheckService->findMatch($request->validated(), $request->user())
+            : null;
+
         $correlationId = (string) $request->attributes->get('correlation_id', '');
         if ($correlationId === '') {
             $correlationId = (string) Str::uuid();
@@ -175,6 +186,7 @@ class TicketController extends Controller
             $request->validated(),
             $request->file('media_files', []),
             $correlationId,
+            $duplicateCandidate,
         );
         $ticket = $result['ticket'];
         $this->dispatchAfterResponse($ticket, $correlationId);
@@ -214,6 +226,7 @@ class TicketController extends Controller
             'media' => fn ($query) => $query->with('uploadedBy')->latest('created_at'),
             'stateHistory' => fn ($query) => $query->with('changedBy')->oldest('created_at'),
             'embedding.matchedTicket',
+            'embedding.precheckMatchedTicket',
             'embedding.reviewer',
             'communityModerationLogs' => fn ($q) => $q->with('performedBy')->latest('created_at'),
             'communityCommentEditLogs' => fn ($q) => $q->with('editedBy')->latest('created_at'),

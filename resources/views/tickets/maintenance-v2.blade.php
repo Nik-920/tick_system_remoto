@@ -238,6 +238,10 @@
                         $tone      = $priorityTone[$ticket->priority] ?? 'medium';
                         $isMine    = $ticket->assigned_to === $board->technicianId;
                         $isDup     = $ticket->embedding && $ticket->embedding->effective_duplicate;
+                        // Softer signal: reporter confirmed a precheck candidate was
+                        // distinct. Only surfaced when the AI hasn't independently
+                        // confirmed a duplicate — see 2026_07_01_000100 migration.
+                        $isRelated = $ticket->embedding && $ticket->embedding->hasPrecheckCandidate() && ! $isDup;
                         $catName   = $ticket->category?->name;
                         $roomCode  = $ticket->location?->room_code;
                     @endphp
@@ -259,6 +263,11 @@
                                     <span class="tkv2-dup">
                                         <x-lucide-copy width="12" height="12" stroke-width="2" />
                                         Posible duplicado
+                                    </span>
+                                @elseif ($isRelated)
+                                    <span class="tkv2-dup tkv2-dup--info" title="{{ $ticket->embedding->precheck_reason ?? '' }}">
+                                        <x-lucide-link width="12" height="12" stroke-width="2" />
+                                        Relacionado
                                     </span>
                                 @endif
                             </div>

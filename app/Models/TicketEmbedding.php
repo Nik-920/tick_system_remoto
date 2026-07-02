@@ -27,8 +27,12 @@ use Illuminate\Support\Carbon;
  * @property array<int, array<string, mixed>>|null $strategy_results
  * @property array<string, mixed>|null $strategy_metadata
  * @property bool $strategy_suggests_recurrence
+ * @property string|null $precheck_matched_ticket_id
+ * @property string|null $precheck_reason
+ * @property Carbon|null $precheck_confirmed_at
  * @property-read Ticket $ticket
  * @property-read Ticket|null $matchedTicket
+ * @property-read Ticket|null $precheckMatchedTicket
  * @property-read User|null $reviewer
  * @property-read bool $effective_duplicate
  */
@@ -67,6 +71,11 @@ class TicketEmbedding extends Model
         'reviewed_by',
         'reviewed_at',
         'review_note',
+        // Reporter precheck columns — written once at ticket-creation time only;
+        // never touched by AI jobs or the admin review action.
+        'precheck_matched_ticket_id',
+        'precheck_reason',
+        'precheck_confirmed_at',
     ];
 
     /**
@@ -93,6 +102,7 @@ class TicketEmbedding extends Model
             'strategy_metadata' => 'array',
             'strategy_suggests_recurrence' => 'boolean',
             'reviewed_at' => 'datetime',
+            'precheck_confirmed_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -185,6 +195,17 @@ class TicketEmbedding extends Model
         return $this->review_status === null;
     }
 
+    /**
+     * True when the reporter was warned about a related ticket at creation
+     * time (DuplicatePrecheckService) and proceeded anyway ("caso distinto").
+     * Independent of the AI lane (is_duplicate) and the admin-review lane
+     * (review_status) — see the 2026_07_01_000100 migration.
+     */
+    public function hasPrecheckCandidate(): bool
+    {
+        return $this->precheck_matched_ticket_id !== null;
+    }
+
     // ── Relations ────────────────────────────────────────────────────────────
 
     public function ticket(): BelongsTo
@@ -195,6 +216,11 @@ class TicketEmbedding extends Model
     public function matchedTicket(): BelongsTo
     {
         return $this->belongsTo(Ticket::class, 'matched_ticket_id');
+    }
+
+    public function precheckMatchedTicket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'precheck_matched_ticket_id');
     }
 
     public function reviewer(): BelongsTo

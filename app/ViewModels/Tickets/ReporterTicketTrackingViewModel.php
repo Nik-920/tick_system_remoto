@@ -22,6 +22,7 @@ final class ReporterTicketTrackingViewModel
      * @param  array{rows: list<array{icon: string, label: string, value: string}>, technician: ?array{name: string, initials: string, role: string}}  $details
      * @param  array{count: int, items: list<array{label: string, url: ?string, is_image: bool}>}  $evidence
      * @param  array{matchedTitle: string, matchedState: string, similarity: string|null, summary: string, topReasons: array<int, mixed>, warnings: array<int, mixed>, isFallback: bool}|null  $duplicate  Reporter-safe duplicate payload. Null when no active duplicate.
+     * @param  array{matchedTitle: string, matchedState: string, reason: string}|null  $precheckNotice  Reporter-safe "confirmed distinct" payload. Null when there is no precheck candidate, or when $duplicate already covers it.
      */
     public function __construct(
         public readonly array $ticket,
@@ -31,6 +32,7 @@ final class ReporterTicketTrackingViewModel
         public readonly array $evidence,
         public readonly string $notice,
         public readonly ?array $duplicate = null,
+        public readonly ?array $precheckNotice = null,
     ) {}
 
     public function hasEvidence(): bool
@@ -41,5 +43,10 @@ final class ReporterTicketTrackingViewModel
     public function hasDuplicateNotice(): bool
     {
         return $this->duplicate !== null;
+    }
+
+    public function hasPrecheckNotice(): bool
+    {
+        return $this->precheckNotice !== null;
     }
 }

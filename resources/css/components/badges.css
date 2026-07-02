@@ -105,6 +105,13 @@
     color: var(--text-muted);
 }
 
+/* ── Related (precheck confirmed distinct) — informational, not a warning ── */
+.c-badge--info,
+.ticket-badge--info {
+    background: var(--tone-info-soft);
+    color: var(--tone-info-fg);
+}
+
 /* ── Status: danger / failed / rejected / critical ── */
 .c-badge--danger,
 .ticket-badge--rejected,

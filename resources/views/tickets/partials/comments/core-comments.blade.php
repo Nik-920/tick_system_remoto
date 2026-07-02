@@ -22,7 +22,7 @@
     <div class="ticket-show__card-body tc-comments-body">
 
         @if ($coreComments->isEmpty())
-            <p class="tc-empty-state">Aún no hay comentarios internos.</p>
+            <p class="tc-empty-state text-center text-gray-500 text-sm py-4">Aún no hay comentarios internos.</p>
         @else
             <div class="tc-comments-list">
                 @foreach ($coreComments as $comment)

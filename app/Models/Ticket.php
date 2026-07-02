@@ -101,13 +101,24 @@ class Ticket extends Model
     /** @var bool */
     public $incrementing = false;
 
-    /** @return array<string, string> */
+    /**
+     * 'assignment_locked' and 'community_visible' are deliberately NOT listed
+     * here even though they are booleans: they have their own Attribute::make()
+     * accessors below that store the string 'true'/'false' on pgsql (see the
+     * comment on communityVisible() for why). Declaring them 'boolean' here too
+     * made Eloquent's dirty-check (HasAttributes::originalIsEquivalent()) call
+     * the *primitive* caster directly — i.e. PHP's native (bool) 'false', which
+     * is true — so a hide() that flips true -> 'false' was silently seen as
+     * "unchanged" and dropped from the UPDATE's column list entirely. SQLite
+     * (used by the test suite) stores these as int 1/0 instead of strings, so
+     * (bool) 0 correctly resolves to false and the tests never caught this.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
             'assigned_at' => 'datetime',
-            'assignment_locked' => 'boolean',
-            'community_visible' => 'boolean',
             'community_hidden_at' => 'datetime',
             'resolved_at' => 'datetime',
             'created_at' => 'datetime',

@@ -62,6 +62,7 @@ final class ReporterTicketTrackingQuery
                 'stateHistory' => fn ($q) => $q->with('changedBy')->oldest('created_at'),
                 'media' => fn ($q) => $q->latest('created_at'),
                 'embedding.matchedTicket',
+                'embedding.precheckMatchedTicket',
             ])
             ->findOrFail($ticketId);
 
@@ -78,6 +79,7 @@ final class ReporterTicketTrackingQuery
             evidence: $this->evidence(),
             notice: 'Recibirás una notificación cuando el estado de tu ticket cambie.',
             duplicate: $this->duplicateNotice(),
+            precheckNotice: $this->precheckNotice(),
         );
     }
 
@@ -353,6 +355,35 @@ final class ReporterTicketTrackingQuery
             'topReasons' => $explanation['topReasons'] ?? [],
             'warnings' => $explanation['warnings'] ?? [],
             'isFallback' => (bool) ($explanation['isFallback'] ?? false),
+        ];
+    }
+
+    /**
+     * Reporter-safe notice for when the reporter was warned about a related
+     * ticket at creation time and confirmed this is a distinct case. Only
+     * shown when the (stronger) AI duplicate notice above is not already
+     * covering it. Strips the matched-ticket id/URL — same boundary as
+     * duplicateNotice(): a reporter cannot navigate to another reporter's ticket.
+     *
+     * @return array{matchedTitle: string, matchedState: string, reason: string}|null
+     */
+    private function precheckNotice(): ?array
+    {
+        if ($this->duplicateNotice() !== null) {
+            return null;
+        }
+
+        $embedding = $this->ticket->embedding;
+        if ($embedding === null || ! $embedding->hasPrecheckCandidate()) {
+            return null;
+        }
+
+        $matched = $embedding->precheckMatchedTicket;
+
+        return [
+            'matchedTitle' => $matched !== null ? (string) $matched->title : 'Ticket relacionado',
+            'matchedState' => $matched !== null ? $this->stateLabel((string) $matched->state) : '—',
+            'reason' => (string) ($embedding->precheck_reason ?? ''),
         ];
     }
 

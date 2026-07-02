@@ -34,11 +34,8 @@ function initCopyButtons() {
 function initOnceForms() {
     document.querySelectorAll('form.tickets-once-form, form.tickets-review-actions').forEach((form) => {
         form.addEventListener('submit', (e) => {
-            const message = form.dataset.confirm;
-            if (message && !globalThis.confirm(message)) {
-                e.preventDefault();
-                return;
-            }
+            // El popup de confirmación (data-confirm) ahora se maneja globalmente en app.js
+
             // Deshabilitar submits internos y externos (form="...") tras enviar.
             const buttons = [
                 ...form.querySelectorAll('button[type="submit"]'),

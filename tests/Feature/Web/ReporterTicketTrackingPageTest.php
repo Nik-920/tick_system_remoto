@@ -307,6 +307,90 @@ class ReporterTicketTrackingPageTest extends TestCase
         $response->assertDontSee('technicalDetails', false);
     }
 
+    // ── Precheck notice (reporter confirmed "caso distinto") ───────────────
+
+    public function test_precheck_notice_shown_when_reporter_confirmed_distinct(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Reporte confirmado como caso distinto');
+        $matched = $this->ticketFor($other, 'open', 'Ticket relacionado por precheck');
+        $this->embedding($ticket, $matched, [
+            'is_duplicate' => false,
+            'matched_ticket_id' => null,
+            'similarity_score' => null,
+            'strategy_results' => null,
+            'precheck_matched_ticket_id' => $matched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Posible duplicado detectado por IA');
+        $response->assertSeeText('Relacionado con otro reporte');
+        $response->assertSeeText('Ticket relacionado por precheck');
+        $this->assertTrue($response->viewData('tracking')->hasPrecheckNotice());
+    }
+
+    public function test_precheck_notice_not_shown_without_precheck_candidate(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Ticket sin precheck');
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Relacionado con otro reporte');
+        $this->assertFalse($response->viewData('tracking')->hasPrecheckNotice());
+    }
+
+    public function test_precheck_notice_does_not_expose_matched_ticket_url(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Mi reporte con precheck');
+        $matched = $this->ticketFor($other, 'open', 'El relacionado ajeno');
+        $this->embedding($ticket, $matched, [
+            'is_duplicate' => false,
+            'matched_ticket_id' => null,
+            'similarity_score' => null,
+            'strategy_results' => null,
+            'precheck_matched_ticket_id' => $matched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertSeeText('Relacionado con otro reporte');
+        // Reporter-safe: no direct link to the matched ticket, same boundary
+        // as the AI duplicate notice.
+        $response->assertDontSee(route('tickets.show', $matched->id), false);
+    }
+
+    public function test_precheck_notice_suppressed_when_main_duplicate_notice_shown(): void
+    {
+        $me = $this->userWithRole('reporter');
+        $other = $this->userWithRole('reporter');
+        $ticket = $this->ticketFor($me, 'open', 'Reporte con duplicado IA y precheck');
+        $aiMatched = $this->ticketFor($other, 'open', 'Duplicado confirmado por IA');
+        $precheckMatched = $this->ticketFor($other, 'open', 'Relacionado por precheck');
+        $this->embedding($ticket, $aiMatched, [
+            'precheck_matched_ticket_id' => $precheckMatched->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($me)->get(route('reporter.tickets.show', $ticket->id));
+
+        $response->assertOk();
+        $response->assertSeeText('Posible duplicado detectado por IA');
+        $response->assertDontSeeText('Relacionado con otro reporte');
+    }
+
     public function test_board_route_remains_intact(): void
     {
         $me = $this->userWithRole('reporter');

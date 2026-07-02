@@ -601,6 +601,7 @@
     border-radius: var(--radius-sm);
     padding: 1rem 1.25rem;
     box-shadow: var(--shadow-xs);
+    margin-bottom: 1.25rem;
 }
 
 .tickets-dup-banner {
@@ -632,6 +633,25 @@
 
 .tickets-dup-link {
     margin-left: 0.2rem;
+}
+
+/* Softer "related" notice: reporter confirmed a precheck candidate was a
+   distinct case. Informational only — never the actionable AI warning tone. */
+.tickets-dup-alert--info {
+    background: var(--tone-info-soft);
+    border-color: var(--tone-info-solid);
+    border-left-color: var(--tone-info-solid);
+}
+
+.tickets-dup-banner--info .tickets-dup-title {
+    color: var(--tone-info-fg);
+}
+
+.tickets-dup-precheck-note {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--text-primary);
 }
 
 .tickets-dup-reviewer {

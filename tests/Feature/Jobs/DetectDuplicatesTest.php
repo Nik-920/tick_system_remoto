@@ -693,4 +693,114 @@ class DetectDuplicatesTest extends TestCase
         $this->assertNull($embedding->strategy_metadata);
         $this->assertFalse($embedding->strategy_suggests_recurrence);
     }
+
+    // ── Precheck lane isolation (2026_07_01_000100) ─────────────────────────
+    // Mirrors test_job_does_not_clear_review_status_when_*: the reporter's
+    // precheck confirmation ("caso distinto") is a third, independent column
+    // lane the AI job must never read or write, whether it resets its own
+    // columns (no candidate found) or confirms its own duplicate.
+
+    public function test_job_does_not_clear_precheck_lane_when_no_candidates_found(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        $ticket = $this->createTicket('Ticket con precheck confirmado');
+        // Shares location/category with $ticket (createTicket() would collide
+        // on its default room_code otherwise), but has no TicketEmbedding row
+        // of its own, so it can never become an AI candidate — this test's
+        // premise is "no candidates found".
+        $precheckMatch = $this->createTicket('Ticket relacionado por precheck', $ticket->location_id, $ticket->category_id);
+        $confirmedAt = now()->subMinutes(5);
+
+        // Setup: reporter confirmed "caso distinto" at creation time, but the
+        // (stricter, independent) AI similarity check finds nothing of its own.
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [],
+            'precheck_matched_ticket_id' => $precheckMatch->id,
+            'precheck_reason' => 'Misma ubicación, categoría y título similar',
+            'precheck_confirmed_at' => $confirmedAt,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-precheck-001');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        // AI columns were (re)computed by the job as usual
+        $this->assertFalse($embedding->is_duplicate);
+        $this->assertNull($embedding->matched_ticket_id);
+
+        // Precheck lane MUST be preserved untouched
+        $this->assertSame($precheckMatch->id, $embedding->precheck_matched_ticket_id);
+        $this->assertSame('Misma ubicación, categoría y título similar', $embedding->precheck_reason);
+        $this->assertNotNull($embedding->precheck_confirmed_at);
+        $this->assertEqualsWithDelta($confirmedAt->timestamp, $embedding->precheck_confirmed_at->timestamp, 1);
+    }
+
+    public function test_job_does_not_clear_precheck_lane_when_it_finds_its_own_duplicate(): void
+    {
+        config([
+            'ai.enabled' => true,
+            'ai.dedup.enabled' => true,
+            'ai.dedup.similarity_threshold' => 0.90,
+            'ai.dedup.observation_threshold' => 0.82,
+            'ai.dedup.title_overlap_min_tokens' => 1,
+            'ai.dedup.window_hours' => 24,
+        ]);
+
+        Event::fake([DuplicateDetected::class]);
+
+        $ticket = $this->createTicket('Proyector sala C-301');
+        $aiMatched = $this->createTicket('Proyector sala C-301 sin imagen', $ticket->location_id, $ticket->category_id);
+        $precheckMatch = $this->createTicket('Ticket relacionado por precheck', $ticket->location_id, $ticket->category_id);
+
+        TicketEmbedding::create([
+            'ticket_id' => $ticket->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $ticket->embeddingText()),
+            'is_duplicate' => false,
+            'precheck_matched_ticket_id' => $precheckMatch->id,
+            'precheck_reason' => 'Misma ubicación y categoría con descripción relacionada',
+            'precheck_confirmed_at' => now()->subMinutes(2),
+        ]);
+
+        TicketEmbedding::create([
+            'ticket_id' => $aiMatched->id,
+            'embedding_vector' => [1.0, 0.0],
+            'description_hash' => hash('sha256', $aiMatched->embeddingText()),
+            'is_duplicate' => false,
+        ]);
+
+        $job = new DetectDuplicates($ticket, 'corr-precheck-002');
+        $job->handle(
+            new DeduplicationService($this->makeEmbeddingService([0.0, 1.0])),
+            $this->makeEmbeddingService([0.0, 1.0]),
+            $this->makeLogger(),
+            $this->makeEngine()
+        );
+
+        $embedding = TicketEmbedding::where('ticket_id', $ticket->id)->first();
+
+        // AI found and persisted its own (possibly different) match
+        $this->assertTrue($embedding->is_duplicate);
+        $this->assertSame($aiMatched->id, $embedding->matched_ticket_id);
+
+        // Precheck lane still untouched, even though the AI's own candidate differs
+        $this->assertSame($precheckMatch->id, $embedding->precheck_matched_ticket_id);
+        $this->assertSame('Misma ubicación y categoría con descripción relacionada', $embedding->precheck_reason);
+        $this->assertNotNull($embedding->precheck_confirmed_at);
+    }
 }

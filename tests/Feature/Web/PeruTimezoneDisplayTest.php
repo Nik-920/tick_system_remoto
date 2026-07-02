@@ -18,9 +18,22 @@ use Tests\TestCase;
 /**
  * Guards that all ticket-related dates are displayed in America/Lima timezone.
  *
- * Root cause fixed: dates were stored as UTC but several query classes called
- * ->format() directly (no timezone conversion), and the .env had a conflicting
- * duplicate APP_TIMEZONE=UTC entry. This test suite prevents both regressions.
+ * Root cause fixed (1st incident): dates were stored as UTC but several query
+ * classes called ->format() directly (no timezone conversion), and the .env
+ * had a conflicting duplicate APP_TIMEZONE=UTC entry.
+ *
+ * Root cause fixed (2nd incident, 2026-07-01): local .env had APP_TIMEZONE
+ * set to America/Lima instead of UTC. Laravel's query grammar formats
+ * datetimes without an offset suffix, so every timestamptz write got
+ * interpreted using the session timezone, silently storing each instant
+ * 5h off from reality (confirmed on production: a ticket created at 21:40
+ * Lima was stored/displayed as 16:32/16:40, and "tiempo transcurrido" read
+ * ~5h12m instead of ~0). test_app_timezone_config_defaults_to_utc_for_storage
+ * below guards the config default, but note it CANNOT catch a bad value in
+ * the real .env or in a deployment platform's env vars (phpunit.xml forces
+ * DB_CONNECTION=sqlite and .env.testing has no APP_TIMEZONE override, so
+ * tests always see the UTC fallback regardless of .env). Verify APP_TIMEZONE
+ * directly in any deployment platform's dashboard after touching this.
  *
  * DB fixture: PostgreSQL preserves timestamp with timezone.
  * The canonical instant used across tests is 2026-06-22 03:02:00 UTC
@@ -81,6 +94,18 @@ class PeruTimezoneDisplayTest extends TestCase
         $result = LocalTime::format($lima);
 
         $this->assertSame(self::EXPECTED_DATE, $result);
+    }
+
+    /**
+     * app.timezone MUST stay UTC — it governs storage, not display (see
+     * App\Support\LocalTime). Setting it to America/Lima strips the offset
+     * before every Eloquent write and corrupts the stored instant instead
+     * of just its presentation. This only guards the test-env default;
+     * see the class docblock for why it can't see .env or Railway.
+     */
+    public function test_app_timezone_config_defaults_to_utc_for_storage(): void
+    {
+        $this->assertSame('UTC', config('app.timezone'));
     }
 
     // ── Feature: /tickets/{ticket} show page ──────────────────────────────────
