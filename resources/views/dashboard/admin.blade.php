@@ -37,21 +37,24 @@
 
 <div class="adm-page">
 
-    {{-- ── 1. HEADER ─────────────────────────────────────────────── --}}
-    <header class="adm-header">
-        <div>
-            <h1 class="adm-header__title">{{ $hero['title'] }}</h1>
-            <p class="adm-header__subtitle">{{ $hero['subtitle'] }}</p>
-            <p class="adm-header__meta">Perfil operativo: {{ $roleLabel }}</p>
+    {{-- ── 1. HERO ───────────────────────────────────────────────── --}}
+    <section class="adm-hero">
+        <div class="adm-hero-inner">
+            <div>
+                <p class="adm-header__overline">{{ $hero['badge'] }}</p>
+                <h1 class="adm-header__title">{{ $hero['title'] }}</h1>
+                <p class="adm-header__subtitle">{{ $hero['subtitle'] }}</p>
+                <p class="adm-header__meta">Perfil operativo: {{ $roleLabel }}</p>
+            </div>
+            <div class="adm-header__actions">
+                @foreach ($quickActions as $action)
+                    <a href="{{ $action['href'] }}" class="adm-btn adm-btn--{{ $action['variant'] === 'primary' ? 'primary' : 'ghost' }}">
+                        {{ $action['label'] }}
+                    </a>
+                @endforeach
+            </div>
         </div>
-        <div class="adm-header__actions">
-            @foreach ($quickActions as $action)
-                <a href="{{ $action['href'] }}" class="adm-btn adm-btn--{{ $action['variant'] === 'primary' ? 'primary' : 'ghost' }}">
-                    {{ $action['label'] }}
-                </a>
-            @endforeach
-        </div>
-    </header>
+    </section>
 
     {{-- ── 2. KPI ROW ────────────────────────────────────────────── --}}
     <div class="adm-kpis">
