@@ -13,15 +13,32 @@ use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
- * Regression for PostgreSQL SQLSTATE[42804] boolean mismatch.
+ * Regression for two distinct PostgreSQL boolean bugs in this domain.
  *
- * Root cause: Grammar::prepareBindings() converts PHP true/false to int 1/0.
- * PDO then sends PARAM_INT, which PostgreSQL rejects for boolean columns.
- * Fix: setter mutators on CommunityModerationLog store '1'/'0' strings so
- * PDO uses PARAM_STR, which PostgreSQL accepts via text→boolean coercion.
+ * 1) SQLSTATE[42804] boolean mismatch — Grammar::prepareBindings() converts
+ *    PHP true/false to int 1/0. PDO then sends PARAM_INT, which PostgreSQL
+ *    rejects for boolean columns. Fix: setter mutators on
+ *    CommunityModerationLog store '1'/'0' strings so PDO uses PARAM_STR,
+ *    which PostgreSQL accepts via text→boolean coercion. Sections 1-6 below.
  *
- * These tests assert PHP-level boolean types on the Eloquent model to
- * validate that the cast + mutator round-trip is correct.
+ * 2) Silent partial write on Ticket::hide() (found 2026-07-02) — Ticket's
+ *    communityVisible()/assignmentLocked() accessors store the STRING
+ *    'true'/'false' on pgsql for the same PARAM_STR reason above. But
+ *    Ticket::casts() ALSO used to declare these keys 'boolean'. Eloquent's
+ *    HasAttributes::originalIsEquivalent() routes any key with a *primitive*
+ *    cast through the low-level castAttribute(), which applies PHP's native
+ *    (bool) to the raw stored value directly — bypassing the accessor. PHP's
+ *    (bool) 'false' is TRUE (any non-empty, non-"0" string is truthy), so a
+ *    hide() that flips true -> 'false' looked identical to the original
+ *    `true` and was silently dropped from the UPDATE's column list: the
+ *    request "succeeded", hidden_at/hidden_by/reason were written, but
+ *    community_visible stayed true forever. SQLite (this whole suite's
+ *    driver, see phpunit.xml) stores 1/0 instead of 'true'/'false', and
+ *    (bool) 0 is correctly false, so this was invisible to every test here
+ *    despite the file's name. Fix: removed the redundant casts() entries —
+ *    the accessors already fully own get/set for these two keys. Section 7
+ *    below simulates the exact pgsql-fetched state via Reflection so the
+ *    test is driver-independent and actually exercises the mechanism.
  */
 class TicketCommunityVisibilityPostgresBooleanRegressionTest extends TestCase
 {
@@ -278,6 +295,79 @@ class TicketCommunityVisibilityPostgresBooleanRegressionTest extends TestCase
         $this->assertFalse($hideLog->new_visible);
         $this->assertFalse($restoreLog->previous_visible);
         $this->assertTrue($restoreLog->new_visible);
+    }
+
+    // ── 7. Silent partial-write bug — dirty-tracking on pgsql string values ───
+
+    public function test_casts_do_not_redeclare_community_visible_or_assignment_locked(): void
+    {
+        // Guards against reintroducing the bug documented in the class
+        // docblock: both keys have their own Attribute::make() accessors,
+        // so redeclaring them in casts() routes Eloquent's dirty-check
+        // through the primitive (bool) caster instead of the accessor.
+        $ticket = $this->makeVisibleTicket();
+
+        $this->assertArrayNotHasKey('community_visible', $ticket->getCasts());
+        $this->assertArrayNotHasKey('assignment_locked', $ticket->getCasts());
+    }
+
+    public function test_community_visible_true_to_pgsql_false_string_is_detected_as_dirty(): void
+    {
+        $ticket = $this->makeVisibleTicket()->fresh();
+
+        // Simulate exactly what the pgsql branch of communityVisible()'s
+        // set-mutator stores: the string 'false', not a native bool.
+        $this->setRawAttribute($ticket, 'community_visible', 'false');
+
+        $this->assertTrue(
+            $ticket->isDirty('community_visible'),
+            'true -> pgsql string "false" must be detected as a real change, '.
+            'not silently treated as equivalent to the original true.',
+        );
+        $this->assertArrayHasKey('community_visible', $ticket->getDirty());
+    }
+
+    public function test_community_visible_false_to_pgsql_true_string_is_detected_as_dirty(): void
+    {
+        $ticket = $this->makeHiddenTicket()->fresh();
+
+        $this->setRawAttribute($ticket, 'community_visible', 'true');
+
+        $this->assertTrue(
+            $ticket->isDirty('community_visible'),
+            'false -> pgsql string "true" must be detected as a real change (restore direction).',
+        );
+    }
+
+    public function test_assignment_locked_true_to_pgsql_false_string_is_detected_as_dirty(): void
+    {
+        $ticket = $this->makeVisibleTicket();
+        $ticket->forceFill(['assignment_locked' => true])->save();
+        $ticket = $ticket->fresh();
+
+        $this->setRawAttribute($ticket, 'assignment_locked', 'false');
+
+        $this->assertTrue(
+            $ticket->isDirty('assignment_locked'),
+            'Same class of bug as community_visible above — see class docblock.',
+        );
+    }
+
+    /**
+     * Writes directly into the model's raw $attributes array, bypassing
+     * setAttribute()/the Attribute accessor entirely, to reproduce the exact
+     * in-memory state a real pgsql fetch-then-mutate would produce — without
+     * needing an actual PostgreSQL connection in this SQLite-backed suite.
+     */
+    private function setRawAttribute(Ticket $ticket, string $key, mixed $value): void
+    {
+        $ref = new \ReflectionClass($ticket);
+        $property = $ref->getProperty('attributes');
+        $property->setAccessible(true);
+
+        $raw = $property->getValue($ticket);
+        $raw[$key] = $value;
+        $property->setValue($ticket, $raw);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
