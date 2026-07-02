@@ -14,7 +14,6 @@ use App\Models\User;
 use App\Queries\Tickets\Concerns\TicketBoardHelpers;
 use App\Support\LocalTime;
 use App\ViewModels\Tickets\ReporterTicketHistoryViewModel;
-use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -63,13 +62,8 @@ final class ReporterTicketHistoryQuery
 
     private const PER_PAGE = 5;
 
-    /** Resolved tickets sampled for the average + monthly chart. */
+    /** Resolved tickets sampled for the average resolution time. */
     private const POOL_LIMIT = 500;
-
-    /** Months shown in the "resolved per month" chart. */
-    private const MONTHS = 6;
-
-    private const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
     /** @var array<string, CarbonInterface> ticket_id → close moment (latest rejected/cancelled transition), filled by rows(). */
     private array $closeTimes = [];
@@ -288,7 +282,6 @@ final class ReporterTicketHistoryQuery
      *     total: int,
      *     donut: list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>,
      *     avg_value: string, avg_note: string, avg_has_data: bool,
-     *     monthly: array{peak: int, has_data: bool, items: list<array{label: string, count: int}>}
      * }
      */
     private function summary(int $resolved, int $rejected, int $cancelled): array
@@ -301,7 +294,6 @@ final class ReporterTicketHistoryQuery
             'avg_value' => $avg['label'],
             'avg_note' => $avg['has_data'] ? 'Sobre tus tickets resueltos' : 'Aún no tienes tickets resueltos',
             'avg_has_data' => $avg['has_data'],
-            'monthly' => $this->monthly(),
         ];
     }
 
@@ -359,49 +351,6 @@ final class ReporterTicketHistoryQuery
         $average = (int) round(((float) $minutes->sum()) / $minutes->count());
 
         return ['label' => $this->formatDuration($average), 'has_data' => true];
-    }
-
-    /**
-     * Resolved tickets bucketed by month over the last MONTHS months (PHP
-     * bucketing, portable). `has_data` is false when no resolved ticket falls in
-     * the window, so the view can show an honest placeholder.
-     *
-     * @return array{peak: int, has_data: bool, items: list<array{label: string, count: int}>}
-     */
-    private function monthly(): array
-    {
-        $now = CarbonImmutable::now()->startOfMonth();
-
-        // Seed an ordered bucket per month (oldest → newest), all zero.
-        $buckets = [];
-        for ($i = self::MONTHS - 1; $i >= 0; $i--) {
-            $month = $now->subMonths($i);
-            $buckets[$month->format('Y-m')] = ['label' => self::MONTH_ABBR[$month->month - 1], 'count' => 0];
-        }
-
-        $oldest = $now->subMonths(self::MONTHS - 1)->startOfMonth();
-
-        $resolvedAt = (clone $this->mineHistoryBase())
-            ->where('state', Ticket::STATE_RESOLVED)
-            ->whereNotNull('resolved_at')
-            ->where('resolved_at', '>=', $oldest->format(self::SQL_DATETIME_FORMAT))
-            ->limit(self::POOL_LIMIT)
-            ->pluck('resolved_at');
-
-        foreach ($resolvedAt as $date) {
-            if ($date instanceof CarbonInterface) {
-                $key = $date->format('Y-m');
-                if (isset($buckets[$key])) {
-                    $buckets[$key]['count']++;
-                }
-            }
-        }
-
-        $items = array_values($buckets);
-        $peak = (int) max(1, ...array_map(fn (array $b): int => $b['count'], $items));
-        $hasData = array_sum(array_map(fn (array $b): int => $b['count'], $items)) > 0;
-
-        return ['peak' => $peak, 'has_data' => $hasData, 'items' => $items];
     }
 
     // ── Row shaping ──────────────────────────────────────────────

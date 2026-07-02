@@ -30,7 +30,7 @@ final class ReporterTicketHistoryViewModel
      * @param  Collection<int, Category>  $categories
      * @param  list<array<string, mixed>>  $tickets  Shaped rows for the current page.
      * @param  array{from: int, to: int, total: int, current: int, last: int, pages: list<int>}  $pagination
-     * @param  array{total: int, donut: list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>, avg_value: string, avg_note: string, avg_has_data: bool, monthly: array{peak: int, has_data: bool, items: list<array{label: string, count: int}>}}  $summary
+     * @param  array{total: int, donut: list<array{key: string, label: string, count: int, percent: int, tone: string, color: string, start: float, end: float}>, avg_value: string, avg_note: string, avg_has_data: bool}  $summary
      */
     public function __construct(
         public readonly string $reporterId,

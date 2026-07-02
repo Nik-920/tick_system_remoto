@@ -31,7 +31,7 @@ use Illuminate\View\View;
  *  - show():    "Ver seguimiento" — ReporterTicketTrackingQuery (resolves the
  *               ticket inside the reporter_id boundary, 404 otherwise).
  *  - history(): "Historial" — ReporterTicketHistoryQuery (own closed-out
- *               tickets: resolved/rejected, plus donut/average/monthly).
+ *               tickets: resolved/rejected, plus donut/average).
  *  - edit():    "Editar ticket" — form to update safe fields + add evidence.
  *  - update():  Persists safe fields and any new uploaded images atomically.
  *  - cancel():  "Cancelar solicitud" — open → cancelled via TicketCancellationService.
