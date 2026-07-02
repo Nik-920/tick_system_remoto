@@ -98,6 +98,15 @@ return [
             'schema' => 'public',
             'sslmode' => env('DB_SSLMODE', 'require'),
 
+            // Pin the Postgres session to UTC regardless of the pooler's own
+            // default. Laravel's grammar sends datetimes without an offset
+            // suffix, so timestamptz columns are interpreted using this
+            // session timezone — it must match app.timezone (UTC) or every
+            // stored instant silently shifts by the difference. See
+            // App\Support\LocalTime, which handles Lima conversion for
+            // display only.
+            'timezone' => 'UTC',
+
             // Use emulated prepares with pooler connections to avoid SQLSTATE[26000].
             // For PostgreSQL boolean filters, prefer model scopes that compile to
             // SQL literals (IS TRUE/IS FALSE) instead of bound boolean values.
