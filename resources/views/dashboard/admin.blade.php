@@ -3,213 +3,316 @@
 @section('title', 'Centro De Control Admin')
 
 @section('content')
-    <div class="role-dashboard role-dashboard-admin space-y-6">
+@php
+    /**
+     * Dashboard Admin V2 — card-based, no <table>. Same visual grammar as
+     * the maintenance V2 dashboard (dashboard-maintenance-v2.css, mdv2-*)
+     * and the reporter dashboard (reporter-dashboard.css, rep-*), built by
+     * AdminDashboardV2Presenter from AdminDashboardQuery's global figures.
+     *
+     * @var string $roleProfile
+     * @var string $roleLabel
+     * @var array{badge:string,title:string,subtitle:string,resolutionRate7Days:string} $hero
+     * @var list<array{label:string,href:string,variant:string}> $quickActions
+     * @var list<array{value:string,label:string,note:string,icon:string,tone:string}> $kpis
+     * @var array{total:int,segments:list<array<string,mixed>>} $statusDonut
+     * @var array{peak:int,items:list<array{label:string,count:int,tone:string}>} $priorityBars
+     * @var array{total:int,peak:int,items:list<array{label:string,count:int,tone:string}>} $qrBars
+     * @var array{value:int,resolved:int,total:int} $closeRate
+     * @var list<array<string,mixed>> $recentActivity
+     * @var list<array<string,mixed>> $topLocations
+     * @var list<array<string,mixed>> $qrIssues
+     * @var list<array{count:int,title:string,note:string,tone:string,icon:string}> $alerts
+     * @var list<array{value:string,label:string,note:string,icon:string,tone:string}> $bottomCards
+     */
+    $donutStops = collect($statusDonut['segments'])
+        ->map(fn ($s) => "{$s['color']} {$s['start']}% {$s['end']}%")
+        ->implode(', ');
+    $donutAria = collect($statusDonut['segments'])
+        ->map(fn ($s) => "{$s['label']} {$s['count']} ({$s['percent']}%)")
+        ->implode(', ');
+    $vpeak = max(1, $priorityBars['peak']);
+    $hpeak = max(1, $qrBars['peak']);
+@endphp
 
-        {{-- ===== HERO ===== --}}
-        <section class="role-hero role-hero-admin panel panel-pad overflow-hidden">
-            <div class="role-hero__header flex flex-wrap items-start justify-between gap-4">
-                <div class="max-w-3xl">
-                    <p class="role-hero__eyebrow text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{{ $hero['badge'] }}</p>
-                    <h1 class="role-hero__title mt-2 text-3xl md:text-4xl font-black tracking-tight text-slate-900">{{ $hero['title'] }}</h1>
-                    <p class="role-hero__subtitle mt-2 text-slate-700 text-sm md:text-base">{{ $hero['subtitle'] }}</p>
-                    <p class="role-hero__meta mt-3 text-xs uppercase tracking-[0.12em] text-slate-500">Perfil operativo: {{ $roleLabel }}</p>
+<div class="adm-page">
+
+    {{-- ── 1. HEADER ─────────────────────────────────────────────── --}}
+    <header class="adm-header">
+        <div>
+            <h1 class="adm-header__title">{{ $hero['title'] }}</h1>
+            <p class="adm-header__subtitle">{{ $hero['subtitle'] }}</p>
+            <p class="adm-header__meta">Perfil operativo: {{ $roleLabel }}</p>
+        </div>
+        <div class="adm-header__actions">
+            @foreach ($quickActions as $action)
+                <a href="{{ $action['href'] }}" class="adm-btn adm-btn--{{ $action['variant'] === 'primary' ? 'primary' : 'ghost' }}">
+                    {{ $action['label'] }}
+                </a>
+            @endforeach
+        </div>
+    </header>
+
+    {{-- ── 2. KPI ROW ────────────────────────────────────────────── --}}
+    <div class="adm-kpis">
+        @foreach ($kpis as $kpi)
+            <div class="adm-kpi adm-tone-{{ $kpi['tone'] }}">
+                <div class="adm-kpi__top">
+                    <span class="adm-kpi__icon">
+                        <x-dynamic-component :component="'lucide-' . $kpi['icon']" width="20" height="20" stroke-width="2" />
+                    </span>
+                    <div>
+                        <div class="adm-kpi__value">{{ $kpi['value'] }}</div>
+                        <div class="adm-kpi__label">{{ $kpi['label'] }}</div>
+                    </div>
                 </div>
-                <div class="role-hero__metric-box rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-right">
-                    <p class="role-hero__metric-label text-xs uppercase tracking-[0.1em] font-semibold text-emerald-700">Tasa resolucion 7 dias</p>
-                    <p class="role-hero__metric-value text-2xl font-black text-slate-900 mt-1">{{ $hero['resolutionRate7Days'] }}</p>
+                <div class="adm-kpi__note">{{ $kpi['note'] }}</div>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- ── 3. CHARTS ROW ─────────────────────────────────────────── --}}
+    <div class="adm-charts">
+
+        {{-- A. Tickets por estado (donut) --}}
+        <section class="adm-card">
+            <h2 class="adm-card__title">
+                <x-lucide-pie-chart width="16" height="16" stroke-width="2" />
+                Tickets por estado
+            </h2>
+            <div class="adm-donut-wrap">
+                <div class="adm-donut {{ $statusDonut['total'] === 0 ? 'adm-donut--empty' : '' }}" role="img"
+                     @if ($statusDonut['total'] > 0) style="background: conic-gradient({{ $donutStops }});" @endif
+                     aria-label="Tickets por estado: {{ $donutAria }}">
+                    <div class="adm-donut__center">
+                        <span class="adm-donut__total">{{ $statusDonut['total'] }}</span>
+                        <span class="adm-donut__caption">tickets</span>
+                    </div>
+                </div>
+                <div class="adm-legend">
+                    @foreach ($statusDonut['segments'] as $seg)
+                        <div class="adm-legend__row adm-tone-{{ $seg['tone'] }}">
+                            <span class="adm-legend__dot" aria-hidden="true"></span>
+                            <span class="adm-legend__label">{{ $seg['label'] }}</span>
+                            <span class="adm-legend__value">{{ $seg['count'] }} · {{ $seg['percent'] }}%</span>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-            <div class="role-hero__actions mt-4 flex flex-wrap items-center gap-2">
-                @foreach ($quickActions as $action)
-                    <a href="{{ $action['href'] }}"
-                       class="{{ $action['variant'] === 'primary' ? 'btn-primary' : 'btn-secondary' }}">
-                        {{ $action['label'] }}
-                    </a>
+            <div class="adm-card__total"><span>Total</span><strong>{{ $statusDonut['total'] }} tickets</strong></div>
+        </section>
+
+        {{-- B. Tickets por prioridad (vertical bars) --}}
+        <section class="adm-card">
+            <h2 class="adm-card__title">
+                <x-lucide-bar-chart-3 width="16" height="16" stroke-width="2" />
+                Tickets por prioridad
+            </h2>
+            <div class="adm-vbars" role="img"
+                 aria-label="Tickets por prioridad: {{ collect($priorityBars['items'])->map(fn ($i) => "{$i['label']} {$i['count']}")->implode(', ') }}">
+                @foreach ($priorityBars['items'] as $bar)
+                    <div class="adm-vbar adm-tone-{{ $bar['tone'] }}">
+                        <span class="adm-vbar__count">{{ $bar['count'] }}</span>
+                        <div class="adm-vbar__track">
+                            <div class="adm-vbar__fill" style="height: {{ round($bar['count'] / $vpeak * 100) }}%"></div>
+                        </div>
+                        <span class="adm-vbar__label">{{ $bar['label'] }}</span>
+                    </div>
                 @endforeach
             </div>
         </section>
 
-        {{-- ===== KPIs ===== --}}
-        @php
-            $kpiIcons = [
-                'TICKETS TOTALES'       => 'ti-ticket',
-                'ABIERTOS SIN ASIGNAR'  => 'ti-alert-circle',
-                'CRITICOS ABIERTOS'     => 'ti-flame',
-                'CRÍTICOS ABIERTOS'     => 'ti-flame',
-                'UBICACIONES ACTIVAS'   => 'ti-map-pin',
-                'CATEGORIAS'            => 'ti-tag',
-                'CATEGORÍAS'            => 'ti-tag',
-                'CREADOS 7 DIAS'        => 'ti-calendar-plus',
-                'CREADOS 7 DÍAS'        => 'ti-calendar-plus',
-                'RESUELTOS 7 DIAS'      => 'ti-circle-check',
-                'RESUELTOS 7 DÍAS'      => 'ti-circle-check',
-            ];
-        @endphp
-
-        <section class="role-kpi-grid grid grid-cols-2 xl:grid-cols-4 gap-3">
-            @foreach ($kpis as $kpi)
-                @php
-                    $labelUpper = strtoupper($kpi['label']);
-                    $icon       = $kpiIcons[$labelUpper] ?? 'ti-chart-bar';
-
-                    $valStyle = '';
-                    if (str_contains($labelUpper, 'SIN ASIGNAR') && $kpi['value'] > 0)   $valStyle = 'color:#d97706;';
-                    if (str_contains($labelUpper, 'CRITICO')     && $kpi['value'] == 0)  $valStyle = 'color:#059669;';
-                    if (str_contains($labelUpper, 'RESUELTO')    && $kpi['value'] == 0)  $valStyle = 'color:#d97706;';
-                @endphp
-                <article class="role-kpi-card">
-                    <p>{{ $kpi['label'] }}</p>
-                    <p @if($valStyle) style="{{ $valStyle }}" @endif>{{ $kpi['value'] }}</p>
-                    <p>{{ $kpi['hint'] }}</p>
-                    <i class="ti {{ $icon }} kpi-icon-bg" aria-hidden="true"></i>
-                </article>
-            @endforeach
+        {{-- C. Salud QR por estado (horizontal bars) --}}
+        <section class="adm-card">
+            <h2 class="adm-card__title">
+                <x-lucide-qr-code width="16" height="16" stroke-width="2" />
+                Salud QR por estado
+            </h2>
+            <div class="adm-hbars">
+                @foreach ($qrBars['items'] as $bar)
+                    <div class="adm-tone-{{ $bar['tone'] }}">
+                        <div class="adm-hbar__head">
+                            <span class="adm-hbar__label">{{ $bar['label'] }}</span>
+                            <span class="adm-hbar__value">{{ $bar['count'] }}</span>
+                        </div>
+                        <div class="adm-hbar__track">
+                            <div class="adm-hbar__fill" style="width: {{ round($bar['count'] / $hpeak * 100) }}%"></div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            <div class="adm-card__total"><span>Total</span><strong>{{ $qrBars['total'] }} ubicaciones</strong></div>
         </section>
+    </div>
 
-        {{-- ===== QR + UBICACIONES ===== --}}
-        <div class="role-section-grid role-section-grid--3 grid grid-cols-1 xl:grid-cols-3 gap-4">
+    {{-- ── 4. MAIN LAYOUT (actividad + ubicaciones | rail) ────────── --}}
+    <div class="adm-layout">
 
-            {{-- Salud QR --}}
-            <section class="role-section">
-                <header>
-                    <h2>Salud QR por estado</h2>
-                    <p>Semaforo de generacion y estabilidad QR institucional.</p>
-                </header>
-                <div class="grid grid-cols-2 gap-2 p-4">
-                    <article class="dash-mini-card">
-                        <p class="dash-mini-label"><span class="qr-dot dot-gray"></span>Pending</p>
-                        <p class="dash-mini-val">{{ $qrStatusSummary['pending'] ?? 0 }}</p>
-                    </article>
-                    <article class="dash-mini-card">
-                        <p class="dash-mini-label"><span class="qr-dot dot-amber"></span>Processing</p>
-                        <p class="dash-mini-val dash-mini-val--amber">{{ $qrStatusSummary['processing'] ?? 0 }}</p>
-                    </article>
-                    <article class="dash-mini-card">
-                        <p class="dash-mini-label"><span class="qr-dot dot-red"></span>Failed</p>
-                        <p class="dash-mini-val dash-mini-val--red">{{ $qrStatusSummary['failed'] ?? 0 }}</p>
-                    </article>
-                    <article class="dash-mini-card">
-                        <p class="dash-mini-label"><span class="qr-dot dot-green"></span>Ready</p>
-                        <p class="dash-mini-val dash-mini-val--green">{{ $qrStatusSummary['ready'] ?? 0 }}</p>
-                    </article>
+        <div class="adm-main">
+
+            {{-- Actividad global reciente --}}
+            <section class="adm-card adm-card--fill">
+                <div class="adm-card__head">
+                    <h2 class="adm-card__title">
+                        <x-lucide-activity width="16" height="16" stroke-width="2" />
+                        Actividad global reciente
+                    </h2>
+                    <a href="{{ route('tickets.index') }}" class="adm-link">Ver todos</a>
                 </div>
-            </section>
-
-            {{-- Top ubicaciones --}}
-            <section class="role-section xl:col-span-2">
-                <header>
-                    <h2>Top ubicaciones con carga operativa</h2>
-                    <p>Espacios con mayor volumen de incidencias abiertas/en progreso.</p>
-                </header>
-                <div class="p-4 space-y-2">
-                    @forelse ($topLocationsByOpen as $location)
-                        <article class="dash-location-card" style="flex-wrap:wrap;">
-                            <div class="flex justify-between items-center w-full gap-3">
-                                <div>
-                                    <p class="dash-location-name">{{ $location->name }}</p>
-                                    <p class="dash-location-meta">{{ $location->room_code }} · {{ $location->building }}</p>
+                <div class="adm-feed">
+                    @forelse ($recentActivity as $event)
+                        <article class="adm-event adm-tone-{{ $event['tone'] }}">
+                            <span class="adm-event__icon">
+                                <x-dynamic-component :component="'lucide-' . $event['icon']" width="16" height="16" stroke-width="2" />
+                            </span>
+                            <div class="adm-event__body">
+                                <div class="adm-event__top">
+                                    <h3 class="adm-event__title">{{ $event['title'] }}</h3>
+                                    <span class="adm-badge adm-status--{{ $event['state'] }}">
+                                        <span class="adm-badge__dot" aria-hidden="true"></span>
+                                        {{ $event['state_label'] }}
+                                    </span>
                                 </div>
-                                <div class="dash-location-stats text-right" style="white-space:nowrap;">
-                                    <p>Abiertos: <strong>{{ $location->open_tickets_count }}</strong></p>
-                                    <p>En progreso: <strong>{{ $location->in_progress_tickets_count }}</strong></p>
+                                <div class="adm-event__meta">{{ $event['ref'] }} · {{ $event['location'] }}</div>
+                                <div class="adm-event__foot">
+                                    <span class="adm-event__at">{{ $event['at'] }}</span>
+                                    <a href="{{ route('tickets.show', $event['id']) }}" class="adm-event__link">
+                                        Ver
+                                        <x-lucide-chevron-right width="13" height="13" stroke-width="2.5" />
+                                    </a>
                                 </div>
-                            </div>
-                            <div style="width:100%;height:3px;background:var(--border-default);border-radius:2px;margin-top:7px;">
-                                <div style="height:3px;border-radius:2px;background:#3b82f6;width:{{ min(100, $location->open_tickets_count * 25) }}%;transition:width .4s ease;"></div>
                             </div>
                         </article>
                     @empty
-                        <p class="dash-empty">No hay ubicaciones con carga activa en este momento.</p>
+                        <p class="adm-empty">No hay actividad reciente para mostrar.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            {{-- Top ubicaciones con carga operativa --}}
+            <section class="adm-card adm-card--fill">
+                <div class="adm-card__head">
+                    <h2 class="adm-card__title">
+                        <x-lucide-map-pin width="16" height="16" stroke-width="2" />
+                        Top ubicaciones con carga operativa
+                    </h2>
+                    <a href="{{ route('locations.index') }}" class="adm-link">Ver todas</a>
+                </div>
+                <div class="adm-locations">
+                    @forelse ($topLocations as $location)
+                        <div class="adm-loc">
+                            <div class="adm-loc__head">
+                                <span class="adm-loc__name">{{ $location['name'] }}</span>
+                                <span class="adm-loc__meta">{{ $location['meta'] }}</span>
+                            </div>
+                            <div class="adm-loc__counts">
+                                <span>Abiertos: <strong>{{ $location['open'] }}</strong></span>
+                                <span>En progreso: <strong>{{ $location['in_progress'] }}</strong></span>
+                            </div>
+                            <div class="adm-loc__track">
+                                <div class="adm-loc__fill" style="width: {{ $location['percent'] }}%"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="adm-empty">No hay ubicaciones con carga activa en este momento.</p>
                     @endforelse
                 </div>
             </section>
         </div>
 
-        {{-- ===== TABLAS ===== --}}
-        <div class="role-section-grid role-section-grid--2 grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {{-- RIGHT: rail --}}
+        <aside class="adm-rail" aria-label="Indicadores operativos">
 
-            {{-- Radar QR --}}
-            <section class="role-section">
-                <header>
-                    <h2>Radar de incidencias QR</h2>
-                    <p>Ubicaciones con QR pendiente, procesando o fallido.</p>
-                </header>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ubicacion</th>
-                                <th>Aula</th>
-                                <th>Estado QR</th>
-                                <th>Tickets</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($qrIssues as $location)
-                                <tr>
-                                    <td>{{ $location->name }}</td>
-                                    <td>{{ $location->room_code }}</td>
-                                    <td>
-                                        <span class="dash-qr-badge dash-qr-badge--{{ $location->qr_generation_status ?? 'pending' }}">
-                                            {{ $location->qr_generation_status ?? 'pending' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $location->tickets_count }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="dash-empty">No hay incidencias QR activas.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            {{-- A. Tasa de resolución (7 días) --}}
+            <section class="adm-card">
+                <h2 class="adm-card__title">
+                    <x-lucide-shield-check width="16" height="16" stroke-width="2" />
+                    Tasa de resolución (7 días)
+                </h2>
+                <div class="adm-gauge-wrap">
+                    <div class="adm-gauge" role="img" aria-label="Tasa de resolución: {{ $closeRate['value'] }}%"
+                         style="background: conic-gradient(var(--color-success) 0 {{ $closeRate['value'] }}%, var(--border-default) {{ $closeRate['value'] }}% 100%);">
+                        <div class="adm-gauge__center">
+                            <span class="adm-gauge__value">{{ $closeRate['value'] }}%</span>
+                            <span class="adm-gauge__caption">cierre</span>
+                        </div>
+                    </div>
+                    <div class="adm-gauge-side">
+                        <div class="adm-gauge-side__label">Resueltos sobre creados en 7 días</div>
+                        <div class="adm-gauge-side__detail">{{ $closeRate['resolved'] }} de {{ $closeRate['total'] }} tickets</div>
+                    </div>
                 </div>
             </section>
 
-            {{-- Actividad reciente --}}
-            <section class="role-section">
-                <header>
-                    <h2>Actividad global reciente</h2>
-                    <p>Ultimos movimientos sobre tickets en toda la plataforma.</p>
-                </header>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Titulo</th>
-                                <th>Estado</th>
-                                <th>Prioridad</th>
-                                <th>Ubicacion</th>
-                                <th>Accion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($recentTickets as $ticket)
-                                <tr>
-                                    <td>{{ $ticket->title }}</td>
-                                    <td>
-                                        <span class="dash-state-badge dash-state-badge--{{ $ticket->state }}">
-                                            {{ $stateLabels[$ticket->state] ?? $ticket->state }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="dash-priority-badge dash-priority-badge--{{ $ticket->priority }}">
-                                            {{ $priorityLabels[$ticket->priority] ?? $ticket->priority }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $ticket->location?->name ?? 'N/A' }}</td>
-                                    <td><a href="{{ route('tickets.show', $ticket) }}">Ver</a></td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="dash-empty">No hay actividad reciente para mostrar.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            {{-- B. Radar QR --}}
+            <section class="adm-card">
+                <h2 class="adm-card__title">
+                    <x-lucide-scan width="16" height="16" stroke-width="2" />
+                    Radar de incidencias QR
+                </h2>
+                <div class="adm-qr-list">
+                    @forelse ($qrIssues as $issue)
+                        <div class="adm-qr-row">
+                            <div class="adm-qr-row__body">
+                                <div class="adm-qr-row__name">{{ $issue['name'] }}</div>
+                                <div class="adm-qr-row__meta">{{ $issue['room'] }} · {{ $issue['tickets_count'] }} {{ Str::plural('ticket', $issue['tickets_count']) }}</div>
+                            </div>
+                            <span class="adm-badge adm-qr--{{ $issue['status'] }}">
+                                <span class="adm-badge__dot" aria-hidden="true"></span>
+                                {{ $issue['status_label'] }}
+                            </span>
+                        </div>
+                    @empty
+                        <p class="adm-empty">No hay incidencias QR activas.</p>
+                    @endforelse
+                </div>
+                <div class="adm-card__foot">
+                    <a href="{{ route('locations.index') }}" class="adm-link">
+                        Gestionar ubicaciones
+                        <x-lucide-chevron-right width="14" height="14" stroke-width="2.5" />
+                    </a>
                 </div>
             </section>
-        </div>
 
+            {{-- C. Alertas importantes --}}
+            <section class="adm-card">
+                <h2 class="adm-card__title">
+                    <x-lucide-alert-triangle width="16" height="16" stroke-width="2" />
+                    Alertas importantes
+                </h2>
+                <div class="adm-alerts">
+                    @forelse ($alerts as $alert)
+                        <div class="adm-alert adm-tone-{{ $alert['tone'] }}">
+                            <span class="adm-alert__icon">
+                                <x-dynamic-component :component="'lucide-' . $alert['icon']" width="20" height="20" stroke-width="2" />
+                            </span>
+                            <div>
+                                <div class="adm-alert__title"><strong>{{ $alert['count'] }}</strong> {{ $alert['title'] }}</div>
+                                <div class="adm-alert__note">{{ $alert['note'] }}</div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="adm-empty">Sin alertas activas. La operación está bajo control.</p>
+                    @endforelse
+                </div>
+            </section>
+        </aside>
     </div>
+
+    {{-- ── 5. BOTTOM CARDS ───────────────────────────────────────── --}}
+    <div class="adm-bottom">
+        @foreach ($bottomCards as $card)
+            <div class="adm-card adm-stat adm-tone-{{ $card['tone'] }}">
+                <span class="adm-stat__icon">
+                    <x-dynamic-component :component="'lucide-' . $card['icon']" width="24" height="24" stroke-width="2" />
+                </span>
+                <div>
+                    <div class="adm-stat__value">{{ $card['value'] }}</div>
+                    <div class="adm-stat__label">{{ $card['label'] }}</div>
+                    <div class="adm-stat__note">{{ $card['note'] }}</div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
 @endsection
