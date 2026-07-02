@@ -1,8 +1,9 @@
 {{-- ── COMMUNITY COMMENTS PARTIAL ────────────────────────────────────
      Receives $post (array from CommunityFeedQuery::toPost).
      Security contract:
-     - No commenter names, emails, or PII rendered.
-     - Generic author label: "Reporter de la comunidad" / "Tú".
+     - No commenter email or internal IDs rendered.
+     - Author label shows the commenter's display name, or "Tú" for the
+       viewer's own comments (author_label, pre-resolved server-side).
      - Comment body escaped with {{ }} — no raw HTML.
      - Hidden/deleted comments never reach this partial (filtered in query).
      - Replies are one level deep only; hidden/deleted parents hide their replies.
