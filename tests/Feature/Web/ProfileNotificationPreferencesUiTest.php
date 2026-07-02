@@ -143,14 +143,14 @@ class ProfileNotificationPreferencesUiTest extends TestCase
         $this->assertContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_REPORTER, $types);
     }
 
-    public function test_reporter_has_six_active_ticket_channels_by_default(): void
+    public function test_reporter_has_nine_active_ticket_channels_by_default(): void
     {
         $reporter = $this->makeUser('reporter');
         $prefs = $this->ticketPrefs->applicablePreferencesFor($reporter);
 
         $total = array_sum(array_map(fn (array $p) => count($p['channels']), $prefs));
 
-        $this->assertSame(6, $total);
+        $this->assertSame(9, $total);
     }
 
     public function test_maintenance_has_five_applicable_ticket_types(): void
@@ -166,14 +166,14 @@ class ProfileNotificationPreferencesUiTest extends TestCase
         $this->assertContains(TicketNotificationPreference::TYPE_TICKET_COMMENT_ASSIGNEE, $types);
     }
 
-    public function test_maintenance_has_ten_active_ticket_channels_by_default(): void
+    public function test_maintenance_has_fifteen_active_ticket_channels_by_default(): void
     {
         $maintenance = $this->makeUser('maintenance');
         $prefs = $this->ticketPrefs->applicablePreferencesFor($maintenance);
 
         $total = array_sum(array_map(fn (array $p) => count($p['channels']), $prefs));
 
-        $this->assertSame(10, $total);
+        $this->assertSame(15, $total);
     }
 
     public function test_admin_has_one_applicable_ticket_type(): void
@@ -185,24 +185,24 @@ class ProfileNotificationPreferencesUiTest extends TestCase
         $this->assertContains(TicketNotificationPreference::TYPE_TICKET_CREATED_ADMIN, $types);
     }
 
-    public function test_admin_has_two_active_ticket_channels_by_default(): void
+    public function test_admin_has_three_active_ticket_channels_by_default(): void
     {
         $admin = $this->makeUser('admin');
         $prefs = $this->ticketPrefs->applicablePreferencesFor($admin);
 
         $total = array_sum(array_map(fn (array $p) => count($p['channels']), $prefs));
 
-        $this->assertSame(2, $total);
+        $this->assertSame(3, $total);
     }
 
-    public function test_super_admin_has_two_active_ticket_channels_by_default(): void
+    public function test_super_admin_has_three_active_ticket_channels_by_default(): void
     {
         $superAdmin = $this->makeUser('super_admin');
         $prefs = $this->ticketPrefs->applicablePreferencesFor($superAdmin);
 
         $total = array_sum(array_map(fn (array $p) => count($p['channels']), $prefs));
 
-        $this->assertSame(2, $total);
+        $this->assertSame(3, $total);
     }
 
     public function test_reporter_does_not_see_assignee_ticket_types(): void

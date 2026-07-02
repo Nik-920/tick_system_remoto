@@ -18,6 +18,7 @@
         "mallardduck/blade-lucide-icons": "*",
         "predis/predis": "^3.5",
         "promphp/prometheus_client_php": "^2.15",
+        "resend/resend-laravel": "^1.4",
         "sentry/sentry-laravel": "^4.25",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-model-states": "^2.12",

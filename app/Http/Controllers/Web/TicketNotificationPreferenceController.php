@@ -31,6 +31,7 @@ class TicketNotificationPreferenceController extends Controller
         $allChannels = [
             TicketNotificationPreference::CHANNEL_IN_APP,
             TicketNotificationPreference::CHANNEL_FCM,
+            TicketNotificationPreference::CHANNEL_EMAIL,
         ];
 
         foreach ($applicableTypes as $type) {

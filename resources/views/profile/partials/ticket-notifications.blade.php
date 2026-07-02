@@ -53,9 +53,13 @@
                     <div class="profile-pref-channels">
                         @foreach ($pref['channels'] as $channel => $enabled)
                             @php
-                                $isInApp = $channel === 'in_app';
-                                $channelLabel = $isInApp ? 'En la app' : 'Push móvil';
-                                $channelIcon  = $isInApp ? '🖥️' : '📱';
+                                $channelMeta = [
+                                    'in_app' => ['label' => 'En la app', 'icon' => '🖥️'],
+                                    'fcm' => ['label' => 'Push móvil', 'icon' => '📱'],
+                                    'email' => ['label' => 'Correo', 'icon' => '📧'],
+                                ][$channel] ?? ['label' => $channel, 'icon' => '🔔'];
+                                $channelLabel = $channelMeta['label'];
+                                $channelIcon  = $channelMeta['icon'];
                                 $inputId = 'toggle_' . $type . '_' . $channel;
                             @endphp
 

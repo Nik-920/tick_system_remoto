@@ -124,6 +124,7 @@ class TicketNotificationPreferenceService
         return [
             TicketNotificationPreference::CHANNEL_IN_APP,
             TicketNotificationPreference::CHANNEL_FCM,
+            TicketNotificationPreference::CHANNEL_EMAIL,
         ];
     }
 

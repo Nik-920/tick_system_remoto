@@ -2,9 +2,15 @@
 
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\ResendWebhookController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Webhook de Resend: sin auth:sanctum (Resend no puede autenticarse como
+// usuario), protegido en cambio por verificación de firma Svix dentro del
+// propio controller (fail-closed).
+Route::post('/webhooks/resend', ResendWebhookController::class)->name('api.webhooks.resend');
 
 Route::middleware(['auth:sanctum'])->group(function (): void {
     Route::get('/locations', [LocationController::class, 'index'])->name('api.locations.index');
