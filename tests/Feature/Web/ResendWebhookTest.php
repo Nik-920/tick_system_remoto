@@ -19,12 +19,13 @@ class ResendWebhookTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SECRET = 'whsec_dGVzdC1zaWduaW5nLXNlY3JldC0zMi1ieXRlcyEh';
+    private string $secret;
 
     protected function setUp(): void
     {
         parent::setUp();
-        config(['resend.webhook.secret' => self::SECRET, 'resend.webhook.tolerance' => 300]);
+        $this->secret = 'whsec_'.base64_encode(random_bytes(32));
+        config(['resend.webhook.secret' => $this->secret, 'resend.webhook.tolerance' => 300]);
     }
 
     public function test_missing_svix_headers_is_rejected(): void
@@ -148,7 +149,7 @@ class ResendWebhookTest extends TestCase
         return $this->postJson(route('api.webhooks.resend'), $payload, [
             'svix-id' => $svixId,
             'svix-timestamp' => (string) $timestamp,
-            'svix-signature' => $this->sign(self::SECRET, $svixId, $timestamp, $rawBody),
+            'svix-signature' => $this->sign($this->secret, $svixId, $timestamp, $rawBody),
         ]);
     }
 
