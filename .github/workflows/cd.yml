@@ -30,30 +30,94 @@ jobs:
             --yes
 
       - name: ⏳ Esperar arranque
-        run: sleep 45
+        run: sleep 20
 
       - name: 🏥 Health check
         id: healthcheck
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ vars.APP_URL }}/up")
-          echo "Health check status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ Health check failed — iniciando rollback"
-            exit 1
-          fi
-          echo "✅ Deploy exitoso"
+          ATTEMPTS=12
+          SLEEP=10
+          for i in $(seq 1 "$ATTEMPTS"); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.APP_URL }}/up" || echo "000")
+            echo "Intento $i/$ATTEMPTS — Health check status: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Deploy exitoso"
+              exit 0
+            fi
+            sleep "$SLEEP"
+          done
+          echo "❌ Health check failed tras $ATTEMPTS intentos — iniciando rollback"
+          exit 1
 
       - name: 🔄 Rollback automático
         if: failure() && steps.healthcheck.outcome == 'failure'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
-          echo "⚠️ Ejecutando rollback automático..."
-          railway rollback \
-            --service ${{ secrets.RAILWAY_SERVICE_ID }} \
-            --yes
-          echo "✅ Rollback ejecutado"
+          set -euo pipefail
+
+          if [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT_ID:-}" ]; then
+            echo "❌ Faltan los secrets RAILWAY_PROJECT_ID y/o RAILWAY_ENVIRONMENT_ID — no se puede hacer rollback automático"
+            exit 1
+          fi
+
+          echo "⚠️ Buscando el último deployment exitoso anterior..."
+
+          API="https://backboard.railway.com/graphql/v2"
+          QUERY='query Deployments($input: DeploymentListInput!, $first: Int) {
+            deployments(input: $input, first: $first) {
+              edges { node { id status createdAt canRollback } }
+            }
+          }'
+
+          PAYLOAD=$(jq -n \
+            --arg query "$QUERY" \
+            --arg projectId "$RAILWAY_PROJECT_ID" \
+            --arg serviceId "$RAILWAY_SERVICE_ID" \
+            --arg environmentId "$RAILWAY_ENVIRONMENT_ID" \
+            '{query: $query, variables: {input: {projectId: $projectId, serviceId: $serviceId, environmentId: $environmentId}, first: 5}}')
+
+          RESPONSE=$(curl -s -X POST "$API" \
+            -H "Project-Access-Token: $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "❌ Error consultando deployments: $(echo "$RESPONSE" | jq -c '.errors')"
+            exit 1
+          fi
+
+          # El nodo 0 es el deployment recién hecho (el que falló el health check);
+          # buscamos el siguiente exitoso con canRollback=true.
+          TARGET_ID=$(echo "$RESPONSE" | jq -r '
+            [.data.deployments.edges[].node] as $nodes
+            | ($nodes[1:][] | select(.canRollback == true and .status == "SUCCESS") | .id)' \
+            | head -n 1)
+
+          if [ -z "$TARGET_ID" ] || [ "$TARGET_ID" = "null" ]; then
+            echo "❌ No se encontró un deployment anterior al que hacer rollback — intervención manual requerida"
+            exit 1
+          fi
+
+          echo "⏪ Ejecutando rollback al deployment $TARGET_ID"
+
+          ROLLBACK_PAYLOAD=$(jq -n --arg id "$TARGET_ID" \
+            '{query: "mutation DeploymentRollback($id: String!) { deploymentRollback(id: $id) { id status } }", variables: {id: $id}}')
+
+          ROLLBACK_RESPONSE=$(curl -s -X POST "$API" \
+            -H "Project-Access-Token: $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$ROLLBACK_PAYLOAD")
+
+          if echo "$ROLLBACK_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "❌ Error ejecutando rollback: $(echo "$ROLLBACK_RESPONSE" | jq -c '.errors')"
+            exit 1
+          fi
+
+          echo "✅ Rollback solicitado: $(echo "$ROLLBACK_RESPONSE" | jq -c '.data.deploymentRollback')"
 
       - name: ⏳ Esperar rollback
         if: failure() && steps.healthcheck.outcome == 'failure'
@@ -62,13 +126,19 @@ jobs:
       - name: 🏥 Verificar rollback
         if: failure() && steps.healthcheck.outcome == 'failure'
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ vars.APP_URL }}/up")
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ Rollback también falló — intervención manual requerida"
-            exit 1
-          fi
-          echo "✅ Rollback exitoso — versión anterior restaurada"
+          ATTEMPTS=6
+          SLEEP=10
+          for i in $(seq 1 "$ATTEMPTS"); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.APP_URL }}/up" || echo "000")
+            echo "Intento $i/$ATTEMPTS — Verificar rollback status: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Rollback exitoso — versión anterior restaurada"
+              exit 0
+            fi
+            sleep "$SLEEP"
+          done
+          echo "❌ Rollback también falló — intervención manual requerida"
+          exit 1
 
       - name: 🗑️ Prune community thumbnails
         if: success()
