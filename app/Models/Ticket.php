@@ -70,6 +70,13 @@ class Ticket extends Model
     public const ASSIGNMENT_SOURCE_ADMIN = 'admin_assigned';
 
     /**
+     * Asignación automática al Jefe de Práctica responsable de la ubicación
+     * (locations.responsible_user_id) al momento de crear el ticket. Solo se
+     * usa cuando el flag tickets.auto_assign_by_location está activo.
+     */
+    public const ASSIGNMENT_SOURCE_LOCATION = 'location_auto';
+
+    /**
      * Nota: 'id' se mantiene mass-assignable a propósito. Varios tests
      * construyen instancias en memoria con id determinista
      * (new Ticket(['id' => ...])) para eventos/listeners de IA sin tocar la BD.

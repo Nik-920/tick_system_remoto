@@ -12,6 +12,7 @@ use App\Services\Observability\TicketQrLogger;
 use App\Services\Storage\TicketMediaStorageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class TicketCreationService
 {
@@ -93,6 +94,8 @@ class TicketCreationService
             'priority' => $ticket->priority,
         ]);
 
+        $ticket = $this->autoAssignToLocationResponsible($ticket, $reporter, $correlationId);
+
         return [
             'created' => true,
             'ticket' => $ticket,
@@ -100,6 +103,41 @@ class TicketCreationService
             'warning' => null,
             'warning_pending' => false,
         ];
+    }
+
+    /**
+     * Auto-asignación al Jefe de Práctica de la ubicación (Fase JP):
+     * solo cuando el flag tickets.auto_assign_by_location está activo y la
+     * ubicación tiene responsible_user_id. Corre FUERA de la transacción de
+     * creación y envuelto en try/catch: un fallo aquí jamás impide crear el
+     * ticket — en el peor caso queda en el pool, como hoy. Se resuelve el
+     * servicio vía contenedor para no alterar la firma del constructor.
+     */
+    private function autoAssignToLocationResponsible(Ticket $ticket, User $reporter, string $correlationId): Ticket
+    {
+        if (! (bool) config('tickets.auto_assign_by_location', false)) {
+            return $ticket;
+        }
+
+        try {
+            $responsible = $ticket->location?->responsible;
+
+            if ($responsible === null) {
+                return $ticket;
+            }
+
+            return app(TicketAssignmentService::class)
+                ->autoAssignByLocation($ticket, $reporter, $responsible, $correlationId);
+        } catch (Throwable $exception) {
+            $this->logger->warning('ticket.auto_assignment.failed', [
+                'ticket_id' => $ticket->id,
+                'location_id' => $ticket->location_id,
+                'correlation_id' => $correlationId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $ticket;
+        }
     }
 
     /**

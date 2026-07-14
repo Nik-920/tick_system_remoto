@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesLocationResponsible;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreLocationRequest extends FormRequest
 {
+    use ValidatesLocationResponsible;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -28,6 +31,7 @@ class StoreLocationRequest extends FormRequest
             'building' => ['required', 'string', 'max:255'],
             'floor' => ['nullable', 'string', 'max:50'],
             'room_code' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('locations', 'room_code')],
+            'responsible_user_id' => $this->responsibleUserRules(),
             'is_active' => ['nullable', 'boolean'],
             'confirm_similar_location' => ['nullable', 'boolean'],
             'qr_token' => ['prohibited'],

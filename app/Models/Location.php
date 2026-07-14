@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $building
  * @property string $floor
  * @property string $room_code
+ * @property string|null $responsible_user_id
+ * @property-read User|null $responsible
  * @property string|null $qr_token
  * @property string|null $qr_image_url
  * @property string|null $qr_generation_status
@@ -39,6 +42,7 @@ class Location extends Model
         'building',
         'floor',
         'room_code',
+        'responsible_user_id',
         'qr_token',
         'qr_image_url',
         'qr_generation_status',
@@ -104,6 +108,15 @@ class Location extends Model
         ]);
 
         return implode(' · ', $parts) ?: (string) $this->name;
+    }
+
+    /**
+     * Jefe de Práctica (rol maintenance) responsable de esta ubicación.
+     * Nullable: sin responsable la ubicación se comporta como siempre (pool).
+     */
+    public function responsible(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsible_user_id');
     }
 
     public function tickets(): HasMany

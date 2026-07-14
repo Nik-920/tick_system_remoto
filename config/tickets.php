@@ -3,6 +3,18 @@
 declare(strict_types=1);
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-asignación por responsable de ubicación
+    |--------------------------------------------------------------------------
+    | Cuando está activo y la ubicación del ticket tiene un Jefe de Práctica
+    | (locations.responsible_user_id), el ticket recién creado se asigna
+    | automáticamente a ese usuario (assignment_source = location_auto) y se
+    | dispara TicketAssigned (notificaciones estándar al asignado). Apagado por
+    | defecto: sin la env el comportamiento actual no cambia en absoluto.
+    */
+    'auto_assign_by_location' => (bool) env('TICKET_AUTO_ASSIGN_BY_LOCATION', false),
+
     'media' => [
         'create' => [
             'max_files' => 5,

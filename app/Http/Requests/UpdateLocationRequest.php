@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesLocationResponsible;
 use App\Models\Location;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,6 +10,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateLocationRequest extends FormRequest
 {
+    use ValidatesLocationResponsible;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -36,6 +39,7 @@ class UpdateLocationRequest extends FormRequest
                 'regex:/^[A-Za-z0-9_-]+$/',
                 Rule::unique('locations', 'room_code')->ignore($this->locationId()),
             ],
+            'responsible_user_id' => array_merge(['sometimes'], $this->responsibleUserRules()),
             'is_active' => ['sometimes', 'boolean'],
             'confirm_similar_location' => ['nullable', 'boolean'],
             'qr_token' => ['prohibited'],

@@ -102,6 +102,54 @@ class TicketAssignmentService
         return $result;
     }
 
+    /**
+     * Auto-asignación al Jefe de Práctica responsable de la ubicación al crear
+     * el ticket (flag tickets.auto_assign_by_location). El actor es el reporter
+     * que creó el ticket; el evento se emite con action 'assigned' para reusar
+     * las notificaciones estándar al asignado. Reutiliza assertClaimable: solo
+     * aplica sobre tickets open, sin asignar y sin asignación fija, por lo que
+     * nunca pisa una asignación existente.
+     */
+    public function autoAssignByLocation(Ticket $ticket, User $actor, User $responsible, string $correlationId = ''): Ticket
+    {
+        $result = TicketLock::mutation((string) $ticket->id)->get(function () use ($ticket, $actor, $responsible, $correlationId): Ticket {
+            $correlationId = $this->resolveCorrelationId($correlationId);
+
+            $updatedTicket = DB::transaction(function () use ($ticket, $actor, $responsible): Ticket {
+                $lockedTicket = $this->lockedTicket($ticket);
+
+                $this->assertTargetIsMaintenance($responsible);
+                $this->assertClaimable($lockedTicket);
+
+                $this->updateAssignmentFields(
+                    $lockedTicket,
+                    $responsible,
+                    $actor,
+                    false,
+                    Ticket::ASSIGNMENT_SOURCE_LOCATION
+                );
+
+                $this->recordAssignmentHistory(
+                    $lockedTicket,
+                    $actor,
+                    null,
+                    $responsible,
+                    'auto_assigned'
+                );
+
+                return $lockedTicket;
+            });
+
+            return $this->finalizeAssignment('assigned', $updatedTicket, $actor, null, $responsible, $correlationId);
+        });
+
+        if ($result === null) {
+            throw new TicketLockUnavailableException((string) $ticket->id);
+        }
+
+        return $result;
+    }
+
     public function assignByAdmin(Ticket $ticket, User $actor, User $target): Ticket
     {
         $result = TicketLock::mutation((string) $ticket->id)->get(
@@ -323,6 +371,7 @@ class TicketAssignmentService
             'assigned' => 'Ticket asignado a '.$this->resolveUserLabel($to).' por admin/super_admin: '.$this->resolveUserLabel($actor),
             'reassigned' => 'Ticket reasignado de '.$this->resolveUserLabel($from).' a '.$this->resolveUserLabel($to).' por admin/super_admin: '.$this->resolveUserLabel($actor),
             'unassigned' => 'Ticket desasignado por admin/super_admin: '.$this->resolveUserLabel($actor).'. Responsable anterior: '.$this->resolveUserLabel($from),
+            'auto_assigned' => 'Ticket asignado automáticamente a '.$this->resolveUserLabel($to).' (Jefe de Práctica responsable de la ubicación).',
             default => 'Actualizacion de asignacion por '.$this->resolveUserLabel($actor),
         };
 

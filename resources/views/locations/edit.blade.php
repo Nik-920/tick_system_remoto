@@ -70,6 +70,20 @@
                         @error('room_code') <p class="locs-field-error">{{ $message }}</p> @enderror
                     </div>
                     <div class="locs-form-group">
+                        <label for="responsible_user_id" class="locs-field-label">Jefe de Práctica responsable</label>
+                        <select id="responsible_user_id" name="responsible_user_id" class="locs-field">
+                            <option value="">Sin responsable (los tickets van al pool)</option>
+                            @foreach ($maintenanceUsers as $maintenanceUser)
+                                <option value="{{ $maintenanceUser->id }}"
+                                        @selected(old('responsible_user_id', (string) $location->responsible_user_id) === (string) $maintenanceUser->id)>
+                                    {{ trim($maintenanceUser->name.' '.$maintenanceUser->last_name) ?: $maintenanceUser->email }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="locs-field-hint">Si se define y la auto-asignación está activa, los tickets de esta ubicación se asignan automáticamente a este usuario.</p>
+                        @error('responsible_user_id') <p class="locs-field-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="locs-form-group">
                         <p class="locs-field-label">Estado de la ubicación</p>
                         <label class="locs-toggle-wrap">
                             <input type="hidden" name="is_active" value="0">

@@ -8,6 +8,7 @@ use App\Http\Requests\StoreLocationRequest;
 use App\Http\Requests\UpdateLocationRequest;
 use App\Jobs\GenerateLocationQrImage;
 use App\Models\Location;
+use App\Models\User;
 use App\Services\Locations\LocationSimilarityService;
 use App\Services\Qr\QrTokenService;
 use App\Services\Storage\LocationQrStorageService;
@@ -50,7 +51,9 @@ class LocationController extends Controller
     {
         $this->authorize('create', Location::class);
 
-        return view('locations.create');
+        return view('locations.create', [
+            'maintenanceUsers' => $this->maintenanceUsers(),
+        ]);
     }
 
     public function store(
@@ -78,6 +81,7 @@ class LocationController extends Controller
             'building' => (string) $data['building'],
             'floor' => $data['floor'] ?? null,
             'room_code' => (string) $data['room_code'],
+            'responsible_user_id' => $data['responsible_user_id'] ?? null,
             'is_active' => (bool) ($data['is_active'] ?? true),
             'qr_token' => $qrTokenService->generateUniqueToken(),
             'qr_image_url' => null,
@@ -102,6 +106,7 @@ class LocationController extends Controller
 
         return view('locations.edit', [
             'location' => $location,
+            'maintenanceUsers' => $this->maintenanceUsers(),
         ]);
     }
 
@@ -223,6 +228,19 @@ class LocationController extends Controller
         if (! empty($filters['qr_status'])) {
             $query->where('qr_generation_status', (string) $filters['qr_status']);
         }
+    }
+
+    /**
+     * Usuarios elegibles como Jefe de Práctica responsable de una ubicación.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     */
+    private function maintenanceUsers(): \Illuminate\Database\Eloquent\Collection
+    {
+        return User::role('maintenance')
+            ->orderBy('name')
+            ->orderBy('last_name')
+            ->get();
     }
 
     /** @return array<int, array<string, mixed>> */
