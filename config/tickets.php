@@ -15,6 +15,22 @@ return [
     */
     'auto_assign_by_location' => (bool) env('TICKET_AUTO_ASSIGN_BY_LOCATION', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reporte QR público (sin login)
+    |--------------------------------------------------------------------------
+    | Carril adicional para invitados: escanean el QR de la ubicación y
+    | reportan en segundos sin cuenta. Los tickets pertenecen a un usuario
+    | sistema (rol reporter), así el resto del pipeline (dedup, auto-asignación,
+    | notificaciones, policies) funciona sin ningún cambio. Apagado por defecto.
+    */
+    'public_qr_report' => [
+        'enabled' => (bool) env('FEATURE_PUBLIC_QR_REPORT', false),
+        'system_user_email' => env('PUBLIC_QR_SYSTEM_USER_EMAIL', 'reportes-qr@incidex.system'),
+        'system_user_name' => 'Reporte QR',
+        'system_user_last_name' => 'Público',
+    ],
+
     'media' => [
         'create' => [
             'max_files' => 5,

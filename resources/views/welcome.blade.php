@@ -41,6 +41,11 @@
                             Panel de control
                         </a>
                     @else
+                        @if (config('tickets.public_qr_report.enabled'))
+                            <a href="{{ route('public.qr.track') }}" class="welcome-nav-btn welcome-nav-btn--ghost">
+                                Seguir mi reporte
+                            </a>
+                        @endif
                         <a href="{{ route('login') }}" class="welcome-nav-btn welcome-nav-btn--ghost">
                             Iniciar sesión
                         </a>

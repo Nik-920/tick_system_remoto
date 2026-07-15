@@ -25,6 +25,7 @@ use App\Http\Controllers\Web\MaintenanceDashboardV2Controller;
 use App\Http\Controllers\Web\MetricsController;
 use App\Http\Controllers\Web\NotificationController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\PublicQrReportController;
 use App\Http\Controllers\Web\QrScanController;
 use App\Http\Controllers\Web\ReporterCommunityController;
 use App\Http\Controllers\Web\ReporterDashboardController;
@@ -46,6 +47,20 @@ Route::get('/', function () {
 });
 
 Route::get('/health', HealthController::class)->name('health.show');
+
+// ─── Reporte QR público (sin login) ─────────────────────────────────────────
+// Carril adicional detrás del flag FEATURE_PUBLIC_QR_REPORT (404 apagado).
+// El flujo autenticado /scan/{token} NO cambia. Las rutas literales
+// (/r/seguimiento, /r/enviado) van antes de /r/{token} para que no se
+// capturen como token.
+Route::middleware('throttle:public-reports')->group(function (): void {
+    Route::get('/r/seguimiento', [PublicQrReportController::class, 'track'])->name('public.qr.track');
+    Route::get('/r/enviado', [PublicQrReportController::class, 'success'])->name('public.qr.success');
+    Route::get('/r/{token}', [PublicQrReportController::class, 'show'])->name('public.qr.show');
+    Route::post('/r/{token}', [PublicQrReportController::class, 'store'])
+        ->middleware('throttle:public-report-submissions')
+        ->name('public.qr.store');
+});
 
 // Métricas operativas: exponen conteos de usuarios/roles y datos agregados.
 // Requieren sesión autenticada con rol admin/super_admin (no es endpoint público).

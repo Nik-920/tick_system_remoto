@@ -139,6 +139,16 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth-sensitive', function (Request $request): Limit {
             return Limit::perMinutes(15, 5)->by($this->rateLimitKey($request));
         });
+
+        // Reporte QR público (invitados): navegación del formulario/seguimiento.
+        RateLimiter::for('public-reports', function (Request $request): Limit {
+            return Limit::perMinute(30)->by($this->rateLimitKey($request));
+        });
+
+        // Reporte QR público (invitados): envío del formulario — agresivo por IP.
+        RateLimiter::for('public-report-submissions', function (Request $request): Limit {
+            return Limit::perMinute(5)->by($this->rateLimitKey($request));
+        });
     }
 
     private function rateLimitKey(Request $request): string
