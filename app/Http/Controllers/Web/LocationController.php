@@ -13,6 +13,7 @@ use App\Services\Locations\LocationSimilarityService;
 use App\Services\Qr\QrTokenService;
 use App\Services\Storage\LocationQrStorageService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -233,9 +234,9 @@ class LocationController extends Controller
     /**
      * Usuarios elegibles como Jefe de Práctica responsable de una ubicación.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     * @return Collection<int, User>
      */
-    private function maintenanceUsers(): \Illuminate\Database\Eloquent\Collection
+    private function maintenanceUsers(): Collection
     {
         return User::role('maintenance')
             ->orderBy('name')
