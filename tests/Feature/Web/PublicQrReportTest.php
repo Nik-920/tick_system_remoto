@@ -88,6 +88,31 @@ class PublicQrReportTest extends TestCase
         $this->assertStringStartsWith('QR-', $contact->tracking_code);
     }
 
+    public function test_guest_tickets_are_never_community_visible(): void
+    {
+        config(['tickets.public_qr_report.enabled' => true]);
+        $location = $this->makeLocation();
+
+        // Peor caso: categoría con visibilidad bloqueada en "visible" — ni así
+        // debe aparecer un reporte de invitado en la comunidad.
+        $category = Category::create([
+            'name' => 'Locked-'.Str::uuid(),
+            'icon' => 'megaphone',
+            'description' => 'Categoría visible bloqueada',
+            'community_default_visible' => true,
+            'community_visibility_locked' => true,
+        ]);
+
+        $this->post('/r/'.$location->qr_token, [
+            'category_id' => $category->id,
+            'description' => 'Reporte de invitado que no debe verse en comunidad.',
+            'website' => '',
+        ]);
+
+        $ticket = Ticket::query()->firstOrFail();
+        $this->assertFalse((bool) $ticket->community_visible);
+    }
+
     public function test_honeypot_submission_creates_nothing_but_fakes_success(): void
     {
         config(['tickets.public_qr_report.enabled' => true]);

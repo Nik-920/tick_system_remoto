@@ -47,12 +47,23 @@ class PublicQrReportService
                 'location_id' => $locationId,
                 'category_id' => (string) $payload['category_id'],
                 'priority' => 'medium',
+                'community_visible' => false,
             ],
             $mediaFiles,
             $correlationId,
         );
 
         $ticket = $result['ticket'];
+
+        // Invariante de seguridad: los reportes de invitados NUNCA aparecen en
+        // la comunidad (QR público en pared = riesgo de contenido inadecuado).
+        // El false del payload cubre el caso normal, pero una categoría con
+        // visibilidad "locked" en visible podría pisarlo — este update lo
+        // garantiza sin importar la configuración de la categoría.
+        if ((bool) $ticket->community_visible) {
+            Ticket::query()->whereKey($ticket->id)->update(['community_visible' => false]);
+            $ticket->community_visible = false;
+        }
 
         $contact = GuestTicketContact::create([
             'ticket_id' => $ticket->id,
