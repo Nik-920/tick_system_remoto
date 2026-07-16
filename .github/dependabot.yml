@@ -1,0 +1,60 @@
+# ══════════════════════════════════════════════════════════════════
+# Dependabot — Actualización automática de dependencias (S13/DevSecOps)
+# Complementa a `composer audit` (que AVISA en CI) abriendo PRs que
+# ARREGLAN: cada actualización pasa por el CI completo (lint + tests +
+# SonarCloud) antes de mergearse, como cualquier PR humano.
+# Límite de PRs abiertos para no inundar el repo del equipo.
+# ══════════════════════════════════════════════════════════════════
+version: 2
+updates:
+  # Dependencias PHP (Laravel y paquetes)
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - php
+
+  # Dependencias JS (Vite, frontend)
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - javascript
+
+  # Actions de los workflows (fijadas por SHA en varios casos)
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - ci
+
+  # Imagen base del Dockerfile (php:8.x-fpm, node, etc.)
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+      - docker

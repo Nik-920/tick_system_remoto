@@ -1,0 +1,142 @@
+name: "🛡️ DevSecOps — Security Scans"
+
+# ══════════════════════════════════════════════════════════════════
+# Pipeline de seguridad (S13 — DevSecOps). Cada job responde a una
+# amenaza REAL de este proyecto, no a un checklist:
+#
+#   gitleaks    → Amenaza #1 (gestión de secretos): escanea TODO el
+#                 historial de git buscando credenciales commiteadas.
+#   trivy-fs    → Amenaza #2 (dependencias con CVEs): escanea
+#                 composer.lock y package-lock.json. Complementa a
+#                 `composer audit` (ci.yml) y a Dependabot.
+#   trivy-image → Amenaza #4 (imagen de contenedor insegura): builds
+#                 de la MISMA imagen Docker que corre en Railway y la
+#                 escanea capa por capa.
+#
+# Estrategia de enforcement progresivo (igual que la CSP report-only
+# del proyecto): primero medir, luego bloquear.
+#   - gitleaks: BLOQUEANTE (un secreto filtrado nunca es aceptable).
+#   - trivy-fs: BLOQUEANTE solo en CRITICAL.
+#   - trivy-image: informativo (fase de observación) — los hallazgos
+#     se publican en el job summary; se endurece cuando el equipo
+#     triagee la línea base.
+# ══════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Lunes 12:00 UTC (07:00 Lima): línea base semanal aunque no haya pushes —
+    # las CVEs aparecen con el tiempo, no solo cuando cambia el código.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 1. GITLEAKS — Escaneo de secretos en el historial
+  # ──────────────────────────────────────────────
+  gitleaks:
+    name: 🔑 Gitleaks — Secretos en historial
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout (historial completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔑 Escanear historial de git
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ──────────────────────────────────────────────
+  # 2. TRIVY FS — Vulnerabilidades en dependencias
+  # ──────────────────────────────────────────────
+  trivy-fs:
+    name: 📦 Trivy — Dependencias (composer/npm)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Escanear lockfiles (bloqueante en CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
+
+      - name: 📋 Reporte completo HIGH+ (informativo)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+          format: table
+          output: trivy-fs-report.txt
+
+      - name: 📤 Publicar en el resumen del job
+        if: always()
+        run: |
+          echo "## 📦 Trivy — Dependencias (HIGH y CRITICAL)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat trivy-fs-report.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Sin hallazgos HIGH/CRITICAL ✅" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ──────────────────────────────────────────────
+  # 3. TRIVY IMAGE — La imagen Docker real de producción
+  # ──────────────────────────────────────────────
+  trivy-image:
+    name: 🐳 Trivy — Imagen Docker de producción
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build de la imagen (la misma del Dockerfile de Railway)
+        run: docker build -t incidex-app:scan .
+
+      - name: 🐳 Escanear imagen (fase de observación — no bloquea)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: incidex-app:scan
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+          format: table
+          output: trivy-image-report.txt
+
+      - name: 📤 Publicar en el resumen del job
+        if: always()
+        run: |
+          echo "## 🐳 Trivy — Imagen incidex-app (HIGH y CRITICAL)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat trivy-image-report.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Sin hallazgos HIGH/CRITICAL ✅" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 📤 Subir reporte como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report
+          path: trivy-image-report.txt
+          retention-days: 30
